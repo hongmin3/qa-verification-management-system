@@ -9,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 
 from app.core import document_cache
 from app.core.config import get_settings
+from app.core.product_knowledge import KIND_MANUAL, load_manifest, resolve_config, scan_source, source_available, sync_and_register
+from app.core.qa_rules import load_rule_set
 from app.core.storage import Storage
 from app.core.uploads import save_upload
 from app.parsers.document_parser import extract_document_text, parse_document
@@ -44,6 +46,33 @@ def _grouped_by_product_version(kind: str) -> list[dict]:
     return [{"product": product, "version": version, "documents": documents} for (product, version), documents in groups.items()]
 
 
+def _knowledge_source_status() -> list[dict]:
+    """제품별 지식 폴더 상태. 이 호스트에서 폴더에 접근 가능한지와 마지막 수집 결과를 보여준다."""
+    rows: list[dict] = []
+    for product in storage.list_products():
+        config = resolve_config(product)
+        manifest = load_manifest(product)
+        rule_set = load_rule_set(product)
+        available = bool(config and source_available(config))
+        row = {
+            "product": product,
+            "configured": bool(config and config.knowledge_source.dir),
+            "source_dir": config.knowledge_source.dir if config else "",
+            "available": available,
+            "synced_at": manifest.get("synced_at", ""),
+            "counts": manifest.get("counts", {}),
+            "excluded": len(manifest.get("excluded", [])),
+            "rule_revision": rule_set.revision,
+            "rules_available": rule_set.available,
+            "last_sync": storage.latest_sync(product, "product_knowledge"),
+        }
+        if available and config is not None:
+            scan = scan_source(config)
+            row["pending"] = scan.counts()
+        rows.append(row)
+    return rows
+
+
 @router.get("/knowledge", response_class=HTMLResponse)
 def knowledge(request: Request):
     return templates.TemplateResponse(
@@ -52,11 +81,80 @@ def knowledge(request: Request):
         {
             "spec_groups": _grouped_by_product_version("specification"),
             "testcase_groups": _grouped_by_product_version("testcase"),
+            "manual_groups": _grouped_by_product_version(KIND_MANUAL),
             "products": storage.list_products(),
             "versions_by_product": _versions_by_product(),
             "spec_sync": storage.latest_sync("VXvue", "specification"),
+            "knowledge_sources": _knowledge_source_status(),
         },
     )
+
+
+@router.post("/knowledge/sync/product-knowledge")
+def trigger_product_knowledge_sync(product: str = Form(...)):
+    """제품 지식 폴더의 최신본을 수집하고 분석 대상으로 등록한다.
+
+    복사만으로는 분석에 쓰이지 않으므로 등록까지 한 번에 수행한다
+    (`app/core/product_knowledge.sync_and_register`).
+    """
+    product = product.strip()
+    if storage.is_sync_running(product, "product_knowledge"):
+        raise HTTPException(409, f"'{product}' 지식 폴더 수집이 이미 진행 중입니다.")
+    config = resolve_config(product)
+    if config is None or not config.knowledge_source.dir:
+        raise HTTPException(400, f"config/products/ 에 '{product}' 의 knowledge_source.dir 설정이 없습니다.")
+    if not source_available(config):
+        raise HTTPException(
+            400,
+            f"이 서버에서 지식 폴더에 접근할 수 없습니다: {config.knowledge_source.dir}. "
+            "폴더가 있는 PC에서 scripts/sync_product_knowledge.py 를 실행하세요.",
+        )
+    sync_id = storage.sync_start(product, "product_knowledge", "knowledge_folder")
+    try:
+        result = sync_and_register(product, storage=storage)
+        storage.sync_finish(sync_id, result["status"], result["detail"])
+        return result
+    except Exception as exc:
+        storage.sync_finish(sync_id, "FAILED", str(exc))
+        raise HTTPException(500, f"수집 실패: {exc}")
+
+
+@router.post("/knowledge/cleanup/missing")
+def cleanup_missing_documents():
+    """원본 파일이 사라진 등록을 정리한다.
+
+    파일이 없는 등록은 검색에 아무것도 기여하지 못하면서 "사양 없음" 오판만 만든다
+    (실제로 이 등록 하나 때문에 분석 전체가 실패한 적이 있다). 파일이 이미 없으므로
+    지워도 잃는 것이 없다 — 무엇을 지웠는지는 반환값에 남긴다.
+    """
+    removed: list[dict] = []
+    for kind in ("specification", "testcase", KIND_MANUAL):
+        for document in storage.list_documents(kind):
+            if Path(document["path"]).is_file():
+                continue
+            storage.delete_document(document["id"])
+            document_cache.delete(document["id"])
+            removed.append({"kind": kind, "id": document["id"], "name": document["name"], "product": document["product"]})
+    return {"removed": len(removed), "documents": removed}
+
+
+@router.get("/knowledge/source/{product}")
+def knowledge_source_detail(product: str):
+    """지식 폴더 스캔 결과(선택된 자산과 제외 이유). 무엇이 왜 빠졌는지 확인용."""
+    config = resolve_config(product)
+    if config is None:
+        raise HTTPException(404, f"'{product}' 제품 설정이 없습니다.")
+    if not source_available(config):
+        return {"product": product, "available": False, "source_dir": config.knowledge_source.dir, "manifest": load_manifest(product)}
+    scan = scan_source(config)
+    return {
+        "product": product,
+        "available": True,
+        "source_dir": scan.source_dir,
+        "counts": scan.counts(),
+        "selected": [{"kind": asset.kind, "file_name": asset.file_name, "revision": asset.revision, "language": asset.language} for asset in scan.selected],
+        "excluded": [{"file_name": asset.file_name, "reason": asset.exclude_reason, "superseded_by": asset.superseded_by} for asset in scan.assets if not asset.selected],
+    }
 
 
 @router.post("/knowledge/specification")

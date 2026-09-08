@@ -115,8 +115,11 @@ def test_integration_detection_is_safe_on_empty_text() -> None:
 
 
 def test_model_ids_come_from_settings() -> None:
+    """모델 ID 는 config.yaml 이 원천이다. 상위 등급은 계정에서 막힐 수 있어 값이 바뀔 수 있다
+    (`gemini-2.5-pro` 는 실제로 "no longer available to new users" 를 돌려준다)."""
     assert model_for(TIER_STANDARD) == "gemini-2.5-flash"
-    assert model_for(TIER_COMPLEX) == "gemini-2.5-pro"
+    assert model_for(TIER_LIGHT) == "gemini-2.5-flash-lite"
+    assert model_for(TIER_COMPLEX)  # 설정된 값이 있으면 된다 — 특정 ID 를 강제하지 않는다
 
 
 def test_unknown_tier_falls_back_to_standard() -> None:

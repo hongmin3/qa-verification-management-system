@@ -200,6 +200,7 @@ class QaAgentAIClient:
             "user_prompt": self._client.last_sent_prompt or self.last_prompt,
             "user_prompt_chars": len(self._client.last_sent_prompt or self.last_prompt),
             "masking": self._client.last_mask_report.as_dict(),
+            "model_fallback": self._client.model_fallback,
             "response": self.last_response,
             "cache_hit": self._client.last_cache_hit,
             "generation": {

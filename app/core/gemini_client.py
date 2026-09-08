@@ -15,6 +15,16 @@ from app.core.security_filter import MaskReport, mask_text
 from app.core.storage import Storage
 
 
+# 모델이 계정에서 제공되지 않을 때 API 가 내려주는 신호. 정확한 문구는 바뀔 수 있어
+# 상태 코드(404/NOT_FOUND)와 대표 표현을 함께 본다.
+_MODEL_UNAVAILABLE_HINTS = ("not_found", "no longer available", "is not found", "not supported for", "does not exist")
+
+
+def _is_model_unavailable(exc: Exception) -> bool:
+    message = str(exc).casefold()
+    return "404" in message or any(hint in message for hint in _MODEL_UNAVAILABLE_HINTS)
+
+
 class GeminiClient:
     """도메인 무관 Gemini 구조화 호출 클라이언트. 어떤 모듈의 Pydantic 스키마인지, 어떤
     system_instruction을 쓰는지는 전혀 모른다 — 호출자가 prompt_name(→prompts/*.yaml)과
@@ -36,6 +46,8 @@ class GeminiClient:
         self.last_sent_system_instruction = ""
         #: 직전 호출에 실제로 쓴 모델 (호출별로 다를 수 있다 — app/core/model_router.py).
         self.last_model = self.settings.secrets.gemini_model
+        #: 상위 등급 모델을 쓰지 못해 기본 모델로 물러난 경우의 기록. 조용히 바꾸지 않는다.
+        self.model_fallback: dict | None = None
 
     @retry(retry=retry_if_exception_type((TimeoutError, ConnectionError)), stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10), reraise=True)
     def _request(self, prompt: str, *, system_instruction: str, response_schema: type[BaseModel], temperature: float, max_output_tokens: int, thinking_budget: int, model: str) -> dict:
@@ -114,15 +126,34 @@ class GeminiClient:
         if self.last_cache_hit:
             self.cache_hit_count += 1
             return cached
-        raw = self._request(
-            prompt,
-            system_instruction=system_instruction,
-            response_schema=response_schema,
-            temperature=prompt_cfg.temperature,
-            max_output_tokens=prompt_cfg.max_output_tokens,
-            thinking_budget=prompt_cfg.thinking_budget,
-            model=self.last_model,
-        )
+        try:
+            raw = self._request(
+                prompt,
+                system_instruction=system_instruction,
+                response_schema=response_schema,
+                temperature=prompt_cfg.temperature,
+                max_output_tokens=prompt_cfg.max_output_tokens,
+                thinking_budget=prompt_cfg.thinking_budget,
+                model=self.last_model,
+            )
+        except Exception as exc:
+            # 상위 등급 모델이 계정에서 막혀 있는 경우가 실제로 있다 (`gemini-2.5-pro`는
+            # "no longer available to new users"). 환경 문제로 분석 전체를 실패시키지 않고
+            # 기본 모델로 한 번 물러난다 — 물러났다는 사실은 audit 에 남는다.
+            fallback = str(self.settings.get("models.standard", "") or self.settings.secrets.gemini_model)
+            if not _is_model_unavailable(exc) or fallback == self.last_model:
+                raise
+            self.model_fallback = {"requested": self.last_model, "used": fallback, "reason": str(exc)[:300]}
+            self.last_model = fallback
+            raw = self._request(
+                prompt,
+                system_instruction=system_instruction,
+                response_schema=response_schema,
+                temperature=prompt_cfg.temperature,
+                max_output_tokens=prompt_cfg.max_output_tokens,
+                thinking_budget=prompt_cfg.thinking_budget,
+                model=fallback,
+            )
         self.storage.cache_set(cache_key, raw)
         for key, value in raw.get("token_usage", {}).items():
             self.token_usage[key] = self.token_usage.get(key, 0) + int(value)

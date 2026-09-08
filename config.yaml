@@ -76,7 +76,10 @@ security:
 models:
   light: "gemini-2.5-flash-lite"
   standard: "gemini-2.5-flash"
-  complex: "gemini-2.5-pro"
+  # gemini-2.5-pro 는 신규 계정에 제공되지 않는다(실제 API 응답: "no longer available to
+  # new users", 권장 대안 gemini-3.1-pro-preview). 상위 등급을 쓰려면 그 값을 넣는다.
+  # 못 쓰는 모델이면 standard 로 물러나고 그 사실이 결과에 남는다.
+  complex: "gemini-2.5-flash"
   # 1M 토큰당 USD. 값이 바뀌면 여기만 고친다 (코드에 하드코딩하지 않는다).
   # 비용은 추정치이고 실제 청구는 Google 콘솔이 기준이다.
   pricing:
