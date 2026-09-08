@@ -1,5 +1,8 @@
 # VXvue 제품의 지식 동기화 설정. 이 파일은 제품 마스터 데이터(SQLite products 테이블)를
 # 대체하지 않는다 — "이 제품을 어떻게 동기화할지"만 담는다.
+#
+# 새 제품을 추가하려면 이 파일을 복사해 경로만 바꾸면 된다. 코드 변경은 필요하지 않다
+# (docs/PRODUCT_ONBOARDING.md).
 product: VXvue
 version: "1.0"
 manual_types:
@@ -8,6 +11,13 @@ manual_types:
   - "VXvue DICOM Conformance Statement"
   - "System Integration Guide for VXvue"
   - "VXvue Web System Design & API Protocol Manual"
+
+# QA가 이 제품의 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 폴더. 앱은 읽기만 하고
+# 프로젝트 안(data/product_knowledge/<slug>/)으로 사본과 정규화 텍스트를 수집한다.
+# 분류는 파일명 규약으로 하므로 제품별 코드 분기가 없다 — 규약이 다른 제품만 classify를 덮어쓴다.
+# `${ENV}` 형태를 쓰면 환경변수로 덮어쓸 수 있다 (다른 PC·서버에서 경로가 다를 때).
+knowledge_source:
+  dir: "C:/Users/2024980/Documents/자동화/VXvue/VXvue 지식파일"
 
 specification:
   # alm_crawler: 별도 프로젝트(ALM 사양서 최신화 크롤링)가 Polarion에서 이미 수집한 PDF를 읽기만 한다.
@@ -19,8 +29,15 @@ specification:
     - "(사양서) Licence Manager SRS 사양서*.pdf"
 
 testcase:
-  # TC는 Knowledge 화면에서 수동 등록한다.
+  # TC는 Knowledge 화면에서 수동 등록하거나 knowledge_source 폴더에서 수집한다.
   source: manual
+
+# Polarion Issue Export 산출물. 별도 프로젝트(alm-issue-export)가 REST API로 수집해
+# <ISSUE-ID>/backup.json + report.html 을 만든다. 그 결과물만 읽는다.
+issue_source:
+  source: alm_issue_export
+  export_dir: "C:/Users/2024980/Documents/자동화/alm-issue-export/polarion_backup"
+  id_prefix: "VP"
 
 sync:
   # 이 PC에 이미 등록된 ALM 크롤러 작업 스케줄러(VXvue_SRS_Spec_Automation, 매주 월 07:00 KST)보다

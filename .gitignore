@@ -43,3 +43,4 @@ secrets.txt
 secrets.local.*
 !secrets.example.json
 !secrets.example.txt
+data/product_knowledge/

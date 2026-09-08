@@ -1,0 +1,34 @@
+# Bellalun Viewer 제품의 지식 동기화 설정.
+#
+# VXvue와 코드를 공유한다 — 다른 것은 이 YAML의 경로뿐이다. 파일명 규약(`(사양서)`/`(매뉴얼)`/
+# `(TC)`/`[QA 작성 규칙]`/`지침 프롬프트`)이 VXvue와 같아서 classify를 덮어쓸 필요가 없다.
+product: Bellalun Viewer
+version: "1.0"
+manual_types:
+  - "Bellalun Viewer Operation Manual"
+  - "Bellalun Viewer Service Manual"
+  - "Bellalun Viewer DICOM Conformance Statement"
+  - "VDMS-1100TM Operation Manual"
+  - "VDMS-1100TM Service Manual"
+
+knowledge_source:
+  dir: "C:/Users/2024980/Documents/자동화/Bellalun Viewer/지식"
+  # 이 폴더에는 QA 지식이 아닌 자동화 프로젝트 운영 문서도 함께 있다
+  # (`[자동화 구현 현황]`, `[자동화 운영 지침]`). 수집 대상에서 제외한다.
+  ignore:
+    - "[자동화*"
+
+specification:
+  # VXvue와 달리 ALM 크롤러 연동이 없다. 사양서는 knowledge_source 폴더에서 수집한다.
+  source: manual
+
+testcase:
+  source: manual
+
+# Polarion Issue Export를 이 제품으로 확장하면 export_dir와 id_prefix를 채운다.
+issue_source:
+  source: manual
+
+sync:
+  day_of_week: "mon"
+  schedule_time: "07:45"
