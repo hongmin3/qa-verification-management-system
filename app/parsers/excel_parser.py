@@ -100,7 +100,9 @@ def parse_testcases(
             if resolved_row is None or columns is None:
                 continue
             detected_sheet = True
-            for row in sheet.iter_rows(min_row=resolved_row + 1, values_only=True):
+            # `min_row` 부터 세므로 enumerate 시작값을 맞춰 **원본 Excel의 실제 행 번호**를
+            # 기록한다. QA 규칙이 근거 위치로 "Sheet명 + 실제 행 번호"를 요구한다.
+            for row_number, row in enumerate(sheet.iter_rows(min_row=resolved_row + 1, values_only=True), start=resolved_row + 1):
                 values = {
                     field: str(row[index] or "").strip()
                     for field, index in columns.items()
@@ -110,7 +112,7 @@ def parse_testcases(
                 if not tc_id or tc_id in seen:
                     continue
                 seen.add(tc_id)
-                cases.append(TestCase(**values))
+                cases.append(TestCase(**values, workbook=path.name, sheet=sheet.title, row=row_number))
         if not detected_sheet:
             raise ValueError("TC ID 컬럼을 찾을 수 없습니다. 컬럼 매핑을 확인하세요.")
         return cases

@@ -1,0 +1,32 @@
+{% extends "module_base.html" %}
+{% block content %}
+<section>
+  <h2>QA Agent 분석 이력</h2>
+  <p class="hint">총 {{ total }}건. Gate에서 멈춘 분석은 AI 호출이 0회입니다.</p>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>분석 ID</th><th>상태</th><th>Issue</th><th>AI 호출</th><th>단계</th><th>생성 시각</th></tr></thead>
+      <tbody>
+        {% for item in analyses %}
+        <tr>
+          <td><a href="/qa-agent/analyses/{{ item.id }}">{{ item.id }}</a></td>
+          <td><span class="badge {{ item.status }}">{{ item.status }}</span>{% if item.gate_blocked %} <span class="pill HIGH">Gate 차단</span>{% endif %}</td>
+          <td>{{ item.issue_id or '—' }}</td>
+          <td>{{ item.llm_calls }}회</td>
+          <td>{{ item.stage or '—' }}</td>
+          <td>{{ item.created_at[:16] }}</td>
+        </tr>
+        {% endfor %}
+        {% if not analyses %}<tr><td colspan="6" class="hint">아직 분석이 없습니다. <a href="/qa-agent">새 분석</a>을 실행하세요.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% if total_pages > 1 %}
+  <p class="hint">
+    {% if page > 1 %}<a href="/qa-agent/analyses?page={{ page - 1 }}">← 이전</a>{% endif %}
+    {{ page }} / {{ total_pages }}
+    {% if page < total_pages %}<a href="/qa-agent/analyses?page={{ page + 1 }}">다음 →</a>{% endif %}
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

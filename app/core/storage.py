@@ -85,6 +85,14 @@ class Storage:
                     description TEXT NOT NULL DEFAULT '', result_status TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS qa_agent_approvals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    analysis_id TEXT NOT NULL REFERENCES analyses(id),
+                    claim_kind TEXT NOT NULL, claim_label TEXT NOT NULL,
+                    qa_decision TEXT NOT NULL, qa_note TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    UNIQUE(analysis_id, claim_kind, claim_label)
+                );
                 CREATE TABLE IF NOT EXISTS manual_cross_impacts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     revision_id INTEGER NOT NULL REFERENCES manual_revisions(id),
@@ -664,3 +672,41 @@ class Storage:
                 (product,),
             ).fetchall()
             return [dict(row) for row in rows]
+
+    # --- QA Agent 승인 (규칙 §19 QA 승인 원칙) --------------------------------
+    # AI 판정은 결과에 그대로 남고, QA 의 승인/거절/수정은 별도 행으로 쌓인다. AI 결과를
+    # 덮어쓰지 않는 이유는 규칙 §20 이 "AI 결과 / QA 수정 결과 / QA 승인·거절"을 각각
+    # 저장해 Rule·Prompt 개선에 쓰라고 정하고 있기 때문이다.
+
+    def save_qa_agent_approval(self, analysis_id: str, claim_kind: str, claim_label: str, qa_decision: str, qa_note: str = "") -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO qa_agent_approvals(analysis_id,claim_kind,claim_label,qa_decision,qa_note,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?) "
+                "ON CONFLICT(analysis_id,claim_kind,claim_label) DO UPDATE SET qa_decision=excluded.qa_decision, qa_note=excluded.qa_note, updated_at=excluded.updated_at",
+                (analysis_id, claim_kind, claim_label, qa_decision, qa_note, now, now),
+            )
+
+    def list_qa_agent_approvals(self, analysis_id: str) -> list[dict]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM qa_agent_approvals WHERE analysis_id=? ORDER BY claim_kind,claim_label", (analysis_id,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def qa_agent_approval_map(self, analysis_id: str) -> dict[tuple[str, str], dict]:
+        """`(claim_kind, claim_label)` → 승인 행. 화면이 판정 옆에 QA 결정을 붙일 때 쓴다."""
+        return {(row["claim_kind"], row["claim_label"]): row for row in self.list_qa_agent_approvals(analysis_id)}
+
+    def qa_agent_approval_stats(self, days: int = 90) -> dict:
+        """AI 판정 대비 QA 결정 분포. 규칙 §21 품질 지표(AI 결과 QA 수정률)의 원천이다."""
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT qa_decision, COUNT(*) n FROM qa_agent_approvals WHERE created_at>=? GROUP BY qa_decision", (since,)
+            ).fetchall()
+        counts = {row["qa_decision"]: row["n"] for row in rows}
+        total = sum(counts.values())
+        changed = sum(count for decision, count in counts.items() if decision in ("REJECTED", "EDITED"))
+        return {"days": days, "total": total, "by_decision": counts, "revision_rate": round(changed / total, 4) if total else 0.0}

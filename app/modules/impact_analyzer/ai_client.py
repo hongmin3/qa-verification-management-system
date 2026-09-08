@@ -55,8 +55,10 @@ class ImpactAnalysisAIClient:
             "prompt_name": config.name,
             "prompt_version": config.version,
             "model": self._client.settings.secrets.gemini_model,
-            "system_instruction": config.system_instruction,
-            "user_prompt": self.last_prompt,
+            # 마스킹까지 끝난 실제 전송본을 보여준다 (app/core/security_filter.py).
+            "system_instruction": self._client.last_sent_system_instruction or config.system_instruction,
+            "user_prompt": self._client.last_sent_prompt or self.last_prompt,
+            "masking": self._client.last_mask_report.as_dict(),
             "response": self.last_response,
             "cache_hit": self._client.last_cache_hit,
             "generation": {

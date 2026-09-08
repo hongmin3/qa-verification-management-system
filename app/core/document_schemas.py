@@ -28,6 +28,12 @@ class TestCase(BaseModel):
     expected_result: str = ""
     result: str = ""
     remark: str = ""
+    # 근거 위치. QA 규칙이 "Sheet명 + 실제 행 번호"를 우선 제시하라고 정하고 있어, TC를
+    # 인용할 때 원본 Excel에서 바로 찾아갈 수 있어야 한다. 기본값이 있어 이 필드가 없던
+    # 옛 파싱 캐시도 그대로 로드된다(값은 비어 있고, 재파싱하면 채워진다).
+    workbook: str = ""
+    sheet: str = ""
+    row: int = 0
 
     @field_validator("tc_id")
     @classmethod
@@ -38,6 +44,12 @@ class TestCase(BaseModel):
 
     def searchable_text(self) -> str:
         return " ".join((self.tc_id, self.category, self.feature, self.precondition, self.step, self.expected_result, self.remark))
+
+    @property
+    def locator(self) -> str:
+        """원본 Excel에서 이 TC를 찾아가는 위치 (규칙 §9.3)."""
+        parts = [part for part in (self.workbook, self.sheet, f"{self.row}행" if self.row else "") if part]
+        return " · ".join(parts)
 
 
 class SpecificationChunk(BaseModel):

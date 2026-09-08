@@ -10,6 +10,7 @@ from app.core.storage import Storage
 from app.modules.impact_analyzer.scheduled_jobs import register_scheduled_jobs
 from app.modules.impact_analyzer.router import resume_queued_jobs as resume_queued_impact_jobs
 from app.modules.manual_review.router import resume_queued_jobs as resume_queued_manual_jobs
+from app.modules.qa_agent.router import resume_queued_jobs as resume_queued_qa_agent_jobs
 from app.web.router import build_router
 
 settings = get_settings()
@@ -21,6 +22,7 @@ async def lifespan(_: FastAPI):
     storage.fail_running_analyses()
     resume_queued_impact_jobs()
     resume_queued_manual_jobs()
+    resume_queued_qa_agent_jobs()
     start_scheduler([register_scheduled_jobs])
     yield
     stop_scheduler()

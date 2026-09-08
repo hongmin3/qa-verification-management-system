@@ -1,0 +1,78 @@
+{% extends "module_base.html" %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<section>
+  <h2>규칙 구현현황</h2>
+  <p class="hint">제품 QA 규칙 문서의 절마다 <b>무엇으로 구현했는지</b>와 현재 상태입니다. 이 표는 코드(<code>app/modules/qa_agent/rule_capability.py</code>)가 원천이고, 규칙 Rev가 올라가 새 절이 생기면 테스트가 실패해 재분류를 강제합니다.</p>
+
+  <div class="sync-status">
+    <span>최상위 절 <b>{{ summary.total }}</b>개</span>
+    {% for mode, label in mode_labels.items() %}
+    <span>{{ label }} <b>{{ summary.by_mode.get(mode, 0) }}</b></span>
+    {% endfor %}
+  </div>
+  <div class="sync-status" style="margin-top:10px">
+    {% for status, label in status_labels.items() %}
+    <span>{{ label }} <b>{{ summary.by_status.get(status, 0) }}</b></span>
+    {% endfor %}
+  </div>
+
+  <h3>제품별 규칙 주입량</h3>
+  <form method="get" action="/qa-agent/rules" style="display:flex;gap:10px;align-items:end">
+    <label>제품
+      <select name="product" onchange="this.form.submit()">
+        {% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}
+      </select>
+    </label>
+  </form>
+  {% if coverage and coverage.total_sections %}
+  <p class="hint">
+    {{ coverage.product }} · {{ coverage.revision or 'Rev 미표기' }} ·
+    절 {{ coverage.total_sections }}개 · 규칙 전문 {{ '%.1f'|format(coverage.total_chars / 1024) }}KB
+    {% for document in coverage.documents %}<br><span class="mono">{{ document.name }} ({{ document.revision or 'Rev 미표기' }}) — {{ document.sections }}절 {{ '%.1f'|format(document.chars / 1024) }}KB</span>{% endfor %}
+  </p>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>Skill</th><th>태깅된 절</th><th>호출 시 주입량</th><th>규칙 전문 대비</th></tr></thead>
+      <tbody>
+        {% for skill, title in skills.items() %}
+        {% set info = coverage.skills.get(skill, {}) %}
+        {% set sliced = slice_sizes.get(skill, {}) %}
+        <tr>
+          <td><b>{{ skill }}</b> {{ title }}</td>
+          <td>{% if info.sections %}{{ info.sections }}절{% else %}<span class="pill HIGH">0절 — 이 제품 규칙에 해당 내용 없음</span>{% endif %}</td>
+          <td>{% if sliced.chars %}{{ sliced.sections }}절 · {{ '%.1f'|format(sliced.chars / 1024) }}KB{% else %}—{% endif %}</td>
+          <td>{% if sliced.chars and coverage.total_chars %}{{ '%.0f'|format(100 - 100 * sliced.chars / coverage.total_chars) }}% 절감{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">태깅된 절이 0개인 Skill은 결함이 아니라 <b>그 제품 규칙 문서가 그 주제를 다루지 않는다</b>는 뜻입니다. 예를 들어 Viewer 제품에는 Generator가 없습니다.</p>
+  {% else %}
+  <p class="status">이 제품의 규칙 문서가 아직 수집되지 않았습니다. <a href="/knowledge">Knowledge</a>에서 지식 폴더 수집을 실행하세요.</p>
+  {% endif %}
+
+  <h3>절별 구현 방식</h3>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>절</th><th>제목</th><th>구현 방식</th><th>상태</th><th>근거·비고</th></tr></thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td><b>§{{ entry.section }}</b></td>
+          <td>{{ entry.title }}</td>
+          <td>{{ mode_labels.get(entry.mode, entry.mode) }}</td>
+          <td>
+            {% if entry.status == 'IMPLEMENTED' %}<span class="pill exact">구현됨</span>
+            {% elif entry.status == 'PLANNED' %}<span class="pill MEDIUM">예정</span>
+            {% else %}<span class="pill">구현 안 함</span>{% endif %}
+          </td>
+          <td>{% if entry.where %}<code>{{ entry.where }}</code><br>{% endif %}{{ entry.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

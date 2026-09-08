@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.core import document_cache
 from app.core.config import get_settings
+from app.core.knowledge_documents import load_for_product
 from app.core.logger import configure_logging
 from app.core.storage import Storage
 from app.modules.impact_analyzer.ai_client import ImpactAnalysisAIClient
@@ -42,46 +41,20 @@ class RegressionAnalyzer:
         사양서1~5처럼 같은 제품에 서로 다른 문서가 여러 개 등록될 수 있으므로, 새 문서가
         추가돼도 이전 문서를 제외하지 않고 전부 합쳐서 검색한다 (Storage.active_documents).
         """
-        spec_docs = self.storage.active_documents("specification", product)
-        tc_docs = self.storage.active_documents("testcase", product)
-        if not spec_docs or not tc_docs:
-            raise ValueError(f"'{product}' 제품에 등록된 사양서 또는 TC가 없습니다.")
-        chunks: list[SpecificationChunk] = []
-        baseline_texts: list[str] = []
-        doc_labels: dict[str, str] = {}
-        for doc in spec_docs:
-            path = Path(doc["path"])
-            cached_chunks = document_cache.load(doc["id"], SpecificationChunk)
-            if cached_chunks is None:
-                cached_chunks = parse_document(path, path.stem)
-                document_cache.save(doc["id"], cached_chunks)
-            chunks.extend(cached_chunks)
-            cached_text = document_cache.load_text(doc["id"])
-            if cached_text is None:
-                cached_text = extract_document_text(path)
-                document_cache.save_text(doc["id"], cached_text)
-            baseline_texts.append(cached_text)
-            doc_labels[path.stem] = doc["name"]
-        cases: list[TestCase] = []
-        for doc in tc_docs:
-            # register_testcase가 자동 탐지에 실패하면 QA가 /knowledge/testcase/map에서
-            # 수동으로 지정한 컬럼/시트/헤더 행을 metadata_json에 저장해둔다(없으면 자동 탐지).
-            metadata = json.loads(doc.get("metadata_json") or "{}")
-            cached_cases = document_cache.load(doc["id"], TestCase)
-            if cached_cases is None:
-                cached_cases = parse_testcases(
-                    Path(doc["path"]), mapping=metadata.get("column_mapping"),
-                    sheet_name=metadata.get("sheet_name"), header_row=metadata.get("header_row"),
-                )
-                document_cache.save(doc["id"], cached_cases)
-            cases.extend(cached_cases)
-        spec_label = ", ".join(doc["name"] for doc in spec_docs)
-        tc_label = ", ".join(doc["name"] for doc in tc_docs)
-        knowledge_documents = [
-            {key: doc.get(key) for key in ("id", "kind", "product", "version", "revision", "name", "created_at")}
-            for doc in (*spec_docs, *tc_docs)
-        ]
-        return self._execute(change_paths, chunks, cases, "\n".join(baseline_texts), spec_label, tc_label, analysis_id, user_notes, doc_labels, product, knowledge_documents)
+        knowledge = load_for_product(product, storage=self.storage, with_text=True)
+        return self._execute(
+            change_paths,
+            knowledge.chunks,
+            knowledge.cases,
+            "\n".join(knowledge.baseline_texts),
+            knowledge.specification_label,
+            knowledge.testcase_label,
+            analysis_id,
+            user_notes,
+            knowledge.document_labels,
+            product,
+            knowledge.knowledge_documents(),
+        )
 
     def _execute(
         self,

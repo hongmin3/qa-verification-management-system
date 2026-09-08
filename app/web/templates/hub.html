@@ -3,8 +3,12 @@
 {% block content %}
 <section>
   <h2>QA 자동화</h2>
-  <p>수행할 검증 업무를 선택하세요.</p>
+  <p>수행할 검증 업무를 선택하세요. 각 기능 화면의 <b>사용법</b> 메뉴에 상세 안내가 있습니다.</p>
   <div class="grid">
+    <a class="app-card" href="/qa-agent">
+      <h3>QA Agent — Issue 검증 범위</h3>
+      <p>Polarion Issue 하나에서 관련 사양·기존 TC·Regression 범위를 근거와 함께 정리합니다. 근거가 부족하면 AI를 호출하지 않고 무엇이 없는지 알려줍니다.</p>
+    </a>
     <a class="app-card" href="/impact-analyzer">
       <h3>Regression 영향 분석</h3>
       <p>소프트웨어 변경사항과 제품 사양서·Test Case를 분석해 Regression 검증 대상을 추천합니다.</p>
@@ -12,6 +16,14 @@
     <a class="app-card" href="/manual-review">
       <h3>매뉴얼 개정 검증</h3>
       <p>Word 변경 이력과 최신 SRS·Release Scope를 비교해 매뉴얼 수정 및 누락 의심 항목을 검토합니다.</p>
+    </a>
+    <a class="app-card" href="/knowledge">
+      <h3>Knowledge — 사양서·TC·규칙 관리</h3>
+      <p>위 기능들이 공유하는 제품별 사양서·Test Case·QA 규칙 문서를 등록하고, 제품 지식 폴더의 최신본을 수집합니다.</p>
+    </a>
+    <a class="app-card" href="/cost-dashboard">
+      <h3>비용 대시보드</h3>
+      <p>AI 호출 수·토큰 사용량·캐시 적중을 기능별로 집계합니다.</p>
     </a>
     {# config.yaml `services.*`에 URL이 설정된 하위 서비스. 핵심 앱과 다른 프로세스로
        뜨는 별도 배포 단위라 링크로만 연결한다. #}

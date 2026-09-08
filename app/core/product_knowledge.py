@@ -485,3 +485,168 @@ def resolve_config(product: str) -> ProductConfig | None:
         if config.product.casefold() == product.casefold():
             return config
     return None
+
+
+# --- 수집 결과를 분석 대상 문서로 등록 ----------------------------------------
+
+
+@dataclass
+class RegisterOutcome:
+    product: str
+    registered: list[str] = field(default_factory=list)
+    unchanged: list[str] = field(default_factory=list)
+    replaced: list[str] = field(default_factory=list)
+    #: 다른 경로로 이미 등록돼 있어 이 수집본과 겹칠 수 있는 문서. 지우지 않고 보고만 한다.
+    duplicates: list[str] = field(default_factory=list)
+    detail: str = ""
+
+
+def _is_strictly_older(existing_name: str, asset: dict) -> bool:
+    """등록돼 있는 문서가 이 자산의 **같은 논리 문서이면서 확실히 더 오래된** 리비전인가.
+
+    리비전은 **파일명에서만** 유도한다. `documents.revision` 컬럼은 등록 순번(`Rev.1`,
+    `Rev.2`)이 들어 있어 문서 리비전이 아니다 — 그 값으로 비교하면 260831 이 260907 보다
+    최신으로 판정된다.
+
+    리비전 표기 방식이 다르거나(날짜 vs 버전) 비교가 불가능하면 False 를 준다 — 확실할
+    때만 지운다.
+    """
+    new_revision, new_kind = asset.get("revision", ""), asset.get("revision_kind", "")
+    if not new_revision:
+        return False
+    existing_parsed = parse_asset_name(existing_name)
+    if not existing_parsed["revision"] or existing_parsed["revision_kind"] != new_kind:
+        return False
+    try:
+        return _revision_sort_key(existing_parsed["revision"], existing_parsed["revision_kind"]) < _revision_sort_key(new_revision, new_kind)
+    except ValueError:
+        return False
+
+
+def _is_same_file(document_path: str, asset: dict) -> bool:
+    """등록된 파일이 이 수집본과 **바이트까지 같은가**. 같으면 같은 파일이 두 번 등록된 것이다."""
+    digest = asset.get("sha256")
+    if not digest:
+        return False
+    path = Path(document_path)
+    if not path.is_file():
+        return False
+    try:
+        return _sha256(path) == digest
+    except OSError:
+        return False
+
+
+def register_collected(product: str, storage=None, root: Path | None = None, kinds: tuple[str, ...] = REGISTERABLE_KINDS) -> RegisterOutcome:
+    """수집된 자산을 `documents` 테이블에 등록해 분석 대상으로 만든다.
+
+    수집(파일 복사)만으로는 분석에 쓰이지 않는다 — `Storage.active_documents` 가 보는 것은
+    `documents` 테이블이다. 이 함수가 그 사이를 잇는다.
+
+    **같은 논리 문서의 확실히 더 오래된 리비전만 지운다.** "어느 것이 최신인가"에 답하는 것이
+    이 시스템의 존재 이유이므로, 사양서1(260831)이 남아 있는데 사양서1(260907)을 등록하면
+    옛 사양이 계속 검색된다. 반면 리비전 비교가 불가능하거나 종류(kind)가 다르게 등록된
+    문서는 지우지 않고 `duplicates` 로 보고한다 — 사람이 다른 기준으로 올려둔 것일 수 있다.
+    """
+    from app.core import document_cache
+    from app.core.storage import Storage
+
+    storage = storage or Storage()
+    outcome = RegisterOutcome(product=product)
+    config = resolve_config(product)
+    version = config.version if config else ""
+    base = product_dir(product, root)
+
+    storage.ensure_product(product)
+    if version:
+        storage.ensure_version(product, version)
+
+    # 종류가 어긋나게 등록된 문서까지 보려면 전 종류를 함께 본다 (매뉴얼이 specification 으로
+    # 등록돼 있는 실제 사례가 있었다).
+    existing_all: list[dict] = []
+    for kind in REGISTERABLE_KINDS:
+        for document in storage.active_documents(kind, product):
+            existing_all.append({**document, "kind": kind})
+
+    removed_ids: set[int] = set()
+    registered_paths = {str((base / "original" / kind / asset["file_name"]).resolve()).casefold() for kind in kinds for asset in collected_assets(product, kind=kind, root=root)}
+
+    for kind in kinds:
+        for asset in collected_assets(product, kind=kind, root=root):
+            path = base / "original" / kind / asset["file_name"]
+            if not path.is_file():
+                continue
+            resolved = str(path.resolve()).casefold()
+            already = next((document for document in existing_all if str(Path(document["path"]).resolve()).casefold() == resolved), None)
+            if already is not None:
+                outcome.unchanged.append(asset["file_name"])
+            else:
+                storage.add_document(
+                    kind=kind,
+                    product=product,
+                    version=version,
+                    revision=asset.get("revision", ""),
+                    name=asset["file_name"],
+                    path=path,
+                    metadata={
+                        "source": "product_knowledge",
+                        "base_name": asset.get("base_name", ""),
+                        "revision_kind": asset.get("revision_kind", ""),
+                        "language": asset.get("language", ""),
+                        "doc_number": asset.get("doc_number", ""),
+                        "sha256": asset.get("sha256", ""),
+                    },
+                )
+                outcome.registered.append(asset["file_name"])
+
+            asset_base = (asset.get("base_name") or "").casefold()
+            for document in existing_all:
+                if document["id"] in removed_ids or str(Path(document["path"]).resolve()).casefold() in registered_paths:
+                    continue
+                metadata = json.loads(document.get("metadata_json") or "{}")
+                document_base = (metadata.get("base_name") or parse_asset_name(document["name"])["base_name"]).casefold()
+                if document_base != asset_base:
+                    continue
+                older = document["kind"] == kind and _is_strictly_older(document["name"], asset)
+                identical = document["kind"] == kind and _is_same_file(document["path"], asset)
+                # 파일이 사라진 등록은 검색에 아무것도 기여하지 못하면서 "사양 없음" 오판만
+                # 만든다. 같은 논리 문서를 수집본이 대체하므로 잃는 것이 없다.
+                dead = not Path(document["path"]).is_file()
+                if older or identical or dead:
+                    storage.delete_document(document["id"])
+                    document_cache.delete(document["id"])
+                    removed_ids.add(document["id"])
+                    reason = "이전 리비전" if older else ("동일 파일 중복 등록" if identical else "원본 파일 없음")
+                    outcome.replaced.append(f"{document['name']} (kind={document['kind']}, {reason})")
+                else:
+                    note = f"{document['name']} (등록 kind={document['kind']}"
+                    if document["kind"] != kind:
+                        note += f", 수집 분류={kind}"
+                    outcome.duplicates.append(note + ")")
+
+    outcome.duplicates = list(dict.fromkeys(outcome.duplicates))
+    outcome.detail = (
+        f"등록 {len(outcome.registered)}건, 미변경 {len(outcome.unchanged)}건, "
+        f"이전 리비전 정리 {len(outcome.replaced)}건, 중복 확인 필요 {len(outcome.duplicates)}건"
+    )
+    return outcome
+
+
+def sync_and_register(product: str, storage=None, root: Path | None = None) -> dict:
+    """지식 폴더 수집 → 문서 등록을 한 번에. `/knowledge` 화면 버튼과 스케줄러가 함께 쓴다."""
+    config = resolve_config(product)
+    if config is None:
+        return {"status": "NEEDS_CONFIG", "detail": f"config/products/ 에 '{product}' 설정이 없습니다."}
+    collected = sync_product(config, root=root)
+    if collected.status in ("NEEDS_CONFIG", "FAILED"):
+        return {"status": collected.status, "detail": collected.detail, "collected": collected.detail}
+    registered = register_collected(product, storage=storage, root=root)
+    status = "PARTIAL" if collected.status == "PARTIAL" else "SUCCESS"
+    return {
+        "status": status,
+        "detail": f"{collected.detail} / {registered.detail}",
+        "collected": collected.detail,
+        "registered": registered.detail,
+        "duplicates": registered.duplicates,
+        "excluded": collected.excluded,
+    }

@@ -64,3 +64,36 @@ analysis:
   max_concurrent_jobs: 2
   # 이 시간 동안 단계 갱신이 없는 RUNNING 작업은 운영 모니터에서 stale 경고한다.
   job_timeout_minutes: 30
+
+# 외부로 나가는 문자열의 마스킹 (app/core/security_filter.py). RAG를 쓴다고 외부 전송이
+# 0이 되는 것은 아니므로, Gemini 호출 직전에 개인정보·사내 경로를 자리표로 바꾼다.
+# QA 판단에 필요한 식별자(SRS/Issue ID, DICOM Tag, Command 번호, 버전, ErrorCode)는 그대로 둔다.
+security:
+  mask_outbound: true
+
+# 요청 난이도에 따른 모델 선택 (app/core/model_router.py). 난이도 판정에 LLM을 쓰지 않고
+# 입력에서 세어지는 신호(근거 문서 수, Root Cause 명시 여부, 연동 용어 포함)로만 고른다.
+models:
+  light: "gemini-2.5-flash-lite"
+  standard: "gemini-2.5-flash"
+  complex: "gemini-2.5-pro"
+  # 1M 토큰당 USD. 값이 바뀌면 여기만 고친다 (코드에 하드코딩하지 않는다).
+  # 비용은 추정치이고 실제 청구는 Google 콘솔이 기준이다.
+  pricing:
+    gemini-2.5-flash-lite:
+      input: 0.10
+      output: 0.40
+    gemini-2.5-flash:
+      input: 0.30
+      output: 2.50
+    gemini-2.5-pro:
+      input: 1.25
+      output: 10.00
+
+qa_agent:
+  # 호출 1회에 주입할 QA 규칙 발췌 상한 (문자). 규칙 전문은 약 30KB이고 대부분 무관하다.
+  rule_char_budget: 5000
+  # AI에 보낼 TC 후보 상한. 전체 TC(제품당 수천 건)를 보내지 않는다.
+  tc_candidate_limit: 40
+  # 모델 등급을 고정하려면 light / standard / complex 중 하나를 넣는다. 빈 값이면 자동 선택.
+  force_model_tier: ""

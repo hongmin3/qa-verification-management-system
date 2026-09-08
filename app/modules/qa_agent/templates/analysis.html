@@ -1,0 +1,285 @@
+{% extends "module_base.html" %}
+{% block main_class %}wide{% endblock %}
+{% macro evidence_list(items) %}
+  {% if items %}
+  <ul class="evidence">
+    {% for item in items %}
+    <li class="{% if not item.can_support_expected %}weak{% endif %}">
+      <b>{{ item.citation }}</b> · {{ item.level_label }}{% if item.match_reason %} · {{ item.match_reason }}{% endif %}
+      {% if item.excerpt %}<div class="mono">{{ item.excerpt[:220] }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="no-evidence">근거 없음 — 규칙 §55에 따라 이 판정만으로 확정하지 않습니다.</p>
+  {% endif %}
+{% endmacro %}
+{% macro qa_action(job_id, kind, label, approvals, qa_decisions) %}
+  {% set current = approvals.get(kind ~ '|' ~ label) %}
+  <form method="post" action="/qa-agent/analyses/{{ job_id }}/approve" style="display:flex;gap:8px;align-items:center;margin-top:10px">
+    <input type="hidden" name="claim_kind" value="{{ kind }}">
+    <input type="hidden" name="claim_label" value="{{ label }}">
+    <select name="qa_decision" style="padding:6px">
+      {% for key, text in qa_decisions.items() %}<option value="{{ key }}" {% if current and current.qa_decision == key %}selected{% endif %}>{{ text }}</option>{% endfor %}
+    </select>
+    <input type="text" name="qa_note" placeholder="사유 (선택)" value="{{ current.qa_note if current else '' }}" style="padding:6px;flex:1">
+    <button type="submit" style="padding:7px 12px;font-size:13px">기록</button>
+    {% if current %}<span class="pill">{{ qa_decisions.get(current.qa_decision, current.qa_decision) }} · {{ current.updated_at[:16] }}</span>{% endif %}
+  </form>
+{% endmacro %}
+{% block content %}
+{% set tab = request.query_params.get('tab', 'issue') %}
+<section>
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:baseline">
+    <h2 style="margin:0">
+      {{ issue.issue_id or result.issue_id }}
+      <span class="badge {{ analysis.status }}">{{ analysis.status }}</span>
+      {% if result.status == 'GATE_BLOCKED' %}<span class="pill HIGH">Gate 차단 — AI 호출 0회</span>{% endif %}
+      {% if result.draft_only %}<span class="pill MEDIUM">초안 모드</span>{% endif %}
+    </h2>
+    <span class="hint">
+      {{ result.product }} · {{ issue.type_label or '유형 미분류' }}
+      {% if result.rule_revisions %} · 규칙 {{ result.rule_revisions.values()|reject('equalto','')|list|first or 'Rev 미표기' }}{% endif %}
+      · AI 호출 {{ result.request_count or 0 }}회{% if result.cache_hit %} (캐시){% endif %}
+      {% if result.token_usage and result.token_usage.total_tokens %} · {{ '{:,}'.format(result.token_usage.total_tokens) }} 토큰{% endif %}
+      {% if result.elapsed_seconds %} · {{ result.elapsed_seconds }}초{% endif %}
+    </span>
+  </div>
+  {% if issue.title %}<p class="hint" style="margin-top:6px">{{ issue.title }}{% if issue.portal_url %} · <a href="{{ issue.portal_url }}" target="_blank" rel="noopener">Polarion에서 열기</a>{% endif %}</p>{% endif %}
+  {% if result.scope_note %}<p class="status">제한된 범위 기준: <b>{{ result.scope_note }}</b> (규칙 §4)</p>{% endif %}
+
+  <div class="gatebar">
+    {% for code in ['G1','G2','G3','G4','G5'] %}
+    {% set gate = gates.get(code) %}
+    <div class="gate {{ gate.status if gate else 'PENDING' }}">
+      <b>{{ code }} {{ gate.title if gate else '' }}</b>
+      <span>{{ gate.status if gate else 'PENDING' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if result.blocking_reasons %}
+  <div class="status">
+    <b>진행하지 못한 이유</b>
+    <ul>{% for reason in result.blocking_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    <p class="hint">규칙 §53 최종 중단 조건에 해당해 완성형 산출물을 확정하지 않았습니다. 위 항목을 채우고 다시 실행하세요.</p>
+  </div>
+  {% endif %}
+
+  <div class="tabs">
+    {% for key, text in [('issue','Issue'),('spec','Specification'),('tc','TC Coverage'),('regression','Regression'),('gates','Gate 상세'),('action','QA Action')] %}
+    <a href="?tab={{ key }}" class="{% if tab == key %}active{% endif %}">{{ text }}</a>
+    {% endfor %}
+  </div>
+
+  {% if tab == 'issue' %}
+  <h3>Issue 구조화 결과</h3>
+  <dl class="kv">
+    <dt>유형</dt><dd>{{ issue.type_label }}{% if issue.needs_type_confirmation %} <span class="pill MEDIUM">QA 확정 필요</span>{% endif %} <span class="hint">(연구소 검토 결과: <code>{{ issue.lab_review_result or '없음' }}</code>)</span></dd>
+    {% if issue.type_candidates and issue.type_candidates|length > 1 %}<dt>유형 후보</dt><dd>{{ issue.type_candidates|join(' 또는 ') }}</dd>{% endif %}
+    <dt>발생 버전</dt><dd>{{ issue.occurred_versions|join(', ') or '—' }}</dd>
+    <dt>목표 버전</dt><dd>{{ issue.target_versions|join(', ') or '—' }}</dd>
+    <dt>재현 빈도</dt><dd>{{ issue.occurrence_frequency or '—' }}</dd>
+    <dt>연결 SRS</dt><dd>{{ issue.linked_srs|join(', ') or '—' }}</dd>
+    <dt>연결 Issue</dt><dd>{{ issue.linked_issues|join(', ') or '—' }}</dd>
+    <dt>표준 형식 본문</dt><dd>{% if issue.has_standard_body %}예{% else %}<b>아니오</b> — Step/Expected/Actual 구획이 일부 없습니다{% endif %}</dd>
+    <dt>Runtime TC 자동생성</dt><dd>{% if issue.blocks_auto_runtime_tc %}<b>차단</b> — {{ issue.type_label }} 유형은 요구받지 않으면 만들지 않습니다 (규칙 §6){% else %}허용{% endif %}</dd>
+  </dl>
+
+  <h3>Precondition · Step · Expected · Actual</h3>
+  <div class="grid">
+    <div>
+      <div class="claim"><div class="claim-head"><b>Precondition</b></div>{% for line in issue.precondition %}<p>{{ line }}</p>{% endfor %}{% if not issue.precondition %}<p class="hint">없음</p>{% endif %}</div>
+      <div class="claim"><div class="claim-head"><b>Step</b></div><ol style="margin:8px 0 0;padding-left:20px">{% for line in issue.steps %}<li>{{ line }}</li>{% endfor %}</ol>{% if not issue.steps %}<p class="hint">없음</p>{% endif %}</div>
+    </div>
+    <div>
+      <div class="claim"><div class="claim-head"><b>Expected Result</b></div>{% for line in issue.expected %}<p>{{ line }}</p>{% endfor %}{% if not issue.expected %}<p class="hint">없음</p>{% endif %}</div>
+      <div class="claim"><div class="claim-head"><b>Actual Result</b></div>{% for line in issue.actual %}<p>{{ line }}</p>{% endfor %}{% if not issue.actual %}<p class="hint">없음</p>{% endif %}</div>
+    </div>
+  </div>
+
+  <h3>발생원인 · 조치내역 <span class="hint">규칙 §7에 따라 이 두 항목은 탐색 단서이고 단독 Expected 근거가 아닙니다.</span></h3>
+  <div class="claim"><div class="claim-head"><b>발생원인</b></div><p>{{ issue.occurrence_cause or '—' }}</p></div>
+  <div class="claim"><div class="claim-head"><b>조치내역</b></div><p>{{ issue.action_details or '—' }}</p></div>
+
+  {% set analysis_claims = decision.issue_analysis %}
+  {% if analysis_claims %}
+  <h3>AI 의미 분석 (S01)</h3>
+  <dl class="kv">
+    <dt>Trigger</dt><dd>{{ analysis_claims.trigger|join(' / ') or '—' }}</dd>
+    <dt>Root Cause</dt><dd>{{ analysis_claims.root_cause_summary or '—' }}</dd>
+    <dt>수정 대상</dt><dd>{{ analysis_claims.change_target or '—' }}</dd>
+    <dt>Before → After</dt><dd>{{ analysis_claims.before or '—' }} → {{ analysis_claims.after or '—' }}</dd>
+  </dl>
+  {% endif %}
+
+  {% if issue.body_images or issue.attachments %}
+  <h3>첨부 <span class="hint">이미지는 AI가 판정하지 않습니다 — 사람이 원본을 확인해야 합니다.</span></h3>
+  <ul>
+    {% for name in issue.body_images %}<li>본문 이미지: <code>{{ name }}</code></li>{% endfor %}
+    {% for name in issue.attachments %}<li>첨부: <code>{{ name }}</code></li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <h3>검색에 사용한 키 (규칙 §9.1)</h3>
+  <p>{% for term in issue.search_terms %}<span class="pill">{{ term }}</span> {% endfor %}{% if not issue.search_terms %}<span class="hint">없음</span>{% endif %}</p>
+
+  {% elif tab == 'spec' %}
+  <h3>사양 근거 검색 결과</h3>
+  {% if retrieval.specification %}
+  <p class="hint">정확 일치 <b>{{ retrieval.specification.exact }}</b>건 + 용어 유사도 <b>{{ retrieval.specification.bm25 }}</b>건 = 총 {{ retrieval.specification.total }}건 (BM25 예산 {{ retrieval.specification.bm25_budget }})</p>
+  {% endif %}
+  {% set spec_claims = (evidence.claims or [])|selectattr('kind','equalto','spec_trace')|list %}
+  {% if spec_claims %}
+  {% for claim in spec_claims %}
+  <div class="claim">
+    <div class="claim-head"><b>{{ claim.label }}</b><span class="pill">{{ claim.text.split(' — ')[0] }}</span></div>
+    <p>{{ claim.text }}</p>
+    {{ evidence_list(claim.evidence) }}
+    {{ qa_action(analysis.id, 'spec_trace', claim.label, approvals, qa_decisions) }}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="hint">사양 관련도 판정이 없습니다 (Gate에서 멈췄거나 근거를 찾지 못했습니다).</p>
+  {% endif %}
+
+  {% elif tab == 'tc' %}
+  <h3>기존 TC Coverage 판정 (S03)</h3>
+  {% if retrieval.testcase %}<p class="hint">TC 후보 {{ retrieval.testcase.total }}건 (정확 일치 {{ retrieval.testcase.exact }}건)</p>{% endif %}
+  {% set tc_claims = (evidence.claims or [])|selectattr('kind','equalto','tc_coverage')|list %}
+  {% for entry in decision.tc_coverage or [] %}
+  {% set claim = (tc_claims|selectattr('label','equalto',entry.tc_id)|list|first) %}
+  <div class="claim">
+    <div class="claim-head">
+      <b>{{ entry.tc_id }}</b>
+      <span>
+        <span class="pill {% if entry.judgment == 'KEEP' %}LOW{% else %}MEDIUM{% endif %}">{{ judgments.get(entry.judgment, entry.judgment) }}</span>
+        <span class="pill">Root Cause 검출 {% if entry.covers_root_cause %}가능{% else %}불가{% endif %}</span>
+        <span class="pill">confidence {{ '%.2f'|format(entry.confidence) }}</span>
+      </span>
+    </div>
+    <p>{{ entry.reason or '판정 근거가 비어 있습니다.' }}</p>
+    {{ evidence_list(claim.evidence if claim else []) }}
+    {% if entry.judgment != 'KEEP' %}<p class="hint">규칙 §55에 따라 실제 TC는 자동으로 바꾸지 않습니다. QA 승인 후 반영하세요.</p>{% endif %}
+    {{ qa_action(analysis.id, 'tc_coverage', entry.tc_id, approvals, qa_decisions) }}
+  </div>
+  {% endfor %}
+  {% if not decision.tc_coverage %}<p class="hint">TC 판정이 없습니다.</p>{% endif %}
+
+  {% elif tab == 'regression' %}
+  <h3>Regression 영향 Matrix (S05, 규칙 §32)</h3>
+  <p class="hint">축은 코드가 고정합니다. 해당하지 않는 축도 “검토했으나 해당 없음”으로 남깁니다.</p>
+  {% set regression_claims = (evidence.claims or [])|selectattr('kind','equalto','regression')|list %}
+  {% for entry in decision.regression_areas or [] %}
+  {% set label = axes.get(entry.axis, entry.axis) %}
+  {% set claim = (regression_claims|selectattr('label','equalto',label)|list|first) %}
+  <div class="claim {% if not entry.applicable %}axis-off{% endif %}">
+    <div class="claim-head">
+      <b>{{ label }}</b>
+      <span>
+        {% if entry.applicable %}<span class="pill {{ entry.priority }}">{{ entry.priority }}</span>{% else %}<span class="pill">해당 없음</span>{% endif %}
+      </span>
+    </div>
+    {% if entry.applicable %}
+    <dl class="kv" style="margin-top:8px">
+      <dt>Trigger</dt><dd>{{ entry.trigger or '—' }}</dd>
+      <dt>Expected</dt><dd>{{ entry.expected or '—' }}</dd>
+      <dt>관련 TC</dt><dd>{{ entry.related_tc_ids|join(', ') or '—' }}</dd>
+    </dl>
+    {% endif %}
+    <p>{{ entry.reason or '' }}</p>
+    {% if entry.applicable %}{{ evidence_list(claim.evidence if claim else []) }}{{ qa_action(analysis.id, 'regression', label, approvals, qa_decisions) }}{% endif %}
+  </div>
+  {% endfor %}
+  {% if not decision.regression_areas %}<p class="hint">Regression 판정이 없습니다.</p>{% endif %}
+
+  {% elif tab == 'gates' %}
+  <h3>Gate 판정 상세</h3>
+  {% for code in ['G1','G2','G3','G4','G5'] %}
+  {% set gate = gates.get(code) %}
+  {% if gate %}
+  <div class="claim">
+    <div class="claim-head"><b>{{ code }} {{ gate.title }}</b><span class="pill {% if gate.status == 'BLOCK' %}HIGH{% elif gate.status == 'PASS' %}LOW{% else %}MEDIUM{% endif %}">{{ gate.status }}</span></div>
+    {% if gate.notes %}
+    <ul class="evidence">
+      {% for note in gate.notes %}
+      <li class="{% if note.severity != 'note' %}weak{% endif %}"><b>[{{ note.severity }}]</b> {{ note.message }}{% if note.rule_ref %} <span class="hint">({{ note.rule_ref }})</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="hint">기록 없음</p>{% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% if validation and (validation.dropped_tc_ids or validation.dropped_chunk_ids or validation.dropped_axes or validation.downgraded_tc_ids or validation.step_number_mismatches) %}
+  <h3>ID 교차검증에서 걸러낸 것</h3>
+  <p class="hint">모델이 만든 ID를 그대로 믿지 않습니다. 걸러낸 항목을 숨기지 않고 남깁니다.</p>
+  <ul>
+    {% if validation.dropped_tc_ids %}<li>존재하지 않는 TC ID {{ validation.dropped_tc_ids|length }}건: <code>{{ validation.dropped_tc_ids|join(', ') }}</code></li>{% endif %}
+    {% if validation.dropped_chunk_ids %}<li>존재하지 않는 근거 Chunk ID {{ validation.dropped_chunk_ids|length }}건</li>{% endif %}
+    {% if validation.dropped_axes %}<li>정의되지 않은 Regression 축: <code>{{ validation.dropped_axes|join(', ') }}</code></li>{% endif %}
+    {% if validation.downgraded_tc_ids %}<li>근거가 없어 confidence를 내린 TC: <code>{{ validation.downgraded_tc_ids|join(', ') }}</code></li>{% endif %}
+    {% for message in validation.step_number_mismatches %}<li>{{ message }} (규칙 §14)</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if decision.unresolved_questions %}
+  <h3>AI가 더 필요하다고 본 정보</h3>
+  <ul>{% for question in decision.unresolved_questions %}<li>{{ question }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% elif tab == 'action' %}
+  <h3>QA Action</h3>
+  <p class="hint">규칙 §19에 따라 다음은 QA 승인이 필수입니다 — TC 실제 변경, SRS Link 확정, Pass/Fail, Issue Close, 새로운 결함 확정, Release 승인.</p>
+  {% if evidence.summary %}
+  <dl class="kv">
+    <dt>판정 수</dt><dd>{{ evidence.summary.claims }}건</dd>
+    <dt>근거 없는 판정</dt><dd>{% if evidence.summary.unsourced %}<b style="color:#991b1b">{{ evidence.summary.unsourced }}건</b>{% else %}0건{% endif %}</dd>
+    <dt>근거 수준 분포</dt><dd>{% for level, count in (evidence.summary.evidence_by_level or {}).items() %}<span class="pill">{{ level }} {{ count }}</span> {% endfor %}</dd>
+  </dl>
+  {% endif %}
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>구분</th><th>대상</th><th>AI 판정</th><th>근거</th><th>QA 결정</th></tr></thead>
+      <tbody>
+        {% for claim in evidence.claims or [] %}
+        <tr>
+          <td>{{ claim.kind }}</td>
+          <td><b>{{ claim.label }}</b></td>
+          <td>{{ claim.findings|join(', ') or claim.text[:60] }}</td>
+          <td>{{ claim.evidence|length }}건{% if not claim.evidence %} <span class="pill HIGH">없음</span>{% endif %}</td>
+          <td>
+            {% set current = approvals.get(claim.kind ~ '|' ~ claim.label) %}
+            {% if current %}<span class="pill">{{ qa_decisions.get(current.qa_decision, current.qa_decision) }}</span>{% if current.qa_note %}<div class="hint">{{ current.qa_note }}</div>{% endif %}{% else %}<span class="hint">미결정</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if approval_stats and approval_stats.total %}
+  <p class="hint">최근 {{ approval_stats.days }}일 QA 결정 {{ approval_stats.total }}건 · AI 결과 수정률 {{ '%.1f'|format(approval_stats.revision_rate * 100) }}% (규칙 §21 품질 지표)</p>
+  {% endif %}
+  {% endif %}
+
+  {% if audit %}
+  <details class="audit">
+    <summary>Gemini에 실제로 보낸 것 / 받은 것 (감사)</summary>
+    <p class="hint">
+      프롬프트 {{ '{:,}'.format(audit.user_prompt_chars or 0) }}자 · 주입한 규칙 발췌 {{ '{:,}'.format(audit.system_suffix_chars or 0) }}자
+      · {{ audit.prompt_name }} v{{ audit.prompt_version }} · {{ audit.model }}{% if audit.cache_hit %} · 캐시 적중{% endif %}
+    </p>
+    <h4>System Instruction</h4><pre>{{ audit.system_instruction }}</pre>
+    <h4>주입한 규칙 발췌 (제품 규칙 문서에서 이 Skill 절만)</h4><pre>{{ audit.system_suffix or '(없음)' }}</pre>
+    <h4>보낸 입력 JSON</h4><pre>{{ audit.user_prompt }}</pre>
+    <h4>받은 응답 JSON</h4><pre>{{ audit.response | tojson(indent=2) }}</pre>
+  </details>
+  {% endif %}
+
+  <p class="hint" style="margin-top:18px">
+    <a href="/qa-agent/analyses/{{ analysis.id }}/export">결과 JSON 내려받기</a> ·
+    <a href="/qa-agent/analyses">분석 이력</a> ·
+    <a href="/qa-agent">새 분석</a>
+  </p>
+</section>
+{% endblock %}
