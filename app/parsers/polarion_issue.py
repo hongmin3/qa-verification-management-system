@@ -272,7 +272,7 @@ def classify_issue_type(lab_review_result: str) -> tuple[str, tuple[str, ...]]:
 
 
 def _short_id(raw: object) -> str:
-    """`VXvue/VP-6573` -> `VP-6573`, `VXvue/VXvue_1_1_0_001` -> `VXvue_1_1_0_001`."""
+    """`VXvue/VP-1234` -> `VP-1234`, `VXvue/VXvue_1_1_0_001` -> `VXvue_1_1_0_001`."""
     value = str(raw or "")
     return value.rsplit("/", 1)[-1] if value else ""
 

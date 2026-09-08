@@ -384,7 +384,7 @@ Evidence Pack 조립 → mask_text(prompt) + mask_text(system_suffix) → Gemini
 | UNC / 로컬 절대 경로 | `[NETWORK_PATH]` / `[LOCAL_PATH]` |
 
 **마스킹하면 안 되는 것**이 더 위험하다. 버전이나 ErrorCode가 가려지면 분석 자체가
-불가능해진다. 다음은 보호한다: Work Item ID(`VP-6573`), SRS ID, 16진(`0x1234`), DICOM
+불가능해진다. 다음은 보호한다: Work Item ID(`VP-1234`), SRS ID, 16진(`0x1234`), DICOM
 Tag(`(0008,0018)`), `V`로 시작하는 버전(`V1.0.11`).
 
 설계상 주의 두 가지:

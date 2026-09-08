@@ -41,7 +41,7 @@ def _exact() -> ExactRetriever[Chunk]:
 
 
 def test_identifier_patterns_are_recognised() -> None:
-    for term in ("AP-5500", "VP-6573", "SRS-1200", "0x1234", "(0008,0018)"):
+    for term in ("AP-5500", "VP-1234", "SRS-1200", "0x1234", "(0008,0018)"):
         assert is_identifier(term), term
 
 

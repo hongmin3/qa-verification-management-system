@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 # IPv4(`10.13.0.222`)까지 함께 보호돼 IP 가 그대로 나간다. 버전과 IP 의 구분은 `ip` 규칙의
 # `skip_if` 가 한다.
 KEEP_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\b[A-Z]{2,5}-\d{1,6}\b"),  # VP-6573, SRS-1234
+    re.compile(r"\b[A-Z]{2,5}-\d{1,6}\b"),  # VP-1234, SRS-1234
     re.compile(r"\b0[xX][0-9A-Fa-f]+\b"),  # 0x1234
     re.compile(r"\(\s*[0-9A-Fa-f]{4}\s*,\s*[0-9A-Fa-f]{4}\s*\)"),  # DICOM Tag
     re.compile(r"\b[Vv]\d+(?:\.\d+)+(?:[A-Za-z]\d*)?\b"),  # V1.0.11 (v 접두사가 붙은 것만)

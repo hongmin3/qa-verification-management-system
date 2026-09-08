@@ -24,7 +24,7 @@ def _mask(text: str) -> str:
 @pytest.mark.parametrize(
     ("text", "placeholder"),
     [
-        ("문의: hong.min@example.com 로 회신", "[EMAIL]"),
+        ("문의: user@example.com 로 회신", "[EMAIL]"),
         ("장비 IP 192.168.10.25 에 접속", "[IP_ADDRESS]"),
         ("Patient ID: P20260908-77 조회", "[PATIENT_ID]"),
         ("환자번호 1234567 로 검색", "[PATIENT_ID]"),
@@ -46,8 +46,8 @@ def test_sensitive_values_are_replaced(text: str, placeholder: str) -> None:
 
 
 def test_original_value_is_gone_not_just_annotated() -> None:
-    masked = _mask("문의: hong.min@example.com")
-    assert "hong.min@example.com" not in masked
+    masked = _mask("문의: user@example.com")
+    assert "user@example.com" not in masked
 
 
 def test_sentence_structure_is_kept() -> None:
@@ -63,7 +63,7 @@ def test_sentence_structure_is_kept() -> None:
 @pytest.mark.parametrize(
     "text",
     [
-        "VP-6573 재현 확인",
+        "VP-1234 재현 확인",
         "SRS-1234 로그인 사양",
         "Command 0x30402 요청",
         "DICOM Attribute (0008,0018) 확인",
@@ -111,7 +111,7 @@ def test_report_does_not_contain_the_original_values() -> None:
 
 
 def test_clean_text_reports_nothing_applied() -> None:
-    text = "VP-6573 의 Root Cause 를 확인한다"
+    text = "VP-1234 의 Root Cause 를 확인한다"
     masked, report = mask_text(text)
     assert masked == text
     assert report.applied is False
@@ -128,14 +128,14 @@ def test_empty_text_is_safe() -> None:
 
 def test_payload_is_masked_recursively() -> None:
     payload = {
-        "issue": {"title": "hong@example.com 로 회신 요청", "steps": ["Patient ID: P1 조회", "VP-6573 재현"]},
+        "issue": {"title": "user@example.com 로 회신 요청", "steps": ["Patient ID: P1 조회", "VP-1234 재현"]},
         "count": 3,
         "flags": [True, None],
     }
     masked, report = mask_payload(payload)
     assert "[EMAIL]" in masked["issue"]["title"]
     assert "[PATIENT_ID]" in masked["issue"]["steps"][0]
-    assert masked["issue"]["steps"][1] == "VP-6573 재현"
+    assert masked["issue"]["steps"][1] == "VP-1234 재현"
     assert masked["count"] == 3
     assert masked["flags"] == [True, None]
     assert report.counts == {"email": 1, "patient_id": 1}
