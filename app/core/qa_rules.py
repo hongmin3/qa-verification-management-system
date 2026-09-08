@@ -175,11 +175,20 @@ class RuleSection:
     body: str
     skills: tuple[str, ...] = ()
     gates: tuple[str, ...] = ()
+    # 상위 절의 번호. 번호 없는 하위 절(§32의 `직접`/`상태`)이 어느 절에 속하는지 잃지 않기
+    # 위해 기록한다. 근거 인용과 규칙 구현현황 대조에 쓴다.
+    parent_number: str = ""
 
     @property
     def anchor(self) -> str:
         """근거로 인용할 때 쓰는 식별자. `VXvue TC 가이드#32` 형태."""
         return f"{self.document}#{self.number or self.title}"
+
+    @property
+    def top_number(self) -> str:
+        """최상위 절 번호. `3.1` -> `3`, 번호 없는 하위 절은 부모의 최상위 번호."""
+        source = self.number or self.parent_number
+        return source.split(".")[0] if source else ""
 
     @property
     def heading(self) -> str:
@@ -354,9 +363,11 @@ def parse_rule_document(text: str, name: str, kind: str, path: str = "") -> Rule
     buffer: list[str] = []
     # 레벨 → 그 레벨 제목이 가진 태그. 하위 절이 태그를 못 얻으면 여기서 물려받는다.
     tag_stack: dict[int, tuple[tuple[str, ...], tuple[str, ...]]] = {}
+    # 레벨 → 그 레벨 제목의 절 번호. 번호 없는 하위 절이 부모를 잃지 않게 한다.
+    number_stack: dict[int, str] = {}
 
     def flush() -> None:
-        nonlocal tag_stack
+        nonlocal tag_stack, number_stack
         if current is None:
             return
         body = "\n".join(buffer).strip()
@@ -366,9 +377,15 @@ def parse_rule_document(text: str, name: str, kind: str, path: str = "") -> Rule
             if tag_stack[parent_level][0] or tag_stack[parent_level][1]:
                 inherited = tag_stack[parent_level]
                 break
+        parent_number = next(
+            (number_stack[key] for key in sorted((k for k in number_stack if k < level), reverse=True) if number_stack[key]),
+            "",
+        )
         skills, gates = _tag_section(current["title"], body, inherited)
         tag_stack = {key: value for key, value in tag_stack.items() if key < level}
         tag_stack[level] = (skills, gates)
+        number_stack = {key: value for key, value in number_stack.items() if key < level}
+        number_stack[level] = current["number"] or parent_number
         # 본문이 없는 절은 하위 절을 묶는 컨테이너 제목이다. 태그는 위에서 물려주되
         # 프롬프트에 넣을 내용이 없으므로 절 목록에는 담지 않는다.
         if not body:
@@ -382,6 +399,7 @@ def parse_rule_document(text: str, name: str, kind: str, path: str = "") -> Rule
                 body=body,
                 skills=skills,
                 gates=gates,
+                parent_number=parent_number,
             )
         )
 
