@@ -31,6 +31,11 @@ DEFAULTS: dict[str, str] = {
     # 하위 서비스(매뉴얼 서버) 조회용 전용 계정. 비어 있으면 연동 자체가 비활성이다.
     "manual_hub_user": "",
     "manual_hub_password": "",
+    # 운영 알림 (app/core/notifier.py). 비어 있으면 알림이 꺼진 채로 동작한다.
+    # 개인 메일 주소는 공개 저장소에 커밋하지 않으므로 여기(secrets)에 둔다.
+    "notify_email_to": "",
+    "smtp_user": "",
+    "smtp_password": "",
 }
 
 # 정규화된 이름(영숫자 소문자만) -> 표준 키
@@ -47,6 +52,14 @@ ALIASES: dict[str, str] = {
     "manualhubloginid": "manual_hub_user",
     "manualhubpassword": "manual_hub_password",
     "manualhubpw": "manual_hub_password",
+    "notifyemailto": "notify_email_to",
+    "notifyemail": "notify_email_to",
+    "alertemail": "notify_email_to",
+    "emailto": "notify_email_to",
+    "smtpuser": "smtp_user",
+    "smtpid": "smtp_user",
+    "smtppassword": "smtp_password",
+    "smtppw": "smtp_password",
 }
 
 # 예제 파일을 그대로 둔 경우를 미입력으로 취급하기 위한 표시값

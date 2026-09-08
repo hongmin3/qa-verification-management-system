@@ -395,3 +395,98 @@ def test_real_knowledge_dir_selects_one_file_per_logical_document() -> None:
         assert asset.logical_id not in seen, f"논리 문서 중복: {asset.file_name} vs {seen[asset.logical_id]}"
         seen[asset.logical_id] = asset.file_name
     assert json.dumps(scan.counts(), ensure_ascii=False)
+
+
+# --- 마운트에서 오는 한글 파일명 -----------------------------------------------
+# 운영 서버가 지식 폴더를 네트워크 마운트로 보면 한글 파일명이 NFD 로 분해되거나
+# iocharset 오설정으로 깨져 온다. 그대로 두면 패턴이 하나도 맞지 않아 **모든 파일이
+# unknown 으로 빠진다** — 조용히 실패하는 종류의 문제라 테스트로 고정한다.
+
+import unicodedata  # noqa: E402
+
+from app.core.product_knowledge import normalize_file_name  # noqa: E402
+
+_NFC_NAME = "(사양서) Acme 사양서1(260907).pdf"
+
+
+def test_nfd_name_is_recombined_silently() -> None:
+    """macOS·일부 SMB 구현이 한글을 자모로 분해해 넘긴다. 정보 손실이 없어 조용히 합친다."""
+    nfd = unicodedata.normalize("NFD", _NFC_NAME)
+    assert nfd != _NFC_NAME
+    fixed, note = normalize_file_name(nfd)
+    assert fixed == _NFC_NAME
+    assert "NFD" in note
+
+
+def test_nfd_name_is_classified_correctly() -> None:
+    nfd = unicodedata.normalize("NFD", _NFC_NAME)
+    assert classify(nfd) == KIND_SPECIFICATION
+
+
+def test_nfd_name_parses_the_same_as_nfc() -> None:
+    nfd = unicodedata.normalize("NFD", _NFC_NAME)
+    assert parse_asset_name(nfd) == parse_asset_name(_NFC_NAME)
+
+
+@pytest.mark.parametrize(("read_as", "actual"), [("latin-1", "cp949"), ("latin-1", "utf-8")])
+def test_mojibake_name_is_recovered_with_a_note(read_as: str, actual: str) -> None:
+    """`iocharset` 오설정으로 깨진 이름을 되살리되, 마운트를 고쳐야 하므로 메모를 남긴다."""
+    broken = _NFC_NAME.encode(actual).decode(read_as)
+    fixed, note = normalize_file_name(broken)
+    assert fixed == _NFC_NAME
+    assert "iocharset" in note
+
+
+def test_mojibake_name_is_classified_correctly() -> None:
+    broken = _NFC_NAME.encode("cp949").decode("latin-1")
+    assert classify(broken) == KIND_SPECIFICATION
+
+
+def test_english_name_is_never_touched() -> None:
+    """원래 한글이 없는 파일명을 복구하려 들면 정상 이름을 망가뜨린다."""
+    name = "(매뉴얼) Acme Operation Manual.V1.0.11_EN.pdf"
+    fixed, note = normalize_file_name(name)
+    assert fixed == name
+    assert note == ""
+
+
+def test_unrecoverable_name_is_reported_not_silently_dropped() -> None:
+    name = "\ufffd\ufffd\ufffd\ufffd\ufffd.pdf"
+    fixed, note = normalize_file_name(name)
+    assert "복구하지 못했습니다" in note or note == ""
+
+
+def test_scan_uses_the_normalised_name(tmp_path: Path) -> None:
+    """수집 사본은 깨끗한 NFC 이름을 갖는다. 원본 경로는 그대로 읽는다."""
+    source = tmp_path / "지식"
+    _write(source, unicodedata.normalize("NFD", "(사양서) Acme 사양서1(260907).md"))
+
+    scan = scan_source(_config(source))
+
+    assert len(scan.selected) == 1
+    asset = scan.selected[0]
+    assert asset.file_name == "(사양서) Acme 사양서1(260907).md"
+    assert asset.kind == KIND_SPECIFICATION
+    assert Path(asset.source_path).is_file()
+
+
+def test_ignore_pattern_matches_nfd_names(tmp_path: Path) -> None:
+    """`[자동화*` 처럼 한글이 든 제외 패턴이 NFD 이름에 맞지 않으면 제외돼야 할 파일이 수집된다."""
+    source = tmp_path / "지식"
+    _write(source, "(사양서) Acme 사양서1(260907).md")
+    _write(source, unicodedata.normalize("NFD", "[자동화 운영 지침] Acme.md"))
+
+    scan = scan_source(_config(source, ignore=["[자동화*"]))
+
+    assert [asset.file_name for asset in scan.assets] == ["(사양서) Acme 사양서1(260907).md"]
+
+
+def test_sync_writes_the_normalised_name(tmp_path: Path) -> None:
+    source = tmp_path / "지식"
+    _write(source, unicodedata.normalize("NFD", "(사양서) Acme 사양서1(260907).md"), "본문")
+    root = tmp_path / "project"
+
+    outcome = sync_product(_config(source), root=root)
+
+    assert outcome.status == "SUCCESS"
+    assert (product_dir("Acme Viewer", root) / "original" / "specification" / "(사양서) Acme 사양서1(260907).md").is_file()

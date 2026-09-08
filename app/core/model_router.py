@@ -23,17 +23,23 @@ TIER_STANDARD = "standard"
 TIER_COMPLEX = "complex"
 
 # 이 저장소가 쓰는 모델. `config.yaml` `models.<tier>` 로 덮어쓸 수 있다.
+# 코드 기본값. 실제 값은 config.yaml `models.*` 가 이긴다 (거기 실측 근거가 적혀 있다).
+# Pro 계열을 상위 등급으로 두지 않는다 — thinking 을 끌 수 없고, 같은 입력으로 비교했을 때
+# 근거 없이 판정을 단정해 결과가 더 나빴다.
 DEFAULT_MODELS = {
-    TIER_LIGHT: "gemini-2.5-flash-lite",
-    TIER_STANDARD: "gemini-2.5-flash",
-    TIER_COMPLEX: "gemini-2.5-pro",
+    TIER_LIGHT: "gemini-3.1-flash-lite",
+    TIER_STANDARD: "gemini-3.5-flash",
+    TIER_COMPLEX: "gemini-3.5-flash",
 }
 
 # 1M 토큰당 USD. `config.yaml` `models.pricing.<model>` 로 덮어쓴다.
 DEFAULT_PRICING: dict[str, dict[str, float]] = {
+    "gemini-3.1-flash-lite": {"input": 0.10, "output": 0.40},
     "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
     "gemini-2.5-flash": {"input": 0.30, "output": 2.50},
+    "gemini-3.5-flash": {"input": 0.30, "output": 2.50},
     "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
+    "gemini-3.1-pro-preview": {"input": 1.25, "output": 10.00},
 }
 
 TIER_LABELS = {TIER_LIGHT: "경량 (요약·분류)", TIER_STANDARD: "기본 QA 판단", TIER_COMPLEX: "복잡한 교차검증"}

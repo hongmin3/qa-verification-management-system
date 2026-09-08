@@ -344,23 +344,45 @@ Skill별 규칙은 `system_suffix`로 그 Skill 절만 주입한다.
 
 | 등급 | 모델 | 조건 |
 |---|---|---|
-| light | `gemini-2.5-flash-lite` | 요약·분류·정형 추출 (현재 QA Agent는 사용하지 않음) |
-| standard | `gemini-2.5-flash` | 기본 |
-| complex | 설정값 | Root Cause 미명시 / 근거가 3개 이상 문서에 흩어짐 / API·DICOM·WebSocket 용어 / 연결 SRS 다수인데 exact 일치 0건 |
+| light | `gemini-3.1-flash-lite` | 요약·분류·정형 추출 (현재 QA Agent는 사용하지 않음) |
+| standard | `gemini-3.5-flash` | 기본 |
+| complex | `gemini-3.5-flash` | Root Cause 미명시 / 근거가 3개 이상 문서에 흩어짐 / API·DICOM·WebSocket 용어 / 연결 SRS 다수인데 exact 일치 0건 |
 
-라우팅 결정과 **이유**가 결과에 남는다.
+라우팅 결정과 **이유**가 결과에 남는다. 두 등급이 같은 모델이어도 판정은 기록된다 —
+나중에 상위 등급을 바꿀 때 어떤 케이스가 complex로 분류됐는지 근거가 남기 때문이다.
 
-> **실측 제약.** `gemini-2.5-pro` 호출이 404로 실패했다 — "This model is no longer available
-> to new users. Please update to `gemini-3.1-pro-preview`". 상위 등급 모델이 계정에서 막혀
-> 있어 분석 전체가 실패하는 것은 환경 문제이므로, 기본 모델로 한 번 물러나고 물러났다는
-> 사실(`requested`/`used`/`reason`)을 audit에 남긴다. `config.yaml`의 `models.complex`
-> 기본값은 검증된 `gemini-2.5-flash`로 두었다.
+### 모델 선택은 측정으로 정했다
+
+같은 Issue·같은 Evidence Pack을 여러 모델에 보내 비교했다 (`scripts/compare_models.py`,
+Issue 2건·3회 실행).
+
+| 모델 | out | thought | 시간 | TC 판정 | 판단 |
+|---|---|---|---|---|---|
+| `gemini-2.5-flash` | 5.3~5.6K | 0 | 24~26초 | 후보 40건 전부 판정, **`judgment` 필드에 관련도 값(`NOT_RELATED`/`RELATED`)을 넣음** | 스키마 혼동. 검증 계층이 전부 `SPEC_REVIEW`로 강등해 TC 판정을 쓸 수 없다 |
+| `gemini-3.1-pro-preview` | 5.3K | **10.0K** | **111초** | 근거 0건인데 40건 전부 `KEEP` | **가장 위험**. "문제 없다"는 오판. 느리고 비싸고 결과가 더 나빴다 |
+| `gemini-3.5-flash` | 2.2~2.3K | 0 | 10~11초 | 관련 2~3건만 선별, 유효한 값(`KEEP`/`MUST_UPDATE`) | 채택. 출력 58% 적고 2.4배 빠르고 46% 저렴 |
+
+### Pro 계열을 쓰지 않는 이유 (실측)
+
+1. **`gemini-2.5-pro`는 이 계정에서 404다.** "no longer available to new users" —
+   결제와 무관하고, 결제를 완료한 뒤에도 같다.
+2. **Pro 계열은 thinking을 끌 수 없다.** `thinking_budget=0`이 `400 Budget 0 is invalid.
+   This model only works in thinking mode`로 거부된다. 이 프로젝트는 `thinking_budget=0`이
+   전제다 — 파이프라인의 LLM 작업은 사전 압축된 근거에 대한 구조화 판정이라 내부 추론이
+   필요 없고, **thinking 토큰이 `max_output_tokens` 예산을 함께 소비해 JSON이 잘린다.**
+3. **길이 이점을 쓸 수 없다.** 입력이 이미 12~14K 토큰으로 압축돼 있어 긴 컨텍스트가 필요 없다.
+4. **어려운 부분이 LLM 몫이 아니다.** 근거 검색·ID 검증·Gate 판정은 코드가 한다.
+
+설정 실수로 Pro 계열을 넣어도 전체가 멈추지 않는다 — 코드가 thinking을 켜서 한 번 다시
+부르고 그 사실(`thinking_override`)을 audit에 남긴다. 모델이 404면 `models.standard` →
+`secrets.gemini_model` 순으로 물러난다.
 
 단가는 `config.yaml` `models.pricing`에 있다. 비용은 **추정치**이고 실제 청구는 Google
-콘솔이 기준이다.
+콘솔이 기준이다. `gemini-3.x` 단가는 공식 표를 확인해 채워야 한다 — 현재는 2.5-flash 기준
+잠정값이다.
 
-**참고 규모**: 실측 입력 12.1K 토큰 기준, 5명 × 하루 10건 × 월 20일 = 월 1,000건이면 Flash로
-월 수 달러 수준이다. 캐시 적중과 Gate 차단이 있으면 그보다 낮다.
+**참고 규모**: 실측 입력 14K·출력 2.2K 토큰 기준 건당 약 $0.010, 5명 × 하루 10건 × 월 20일
+= 월 1,000건이면 **월 $10 수준**이다. 캐시 적중과 Gate 차단이 있으면 그보다 낮다.
 
 ---
 

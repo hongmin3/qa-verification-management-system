@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
+from app.core.notifier import notify_for_error
 from app.core.prompt_manager import load_prompt
 from app.core.security_filter import MaskReport, mask_text
 from app.core.storage import Storage
@@ -19,10 +20,20 @@ from app.core.storage import Storage
 # 상태 코드(404/NOT_FOUND)와 대표 표현을 함께 본다.
 _MODEL_UNAVAILABLE_HINTS = ("not_found", "no longer available", "is not found", "not supported for", "does not exist")
 
+# Pro 계열은 thinking 을 끌 수 없다 (실측: `Budget 0 is invalid. This model only works in
+# thinking mode`). 이 프로젝트는 `thinking_budget=0` 이 전제이므로 그 모델을 설정하면 모든
+# 호출이 400 으로 실패한다. 설정 실수로 전체가 멈추지 않게 thinking 을 켜서 한 번 다시 부른다.
+_THINKING_REQUIRED_HINTS = ("budget 0 is invalid", "only works in thinking mode", "thinking_budget")
+
 
 def _is_model_unavailable(exc: Exception) -> bool:
     message = str(exc).casefold()
     return "404" in message or any(hint in message for hint in _MODEL_UNAVAILABLE_HINTS)
+
+
+def _requires_thinking(exc: Exception) -> bool:
+    message = str(exc).casefold()
+    return "400" in message and any(hint in message for hint in _THINKING_REQUIRED_HINTS)
 
 
 class GeminiClient:
@@ -48,9 +59,11 @@ class GeminiClient:
         self.last_model = self.settings.secrets.gemini_model
         #: 상위 등급 모델을 쓰지 못해 기본 모델로 물러난 경우의 기록. 조용히 바꾸지 않는다.
         self.model_fallback: dict | None = None
+        #: thinking 을 끌 수 없는 모델이라 켜서 호출한 경우의 기록 (토큰이 늘어난다).
+        self.thinking_override: dict | None = None
 
     @retry(retry=retry_if_exception_type((TimeoutError, ConnectionError)), stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10), reraise=True)
-    def _request(self, prompt: str, *, system_instruction: str, response_schema: type[BaseModel], temperature: float, max_output_tokens: int, thinking_budget: int, model: str) -> dict:
+    def _request(self, prompt: str, *, system_instruction: str, response_schema: type[BaseModel], temperature: float, max_output_tokens: int, thinking_budget: int | None, model: str) -> dict:
         self.request_count += 1
         if self.responder:
             return self.responder(prompt)
@@ -69,7 +82,8 @@ class GeminiClient:
                 max_output_tokens=max_output_tokens,
                 # Gemini 2.5의 내부 thinking 토큰이 max_output_tokens 예산을 함께 소비해 JSON이 잘리는
                 # 문제가 있었다. 구조화된 추출 작업이라 별도 추론 과정이 필요 없으므로 비활성화한다.
-                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+                # `None` 이면 이 설정을 보내지 않는다 — thinking 을 끌 수 없는 모델(Pro 계열)용 폴백.
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget) if thinking_budget is not None else None,
             ),
         )
         usage = getattr(response, "usage_metadata", None)
@@ -137,11 +151,48 @@ class GeminiClient:
                 model=self.last_model,
             )
         except Exception as exc:
-            # 상위 등급 모델이 계정에서 막혀 있는 경우가 실제로 있다 (`gemini-2.5-pro`는
-            # "no longer available to new users"). 환경 문제로 분석 전체를 실패시키지 않고
-            # 기본 모델로 한 번 물러난다 — 물러났다는 사실은 audit 에 남는다.
-            fallback = str(self.settings.get("models.standard", "") or self.settings.secrets.gemini_model)
-            if not _is_model_unavailable(exc) or fallback == self.last_model:
+            # 앱이 스스로 복구할 수 없는 오류(할당량 소진·모델 사용 불가)는 사람이 조치해야
+            # 끝난다. 화면을 보고 있지 않으면 알 방법이 없으므로 메일로 알린다.
+            # 알림 실패가 원래 오류를 가리지 않는다 (notifier 가 예외를 올리지 않는다).
+            notify_for_error(
+                str(exc),
+                context={"모델": self.last_model, "프롬프트": f"{prompt_name} v{prompt_cfg.version}"},
+                storage=self.storage,
+            )
+            if _requires_thinking(exc):
+                # Pro 계열은 thinking 을 끌 수 없다. 설정 실수로 전체가 멈추지 않게 thinking 을
+                # 켜서 다시 부르되, 그 사실을 남긴다 — thinking 토큰이 과금되고 응답이
+                # max_output_tokens 를 함께 소비하므로 조용히 넘길 변화가 아니다.
+                self.thinking_override = {
+                    "model": self.last_model,
+                    "reason": "이 모델은 thinking 을 끌 수 없습니다 (thinking_budget=0 거부)",
+                }
+                raw = self._request(
+                    prompt,
+                    system_instruction=system_instruction,
+                    response_schema=response_schema,
+                    temperature=prompt_cfg.temperature,
+                    max_output_tokens=prompt_cfg.max_output_tokens,
+                    thinking_budget=None,
+                    model=self.last_model,
+                )
+                self.storage.cache_set(cache_key, raw)
+                for key, value in raw.get("token_usage", {}).items():
+                    self.token_usage[key] = self.token_usage.get(key, 0) + int(value)
+                return raw
+
+            # 모델이 계정에서 막혀 있는 경우가 실제로 있다 (`gemini-2.5-pro`는 "no longer
+            # available to new users"). 환경 문제로 분석 전체를 실패시키지 않고 한 번 물러난다.
+            #
+            # 후보를 두 단계로 둔다 — `models.standard` 자체가 막힌 모델일 수 있으므로
+            # `secrets.gemini_model`(가장 오래 검증된 값)까지 훑는다. 물러났다는 사실은
+            # audit 에 남는다.
+            candidates = [
+                str(self.settings.get("models.standard", "") or ""),
+                str(self.settings.secrets.gemini_model or ""),
+            ]
+            fallback = next((name for name in candidates if name and name != self.last_model), "")
+            if not _is_model_unavailable(exc) or not fallback:
                 raise
             self.model_fallback = {"requested": self.last_model, "used": fallback, "reason": str(exc)[:300]}
             self.last_model = fallback

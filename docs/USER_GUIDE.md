@@ -248,8 +248,9 @@ Regression 축 730자 + 규칙 발췌 5,019자.
 | QA Agent가 G4 NEED_INPUT | 검증 환경 미입력 | 환경 항목 입력 또는 "초안으로 작성" |
 | Issue를 찾을 수 없음 | 서버에 Polarion Export 폴더가 없음 | `backup.json` 첨부 |
 | 분석이 429로 거절 | 동시 실행 한도(기본 2) 또는 일일 토큰 한도 초과 | 실행 중 작업 완료 후 재시도 / `analysis.daily_token_limit` 조정 |
-| 분석 실패 `RESOURCE_EXHAUSTED` | Gemini 선불 크레딧 소진 | AI Studio에서 결제 상태 확인 |
-| 분석 실패 `모델 NOT_FOUND` | 상위 등급 모델이 계정에서 미제공 | 기본 모델로 자동 폴백되며 결과에 기록됨. `config.yaml` `models.complex` 조정 |
+| 분석 실패 `RESOURCE_EXHAUSTED` | Gemini 선불 크레딧 소진 | AI Studio에서 결제 상태 확인. **설정돼 있으면 메일로 알림이 온다** (`secrets.txt` 의 `NOTIFY_EMAIL_TO`) |
+| 분석 실패 `모델 NOT_FOUND` | 설정된 모델이 계정에서 미제공 | `models.standard` → `secrets.gemini_model` 순으로 자동 폴백되며 결과에 기록됨 |
+| 지식 폴더의 파일이 하나도 분류되지 않음 | 마운트에서 한글 파일명이 깨짐 | `/knowledge/source/<제품>` 의 `name_note` 확인 → `iocharset=utf8` |
 | 등록 문서를 읽지 못했다는 표시 | 원본 파일이 사라진 등록 | `/knowledge` → 죽은 등록 정리 |
 | TC 컬럼 자동 탐지 실패 | 헤더 구조가 다름 | 수동 매핑 화면에서 시트·헤더 행·컬럼 지정 |
 

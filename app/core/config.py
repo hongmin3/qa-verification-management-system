@@ -19,6 +19,11 @@ class Secrets(BaseModel):
     app_secret_key: str = DEFAULTS["app_secret_key"]
     manual_hub_user: str = DEFAULTS["manual_hub_user"]
     manual_hub_password: str = DEFAULTS["manual_hub_password"]
+    # 운영 알림 (app/core/notifier.py). 개인 메일 주소·SMTP 자격증명은 공개 저장소에
+    # 커밋하지 않으므로 secrets 로만 받는다. 비어 있으면 알림이 꺼진 채 동작한다.
+    notify_email_to: str = DEFAULTS["notify_email_to"]
+    smtp_user: str = DEFAULTS["smtp_user"]
+    smtp_password: str = DEFAULTS["smtp_password"]
 
 
 class Settings(BaseModel):

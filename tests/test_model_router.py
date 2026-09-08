@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.model_router import (
+    DEFAULT_MODELS,
     DEFAULT_PRICING,
     TIER_COMPLEX,
     TIER_LIGHT,
@@ -35,9 +36,11 @@ def _route(**overrides):
 
 
 def test_ordinary_analysis_uses_the_standard_model() -> None:
+    """모델 ID 자체를 고정하지 않는다 — 모델은 폐기된다(`gemini-2.5-pro`·`-flash-lite` 실제 404).
+    검증할 것은 "설정된 등급의 모델을 쓴다"는 계약이다."""
     decision = _route()
     assert decision.tier == TIER_STANDARD
-    assert decision.model == "gemini-2.5-flash"
+    assert decision.model == model_for(TIER_STANDARD)
     assert decision.reasons
 
 
@@ -80,7 +83,7 @@ def test_forced_tier_wins() -> None:
         force_tier=TIER_LIGHT,
     )
     assert decision.tier == TIER_LIGHT
-    assert decision.model == "gemini-2.5-flash-lite"
+    assert decision.model == model_for(TIER_LIGHT)
 
 
 def test_unknown_forced_tier_is_ignored() -> None:
@@ -115,15 +118,27 @@ def test_integration_detection_is_safe_on_empty_text() -> None:
 
 
 def test_model_ids_come_from_settings() -> None:
-    """모델 ID 는 config.yaml 이 원천이다. 상위 등급은 계정에서 막힐 수 있어 값이 바뀔 수 있다
-    (`gemini-2.5-pro` 는 실제로 "no longer available to new users" 를 돌려준다)."""
-    assert model_for(TIER_STANDARD) == "gemini-2.5-flash"
-    assert model_for(TIER_LIGHT) == "gemini-2.5-flash-lite"
-    assert model_for(TIER_COMPLEX)  # 설정된 값이 있으면 된다 — 특정 ID 를 강제하지 않는다
+    """모델 ID 는 config.yaml 이 원천이다. 특정 ID 를 강제하지 않는다 — 모델은 폐기된다."""
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    for tier in (TIER_LIGHT, TIER_STANDARD, TIER_COMPLEX):
+        configured = str(settings.get(f"models.{tier}", "") or "")
+        assert model_for(tier) == configured, f"{tier}: 설정값과 다르다"
+        assert configured, f"{tier}: 모델이 설정되지 않았다"
+
+
+def test_pro_class_models_are_not_configured() -> None:
+    """Pro 계열은 thinking 을 끌 수 없어 이 파이프라인에 맞지 않는다 (실측 400).
+
+    설정에 들어가면 매 호출이 thinking 폴백을 타면서 토큰이 늘어난다.
+    """
+    for tier in (TIER_LIGHT, TIER_STANDARD, TIER_COMPLEX):
+        assert "pro" not in model_for(tier), f"{tier} 에 Pro 계열이 설정됐다: {model_for(tier)}"
 
 
 def test_unknown_tier_falls_back_to_standard() -> None:
-    assert model_for("nonexistent") == "gemini-2.5-flash"
+    assert model_for("nonexistent") == DEFAULT_MODELS[TIER_STANDARD]
 
 
 def test_pricing_is_read_despite_dots_in_model_name() -> None:

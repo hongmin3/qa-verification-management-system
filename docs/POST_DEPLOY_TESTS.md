@@ -110,6 +110,7 @@ Environment=QA_KNOWLEDGE_DIR_BELLALUN=/srv/knowledge/bellalun
 | 2.4.2 | 앱이 경로를 인식하는가 | `/qa-agent/readiness?product=VXvue` 의 응답, `/knowledge` 화면에 "지금 수집" 버튼 표시 |
 | 2.4.3 | 스캔이 되는가 | `/knowledge/source/VXvue` — 분류 건수와 제외 이유 |
 | 2.4.4 | 분류되지 않은 파일이 없는가 | 같은 응답의 `excluded` 에 "규약에 맞지 않음"이 없어야 한다 |
+| 2.4.4b | **한글 파일명 처리 메모** | 같은 응답의 `name_note`. 값이 있으면 마운트 설정을 고쳐야 한다 (아래) |
 | 2.4.5 | 수집·등록이 되는가 | "지금 수집" → 알림의 등록/미변경/정리/중복 건수 |
 | 2.4.6 | 주간 자동 수집 | 기동 로그의 `scheduled_job_registered id=sync_product_knowledge_*`, 다음 월요일 07:30/07:45 실행 |
 
@@ -148,9 +149,26 @@ API 호출 지점에서만 막혔다.
 | 3.1 | API Key가 서버에 있는가 | `/config/status` (값은 반환하지 않고 설정 여부·길이·출처만) | `secrets.txt`를 서버에서 직접 넣는다 (배포되지 않음) |
 | 3.2 | **결제 상태가 정상인가** | [AI Studio](https://ai.studio/projects) 에서 크레딧·결제 확인 | 소진 시 모든 분석이 `RESOURCE_EXHAUSTED`로 실패 |
 | 3.3 | 기본 모델이 호출되는가 | QA Agent 분석 1건 실행 → `AI 호출 1회` | 모델 ID 확인 |
-| 3.4 | 상위 등급 모델 정책 | `models.complex` 값 확인 | `gemini-2.5-pro`는 신규 계정에 미제공(실측). 미제공이면 기본 모델로 폴백되고 결과에 기록된다 |
-| 3.5 | 폴백이 결과에 남는가 | 결과 화면 감사 영역의 `model_fallback` | 조용히 바뀌면 안 된다 |
+| 3.4 | 설정된 모델이 이 계정에서 되는가 | `python scripts/compare_models.py --product VXvue --issue <ID>` | 모델은 폐기된다 — `gemini-2.5-pro`·`gemini-2.5-flash-lite` 는 실측 404 |
+| 3.5 | 폴백이 결과에 남는가 | 결과 화면 감사 영역의 `model_fallback` / `thinking_override` | 조용히 바뀌면 안 된다 |
 | 3.6 | 회사 정책 승인 | 외부 생성형 AI API 사용 가능 여부 | **사용자 확인 필요** — 사내 문서 조각이 외부로 나간다 |
+| 3.7 | 알림이 오는가 | `python scripts/test_notification.py --send` | §3.8 참고 |
+
+### 3.8 할당량 소진 알림
+
+크레딧이 소진되면 모든 분석이 실패하는데 화면을 보고 있지 않으면 알 방법이 없다. 메일로 알린다.
+
+| # | 확인 | 방법 |
+|---|---|---|
+| 3.8.1 | 설정 상태 | `python scripts/test_notification.py` — 값은 표시되지 않고 설정 여부만 나온다 |
+| 3.8.2 | **SMTP 자격증명** | Gmail 은 2단계 인증 후 [앱 비밀번호](https://myaccount.google.com/apppasswords)를 발급해 `secrets.txt` 의 `SMTP_USER`/`SMTP_PASSWORD` 에 넣는다. 계정 비밀번호로는 SMTP 로그인이 되지 않는다 |
+| 3.8.3 | 테스트 발송 | `python scripts/test_notification.py --send` → 받은 편지함(스팸함 포함) 확인 |
+| 3.8.4 | 사내 SMTP 를 쓸 경우 | `config.yaml` `notifications.email.host`/`port`/`use_tls` 를 바꾼다. 인증이 없는 릴레이면 자격증명을 비워도 된다 |
+| 3.8.5 | 폭주하지 않는가 | 같은 문제로 `cooldown_minutes`(기본 180) 안에는 한 번만 발송. `Storage.notification_log()` 로 확인 |
+| 3.8.6 | 메일에 민감정보가 없는가 | 본문의 오류 메시지가 마스킹을 거친다 (경로·계정·이메일이 자리표로 바뀐다) |
+
+수신자는 `secrets.txt` 의 `NOTIFY_EMAIL_TO` 다 — 개인 메일 주소는 공개 저장소에 커밋하지
+않으므로 서버에서 직접 넣는다. 비어 있으면 알림이 꺼진 채로 동작하고 분석에는 영향이 없다.
 
 ---
 

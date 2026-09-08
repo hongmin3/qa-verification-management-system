@@ -18,6 +18,8 @@
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
+| **할당량 소진 알림 설정** | [배포 후 테스트 §3.8](POST_DEPLOY_TESTS.md) → `scripts/test_notification.py` |
+| **모델을 바꿀지 판단하기** | [구조 §10](QA_AGENT_ARCHITECTURE.md) → `scripts/compare_models.py` |
 | **추천 정확도를 측정하기** | [Regression 추천 정확도 평가](EVALUATION.md) |
 | **새 기능을 추가하기** | [공용 아키텍처](SHARED_PLATFORM_ARCHITECTURE.md) |
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |

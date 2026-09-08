@@ -29,6 +29,7 @@ import hashlib
 import json
 import re
 import shutil
+import unicodedata
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -108,6 +109,8 @@ class KnowledgeAsset:
     size: int = 0
     sha256: str = ""
     modified: str = ""
+    #: 파일명을 정규화·복구했을 때의 메모. 비어 있으면 원본 그대로 쓴 것이다.
+    name_note: str = ""
     selected: bool = True
     exclude_reason: str = ""
     superseded_by: str = ""
@@ -142,8 +145,54 @@ class ScanResult:
         return counts
 
 
+HANGUL_RE = re.compile(r"[가-힣ㄱ-ㅎㅏ-ㅣ]")
+# 한글 자모(NFD 로 분해된 형태). 이 문자가 보이면 이름이 분해 정규화 상태다.
+HANGUL_JAMO_RE = re.compile(r"[ᄀ-ᇿ㄰-㆏ꥠ-꥿ힰ-퟿]")
+# mojibake 로 흔히 나타나는 latin-1 확장 영역. 정상 한글 파일명에는 나오지 않는다.
+MOJIBAKE_HINT_RE = re.compile(r"[ -ÿ]{2,}")
+
+# 깨진 이름을 되살릴 (읽은 인코딩, 실제 인코딩) 조합. 왕복 결과에 한글이 생길 때만 채택한다.
+MOJIBAKE_RECOVERIES: tuple[tuple[str, str], ...] = (("latin-1", "cp949"), ("latin-1", "utf-8"), ("cp1252", "cp949"), ("cp1252", "utf-8"))
+
+
+def normalize_file_name(file_name: str) -> tuple[str, str]:
+    """파일명을 분류·비교에 쓸 수 있는 형태로 만든다. 반환값은 (정규화된 이름, 변환 메모).
+
+    운영 서버가 지식 폴더를 네트워크 마운트로 볼 때 한글 파일명이 두 가지로 어긋난다.
+    둘 다 그대로 두면 `fnmatch` 패턴이 하나도 맞지 않아 **모든 파일이 unknown 으로 빠진다.**
+
+    1. **NFD(분해) 정규화.** macOS·일부 SMB 구현이 `사양서` 를 자모로 분해해 넘긴다.
+       NFC 로 합치면 해결되고 정보 손실이 없으므로 **조용히 변환한다.**
+    2. **mojibake.** `iocharset` 이 잘못 설정되면 cp949/utf-8 바이트를 latin-1 로 읽은
+       형태가 된다(`»ç¾ç¼­`). 되살릴 수는 있지만 마운트 설정이 잘못됐다는 신호이므로
+       **복구하되 메모를 남긴다** — 근본 원인(`iocharset=utf8`)을 고쳐야 한다.
+
+    복구는 **왕복 결과에 한글이 생길 때만** 채택한다. 원래 한글이 없는 파일명(영문 매뉴얼
+    등)을 건드려 망가뜨리지 않기 위함이다.
+    """
+    normalized = unicodedata.normalize("NFC", file_name)
+    note = "NFD(분해) 정규화를 NFC로 합쳤습니다" if HANGUL_JAMO_RE.search(file_name) else ""
+
+    if HANGUL_RE.search(normalized) or not MOJIBAKE_HINT_RE.search(normalized):
+        return normalized, note
+
+    for read_as, actual in MOJIBAKE_RECOVERIES:
+        try:
+            recovered = unicodedata.normalize("NFC", normalized.encode(read_as).decode(actual))
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            continue
+        if HANGUL_RE.search(recovered):
+            return recovered, f"깨진 파일명을 복구했습니다 ({read_as}→{actual}). 마운트에 iocharset=utf8 이 필요합니다"
+    return normalized, "파일명이 깨져 있고 복구하지 못했습니다. 마운트 옵션(iocharset=utf8)을 확인하세요"
+
+
 def classify(file_name: str, classifiers: dict[str, list[str]] | None = None) -> str:
-    """파일명으로 자산 종류를 정한다. 어느 패턴에도 걸리지 않으면 unknown."""
+    """파일명으로 자산 종류를 정한다. 어느 패턴에도 걸리지 않으면 unknown.
+
+    이름을 먼저 정규화한다 — 마운트에서 NFD 로 오거나 깨져 온 이름을 그대로 비교하면
+    패턴이 하나도 맞지 않는다 (`normalize_file_name`).
+    """
+    file_name, _ = normalize_file_name(file_name)
     patterns: dict[str, tuple[str, ...]] = {kind: tuple(value) for kind, value in (classifiers or {}).items() if value}
     for kind in CLASSIFY_ORDER:
         for pattern in patterns.get(kind, DEFAULT_CLASSIFIERS.get(kind, ())):
@@ -164,7 +213,9 @@ def parse_asset_name(file_name: str) -> dict:
     """파일명을 논리 문서 이름 + 리비전 + 부가 정보로 분해한다.
 
     제품명을 알 필요가 없다 — 접두사·리비전·문서번호·언어·상태 꼬리표만 떼어낸다.
+    이름은 먼저 정규화한다 (`normalize_file_name`).
     """
+    file_name, _ = normalize_file_name(file_name)
     stem = Path(file_name).stem
     extension = Path(file_name).suffix.lower()
 
@@ -231,7 +282,10 @@ def _sha256(path: Path, chunk_size: int = 1 << 20) -> str:
 
 
 def _should_ignore(file_name: str, ignore: tuple[str, ...]) -> bool:
-    return any(fnmatch.fnmatch(file_name, pattern) for pattern in ignore)
+    """제외 패턴 비교. 이름을 정규화한다 — `[자동화*` 처럼 한글이 든 패턴이 NFD 이름에
+    맞지 않으면 제외돼야 할 파일이 수집된다."""
+    normalized, _ = normalize_file_name(file_name)
+    return any(fnmatch.fnmatch(normalized, pattern) for pattern in ignore)
 
 
 def _resolve_duplicates(assets: list[KnowledgeAsset]) -> None:
@@ -285,13 +339,17 @@ def scan_source(config: ProductConfig) -> ScanResult:
     for path in sorted(source_dir.iterdir()):
         if not path.is_file() or path.suffix.lower() not in extensions or _should_ignore(path.name, ignore):
             continue
-        parsed = parse_asset_name(path.name)
-        kind = classify(path.name, classifiers)
+
+        display_name, name_note = normalize_file_name(path.name)
+        parsed = parse_asset_name(display_name)
+        kind = classify(display_name, classifiers)
         stat = path.stat()
         asset = KnowledgeAsset(
             kind=kind,
-            file_name=path.name,
+            # 정규화된 이름을 자산 이름으로 쓴다. 원본 경로는 그대로 두므로 파일은 정상 복사된다.
+            file_name=display_name,
             source_path=str(path),
+            name_note=name_note,
             size=stat.st_size,
             sha256=_sha256(path),
             modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
@@ -300,6 +358,8 @@ def scan_source(config: ProductConfig) -> ScanResult:
         if kind == KIND_UNKNOWN:
             asset.selected = False
             asset.exclude_reason = "파일명이 알려진 지식 자산 규약에 맞지 않습니다"
+            if name_note:
+                asset.exclude_reason += f" ({name_note})"
         result.assets.append(asset)
 
     _resolve_duplicates(result.assets)

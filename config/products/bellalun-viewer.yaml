@@ -11,9 +11,10 @@ manual_types:
   - "VDMS-1100TM Operation Manual"
   - "VDMS-1100TM Service Manual"
 
-# 서버에서는 QA_KNOWLEDGE_DIR_BELLALUN 으로 마운트 지점을 지정한다 (vxvue.yaml 주석 참고).
+# 서버에서는 QA_KNOWLEDGE_DIR_BELLALUN_VIEWER 로 마운트 지점을 지정한다 (vxvue.yaml 주석 참고).
+# 환경변수 이름은 `scripts/make_knowledge_mount.py` 가 제품 slug 로 생성하는 것과 같다.
 knowledge_source:
-  dir: "${QA_KNOWLEDGE_DIR_BELLALUN:-C:/Users/2024980/Documents/자동화/Bellalun Viewer/지식}"
+  dir: "${QA_KNOWLEDGE_DIR_BELLALUN_VIEWER:-C:/Users/2024980/Documents/자동화/Bellalun Viewer/지식}"
   # 이 폴더에는 QA 지식이 아닌 자동화 프로젝트 운영 문서도 함께 있다
   # (`[자동화 구현 현황]`, `[자동화 운영 지침]`). 수집 대상에서 제외한다.
   ignore:

@@ -85,6 +85,10 @@ class Storage:
                     description TEXT NOT NULL DEFAULT '', result_status TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS notifications (
+                    kind TEXT PRIMARY KEY, last_sent_at TEXT, last_claimed_at TEXT NOT NULL,
+                    sent_count INTEGER NOT NULL DEFAULT 0
+                );
                 CREATE TABLE IF NOT EXISTS qa_agent_approvals (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     analysis_id TEXT NOT NULL REFERENCES analyses(id),
@@ -721,3 +725,38 @@ class Storage:
         total = sum(counts.values())
         changed = sum(count for decision, count in counts.items() if decision in ("REJECTED", "EDITED"))
         return {"days": days, "total": total, "by_decision": counts, "revision_rate": round(changed / total, 4) if total else 0.0}
+
+    # --- 알림 쿨다운 (app/core/notifier.py) -----------------------------------
+    # 크레딧이 소진되면 실행마다 같은 오류가 난다. 쿨다운을 두지 않으면 메일이 폭주한다.
+
+    def claim_notification(self, kind: str, cooldown_before_iso: str) -> bool:
+        """이 종류의 알림을 보낼 차례인지 확인하고 **동시에 선점**한다.
+
+        확인과 기록을 한 트랜잭션에서 하는 이유는 분석이 동시에 여러 건 실패할 수 있어서다.
+        읽고 나서 따로 쓰면 두 건이 같은 틈에 들어와 메일이 두 번 나간다.
+
+        `last_claimed_at` 을 갱신하므로 발송이 실패해도 쿨다운이 걸린다 — 메일 서버가 죽어
+        있을 때 매 실행마다 SMTP 접속을 시도하지 않게 하기 위함이다.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connect() as db:
+            row = db.execute("SELECT last_claimed_at FROM notifications WHERE kind=?", (kind,)).fetchone()
+            if row is not None and row["last_claimed_at"] > cooldown_before_iso:
+                return False
+            db.execute(
+                "INSERT INTO notifications(kind,last_sent_at,last_claimed_at,sent_count) VALUES(?,NULL,?,0) "
+                "ON CONFLICT(kind) DO UPDATE SET last_claimed_at=excluded.last_claimed_at",
+                (kind, now),
+            )
+        return True
+
+    def mark_notification_sent(self, kind: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connect() as db:
+            db.execute(
+                "UPDATE notifications SET last_sent_at=?, sent_count=sent_count+1 WHERE kind=?", (now, kind)
+            )
+
+    def notification_log(self) -> list[dict]:
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("SELECT * FROM notifications ORDER BY kind").fetchall()]

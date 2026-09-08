@@ -73,23 +73,54 @@ security:
 
 # 요청 난이도에 따른 모델 선택 (app/core/model_router.py). 난이도 판정에 LLM을 쓰지 않고
 # 입력에서 세어지는 신호(근거 문서 수, Root Cause 명시 여부, 연동 용어 포함)로만 고른다.
+#
+# 아래 값은 **이 계정에서 실제 호출해 확인한 것**이다 (2026-09-08).
+#   gemini-2.5-pro       404 — 신규 계정에 제공되지 않는다. 결제와 무관하다.
+#   gemini-2.5-flash-lite 404 — 같은 이유.
+#   gemini-3.1-pro-preview / gemini-pro-latest
+#                        thinking 을 끌 수 없다 ("Budget 0 is invalid. This model only
+#                        works in thinking mode"). 이 프로젝트는 thinking_budget=0 이
+#                        전제이므로 맞지 않는다 — 설정하면 코드가 thinking 을 켜서 다시
+#                        부르지만 사소한 프롬프트에도 thought 토큰이 수백~1만 개 붙는다.
+#
+# 같은 Issue·같은 입력으로 비교한 결과 (scripts/compare_models.py, Issue 2건·3회 실행):
+#
+#   gemini-2.5-flash        out 5.3~5.6K / thought 0      / 24~26초
+#     TC 후보 40건을 전부 판정하면서 **judgment 필드에 관련도 값(NOT_RELATED/RELATED)을
+#     넣는다.** 스키마 혼동이라 검증 계층이 전부 SPEC_REVIEW 로 강등한다 → TC 판정이
+#     사실상 쓸 수 없다. 2개 Issue 에서 재현됐다.
+#   gemini-3.1-pro-preview  out 5.3K / thought 10.0K / 111초
+#     thinking 을 끌 수 없다. 근거가 하나도 없는데 40건을 전부 KEEP 으로 단정했다 —
+#     "문제 없다"는 오판이라 가장 위험하다. 느리고 비싸고 결과가 더 나빴다.
+#   gemini-3.5-flash        out 2.2~2.3K / thought 0      / 10~11초
+#     관련 TC 2~3건만 선별해 유효한 값(KEEP/MUST_UPDATE)으로 판정한다.
+#     출력 58% 적고 2.4배 빠르고 46% 저렴하다.
+#
+# 그래서 standard·complex 모두 gemini-3.5-flash 로 둔다. Pro 계열은 이 업무에 맞지 않는다 —
+# 이 파이프라인의 LLM 작업은 사전 압축된 근거에 대한 구조화 판정이라 내부 추론이 필요 없고,
+# thinking 토큰은 출력 예산을 함께 소비해 JSON 이 잘린다.
+#
+# 두 등급이 같은 모델이어도 라우팅 판정(tier·이유)은 결과에 기록된다 — 나중에 상위 등급을
+# 바꿀 때 어떤 케이스가 complex 로 분류됐는지 근거가 남는다.
+# 사례가 쌓이면 compare_models.py 로 다시 확인한다.
 models:
-  light: "gemini-2.5-flash-lite"
-  standard: "gemini-2.5-flash"
-  # gemini-2.5-pro 는 신규 계정에 제공되지 않는다(실제 API 응답: "no longer available to
-  # new users", 권장 대안 gemini-3.1-pro-preview). 상위 등급을 쓰려면 그 값을 넣는다.
-  # 못 쓰는 모델이면 standard 로 물러나고 그 사실이 결과에 남는다.
-  complex: "gemini-2.5-flash"
+  light: "gemini-3.1-flash-lite"
+  standard: "gemini-3.5-flash"
+  complex: "gemini-3.5-flash"
   # 1M 토큰당 USD. 값이 바뀌면 여기만 고친다 (코드에 하드코딩하지 않는다).
   # 비용은 추정치이고 실제 청구는 Google 콘솔이 기준이다.
+  # gemini-3.x 단가는 공식 표를 확인해 채운다 — 아래는 2.5-flash 기준 잠정값이다.
   pricing:
-    gemini-2.5-flash-lite:
+    gemini-3.1-flash-lite:
       input: 0.10
       output: 0.40
     gemini-2.5-flash:
       input: 0.30
       output: 2.50
-    gemini-2.5-pro:
+    gemini-3.5-flash:
+      input: 0.30
+      output: 2.50
+    gemini-3.1-pro-preview:
       input: 1.25
       output: 10.00
 
@@ -100,3 +131,23 @@ qa_agent:
   tc_candidate_limit: 40
   # 모델 등급을 고정하려면 light / standard / complex 중 하나를 넣는다. 빈 값이면 자동 선택.
   force_model_tier: ""
+
+# 운영 알림 (app/core/notifier.py). 앱이 스스로 복구할 수 없고 사람이 조치해야 끝나는
+# 상황만 메일로 알린다 — 지금은 Gemini 할당량·결제 문제와 모델 사용 불가.
+# 수신자와 SMTP 자격증명은 secrets.txt 에 둔다 (공개 저장소에 개인 메일을 커밋하지 않는다):
+#   NOTIFY_EMAIL_TO=받는사람@example.com
+#   SMTP_USER=보내는계정@gmail.com
+#   SMTP_PASSWORD=앱비밀번호        # Gmail 은 2단계 인증 후 "앱 비밀번호"를 발급해 쓴다
+# 셋 중 하나라도 없으면 알림이 꺼진 채로 동작한다 (분석에는 영향 없음).
+notifications:
+  email:
+    enabled: true
+    # Gmail 기준. 사내 SMTP 서버가 있으면 그 주소로 바꾼다.
+    host: "smtp.gmail.com"
+    port: 587
+    use_tls: true
+    # 비우면 SMTP_USER 를 발신자로 쓴다.
+    sender: ""
+    # 같은 문제로 이 시간 안에는 다시 보내지 않는다. 크레딧이 소진되면 실행마다 같은
+    # 오류가 나므로 쿨다운이 없으면 메일이 폭주한다.
+    cooldown_minutes: 180
