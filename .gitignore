@@ -44,3 +44,10 @@ secrets.local.*
 !secrets.example.json
 !secrets.example.txt
 data/product_knowledge/
+
+# 진단·비교 실행이 남기는 중간 산출물. 파이프라인이 조립한 Evidence Pack 원문(실제 Issue
+# 본문·사양서 발췌·TC)이 그대로 들어가고 마스킹 전 상태다 — 공개 저장소에 절대 올리지 않는다.
+# 실제로 한 번 올라간 적이 있어(커밋 e08068a) 패턴으로 못 박는다.
+.pro_compare_*
+*.payload.json
+scratch/
