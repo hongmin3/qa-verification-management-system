@@ -9,11 +9,15 @@
 | 하려는 일 | 볼 문서 |
 |---|---|
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
+| **기능별 사용법을 알기** | [사용 안내](USER_GUIDE.md) → 각 화면의 `사용법` 메뉴 |
 | **써 보기** — 로컬에 띄우고 분석 1건 돌려보기 | [배포 가이드 §2–3](DEPLOYMENT.md) → 앱 안 `/impact-analyzer/guide` |
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [QA Agent](modules/qa-agent.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
+| **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
+| **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
 | **추천 정확도를 측정하기** | [Regression 추천 정확도 평가](EVALUATION.md) |
 | **새 기능을 추가하기** | [공용 아키텍처](SHARED_PLATFORM_ARCHITECTURE.md) |
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |
@@ -31,10 +35,13 @@
 | 주소 | 내용 |
 |---|---|
 | `/` | 허브 — 기능 선택 |
+| `/qa-agent/guide` | QA Agent 사용법 (Issue 검증 범위) |
 | `/impact-analyzer/guide` | Regression 영향 분석 사용법 |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
+| `/knowledge/guide` | Knowledge 사용법 (문서·규칙 관리, 파일명 규약) |
+| `/cost-dashboard/guide` | 비용 대시보드 사용법 (지표 해석, 절감 기법) |
+| `/qa-agent/rules` | 규칙 절별 구현현황과 Skill별 규칙 주입량 |
 | `/manual-hub/` | 매뉴얼 서버 (하위 서비스) |
-| `/cost-dashboard` | AI 호출·토큰·캐시 사용량 |
 | `/config/status` | API Key 설정 여부와 일일 토큰 사용량 (Key 값은 반환하지 않음) |
 
 `/guide`는 하위 호환용으로 남아 있으며 `/impact-analyzer/guide`로 연결된다.
@@ -64,11 +71,16 @@
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | precision·recall·F1 기반 추천 정확도 평가 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서 자동 동기화, 보고서 구조 |
+| [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |
+| [QA_AGENT_ARCHITECTURE.md](QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit 설계 |
+| [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 파일명 규약, 리비전 판별, 코드 변경 없이 편입 |
+| [POST_DEPLOY_TESTS.md](POST_DEPLOY_TESTS.md) | 실서버 반영 후 확인 항목 (로컬에서 확인 불가한 것만) |
 
 ### `docs/modules/` — 기능별 상세
 
 | 문서 | 내용 |
 |---|---|
+| [qa-agent.md](modules/qa-agent.md) | QA Agent — Issue 검증 범위, Gate, Evidence, 설계 결정 |
 | [impact-analyzer.md](modules/impact-analyzer.md) | Regression 영향 분석 — 흐름, 설계 결정, 설정 |
 | [manual-review.md](modules/manual-review.md) | 매뉴얼 개정 검증 — 흐름, Human Review Gate, 설정 |
 
@@ -92,5 +104,6 @@
 | `core-web-ui.md` | 화면 작업 (`web-ui`) |
 | `core-testing.md` | 테스트 작업 (`testing`) |
 | `core-deployment.md` | 배포·운영 (`deployment`) |
+| `qa-agent-*.md` | QA Agent (`qa-agent-dev`) · 제품 지식 자산 (`product-knowledge`) |
 | `core-documentation.md` | 문서 작업 (`documentation`) |
 | `manual-hub-*.md` | 하위 서비스 QA Manual Hub (`manual-hub-dev` / `-auth` / `-ui` / `-deploy` / `-backup`) |

@@ -7,6 +7,13 @@
 
 ## 완료 이력 색인 (최신순, 상세는 커밋 참고)
 
+- 2026-09-08: **QA Agentic Workflow 구축** — Issue 기반 검증 범위 분석(`/qa-agent`).
+  제품 지식 자산 레지스트리 공통화(파일명 규약만으로 분류·리비전 판별, Bellalun Viewer가
+  코드 변경 없이 편입), QA 규칙 Rev 로더(절 단위 Skill 태깅 → 85~94% 절감), Polarion Issue
+  파서(실측 38건), Exact→BM25 단계 검색, Gate G1~G5(코드 판정 · 막히면 API 0회), Evidence
+  Store, ID 교차검증, Human Review 6탭, QA 승인 기록, 외부 전송 마스킹, 모델 등급 라우팅.
+  실측: 코퍼스 2.11MB 중 API 전송 1.37%. 테스트 535건.
+
 - 2026-09-02: Release Scope BM25 소표본 오탐 완화(토큰 겹침 fallback) — `63fbd11`
 - 2026-09-02: Word Comment 앵커링을 문단 단위→변경 요소 단위로 정밀화 — `f5c4f9f`
 - 2026-09-02: `app/parsers/*` 계층 역전 해소(`app/core/document_schemas.py`) — `dee64c2`
@@ -43,6 +50,17 @@
 
 ### A. 운영 리스크
 
+-1. **Gemini API 선불 크레딧이 소진됐다.** 실호출이 `429 RESOURCE_EXHAUSTED`로 실패한다
+   (2026-09-08 로컬 확인). 파이프라인은 Gate 통과·검색·payload 조립·마스킹까지 정상
+   수행하고 API 호출 지점에서만 막힌다. AI Studio에서 결제 상태를 확인해야 실사용이 가능하다.
+-2. **`gemini-2.5-pro`가 신규 계정에 제공되지 않는다.** 실제 응답: "no longer available to
+   new users, please update to gemini-3.1-pro-preview". 상위 등급 모델이 막히면 기본
+   모델로 물러나고 그 사실이 결과에 남도록 처리했고, `config.yaml`의 `models.complex`
+   기본값은 검증된 `gemini-2.5-flash`로 두었다. 상위 등급을 쓸지는 **사용자 결정 대기**.
+-3. **지식 폴더를 서버가 볼 수 없다.** 폴더는 QA 담당자 PC에 있다. 담당자 PC에서 CLI로
+   수집한 결과(`data/product_knowledge/`)를 서버로 옮기는 방식(복사 / 네트워크 마운트 /
+   화면 업로드)을 정해야 한다 — **사용자 결정 대기** (`docs/POST_DEPLOY_TESTS.md` §2).
+
 0. **HTTPS 미적용 (다시).** self-signed 인증서로 2026-09-02에 적용했다가 브라우저
    "안전하지 않음" 경고 때문에 같은 날 롤백했다(위 완료 이력 참고). 매뉴얼 서버는
    로그인·세션 기반인데 여전히 평문 HTTP다. 재적용하려면 정식 CA 인증서를 발급받거나
@@ -55,6 +73,20 @@
    인프라 결정이 먼저 필요하다** (보류, 사용자 결정 대기).
 
 ### B. 제품 기능 고도화
+
+5. **핵심 앱에 사용자 인증이 없다.** QA 승인 기록에 "누가" 승인했는지 남지 않는다. 파트원
+   5명이 함께 쓰면 추적성이 필요해진다. Manual Hub의 세션 인증을 재사용하는 방법과 별도
+   인증을 붙이는 방법이 있고, **평문 HTTP 상태(A-0)와 함께 결정해야 한다** — 인증을 붙이면서
+   HTTPS를 미루면 자격증명이 평문으로 흐른다.
+6. **QA Agent 2차 Skill 미구현.** S04(Fix Verification) · S06(Issue Writing & Closure) ·
+   S08(API/WebSocket/DICOM) · S09(Generator) · S10(Release Validation). 현황은
+   `/qa-agent/rules` 또는 `python scripts/rule_capability_report.py --status NOT_PLANNED`.
+7. **사양 Chunk에 SRS 메타데이터가 없다.** SRS ID·Status·Parent/Child·Linked SRS를 뽑지
+   않고 본문 exact 검색으로 찾는다. Polarion REST API로 SRS 워크아이템을 수집하면 채울 수
+   있다(`alm-issue-export`가 이미 그 접근을 갖고 있다).
+8. **Semantic Search 미구현.** exact+BM25의 Recall을 먼저 측정해야 하고, 외부 Embedding은
+   이 프로젝트의 전제(원문 미전송)와 충돌한다. 로컬 임베딩이 준비되면 `Retriever` Protocol
+   구현체만 추가하면 된다.
 
 9. **`retrieval.candidate_limit=150`이 검증되지 않았다.** 실서버 표본 1건(전체 TC 6,407 →
    후보 150 → 최종 추천 3)만으로 정한 값이다. 추천 정확도 측정 루프는 이미 동작하지만

@@ -26,6 +26,11 @@ TC_FIELD_LABELS = {
 }
 
 
+@router.get("/knowledge/guide", response_class=HTMLResponse)
+def knowledge_guide(request: Request):
+    return templates.TemplateResponse(request, "guide.html", {})
+
+
 @router.post("/knowledge/products")
 def register_product(product: str = Form(...)):
     product = product.strip()

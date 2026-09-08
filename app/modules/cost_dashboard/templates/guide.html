@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block page_title %}비용 대시보드 사용법{% endblock %}
+{% block header_title %}비용 대시보드 사용법{% endblock %}
+{% block header_subtitle %}AI 호출이 실제로 얼마나 발생했는지, 무엇이 비용을 줄이고 있는지 확인합니다.{% endblock %}
+{% block header_nav %}<nav><a href="/">QA 홈</a><a href="/cost-dashboard">대시보드</a><a href="/qa-agent">QA Agent</a><a href="/impact-analyzer">Regression 분석</a><a href="/manual-review">매뉴얼 검증</a><a href="/knowledge">Knowledge</a></nav>{% endblock %}
+{% block content %}
+<section>
+  <h2>무엇을 보는 화면인가</h2>
+  <p class="hint">사내 서비스로 계속 운영하려면 분석 1건의 비용이 예측 가능해야 합니다. 이 화면은 <b>호출이 실제로 몇 번 발생했는지</b>와 <b>캐시가 얼마나 재사용됐는지</b>를 기능별로 집계합니다.</p>
+
+  <h3>지표 읽는 법</h3>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>지표</th><th>뜻</th><th>이 값이 나쁠 때</th></tr></thead>
+      <tbody>
+        <tr><td><b>분석 건수</b></td><td>실행된 분석 수</td><td>—</td></tr>
+        <tr><td><b>API 호출 수</b></td><td>실제로 Gemini에 요청한 횟수</td><td>분석 건수보다 크게 많으면 어딘가에서 재질의가 발생하는 것입니다. 이 시스템은 분석 1건당 1회가 원칙입니다</td></tr>
+        <tr><td><b>캐시 적중</b></td><td>같은 입력이어서 호출 없이 재사용된 횟수</td><td>0에 가까우면 같은 분석을 반복 실행하는 경우가 없다는 뜻입니다 (나쁜 것은 아닙니다)</td></tr>
+        <tr><td><b>토큰</b></td><td>입력·출력 토큰 누적. 캐시 적중은 합산하지 않습니다 (실제 비용이 0이므로)</td><td>분석당 입력 토큰이 계속 커지면 검색 후보 상한을 확인하세요</td></tr>
+        <tr><td><b>일별 추이</b></td><td>날짜별 토큰</td><td>특정 날짜에 급증하면 그날 분석의 감사 화면에서 입력 크기를 확인하세요</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>비용이 줄어드는 지점</h3>
+  <p>이 시스템이 비용을 줄이는 방식은 “싼 모델을 쓰는 것”이 아니라 <b>보낼 양을 줄이고, 안 보내도 되는 경우 아예 보내지 않는 것</b>입니다.</p>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>#</th><th>기법</th><th>효과</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><b>Gate가 먼저 막는다</b></td><td>근거가 부족한 Issue는 <b>API 호출이 0회</b>. QA Agent 이력에서 “Gate 차단”으로 표시됩니다</td></tr>
+        <tr><td>2</td><td>Rule Engine 사전 필터</td><td>비기능 변경은 AI 대상에서 제외</td></tr>
+        <tr><td>3</td><td>기준 사양서 Diff</td><td>진짜 바뀐 줄만 분석</td></tr>
+        <tr><td>4</td><td>Exact → BM25 후보 압축</td><td>전체 사양서·전체 TC를 보내지 않음. 실측 <b>전체 코퍼스의 1.37%</b>만 전송</td></tr>
+        <tr><td>5</td><td>정확 일치 시 후보 축소</td><td>확실한 근거가 확보되면 유사도 후보 수를 줄임</td></tr>
+        <tr><td>6</td><td>규칙 발췌 주입</td><td>QA 규칙 전문 약 30KB → 해당 Skill 절만 2~5KB (85~94% 절감)</td></tr>
+        <tr><td>7</td><td>Structured Output 단일 호출</td><td>Issue 분석·사양 관련도·TC Coverage·Regression을 한 번에 받음</td></tr>
+        <tr><td>8</td><td>quick / detail 2단계 + PASS short-circuit</td><td>매뉴얼 개정 검증에서 문제없으면 비싼 호출 생략</td></tr>
+        <tr><td>9</td><td>SHA-256 응답 캐시</td><td>같은 입력은 API 호출 자체가 없음</td></tr>
+        <tr><td>10</td><td><code>thinking_budget=0</code></td><td>내부 추론 토큰 소비 차단</td></tr>
+        <tr><td>11</td><td>모델 등급 라우팅</td><td>기본은 Flash. 근거가 흩어져 있거나 Root Cause가 불명확할 때만 상위 등급</td></tr>
+        <tr><td>12</td><td>일일 토큰 한도</td><td>초과 시 새 분석 실행을 차단</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>일일 토큰 한도 설정</h3>
+  <p><code>config.yaml</code>의 <code>analysis.daily_token_limit</code>에 하루 총 토큰 상한을 넣습니다. <b>0이면 비활성</b>입니다. 넘으면 새 분석 실행이 429로 차단되고, 실행 중인 분석에는 영향이 없습니다.</p>
+  <p class="hint">현재 설정 상태는 <a href="/config/status">/config/status</a>에서 확인할 수 있습니다 (API Key 값은 반환하지 않고 설정 여부·길이·출처만 보여줍니다).</p>
+
+  <h3>모델 등급과 단가</h3>
+  <p>등급은 <b>입력에서 세어지는 신호로만</b> 정합니다 — 난이도 판정에 또 LLM을 부르지 않습니다.</p>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>등급</th><th>언제</th><th>단가 (1M 토큰, 입력/출력)</th></tr></thead>
+      <tbody>
+        <tr><td><b>Flash-Lite</b></td><td>요약·분류·정형 추출</td><td>$0.10 / $0.40</td></tr>
+        <tr><td><b>Flash</b> (기본)</td><td>Issue 분석·사양 추적·TC Coverage·일반 Regression</td><td>$0.30 / $2.50</td></tr>
+        <tr><td><b>Pro</b></td><td>Root Cause 불명확 · 근거가 3개 이상 문서에 흩어짐 · API/DICOM 연동 판단</td><td>$1.25 / $10.00</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint">
+    단가는 <code>config.yaml</code>의 <code>models.pricing</code>에 있고 값이 바뀌면 그곳만 고칩니다. 각 분석 결과에 <b>추정 비용</b>이 표시되지만
+    <b>실제 청구는 Google 콘솔이 기준</b>입니다. 상위 등급 모델이 계정에서 제공되지 않으면 기본 모델로 물러나고, 물러났다는 사실이 결과에 남습니다.
+  </p>
+
+  <h3>참고 규모</h3>
+  <p>실측 기준(VXvue Issue 1건 = 입력 약 12.1K 토큰)으로 사용자 5명 × 하루 10건 × 월 20일 = 월 1,000건이면, Flash 기준 <b>월 수 달러 수준</b>입니다. 캐시 적중과 Gate 차단이 있으면 그보다 낮아집니다.</p>
+
+  <h3>비용이 예상보다 많을 때 확인 순서</h3>
+  <ol>
+    <li><b>분석 상세 화면의 감사 영역</b>을 펼쳐 입력 JSON 글자 수와 규칙 발췌 크기를 봅니다.</li>
+    <li>입력이 크면 <code>retrieval.specification_top_k</code>, <code>qa_agent.tc_candidate_limit</code>, <code>qa_agent.rule_char_budget</code>을 낮춥니다.</li>
+    <li>모델 등급이 계속 상위로 올라가면 결과 화면의 <b>라우팅 이유</b>를 봅니다. Root Cause 미명시가 잦다면 Issue 작성 품질 문제일 수 있습니다.</li>
+    <li>같은 분석을 반복 실행하고 있다면 캐시 적중이 올라가야 정상입니다. 안 올라가면 입력이 매번 미세하게 다른 것입니다.</li>
+    <li>호출 수가 분석 건수보다 많으면 재시도가 발생한 것입니다 — 응답 JSON이 잘려 실패했는지 로그를 확인하세요.</li>
+  </ol>
+</section>
+{% endblock %}

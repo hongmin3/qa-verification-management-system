@@ -426,3 +426,37 @@ def test_retry_analysis_creates_linked_job(monkeypatch, tmp_path):
     retried = persisted.get_analysis(response.json()["job_id"])
     assert retried["request"]["retry_of"] == "failed"
     assert retried["status"] == "QUEUED"
+
+
+def test_analysis_history_is_separated_by_module(tmp_path):
+    """여러 기능이 같은 analyses 테이블을 쓴다. 필터가 없으면 한 기능의 이력 화면에
+    다른 기능의 분석이 섞인다."""
+    from app.core.storage import Storage
+
+    storage = Storage(db_path=tmp_path / "modules.db")
+    storage.create_analysis("a1", module="impact_analyzer")
+    storage.create_analysis("a2", module="qa_agent")
+    storage.create_analysis("a3", module="qa_agent")
+
+    impact, impact_total = storage.list_analyses(module="impact_analyzer")
+    agent, agent_total = storage.list_analyses(module="qa_agent")
+    everything, all_total = storage.list_analyses()
+
+    assert [row["id"] for row in impact] == ["a1"] and impact_total == 1
+    assert {row["id"] for row in agent} == {"a2", "a3"} and agent_total == 2
+    assert all_total == 3
+
+
+def test_legacy_rows_without_module_belong_to_impact_analyzer(tmp_path):
+    """module 컬럼이 없던 시절의 행은 그때 유일했던 기능의 것이다."""
+    from app.core.storage import Storage
+
+    storage = Storage(db_path=tmp_path / "legacy.db")
+    storage.create_analysis("old", module="impact_analyzer")
+    with storage.connect() as db:
+        db.execute("UPDATE analyses SET module=NULL WHERE id='old'")
+
+    impact, total = storage.list_analyses(module="impact_analyzer")
+
+    assert [row["id"] for row in impact] == ["old"] and total == 1
+    assert storage.list_analyses(module="qa_agent")[1] == 0

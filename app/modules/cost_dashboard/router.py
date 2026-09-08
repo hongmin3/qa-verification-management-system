@@ -17,6 +17,11 @@ storage = Storage()
 MODULE_LABELS = {"impact_analyzer": "Regression 영향 분석", "manual_review": "매뉴얼 개정 검증"}
 
 
+@router.get("/cost-dashboard/guide", response_class=HTMLResponse)
+def cost_dashboard_guide(request: Request):
+    return templates.TemplateResponse(request, "guide.html", {})
+
+
 @router.get("/cost-dashboard", response_class=HTMLResponse)
 def cost_dashboard(request: Request, days: int = 30):
     stats = storage.cost_dashboard_stats(days=days)

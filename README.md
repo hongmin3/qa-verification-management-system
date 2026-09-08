@@ -41,9 +41,15 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 
 | 질문 | 담당 기능 |
 |---|---|
-| 어디까지 다시 검증해야 하는가 | [Regression 영향 분석](docs/modules/impact-analyzer.md) |
+| 이 **Issue**를 어디까지 검증해야 하는가 | [QA Agent](docs/modules/qa-agent.md) |
+| 이 **변경**으로 어디까지 다시 검증해야 하는가 | [Regression 영향 분석](docs/modules/impact-analyzer.md) |
 | 매뉴얼이 최신 사양을 반영했는가 | [매뉴얼 개정 검증](docs/modules/manual-review.md) |
 | 매뉴얼의 최신본이 어느 것인가 | [QA Manual Hub](services/qa-manual-hub/README.md) |
+
+세 분석 기능은 **입력이 다릅니다.** 목적이 아니라 손에 있는 자료로 고릅니다 —
+Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영향 분석, 개정 매뉴얼을
+받았으면 매뉴얼 개정 검증입니다. 셋 다 같은 문서 집합을 보므로 결론이 갈릴 때 그 차이를
+자료 탓으로 돌릴 수 없습니다.
 
 ---
 
@@ -104,10 +110,12 @@ qa-verification-management-system/
 ├─ app/                     ① 핵심 앱 — 하나의 FastAPI 프로세스
 │  ├─ core/                 공용 인프라 (설정, 저장소, Gemini 클라이언트, 프롬프트 로더, 스케줄러)
 │  ├─ prompts/              AI 프롬프트 YAML (버전·생성 설정 포함)
+│  ├─ retrieval/            Exact(식별자) → BM25 단계 검색
 │  ├─ modules/
+│  │  ├─ qa_agent/          Issue 검증 범위 (Skill·Gate)  → /qa-agent
 │  │  ├─ impact_analyzer/   Regression 영향 분석          → /impact-analyzer
 │  │  ├─ manual_review/     매뉴얼 개정 검증              → /manual-review
-│  │  ├─ knowledge/         사양서·TC 관리 (두 기능 공유)  → /knowledge
+│  │  ├─ knowledge/         문서·규칙 관리 (전 기능 공유)  → /knowledge
 │  │  └─ cost_dashboard/    AI 사용량 집계                → /cost-dashboard
 │  └─ web/                  모듈 라우터를 한 서버에 취합하는 얇은 계층 + 공용 template/static
 │
@@ -174,6 +182,35 @@ Gemini가 등장하는 곳은 한 군데뿐이고, 나머지는 전부 결정적
 
 ## 기능
 
+### QA Agent — `/qa-agent`
+
+Polarion Issue 하나에서 **관련 사양 → 기존 TC → Regression 범위**를 근거와 함께 정리합니다.
+AI가 QA를 판정하지 않습니다 — QA가 반복 수행하는 조사·비교·추적 절차를 표준화합니다.
+
+```text
+Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
+   → Gate G1·G2·G4 ── 막히면 여기서 끝 (API 호출 0회)
+   → Gemini 1회 (Issue 분석 · 사양 관련도 · TC Coverage · Regression 동시)
+   → ID 교차검증 → Gate G3·G5 → Human Review 6탭 → QA 승인
+```
+
+- **Gate를 프롬프트가 아니라 코드로 판정**합니다. 근거가 부족한 Issue는 API 호출이 **0회**이고,
+  왜 멈췄는지가 결과에 남습니다. "근거가 충분한가"는 세면 되는 문제라 LLM에 물을 이유가 없고,
+  물으면 같은 입력에 다른 답이 나옵니다.
+- **Issue 유형을 LLM에 묻지 않습니다.** Polarion 연구소 검토 결과가 QA 규칙의 유형 분류와
+  대응해, 실측 38건 중 33건이 코드로 분류됩니다. 갈리는 값은 확정하지 않고 후보만 남깁니다.
+- **판정마다 근거 위치**가 붙습니다 (문서·페이지·절 / 파일·시트·행). 근거 없는 판정은
+  "근거 없음"으로 드러나고 confidence가 사람 확인 구간으로 내려갑니다.
+- **모델이 만든 ID를 믿지 않습니다.** 실제 데이터에 없는 TC ID·근거 ID를 제외하고,
+  제외했다는 사실을 화면에 남깁니다.
+- **QA 규칙 문서를 매 호출에 통째로 보내지 않습니다.** 절 단위로 쪼개 Skill별로 태깅하고
+  해당 절만 주입합니다 — 전문 30.7KB → **2~5KB (85~94% 절감)**.
+- QA 규칙이 **자동 확정을 금지한 8가지**(Issue 자동 Close, QA 승인 없는 TC 덮어쓰기 등)는
+  코드 경로 자체가 없습니다.
+
+→ [상세 문서](docs/modules/qa-agent.md) · [구조 분석](docs/QA_AGENT_ARCHITECTURE.md) ·
+사용법: 앱 안 `/qa-agent/guide`
+
 ### Regression 영향 분석 — `/impact-analyzer`
 
 제품만 선택하면 등록된 사양서·TC 전체를 자동 검색해 분석합니다. 변경 문서는 여러 개 동시
@@ -202,9 +239,18 @@ Gemini가 등장하는 곳은 한 군데뿐이고, 나머지는 전부 결정적
 
 ### 지식 관리 — `/knowledge`
 
-두 기능이 함께 쓰는 제품별·버전별 사양서와 TC를 등록·삭제·동기화합니다. VXvue 최신 사양서는
-별도 자동화(Polarion 연동)와 연계해 매주 자동 확보하고 이전 리비전을 정리합니다
-([AUTOMATION.md](docs/AUTOMATION.md)).
+세 분석 기능이 함께 쓰는 제품별 사양서·TC·매뉴얼·QA 규칙을 관리합니다. 파일을 하나씩
+올리는 대신 **제품마다 최신본을 모아 두는 폴더 하나를 읽어 수집**합니다.
+
+- 분류·리비전 판별이 **파일명 규약**으로 자동 처리됩니다. 제품별 설정은 폴더 경로뿐이고
+  새 제품을 붙일 때 코드 변경이 필요 없습니다 ([새 제품 추가](docs/PRODUCT_ONBOARDING.md)).
+- 같은 문서의 구버전, 바이트까지 같은 중복, 원본이 사라진 죽은 등록을 자동 정리하고
+  **확실하지 않은 것은 지우지 않고 보고**합니다.
+- 사람이 미리 뽑아둔 `.txt` 추출본이 원본 PDF보다 오래된 사례가 실제로 있어, 원본 형식을
+  우선하고 제외 이유를 남깁니다.
+- VXvue 최신 사양서는 별도 자동화(Polarion 연동)와도 연계됩니다 ([AUTOMATION.md](docs/AUTOMATION.md)).
+
+→ 사용법: 앱 안 `/knowledge/guide`
 
 ### 매뉴얼 서버 — `/manual-hub` (하위 서비스)
 
@@ -230,15 +276,45 @@ Gemini가 등장하는 곳은 한 군데뿐이고, 나머지는 전부 결정적
 
 | # | 기법 | 효과 |
 |---|---|---|
-| 1 | Rule Engine 사전 필터 | 비기능 변경은 AI 대상에서 제외 |
-| 2 | 기준 사양서 Diff | 진짜 바뀐 줄만 분석 |
-| 3 | BM25 Top-K 후보 압축 | 전체 사양서·TC를 보내지 않음 |
-| 4 | 변경 문서 관련 줄 축소 | 요청과 무관한 줄 제외 |
-| 5 | Structured Output 단일 호출 | 재질의 왕복 없음 |
-| 6 | quick / detail 2단계 + PASS short-circuit | 문제없으면 비싼 호출 생략 |
-| 7 | SHA-256 응답 캐시 | 동일 입력은 API 호출 자체가 없음 |
-| 8 | `thinking_budget=0` | 내부 추론 토큰 소비 차단 |
-| 9 | 일일 토큰 한도 + 감사 기록 | 초과 시 실행 차단, 사후 검증 가능 |
+| 1 | **Gate가 API 호출 전에 차단** | 근거가 부족한 Issue는 **호출 0회**. 왜 멈췄는지가 결과에 남음 |
+| 2 | Rule Engine 사전 필터 | 비기능 변경은 AI 대상에서 제외 |
+| 3 | 기준 사양서 Diff | 진짜 바뀐 줄만 분석 |
+| 4 | Exact → BM25 Top-K 후보 압축 | 전체 사양서·TC를 보내지 않음 |
+| 5 | 정확 일치 확보 시 후보 축소 | 확실한 근거가 있으면 유사도 후보 수를 줄임 |
+| 6 | **QA 규칙 발췌 주입** | 규칙 전문 30.7KB → 해당 Skill 절만 2~5KB (**85~94% 절감**) |
+| 7 | 변경 문서 관련 줄 축소 | 요청과 무관한 줄 제외 |
+| 8 | Structured Output 단일 호출 | 재질의 왕복 없음. 네 Skill을 한 번에 판단 |
+| 9 | quick / detail 2단계 + PASS short-circuit | 문제없으면 비싼 호출 생략 |
+| 10 | SHA-256 응답 캐시 | 동일 입력은 API 호출 자체가 없음 |
+| 11 | `thinking_budget=0` | 내부 추론 토큰 소비 차단 |
+| 12 | 모델 등급 라우팅 | 기본은 Flash. 근거가 흩어지거나 Root Cause가 불명확할 때만 상위 등급 |
+| 13 | 일일 토큰 한도 + 감사 기록 | 초과 시 실행 차단, 사후 검증 가능 |
+
+### 실측 — 무엇이 실제로 나가는가
+
+VXvue Issue 1건 분석 기준입니다.
+
+| 항목 | 크기 |
+|---|---|
+| 등록 문서 전체 (사양 Chunk 737개 + TC 6,407건 + QA 규칙) | **2.11MB ≈ 883K 토큰** |
+| **실제 API 전송량** | **30,207자 ≈ 12.1K 토큰** |
+| 비율 | **1.37%** |
+| AI 호출 | **1회** |
+
+내부 구성: Issue 구조화 986자 + 검색된 사양 Chunk 6개 6,869자 + TC 후보 40건 16,404자 +
+Regression 축 730자 + QA 규칙 발췌 5,019자.
+
+**원본 PDF·Excel·DOCX는 서버 밖으로 나가지 않습니다.** 파싱·검색·후보 압축이 전부 서버
+안에서 끝나고, 나가는 것은 검색으로 추린 발췌뿐입니다.
+
+호출 직전에 개인정보·사내 경로를 자리표로 바꿉니다 (`[PATIENT_ID]`, `[IP_ADDRESS]`,
+`[NETWORK_PATH]` 등). 이때 **마스킹하면 안 되는 것이 더 위험**합니다 — 버전이나 ErrorCode가
+가려지면 분석 자체가 불가능해지므로, SRS/Issue ID·DICOM Tag·Command 번호·버전은 보호합니다.
+`1.1.0.001`(버전)과 `10.13.0.222`(IP)는 모양이 같아서, 0으로 채운 자리가 있으면 버전으로
+판별합니다.
+
+무엇이 마스킹됐는지는 **건수만** 기록합니다 — 로그에 원본이 남으면 마스킹의 의미가 없습니다.
+실제 전송본은 분석 결과 화면의 감사 영역에서 원문 그대로 확인할 수 있습니다.
 
 → [단계별 상세와 관련 코드](docs/COST_OPTIMIZATION.md)
 
@@ -294,21 +370,23 @@ akela log applied / contradicted     근거로 쓴 규칙 · 결과가 뒤집은
 
 **이 프로젝트에서 실제로 어떤 이득이 있었나**
 
-지식 베이스는 12개 파일 · 78개 섹션 · 약 49KB입니다. 이걸 매 작업마다 통째로 넣는 대신,
+지식 베이스는 14개 파일 · 100개 섹션 · 약 69KB입니다. 이걸 매 작업마다 통째로 넣는 대신,
 작업 종류에 따라 이만큼만 들어갑니다.
 
 | 작업 종류 | 주입되는 섹션 | slice 크기 |
 |---|---|---|
-| `documentation` | 7 | 3.6KB |
-| `testing` | 8 | 4.0KB |
-| `web-ui` | 9 | 4.8KB |
-| `manual-hub-ui` | 7 | 5.0KB |
-| `deployment` | 10 | 5.3KB |
-| `manual-hub-backup` | 8 | 6.0KB |
-| `manual-hub-auth` | 11 | 7.4KB |
-| `manual-hub-deploy` | 12 | 8.7KB |
-| `core-development` | 21 | 12KB |
-| `manual-hub-dev` | 15 | 14KB |
+| `testing` | 8 | 3.9KB |
+| `documentation` | 8 | 4.6KB |
+| `web-ui` | 9 | 4.7KB |
+| `manual-hub-ui` | 7 | 4.9KB |
+| `manual-hub-backup` | 8 | 5.9KB |
+| `manual-hub-auth` | 11 | 7.2KB |
+| `deployment` | 11 | 7.7KB |
+| `product-knowledge` | 12 | 8.5KB |
+| `manual-hub-deploy` | 12 | 9.4KB |
+| `qa-agent-dev` | 15 | 11.4KB |
+| `manual-hub-dev` | 15 | 14.2KB |
+| `core-development` | 25 | 15.1KB |
 
 - **저장소가 커져도 각 작업의 컨텍스트는 그만큼 커지지 않습니다.** QA Manual Hub를 병합하며
   지식이 25KB 늘었지만, 회귀 분석 코드 작업에는 그 25KB가 한 줄도 들어가지 않습니다.
@@ -427,6 +505,10 @@ pytest tests -q
 | 문서 | 내용 |
 |---|---|
 | [docs/README.md](docs/README.md) | 문서 지도 — 목적별 안내 |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |
+| [docs/QA_AGENT_ARCHITECTURE.md](docs/QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit |
+| [docs/PRODUCT_ONBOARDING.md](docs/PRODUCT_ONBOARDING.md) | 새 제품 추가 — 코드 변경 없이 편입하는 방법 |
+| [docs/POST_DEPLOY_TESTS.md](docs/POST_DEPLOY_TESTS.md) | 실서버 반영 후 확인 항목 |
 | [docs/SHARED_PLATFORM_ARCHITECTURE.md](docs/SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식과 경계, 새 기능 추가 체크리스트 |
 | [docs/COST_OPTIMIZATION.md](docs/COST_OPTIMIZATION.md) | 비용 절감 파이프라인 9단계 |
 | [docs/CONTEXT_ENGINEERING.md](docs/CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 에이전트 컨텍스트 토큰 절감 |

@@ -97,28 +97,30 @@ dropped: []
 
 | 항목 | 값 |
 |---|---|
-| 지식 파일 | 12개 (`knowledge/*.md`) |
-| 섹션 | 78개 · 약 49KB (핵심 앱 24KB / 매뉴얼 서버 25KB) |
-| scope 분포 (중복 포함) | `core-development` 19 · `manual-hub-dev` 13 · `manual-hub-deploy` 10 · `manual-hub-auth` 9 · `deployment` 8 · `web-ui` 7 · `testing` 6 · `manual-hub-backup` 6 · `documentation` 5 · `manual-hub-ui` 5 · `all` 2 |
-| tier 분포 | `must` 40 · `should` 38 |
-| activity | 핵심 앱 5종(`core-development`, `web-ui`, `testing`, `deployment`, `documentation`) + 매뉴얼 서버 5종(`manual-hub-dev`, `-auth`, `-ui`, `-deploy`, `-backup`) |
+| 지식 파일 | 14개 (`knowledge/*.md`) |
+| 섹션 | 100개 · 약 69KB (핵심 앱 24KB / QA Agent·제품 지식 20KB / 매뉴얼 서버 25KB) |
+| scope 분포 (중복 포함) | `core-development` 23 · `manual-hub-dev` 13 · `qa-agent-dev` 13 · `manual-hub-deploy` 10 · `product-knowledge` 10 · `deployment` 9 · `manual-hub-auth` 9 · `web-ui` 7 · `documentation` 6 · `testing` 6 · `manual-hub-backup` 6 · `manual-hub-ui` 5 · `all` 2 |
+| tier 분포 | `must` 56 · `should` 44 |
+| activity | 핵심 앱 5종(`core-development`, `web-ui`, `testing`, `deployment`, `documentation`) + QA Agent 2종(`qa-agent-dev`, `product-knowledge`) + 매뉴얼 서버 5종(`manual-hub-dev`, `-auth`, `-ui`, `-deploy`, `-backup`) |
 | 기록된 작업 | 31건 (`.akela/runs/`) |
 | 근거 사용 기록 | `applied` 56건 · `contradicted` 1건 (`akela/learnings-log.jsonl`) |
 
-작업 종류별로 실제 컴파일한 slice 크기다. 49KB 전체를 매번 넣는 대신 필요한 만큼만 들어간다.
+작업 종류별로 실제 컴파일한 slice 크기다. 69KB 전체를 매번 넣는 대신 필요한 만큼만 들어간다.
 
 | activity | 섹션 | slice |
 |---|---|---|
-| `documentation` | 7 | 3.6KB |
-| `testing` | 8 | 4.0KB |
-| `web-ui` | 9 | 4.8KB |
-| `manual-hub-ui` | 7 | 5.0KB |
-| `deployment` | 10 | 5.3KB |
-| `manual-hub-backup` | 8 | 6.0KB |
-| `manual-hub-auth` | 11 | 7.4KB |
-| `manual-hub-deploy` | 12 | 8.7KB |
-| `core-development` | 21 | 12KB |
-| `manual-hub-dev` | 15 | 14KB |
+| `testing` | 8 | 3.9KB |
+| `documentation` | 8 | 4.6KB |
+| `web-ui` | 9 | 4.7KB |
+| `manual-hub-ui` | 7 | 4.9KB |
+| `manual-hub-backup` | 8 | 5.9KB |
+| `manual-hub-auth` | 11 | 7.2KB |
+| `deployment` | 11 | 7.7KB |
+| `product-knowledge` | 12 | 8.5KB |
+| `manual-hub-deploy` | 12 | 9.4KB |
+| `qa-agent-dev` | 15 | 11.4KB |
+| `manual-hub-dev` | 15 | 14.2KB |
+| `core-development` | 25 | 15.1KB |
 
 ## 측정해서 알게 된 것 — 태깅해 뒀다고 전달되는 것이 아니다
 

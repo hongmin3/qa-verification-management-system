@@ -60,6 +60,8 @@ def analysis_history(request: Request, status: str = "", product: str = "", q: s
     analyses, total = storage.list_analyses(
         limit=ANALYSIS_HISTORY_PAGE_SIZE, offset=(page - 1) * ANALYSIS_HISTORY_PAGE_SIZE,
         status=status or None, product=product or None, search=q or None,
+        # 여러 기능이 같은 analyses 테이블을 쓰므로 이 화면은 Regression 분석만 보여준다.
+        module="impact_analyzer",
     )
     for item in analyses:
         result = item.get("result") or {}

@@ -301,13 +301,24 @@ class Storage:
     def list_analyses(
         self, limit: int = 100, offset: int = 0,
         status: str | None = None, product: str | None = None, search: str | None = None,
+        module: str | None = None,
     ) -> tuple[list[dict], int]:
         """분석 이력을 최신순으로 페이지네이션해 반환한다. 반환값은 (이 페이지의 행,
         필터 적용 후 전체 건수)다. `product`는 등록 당시 `request_json`에 저장된 값을
         `json_extract`로 대조한다(별도 컬럼 없음). `search`는 작업 ID와 변경 문서명에서
-        부분일치한다."""
+        부분일치한다.
+
+        `module`은 기능별 이력을 분리한다. 여러 기능이 같은 `analyses` 테이블을 쓰므로
+        필터가 없으면 한 기능의 이력 화면에 다른 기능의 분석이 섞인다. `module` 컬럼이
+        없던 시절의 행(NULL)은 그때 유일했던 기능인 `impact_analyzer`로 취급한다."""
         conditions: list[str] = []
         params: list[str] = []
+        if module:
+            if module == "impact_analyzer":
+                conditions.append("(module=? OR module IS NULL)")
+            else:
+                conditions.append("module=?")
+            params.append(module)
         if status:
             conditions.append("status=?")
             params.append(status)
