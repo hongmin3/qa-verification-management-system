@@ -15,9 +15,12 @@ manual_types:
 # QA가 이 제품의 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 폴더. 앱은 읽기만 하고
 # 프로젝트 안(data/product_knowledge/<slug>/)으로 사본과 정규화 텍스트를 수집한다.
 # 분류는 파일명 규약으로 하므로 제품별 코드 분기가 없다 — 규약이 다른 제품만 classify를 덮어쓴다.
-# `${ENV}` 형태를 쓰면 환경변수로 덮어쓸 수 있다 (다른 PC·서버에서 경로가 다를 때).
+# 담당자 PC 와 운영 서버가 같은 폴더를 다른 경로로 본다 (PC 는 로컬 경로, 서버는 마운트 지점).
+# `${ENV:-기본값}` 은 환경변수가 있으면 그것을, 없으면 기본값을 쓴다 — 서버에서만
+# QA_KNOWLEDGE_DIR_VXVUE 를 설정하면 되고 PC 는 아무것도 하지 않아도 된다.
+# 서버 설정: /etc/systemd/system/<유닛>.d/override.conf 의 Environment= 또는 .env
 knowledge_source:
-  dir: "C:/Users/2024980/Documents/자동화/VXvue/VXvue 지식파일"
+  dir: "${QA_KNOWLEDGE_DIR_VXVUE:-C:/Users/2024980/Documents/자동화/VXvue/VXvue 지식파일}"
 
 specification:
   # alm_crawler: 별도 프로젝트(ALM 사양서 최신화 크롤링)가 Polarion에서 이미 수집한 PDF를 읽기만 한다.

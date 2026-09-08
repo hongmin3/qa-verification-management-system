@@ -329,6 +329,22 @@ def test_unset_env_var_becomes_empty_not_literal_path() -> None:
     assert KnowledgeSourceConfig(dir="${DEFINITELY_NOT_SET_QA_TEST}").dir == ""
 
 
+def test_env_default_is_used_when_variable_is_unset() -> None:
+    """담당자 PC 는 환경변수를 설정하지 않는다 — YAML 의 기본값이 그대로 쓰여야 한다."""
+    assert KnowledgeSourceConfig(dir="${NOT_SET_QA_TEST:-C:/PC/지식}").dir == "C:/PC/지식"
+
+
+def test_env_default_is_overridden_on_the_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    """운영 서버는 같은 폴더를 마운트 지점으로 본다."""
+    monkeypatch.setenv("QA_TEST_MOUNT", "/srv/knowledge/vxvue")
+    assert KnowledgeSourceConfig(dir="${QA_TEST_MOUNT:-C:/PC/지식}").dir == "/srv/knowledge/vxvue"
+
+
+def test_windows_default_path_with_colon_is_not_truncated() -> None:
+    """기본값에 `C:/...` 처럼 콜론이 들어가도 `:-` 구분자와 혼동하지 않아야 한다."""
+    assert KnowledgeSourceConfig(dir="${NOT_SET_QA_TEST:-D:/QA/지식파일}").dir == "D:/QA/지식파일"
+
+
 @pytest.mark.parametrize(
     ("product", "slug"),
     [("VXvue", "vxvue"), ("Bellalun Viewer", "bellalun-viewer"), ("VDMS-1100TM", "vdms-1100tm")],

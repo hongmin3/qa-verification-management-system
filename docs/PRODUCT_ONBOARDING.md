@@ -28,10 +28,11 @@ manual_types:
   - "Acme Viewer Operation Manual"
   - "Acme Viewer Service Manual"
 
-# 이 제품의 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 폴더.
-# 앱은 읽기만 하고 쓰지 않는다.
+# 이 제품의 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 폴더. 앱은 읽기만 하고 쓰지 않는다.
+# 담당자 PC는 로컬 경로, 서버는 마운트 지점으로 본다 — 기본값은 PC 경로로 두고
+# 서버에서만 환경변수로 덮어쓴다 (§6).
 knowledge_source:
-  dir: "C:/Users/2024980/Documents/자동화/Acme Viewer/지식"
+  dir: "${QA_KNOWLEDGE_DIR_ACME:-C:/Users/<계정>/Documents/자동화/Acme Viewer/지식}"
 
 specification:
   source: manual        # ALM 크롤러 연동이 있으면 alm_crawler
@@ -49,7 +50,8 @@ sync:
 
 ### ③ 수집
 
-`/knowledge` → 해당 제품의 **"지금 수집"**. 서버에 폴더가 없으면 폴더가 있는 PC에서:
+`/knowledge` → 해당 제품의 **"지금 수집"**. 서버는 그 폴더를 읽기 전용으로 마운트해서
+본다(§6). 마운트가 없으면 버튼이 숨고, 폴더가 있는 PC에서 CLI로 실행한다:
 
 ```bash
 python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
@@ -175,15 +177,27 @@ Skill 태깅은 제품 고유 용어가 아니라 **QA 공통 용어**로 매칭
 
 ## 6. 서버와 담당자 PC의 경로가 다를 때
 
-`${ENV}` 형태로 환경변수를 쓸 수 있다.
+같은 폴더를 담당자 PC는 로컬 경로로, 운영 서버는 마운트 지점으로 본다.
+`${ENV:-기본값}` 을 쓰면 **YAML에 PC 경로를 기본값으로 두고 서버에서만 환경변수로
+덮어쓸** 수 있다 — 양쪽 모두 환경변수를 설정할 필요가 없다.
 
 ```yaml
 knowledge_source:
-  dir: "${ACME_KNOWLEDGE_DIR}"
+  dir: "${QA_KNOWLEDGE_DIR_ACME:-C:/Users/<계정>/Documents/자동화/Acme Viewer/지식}"
 ```
 
-환경변수가 설정되지 않으면 **빈 값**이 된다 — `${...}` 문자열이 그대로 경로가 되어 엉뚱한
-폴더를 만드는 일을 막는다. 빈 값이면 "설정되지 않음"으로 표시되고 수집 버튼이 나오지 않는다.
+서버에서는 systemd 유닛에 넣는다 (마운트 절차는 [배포 후 테스트 §2](POST_DEPLOY_TESTS.md#2-제품-지식-폴더-수집--서버에서-되는지가-관건)).
+
+```ini
+[Service]
+Environment=QA_KNOWLEDGE_DIR_ACME=/srv/knowledge/acme
+```
+
+기본값 없는 `${ENV}` 인데 환경변수도 없으면 **빈 값**이 된다 — `${...}` 문자열이 그대로
+경로가 되어 엉뚱한 폴더를 만드는 일을 막는다. 빈 값이면 "설정되지 않음"으로 표시되고
+수집 버튼이 나오지 않는다.
+
+기본값에 `C:/...` 처럼 콜론이 들어가도 `:-` 구분자와 혼동하지 않는다 (첫 `:-` 만 구분자로 본다).
 
 ---
 

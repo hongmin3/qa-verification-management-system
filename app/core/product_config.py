@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.config import get_settings
+
+# `${NAME}` 또는 `${NAME:-기본값}`. 기본값에는 Windows 경로(`C:/...`)가 들어가므로 `}` 만
+# 종료로 본다.
+_ENV_REF_RE = re.compile(r"\$\{([^}]+)\}")
 
 
 class SpecificationSyncConfig(BaseModel):
@@ -40,14 +45,24 @@ class KnowledgeSourceConfig(BaseModel):
     @field_validator("dir")
     @classmethod
     def _expand(cls, value: str) -> str:
-        """`${ENV}` 형태를 환경변수로 치환한다. PC·서버마다 경로가 달라도 YAML을 고치지 않게 한다.
+        """`${ENV}` / `${ENV:-기본값}` 형태를 환경변수로 치환한다.
 
-        치환할 값이 없으면 빈 문자열로 만든다 — `${...}` 문자열이 그대로 경로로 쓰여
-        "폴더 없음"이 아니라 이상한 폴더를 만드는 일을 막는다.
+        같은 폴더를 담당자 PC 와 운영 서버가 서로 다른 경로로 본다 (PC 는 로컬 경로, 서버는
+        마운트 지점). `${ENV:-기본값}` 을 쓰면 **YAML 에 PC 경로를 기본값으로 두고 서버에서만
+        환경변수로 덮어쓸** 수 있다 — 양쪽 모두 환경변수를 설정하지 않아도 된다.
+
+        기본값이 없는 `${ENV}` 인데 환경변수도 없으면 빈 문자열로 만든다. `${...}` 문자열이
+        그대로 경로로 쓰여 "폴더 없음"이 아니라 이상한 폴더를 만드는 일을 막는다.
         """
         if not value:
             return value
-        expanded = os.path.expandvars(value)
+
+        def substitute(match: re.Match[str]) -> str:
+            name, _, fallback = match.group(1).partition(":-")
+            return os.environ.get(name.strip(), fallback)
+
+        expanded = _ENV_REF_RE.sub(substitute, value)
+        expanded = os.path.expandvars(expanded)
         return "" if "${" in expanded or expanded.startswith("$") else expanded
 
 

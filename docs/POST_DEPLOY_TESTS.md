@@ -52,37 +52,73 @@ sqlite3 /srv/qa-verification-management-system/data/app.db ".tables" | tr ' ' '\
 
 ## 2. 제품 지식 폴더 수집 — 서버에서 되는지가 관건
 
-**로컬에서 확인할 수 없는 부분이다.** 지식 폴더는 QA 담당자 PC에 있고 서버에는 없다.
+**로컬에서 확인할 수 없는 부분이다.** 지식 폴더는 QA 담당자 PC에 있고 서버에는 마운트로
+붙인다. 마운트가 되기 전과 된 후의 동작이 다르므로 순서대로 확인한다.
 
-| # | 확인 | 기대 동작 |
-|---|---|---|
-| 2.1 | `/knowledge` 상단에 제품별 지식 폴더 상태가 보이는가 | 서버에서는 **"접근할 수 없습니다"** + CLI 안내가 정상 |
-| 2.2 | 접근 불가일 때 버튼이 숨는가 | "지금 수집" 버튼이 없어야 한다 |
-| 2.3 | 그 상태에서 QA Agent가 어떻게 되는가 | 이미 수집된 사본이 있으면 정상 동작. 없으면 G1 BLOCK |
-| 2.4 | 담당자 PC에서 CLI 수집 후 서버에 반영되는가 | 아래 절차 |
+| # | 확인 | 마운트 전 (기대) | 마운트 후 (기대) |
+|---|---|---|---|
+| 2.1 | `/knowledge` 상단에 제품별 지식 폴더 상태가 보이는가 | **"접근할 수 없습니다"** + CLI 안내 | 수집 대기 건수 표시 |
+| 2.2 | "지금 수집" 버튼 | 숨어 있어야 한다 | 표시돼야 한다 |
+| 2.3 | 그 상태에서 QA Agent가 어떻게 되는가 | 이미 수집된 사본이 있으면 정상. 없으면 G1 BLOCK | 정상 |
 
-### 담당자 PC → 서버 반영 절차
+### 확정된 방식: 서버가 지식 폴더를 마운트한다
 
-수집 사본은 `data/product_knowledge/`에 만들어지고 **Git에 포함되지 않는다.** 서버에 옮기는
-방법을 하나 정해야 한다.
+담당자 PC 와 서버가 **같은 폴더를 다른 경로로** 본다. `config/products/*.yaml` 의
+`knowledge_source.dir` 은 `${ENV:-기본값}` 형태이므로 **서버에서만 환경변수를 설정**하면
+되고 담당자 PC 는 아무것도 하지 않아도 된다.
+
+| 제품 | 환경변수 |
+|---|---|
+| VXvue | `QA_KNOWLEDGE_DIR_VXVUE` |
+| Bellalun Viewer | `QA_KNOWLEDGE_DIR_BELLALUN` |
+
+**① 마운트** — 사내 공유 폴더를 서버에 읽기 전용으로 붙인다. 앱은 이 폴더를 쓰지 않으므로
+`ro` 로 충분하다.
 
 ```bash
-python scripts/sync_product_knowledge.py --dry-run
+sudo mkdir -p /srv/knowledge/vxvue /srv/knowledge/bellalun
 ```
+
+`/etc/fstab` 에 등록해 재부팅 후에도 유지한다 (자격증명은 별도 파일로 두고 `600` 권한).
+
+```text
+//<서버>/<공유>/VXvue/VXvue\040지식파일  /srv/knowledge/vxvue     cifs  ro,credentials=/etc/qa-knowledge.cred,iocharset=utf8,uid=<앱계정>,_netdev  0  0
+//<서버>/<공유>/Bellalun\040Viewer/지식   /srv/knowledge/bellalun  cifs  ro,credentials=/etc/qa-knowledge.cred,iocharset=utf8,uid=<앱계정>,_netdev  0  0
+```
+
+> **한글 폴더명 주의.** `fstab` 은 경로의 공백을 `\040` 로 써야 하고, 한글 파일명이 깨지지 않게
+> `iocharset=utf8` 이 필요하다. 마운트 후 `ls` 로 파일명이 정상인지 먼저 확인한다 —
+> 파일명이 깨지면 분류·리비전 판별이 전부 실패한다.
+
+**② 환경변수** — systemd 유닛에 넣는다.
 
 ```bash
-python scripts/sync_product_knowledge.py --product VXvue
+sudo systemctl edit qa-verification
 ```
 
-| 방식 | 장점 | 단점 |
-|---|---|---|
-| A. `data/product_knowledge/` 를 서버로 복사(rsync/scp) 후 서버에서 등록 | 파싱을 서버가 한 번만 함 | 복사 단계가 수동 |
-| B. 서버가 지식 폴더를 네트워크 경로로 마운트 | 서버에서 버튼 하나로 수집 | 마운트 권한·경로 결정 필요 |
-| C. `/knowledge` 화면에서 파일을 직접 업로드 | 추가 설정 불필요 | 매주 사람이 반복 |
+```ini
+[Service]
+Environment=QA_KNOWLEDGE_DIR_VXVUE=/srv/knowledge/vxvue
+Environment=QA_KNOWLEDGE_DIR_BELLALUN=/srv/knowledge/bellalun
+```
 
-> **결정 대기.** 어느 방식을 쓸지 정해지면 `config/products/*.yaml`의 `knowledge_source.dir`을
-> 그에 맞게 바꾸고 이 문서에 확정 절차를 적는다. B를 고르면 `${ENV}` 치환으로 서버·PC의
-> 경로를 나눌 수 있다.
+**③ 확인**
+
+| # | 확인 | 기대 |
+|---|---|---|
+| 2.4.1 | 마운트가 붙었는가 | `ls "/srv/knowledge/vxvue"` 에 한글 파일명이 정상 표시 |
+| 2.4.2 | 앱이 경로를 인식하는가 | `/qa-agent/readiness?product=VXvue` 의 응답, `/knowledge` 화면에 "지금 수집" 버튼 표시 |
+| 2.4.3 | 스캔이 되는가 | `/knowledge/source/VXvue` — 분류 건수와 제외 이유 |
+| 2.4.4 | 분류되지 않은 파일이 없는가 | 같은 응답의 `excluded` 에 "규약에 맞지 않음"이 없어야 한다 |
+| 2.4.5 | 수집·등록이 되는가 | "지금 수집" → 알림의 등록/미변경/정리/중복 건수 |
+| 2.4.6 | 주간 자동 수집 | 기동 로그의 `scheduled_job_registered id=sync_product_knowledge_*`, 다음 월요일 07:30/07:45 실행 |
+
+마운트가 불가능해지면 CLI 방식으로 되돌릴 수 있다 — 환경변수를 빼면 기본값(PC 경로)이
+되어 서버에서는 "접근할 수 없습니다"로 표시되고 화면이 CLI 절차를 안내한다.
+
+```bash
+python scripts/sync_product_knowledge.py --product VXvue --report-to http://10.13.0.222:12000
+```
 
 **검증 후 확인**
 
@@ -165,8 +201,8 @@ API 호출 지점에서만 막혔다.
 | # | 확인 | 방법 |
 |---|---|---|
 | 6.1 | job이 등록됐는가 | 기동 로그의 `scheduled_job_registered id=sync_product_knowledge_*` |
-| 6.2 | 서버에서 폴더 접근 불가일 때 조용히 건너뛰는가 | 로그 `knowledge_sync_skipped reason=지식_폴더_접근_불가` (오류가 아님) |
-| 6.3 | 담당자 PC 작업 스케줄러가 도는가 | 그 PC의 작업 스케줄러 이력 + 서버 `/knowledge` 의 마지막 수집 시각 |
+| 6.2 | 마운트가 붙은 뒤 실제로 수집되는가 | 다음 월요일 `/knowledge` 의 마지막 수집 시각과 sync 로그 |
+| 6.3 | 마운트가 끊겼을 때 조용히 건너뛰는가 | 로그 `knowledge_sync_skipped reason=지식_폴더_접근_불가` (오류가 아님) |
 | 6.4 | ALM 사양서 동기화가 계속 도는가 | `/knowledge` 의 ALM 동기화 상태 (기존 기능) |
 
 시간대는 `Asia/Seoul` 고정이다. 서버 TZ와 무관하다.
