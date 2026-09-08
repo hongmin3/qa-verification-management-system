@@ -7,6 +7,11 @@
 
 ## 완료 이력 색인 (최신순, 상세는 커밋 참고)
 
+- 2026-09-08: **할당량 알림 · 모델 실측 판단 · 한글 파일명 처리** — Gemini 할당량 소진/모델
+  사용 불가를 메일로 알림(쿨다운·마스킹·발송 실패 내성). 모델을 실측으로 결정:
+  `gemini-3.5-flash` 채택, Pro 계열 배제(thinking 을 끌 수 없고 근거 없이 40건을 KEEP 으로
+  단정). 마운트에서 한글 파일명이 NFD/mojibake 로 와도 자동 흡수 + fstab 생성기.
+
 - 2026-09-08: **QA Agentic Workflow 구축** — Issue 기반 검증 범위 분석(`/qa-agent`).
   제품 지식 자산 레지스트리 공통화(파일명 규약만으로 분류·리비전 판별, Bellalun Viewer가
   코드 변경 없이 편입), QA 규칙 Rev 로더(절 단위 Skill 태깅 → 85~94% 절감), Polarion Issue
@@ -48,18 +53,21 @@
 
 각 항목의 "확인" 줄은 실서버 또는 로컬에서 직접 검증한 근거다.
 
-### A. 운영 리스크
+### A. 바로 해야 하는 것 (사용자 조치)
 
--1. **Gemini API 선불 크레딧이 소진됐다.** 실호출이 `429 RESOURCE_EXHAUSTED`로 실패한다
-   (2026-09-08 로컬 확인). 파이프라인은 Gate 통과·검색·payload 조립·마스킹까지 정상
-   수행하고 API 호출 지점에서만 막힌다. AI Studio에서 결제 상태를 확인해야 실사용이 가능하다.
--2. **`gemini-2.5-pro`가 신규 계정에 제공되지 않는다.** 실제 응답: "no longer available to
-   new users, please update to gemini-3.1-pro-preview". 상위 등급 모델이 막히면 기본
-   모델로 물러나고 그 사실이 결과에 남도록 처리했고, `config.yaml`의 `models.complex`
-   기본값은 검증된 `gemini-2.5-flash`로 두었다. 상위 등급을 쓸지는 **사용자 결정 대기**.
--3. **지식 폴더를 서버가 볼 수 없다.** 폴더는 QA 담당자 PC에 있다. 담당자 PC에서 CLI로
-   수집한 결과(`data/product_knowledge/`)를 서버로 옮기는 방식(복사 / 네트워크 마운트 /
-   화면 업로드)을 정해야 한다 — **사용자 결정 대기** (`docs/POST_DEPLOY_TESTS.md` §2).
+-1. **SMTP 앱 비밀번호.** 알림 코드는 완성됐고 수신자(`NOTIFY_EMAIL_TO`)도 넣었지만
+   발신 계정이 없어 실제로는 나가지 않는다. [앱 비밀번호](https://myaccount.google.com/apppasswords)를
+   발급해 `secrets.txt`의 `SMTP_USER`/`SMTP_PASSWORD`에 넣고
+   `python scripts/test_notification.py --send`로 확인한다. 1분 작업이다.
+-2. **지식 폴더 마운트.** 방식은 정해졌다(서버가 읽기 전용 CIFS 마운트). 실행만 남았다.
+   `python scripts/make_knowledge_mount.py --share "//<서버>/<공유>" --app-user <계정>`이
+   fstab 라인과 systemd Environment를 생성한다. 마운트 후 `ls`로 한글 파일명을 먼저 확인한다.
+-3. **Gemini 유료 사용 사내 승인.** 결제는 됐고 Flash 호출이 실제로 동작한다. 사내 문서
+   조각이 외부로 나가므로 **회사 보안 정책상 외부 생성형 AI API 사용 가능 여부**가 확인돼야
+   한다. 코드가 아니라 운영 승인 문제다.
+-4. **`gemini-3.x` 단가 확인.** `config.yaml` `models.pricing`의 `gemini-3.5-flash`·
+   `gemini-3.1-flash-lite` 값은 2.5-flash 기준 **잠정값**이다. 공식 표를 확인해 채운다.
+   비용 추정이 그만큼 어긋난다.
 
 0. **HTTPS 미적용 (다시).** self-signed 인증서로 2026-09-02에 적용했다가 브라우저
    "안전하지 않음" 경고 때문에 같은 날 롤백했다(위 완료 이력 참고). 매뉴얼 서버는
@@ -72,7 +80,19 @@
    쓸 수 없다. **여분 디스크가 없어 이 서버만으로는 해결 불가 — 별도 볼륨/NAS 추가라는
    인프라 결정이 먼저 필요하다** (보류, 사용자 결정 대기).
 
-### B. 제품 기능 고도화
+### B. 다음 개선 (측정이 먼저인 것)
+
+4a. **TC 후보를 40건 보내는데 실제로 판정되는 것은 2~3건이다.** 입력의 54%(16,404 / 30,207자)가
+   TC 후보이고 그중 대부분이 무관하다. 단순 임계값으로는 자를 수 없다 — 실측한 BM25 점수
+   분포가 관련성을 구분하지 못한다 (VP-6699는 40건이 25~34 사이에 붙어 있고 gap이 없다).
+   **정확도 평가 루프로 정해야 한다**: QA가 확정 TC ID를 몇 건 적립하면
+   (완료된 분석 상세 화면 → precision/recall/F1) 관련 TC가 실제로 몇 위에 오는지 나온다.
+   그 순위를 보고 `qa_agent.tc_candidate_limit`을 내린다. 15건으로 줄이면 입력이 약 40%
+   줄지만, 관련 TC가 20위에 있으면 놓친다 — 근거 없이 줄일 수 없다.
+
+4b. **`retrieval.candidate_limit=150`도 같은 이유로 검증되지 않았다.** (기존 항목)
+
+### C. 제품 기능 고도화
 
 5. **핵심 앱에 사용자 인증이 없다.** QA 승인 기록에 "누가" 승인했는지 남지 않는다. 파트원
    5명이 함께 쓰면 추적성이 필요해진다. Manual Hub의 세션 인증을 재사용하는 방법과 별도
@@ -96,13 +116,13 @@
     변경 알림(Email/Teams), Revision 자동 추출, 권한 고도화. 구조는 준비돼 있고 미구현이다
     (`services/qa-manual-hub/README.md` "향후 확장").
 
-### C. 구조 · 기술 부채
+### D. 구조 · 기술 부채
 
 14. **핵심 앱 스키마 마이그레이션 방식.** 현재 `CREATE TABLE IF NOT EXISTS` + 컬럼 보강이다.
     `docs/SHARED_PLATFORM_ARCHITECTURE.md`가 정한 전환 시점(운영 인스턴스나 개발자 증가)에
     도달하면 Alembic으로 옮긴다. 매뉴얼 서버는 이미 Alembic을 쓴다.
 
-### D. Akela 지식 운영
+### E. Akela 지식 운영
 
 19. ~~**매뉴얼 서버 지식 31개 섹션이 아직 한 번도 applied되지 않았다.**~~ → **1차 스팟체크
     완료 (2026-09-02)**. `manual-hub-deploy` activity로 오늘 실제 서버에서 확인한 사실(systemd
