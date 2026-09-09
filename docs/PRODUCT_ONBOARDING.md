@@ -50,12 +50,21 @@ sync:
 
 ### ③ 수집
 
-`/knowledge` → 해당 제품의 **"지금 수집"**. 서버는 그 폴더를 읽기 전용으로 마운트해서
-본다(§6). 마운트가 없으면 버튼이 숨고, 폴더가 있는 PC에서 CLI로 실행한다:
+지식 폴더가 있는 **담당자 PC에서** 실행한다. 먼저 무엇이 수집될지 확인하고,
 
 ```bash
 python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 ```
+
+맞으면 운영 서버로 올린다 (서버는 이 폴더를 볼 수 없다 — §6).
+
+```bash
+python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to http://10.13.0.222:12000
+```
+
+바뀐 파일만 전송한다 (sha256 비교). VXvue 실측으로 첫 회 106MB, 이후 변경 없으면 0MB다.
+서버가 폴더를 직접 볼 수 있는 환경이라면 `/knowledge` 화면의 **"지금 수집"** 버튼으로도
+같은 일을 할 수 있다 — 볼 수 없으면 버튼이 숨는다.
 
 ---
 
@@ -175,11 +184,27 @@ Skill 태깅은 제품 고유 용어가 아니라 **QA 공통 용어**로 매칭
 
 ---
 
-## 6. 서버와 담당자 PC의 경로가 다를 때
+## 6. 서버는 이 폴더를 볼 수 없다
 
-같은 폴더를 담당자 PC는 로컬 경로로, 운영 서버는 마운트 지점으로 본다.
-`${ENV:-기본값}` 을 쓰면 **YAML에 PC 경로를 기본값으로 두고 서버에서만 환경변수로
-덮어쓸** 수 있다 — 양쪽 모두 환경변수를 설정할 필요가 없다.
+**운영 방식은 업로드다.** 서버가 담당자 PC 폴더를 CIFS 로 마운트하는 방법도 검토했고
+포트(445)도 열려 있었지만, 담당자 PC 가 Wi-Fi DHCP 라 IP 가 바뀌고 사내 DNS 에 이름이
+없으며(서버에서 `getent hosts` 실패) 외근 중엔 네트워크에 아예 없다. 마운트였다면 그 주
+수집이 통째로 비었을 것이다. 그래서 폴더를 볼 수 있는 쪽이 밀어 올린다 — ALM 크롤러
+동기화와 같은 방향이다. 프로토콜과 근거는 `app/core/knowledge_upload.py` 에 있다.
+
+담당자 PC 에서 주 1회 자동 실행하려면 작업 스케줄러에 등록한다.
+
+```
+schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON /ST 07:45 ^
+  /TR "C:\path\to\.venv\Scripts\python.exe C:\path\to\scripts\sync_product_knowledge.py --upload-to http://10.13.0.222:12000"
+```
+
+### 그래도 서버가 폴더를 볼 수 있는 환경이라면
+
+공용 네트워크 드라이브에 지식 폴더를 두는 경우처럼 서버가 직접 읽을 수 있다면, 같은
+폴더를 담당자 PC 는 로컬 경로로, 운영 서버는 마운트 지점으로 본다. `${ENV:-기본값}` 을
+쓰면 **YAML 에 PC 경로를 기본값으로 두고 서버에서만 환경변수로 덮어쓸** 수 있다 — 양쪽
+모두 환경변수를 설정할 필요가 없다.
 
 ```yaml
 knowledge_source:

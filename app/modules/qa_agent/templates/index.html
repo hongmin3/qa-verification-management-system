@@ -20,7 +20,9 @@
       <span>TC <b>{{ readiness.testcases }}</b>건</span>
       <span>QA 규칙 {% if readiness.rules_available %}<b>{{ readiness.rule_revision or '수집됨' }}</b>{% else %}<b style="color:#991b1b">미수집</b>{% endif %}</span>
       {% if readiness.knowledge_synced_at %}<span class="mono">지식 수집 {{ readiness.knowledge_synced_at[:16] }}</span>{% endif %}
-      <span>Issue Export {% if readiness.issue_export_available %}사용 가능{% else %}<b style="color:#9a3412">이 호스트에 없음</b>{% endif %}</span>
+      {# 운영 서버에는 Export 폴더가 없는 것이 정상이다 (담당자 PC 에만 있다). 경고색으로
+         칠하면 늘 켜져 있는 경고가 되어 진짜 경고까지 무시하게 만든다. #}
+      <span>Issue Export {% if readiness.issue_export_available %}<b>사용 가능</b>{% else %}폴더 없음 — 아래에서 <code>backup.json</code> 첨부{% endif %}</span>
     </div>
     {% if not readiness.rules_available %}
     <p class="status">이 제품의 QA 규칙 문서가 수집되지 않아 G1이 분석을 막습니다. <a href="/knowledge">Knowledge</a>에서 <b>지식 폴더 수집</b>을 먼저 실행하세요.</p>

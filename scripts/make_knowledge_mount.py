@@ -23,6 +23,10 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.console import configure_stdout  # noqa: E402
+
+configure_stdout()
+
 from app.core.product_config import list_product_configs  # noqa: E402
 from app.core.product_knowledge import product_slug, resolve_config  # noqa: E402
 

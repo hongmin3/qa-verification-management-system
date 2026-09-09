@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -9,6 +10,9 @@ from fastapi.templating import Jinja2Templates
 
 from app.core import document_cache
 from app.core.config import get_settings
+from app.core.knowledge_upload import UploadRejected
+from app.core.knowledge_upload import commit as commit_upload
+from app.core.knowledge_upload import server_state, store_asset
 from app.core.product_knowledge import KIND_MANUAL, load_manifest, resolve_config, scan_source, source_available, sync_and_register
 from app.core.qa_rules import load_rule_set
 from app.core.storage import Storage
@@ -122,6 +126,69 @@ def trigger_product_knowledge_sync(product: str = Form(...)):
     except Exception as exc:
         storage.sync_finish(sync_id, "FAILED", str(exc))
         raise HTTPException(500, f"수집 실패: {exc}")
+
+
+@router.get("/knowledge/product-knowledge/state")
+def product_knowledge_state(product: str):
+    """서버가 이미 가진 자산 목록 (file_name + sha256).
+
+    담당자 PC 가 이것과 비교해 **바뀐 파일만** 올린다. 이 한 번의 조회가 없으면 매주 약
+    192MB 를 통째로 다시 보내게 된다.
+    """
+    try:
+        return server_state(product.strip())
+    except UploadRejected as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/knowledge/product-knowledge/asset")
+async def upload_product_knowledge_asset(
+    product: str = Form(...),
+    kind: str = Form(...),
+    sha256: str = Form(""),
+    file: UploadFile = File(...),
+):
+    """지식 자산 원본 하나를 받는다. 정규화 텍스트는 서버가 직접 뽑는다.
+
+    파일 이름은 그대로 디스크 경로가 되므로 `safe_file_name` 이 다시 검증한다 — 보내는
+    쪽을 신뢰하지 않는다 (`app/core/knowledge_upload.py`).
+    """
+    data = await file.read()
+    try:
+        return store_asset(product.strip(), kind.strip(), file.filename or "", data, sha256.strip())
+    except UploadRejected as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.post("/knowledge/product-knowledge/commit")
+def commit_product_knowledge(product: str = Form(...), manifest: str = Form(...), uploaded: str = Form("{}")):
+    """업로드된 자산을 서버 상태로 확정하고 문서로 등록한다.
+
+    sync_log 에 남겨 `/knowledge` 화면의 "마지막 동기화"가 서버 자체 수집과 똑같이 보이게
+    한다 — 담당자가 보는 것은 어느 경로로 들어왔는지가 아니라 언제 최신화됐는지다.
+    """
+    product = product.strip()
+    if storage.is_sync_running(product, "product_knowledge"):
+        raise HTTPException(409, f"'{product}' 지식 폴더 수집이 이미 진행 중입니다.")
+    try:
+        manifest_payload = json.loads(manifest)
+        uploaded_payload = json.loads(uploaded or "{}")
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, f"manifest 를 읽을 수 없습니다: {exc}")
+    if not isinstance(manifest_payload, dict) or not isinstance(uploaded_payload, dict):
+        raise HTTPException(400, "manifest 와 uploaded 는 JSON 객체여야 합니다.")
+
+    sync_id = storage.sync_start(product, "product_knowledge", "upload")
+    try:
+        result = commit_upload(product, manifest_payload, uploaded=uploaded_payload, storage=storage)
+    except UploadRejected as exc:
+        storage.sync_finish(sync_id, "FAILED", str(exc))
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        storage.sync_finish(sync_id, "FAILED", str(exc))
+        raise HTTPException(500, f"확정 실패: {exc}")
+    storage.sync_finish(sync_id, result["status"], result["detail"])
+    return result
 
 
 @router.post("/knowledge/cleanup/missing")

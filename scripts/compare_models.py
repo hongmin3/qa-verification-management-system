@@ -25,6 +25,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.console import configure_stdout  # noqa: E402
+
+configure_stdout()
+
 from google import genai  # noqa: E402
 from google.genai import types  # noqa: E402
 

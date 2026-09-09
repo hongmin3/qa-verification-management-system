@@ -7,6 +7,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.console import configure_stdout  # noqa: E402
+
+configure_stdout()
+
 from app.core.evaluation import evaluate_analysis
 
 

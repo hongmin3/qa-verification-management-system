@@ -668,7 +668,13 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                 if document_base != asset_base:
                     continue
                 older = document["kind"] == kind and _is_strictly_older(document["name"], asset)
-                identical = document["kind"] == kind and _is_same_file(document["path"], asset)
+                # **같은 바이트면 종류가 달라도 지운다.** 한 파일이 사양서로도 매뉴얼로도
+                # 등록돼 있으면 검색 후보에 두 번 올라 진짜 사양서를 밀어내고, 근거 등급까지
+                # 어긋난다 (규칙 §7 은 사양서와 매뉴얼을 다른 등급으로 본다 — 매뉴얼 문장이
+                # 사양 근거로 인용된다). 실제로 첫 업로드 때 매뉴얼 4건이 손으로 올려진
+                # `specification` 등록과 겹쳤다. 수집본의 분류가 파일명 규약에서 나오므로
+                # 그쪽이 맞다.
+                identical = _is_same_file(document["path"], asset)
                 # 파일이 사라진 등록은 검색에 아무것도 기여하지 못하면서 "사양 없음" 오판만
                 # 만든다. 같은 논리 문서를 수집본이 대체하므로 잃는 것이 없다.
                 dead = not Path(document["path"]).is_file()
@@ -676,7 +682,12 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                     storage.delete_document(document["id"])
                     document_cache.delete(document["id"])
                     removed_ids.add(document["id"])
-                    reason = "이전 리비전" if older else ("동일 파일 중복 등록" if identical else "원본 파일 없음")
+                    if older:
+                        reason = "이전 리비전"
+                    elif identical:
+                        reason = f"동일 파일이 {kind} 로도 등록됨" if document["kind"] != kind else "동일 파일 중복 등록"
+                    else:
+                        reason = "원본 파일 없음"
                     outcome.replaced.append(f"{document['name']} (kind={document['kind']}, {reason})")
                 else:
                     note = f"{document['name']} (등록 kind={document['kind']}"

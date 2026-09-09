@@ -14,6 +14,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.core.console import configure_stdout  # noqa: E402
+
+configure_stdout()
+
 from app.modules.impact_analyzer.vxvue_spec_sync import acquire_lock, release_lock, report_sync_log, run  # noqa: E402
 
 
