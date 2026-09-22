@@ -59,7 +59,7 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 맞으면 운영 서버로 올린다 (서버는 이 폴더를 볼 수 없다 — §6).
 
 ```bash
-python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to http://10.13.0.222:12000
+python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to http://10.13.0.222:24357
 ```
 
 바뀐 파일만 전송한다 (sha256 비교). VXvue 실측으로 첫 회 106MB, 이후 변경 없으면 0MB다.
@@ -196,7 +196,7 @@ Skill 태깅은 제품 고유 용어가 아니라 **QA 공통 용어**로 매칭
 
 ```
 schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON /ST 07:45 ^
-  /TR "C:\path\to\.venv\Scripts\python.exe C:\path\to\scripts\sync_product_knowledge.py --upload-to http://10.13.0.222:12000"
+  /TR "C:\path\to\.venv\Scripts\python.exe C:\path\to\scripts\sync_product_knowledge.py --upload-to http://10.13.0.222:24357"
 ```
 
 ### 그래도 서버가 폴더를 볼 수 있는 환경이라면

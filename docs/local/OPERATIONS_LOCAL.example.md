@@ -13,7 +13,7 @@
 | 호스트 | `<서버 IP 또는 호스트명>` |
 | SSH 계정 | `<user>` |
 | 핵심 앱 배포 경로 | `<경로>` |
-| 핵심 앱 포트 | `12000` |
+| 핵심 앱 포트 | `24357` |
 | Manual Hub APP_ROOT | `/opt/qa-manual-hub` |
 | Manual Hub DATA_ROOT | `/srv/qa-manual-hub` |
 | Manual Hub 백엔드 포트 | `9180` |
@@ -35,9 +35,9 @@
 
 ```bash
 # 핵심 앱
-OLD_PID=$(ss -ltnp 'sport = :12000' | grep -oP 'pid=\K[0-9]+')
+OLD_PID=$(ss -ltnp 'sport = :24357' | grep -oP 'pid=\K[0-9]+')
 kill "$OLD_PID"
-cd <배포 경로> && nohup .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000 \
+cd <배포 경로> && nohup .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 24357 \
   > output/logs/uvicorn.out 2>&1 & disown
 
 # Manual Hub
@@ -49,6 +49,6 @@ sudo systemctl reload nginx
 
 ```bash
 curl -fsS http://127.0.0.1/health                  # 핵심 앱 (nginx 경유)
-curl -fsS http://127.0.0.1:12000/health            # 핵심 앱 (직접)
+curl -fsS http://127.0.0.1:24357/health            # 핵심 앱 (직접)
 curl -fsS http://127.0.0.1/manual-hub/api/health   # Manual Hub
 ```

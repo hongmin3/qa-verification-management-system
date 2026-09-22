@@ -9,6 +9,7 @@
 | 하려는 일 | 볼 문서 |
 |---|---|
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
+| 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |
 | **기능별 사용법을 알기** | [사용 안내](USER_GUIDE.md) → 각 화면의 `사용법` 메뉴 |
 | **써 보기** — 로컬에 띄우고 분석 1건 돌려보기 | [배포 가이드 §2–3](DEPLOYMENT.md) → 앱 안 `/impact-analyzer/guide` |
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
@@ -65,6 +66,8 @@
 
 | 문서 | 내용 |
 |---|---|
+| [REQUIREMENTS_AND_FUNCTIONAL_SPEC.md](REQUIREMENTS_AND_FUNCTIONAL_SPEC.md) | 요구사항·기능사양서 — 화면 단위 사양번호(`01-03` 등), 진입경로·버튼동작·스크린샷 포함 |
+| [SPEC.html](SPEC.html) | 위 사양서를 사이드바 목차·뱃지·스크린샷 프레임을 입혀 보기 좋게 렌더링한 정적 HTML (브라우저로 직접 열람). `.md`를 고친 뒤 `python scripts/build_spec_html.py`로 재생성 |
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
 | [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 9단계 파이프라인 |
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |

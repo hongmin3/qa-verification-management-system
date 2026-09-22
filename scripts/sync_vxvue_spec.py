@@ -18,12 +18,13 @@ from app.core.console import configure_stdout  # noqa: E402
 
 configure_stdout()
 
+from app.core.config import app_bind  # noqa: E402
 from app.modules.impact_analyzer.vxvue_spec_sync import acquire_lock, release_lock, report_sync_log, run  # noqa: E402
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--target-url", default="http://10.13.0.222:12000", help="Knowledge API를 등록할 서버 (기본: 운영 서버)")
+    parser.add_argument("--target-url", default=f"http://10.13.0.222:{app_bind()[1]}", help="Knowledge API를 등록할 서버 (기본: 운영 서버. 포트는 config.yaml 의 app.port)")
     parser.add_argument("--dry-run", action="store_true", help="실제 등록 없이 변경분만 확인")
     args = parser.parse_args()
 

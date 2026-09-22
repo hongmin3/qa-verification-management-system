@@ -24,8 +24,11 @@ ZIP에 함께 저장한다. `manifest.json` SHA-256과 임시 복원 DB의 `PRAG
 ## 모니터링
 
 ```bash
-.venv/bin/python scripts/monitor_health.py --base-url http://127.0.0.1:12000 --disk-path .
+.venv/bin/python scripts/monitor_health.py --disk-path .
 ```
+
+`--base-url` 을 생략하면 `config.yaml` 의 `app.port` 로 자기 자신을 본다 (REQ-DEPLOY-001).
+다른 대상을 보려면 `--base-url` 로 명시한다.
 
 `/health`, `/config/status`, `/operations/status`를 확인하고 디스크 부족, 토큰 한도 초과,
 DB 무결성 오류, stale 작업, 마지막 지식 동기화 실패 시 exit code 1을 반환한다.
@@ -34,5 +37,5 @@ DB 무결성 오류, stale 작업, 마지막 지식 동기화 실패 시 exit co
 
 ```cron
 15 2 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
-*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --base-url http://127.0.0.1:12000 --disk-path . >> output/logs/monitor.log 2>&1
+*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --disk-path . >> output/logs/monitor.log 2>&1
 ```

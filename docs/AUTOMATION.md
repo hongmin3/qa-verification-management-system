@@ -7,7 +7,7 @@
 ## 1. 전체 시스템 구조
 
 ```text
-[Windows PC]                                   [Ubuntu 10.13.0.222:12000]
+[Windows PC]                                   [Ubuntu 10.13.0.222:24357]
 ALM 사양서 최신화 크롤링(Polarion REST API)         FastAPI 앱 (uvicorn, 일반 사용자 프로세스)
   └─ output/<날짜>/pdf/*.pdf  ──(HTTP 업로드)──▶   /knowledge/specification
        ▲                                            │
@@ -44,7 +44,7 @@ scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundSche
 ## 3. VXvue 사양서 자동 동기화 구조
 
 VXvue 최신 사양서는 별도 프로젝트
-(`C:\Users\2024980\Documents\자동화\ALM 사양서 최신화 크롤링`)가 **Polarion ALM REST API**로
+(`C:\Users\2024980\Documents\자동화\vxvue-srs-spec-automation`)가 **Polarion ALM REST API**로
 이미 매주 자동 수집하고 있었다. 이 프로젝트를 재구현하지 않고 그 결과물(`output/<날짜>/pdf/`)만
 읽는다.
 
@@ -136,7 +136,7 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
   시각/상태/상세만 표시되고, 즉시 실행이 필요하면 아래 CLI를 크롤러가 있는 Windows PC에서
   직접 실행한다. 수동 트리거용 백엔드 엔드포인트(`POST /knowledge/sync/specification`)
   자체는 남겨뒀다(스크립트나 다른 자동화가 재사용할 수 있도록).
-- CLI: `\.venv\Scripts\python.exe scripts\sync_vxvue_spec.py --target-url http://10.13.0.222:12000`
+- CLI: `\.venv\Scripts\python.exe scripts\sync_vxvue_spec.py --target-url http://10.13.0.222:24357`
   (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 매주 월요일 07:30에는 위 작업
   스케줄러가 인자 없이 이 스크립트를 자동 실행한다(기본 대상이 운영 서버이므로 `--target-url`
   생략).

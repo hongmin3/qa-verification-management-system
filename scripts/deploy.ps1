@@ -90,12 +90,16 @@ Write-Host "qa-verification 서비스 재기동 중..."
 $exitCode = Invoke-SudoOverSsh -HostTarget $hostTarget -Command "systemctl restart qa-verification" -Password $sudoPassword
 if ($exitCode -ne 0) { throw "서비스 재기동 실패 (sudo 비밀번호 또는 유닛 이름을 확인하세요)." }
 
+# 헬스체크 포트는 config.yaml 의 app.port 를 그대로 쓴다 (REQ-DEPLOY-001). 여기에
+# 포트를 굳혀 두면 포트를 바꾼 뒤 배포는 성공하는데 헬스체크만 옛 포트를 두드린다.
+$appPort = (Select-String -Path (Join-Path $projectRoot "config.yaml") -Pattern '^\s*port:\s*(\d+)' | Select-Object -First 1).Matches[0].Groups[1].Value
+if (-not $appPort) { throw "config.yaml 에서 app.port 를 읽지 못했습니다." }
 Write-Host "헬스체크 중..."
 $healthy = $false
 $lastResult = ""
 for ($i = 0; $i -lt 15; $i++) {
     Start-Sleep -Seconds 2
-    $lastResult = ssh $hostTarget "curl -fsS http://127.0.0.1:12000/health" 2>$null
+    $lastResult = ssh $hostTarget "curl -fsS http://127.0.0.1:$appPort/health" 2>$null
     if ($LASTEXITCODE -eq 0 -and $lastResult -match '"status"\s*:\s*"ok"') {
         $healthy = $true
         break

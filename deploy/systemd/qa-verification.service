@@ -8,7 +8,6 @@
 #
 #   sudo sed -e 's|__APP_ROOT__|/path/to/app|' \
 #            -e 's|__SERVICE_USER__|ubuntu|' \
-#            -e 's|__PORT__|12000|' \
 #            deploy/systemd/qa-verification.service \
 #     | sudo tee /etc/systemd/system/qa-verification.service > /dev/null
 #   sudo systemctl daemon-reload
@@ -28,7 +27,9 @@ Wants=network-online.target
 Type=simple
 User=__SERVICE_USER__
 WorkingDirectory=__APP_ROOT__
-ExecStart=__APP_ROOT__/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port __PORT__
+# 포트를 여기 적지 않는다. `app.serve` 가 config.yaml 의 app.host / app.port 를 읽어
+# uvicorn 에 넘긴다 — 포트를 바꾸려면 config.yaml 만 고치고 이 유닛은 그대로 둔다.
+ExecStart=__APP_ROOT__/.venv/bin/python -m app.serve
 
 # 기존 운영 습관(로그 파일 tail)을 그대로 유지하기 위해 journald 외에 파일에도 남긴다.
 StandardOutput=append:__APP_ROOT__/output/logs/uvicorn.out

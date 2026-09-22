@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core import document_cache
-from app.core.config import get_settings
+from app.core.config import app_self_url, get_settings
 from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
@@ -366,8 +366,7 @@ def trigger_specification_sync():
         raise HTTPException(400, "이 서버에서는 ALM 크롤러 output 폴더에 접근할 수 없습니다. 크롤러가 있는 Windows PC에서 scripts/sync_vxvue_spec.py를 실행하세요.")
     sync_id = storage.sync_start(product, "specification", "alm_crawler")
     try:
-        port = get_settings().get("app.port", 12000)
-        result = run_spec_sync(f"http://127.0.0.1:{port}")
+        result = run_spec_sync(app_self_url())
         storage.sync_finish(sync_id, result["status"], result["detail"])
         return result
     except Exception as exc:

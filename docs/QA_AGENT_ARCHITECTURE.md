@@ -133,7 +133,7 @@ qa-verification-management-system/
 nginx :80  ──────────────────────────────┐
     │ /                                  │ /manual-hub/
     ▼                                    ▼
-핵심 앱 (uvicorn :12000)            Manual Hub (별도 프로세스)
+핵심 앱 (uvicorn :24357)            Manual Hub (별도 프로세스)
     │
     ├─ QA Agent Orchestrator  ← app/modules/qa_agent/analyzer.py
     │     │

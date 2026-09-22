@@ -34,7 +34,7 @@ cd /srv/qa-verification-management-system && git pull && ./scripts/deploy.ps1 -R
 
 | # | 확인 | 방법 | 실패 시 원인 |
 |---|---|---|---|
-| 1.1 | 앱이 떴는가 | `curl -s localhost:12000/health` → `{"status":"ok"}` | systemd 유닛, `.venv` 의존성 |
+| 1.1 | 앱이 떴는가 | `curl -s localhost:24357/health` → `{"status":"ok"}` | systemd 유닛, `.venv` 의존성 |
 | 1.2 | 새 라우트가 등록됐는가 | 브라우저에서 `/qa-agent`, `/qa-agent/guide`, `/qa-agent/rules`, `/knowledge/guide`, `/cost-dashboard/guide` | `git pull` 후 재시작 누락 |
 | 1.3 | nginx가 새 경로를 넘기는가 | 외부 PC에서 `http://<서버>/qa-agent` | nginx가 `/` 전체를 프록시하면 추가 설정 불필요 |
 | 1.4 | 정적 파일이 갱신됐는가 | `/qa-agent/analyses/<id>` 에서 Gate 색상 표시 확인 | 브라우저 캐시 → 강제 새로고침 |
@@ -118,7 +118,7 @@ Environment=QA_KNOWLEDGE_DIR_BELLALUN=/srv/knowledge/bellalun
 되어 서버에서는 "접근할 수 없습니다"로 표시되고 화면이 CLI 절차를 안내한다.
 
 ```bash
-python scripts/sync_product_knowledge.py --product VXvue --report-to http://10.13.0.222:12000
+python scripts/sync_product_knowledge.py --product VXvue --report-to http://10.13.0.222:24357
 ```
 
 **검증 후 확인**

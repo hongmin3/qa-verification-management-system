@@ -17,7 +17,7 @@
                        /            \
                       /              \
                      ▼                ▼
-        ② 핵심 앱 (포트 12000)   ③ QA Manual Hub 백엔드 (포트 9180)
+        ② 핵심 앱 (포트 24357)   ③ QA Manual Hub 백엔드 (포트 9180)
         "QA 자동화 로직 전체"      "매뉴얼 문서 보관소"
         FastAPI + SQLite           FastAPI + PostgreSQL
 ```
@@ -36,7 +36,7 @@ Hub의 문서를 참고할 때도 코드를 import하는 게 아니라, 평범�
 상당수가 쓰는 오픈소스 소프트웨어다. 이 프로젝트에서 nginx는 딱 세 가지 일만 한다.
 
 1. **교통 정리(리버스 프록시)**: 사용자가 `http://10.13.0.222/`로 들어오면 "이건 핵심
-   앱한테 보내야겠다"고 판단해 뒤에 있는 ②(포트 12000)로 요청을 전달한다. `/manual-hub/`로
+   앱한테 보내야겠다"고 판단해 뒤에 있는 ②(포트 24357)로 요청을 전달한다. `/manual-hub/`로
    들어오면 ③(포트 9180)이나 그 화면 파일로 보낸다. 사용자는 포트 번호를 몰라도 되고,
    실제로는 이 서버들이 외부에서 직접 보이지 않는다(`127.0.0.1`에만 열려 있음) — nginx가
    유일한 정문이다.
@@ -105,7 +105,7 @@ systemd는 Linux가 기본으로 제공하는 "프로세스 자동 관리자"다
 필요가 없다는 뜻).
 
 ```
-ExecStart = .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000
+ExecStart = .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 24357
 ```
 
 `uvicorn`은 FastAPI 코드를 실제로 실행시켜 웹 요청을 받을 수 있게 해주는 프로그램이다
@@ -115,7 +115,7 @@ ExecStart = .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000
 
 ```powershell
 # 로컬(내 PC)에서 실행
-.\scripts\run.ps1                     # http://localhost:12000
+.\scripts\run.ps1                     # http://localhost:24357
 
 # 로컬 테스트 (Gemini Mock 사용, 비용 없음)
 .\.venv\Scripts\python.exe -m pytest -q
@@ -130,7 +130,7 @@ ExecStart = .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000
 sudo systemctl restart qa-verification    # 코드를 새로 배포한 뒤 재기동
 systemctl status qa-verification --no-pager
 journalctl -u qa-verification -n 50 --no-pager   # 최근 로그 50줄
-curl -fsS http://127.0.0.1:12000/health           # {"status":"ok"} 가 나와야 정상
+curl -fsS http://127.0.0.1:24357/health           # {"status":"ok"} 가 나와야 정상
 ```
 
 ---
@@ -206,7 +206,7 @@ pytest tests -q
 | 핵심 앱 재기동 | `sudo systemctl restart qa-verification` |
 | Manual Hub 재기동 | `sudo systemctl restart qa-manual-hub` |
 | nginx 설정 반영(무중단) | `sudo nginx -t && sudo systemctl reload nginx` |
-| 핵심 앱 살아있는지 확인 | `curl -fsS http://127.0.0.1:12000/health` |
+| 핵심 앱 살아있는지 확인 | `curl -fsS http://127.0.0.1:24357/health` |
 | Manual Hub 살아있는지 확인 | `curl -s http://127.0.0.1:9180/api/health` |
 | 셋 다 밖에서 정상인지 확인 | `curl -k https://127.0.0.1/health`, `.../manual-hub/api/health` |
 | 핵심 앱 최근 로그 | `journalctl -u qa-verification -n 50 --no-pager` |

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "files": {
+    "project-readiness.js": "54519221a86a4baad7b5a181bc2c5164d4f9985b57b27eaffa93d56a5e75399c",
+    "agents-spec-section.md": "71875c6c74f3b57acd27e1671b019750357f226d61bfb56664e8f07d988284d2"
+  },
+  "projectFiles": {
+    ".github/workflows/project-readiness.yml": "239453c90ee891c4ffb51345ac3a570d07b3b88fb18afee0f10c9693b5df5c8e"
+  }
+}

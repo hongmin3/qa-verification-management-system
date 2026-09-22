@@ -1,7 +1,12 @@
 app:
   name: "QA 검증 관리 시스템"
   host: "0.0.0.0"
-  port: 12000
+  # 이 앱이 listen 하는 포트의 **단일 원본**이다. 여기만 고치면 uvicorn 바인딩과
+  # 앱이 자기 자신을 부르는 URL, 운영 점검(scripts/monitor_health.py)이 모두 따라간다
+  # (app/serve.py, app/core/config.py 의 app_bind/app_self_url).
+  # 따라오지 않는 곳은 nginx 뿐이다 — deploy/nginx/qa-platform.conf 의 upstream 포트는
+  # 손으로 맞춰야 하고, 어긋나면 tests/test_serve_bind.py 가 실패시킨다.
+  port: 24357
   locale: "ko_KR"
 
 storage:

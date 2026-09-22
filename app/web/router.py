@@ -49,7 +49,7 @@ def relative_service_urls() -> dict[str, str]:
     """URL이 상대 경로인 하위 서비스만 골라 {첫 경로 조각: URL} 로 돌려준다.
 
     상대 경로는 "같은 호스트의 nginx가 이 경로를 하위 서비스로 프록시한다"는 뜻이다.
-    그런데 이 앱은 nginx 없이 자기 포트로도 직접 접속할 수 있고(예: :12000), 그때는
+    그런데 이 앱은 nginx 없이 자기 포트로도 직접 접속할 수 있고(예: :24357), 그때는
     같은 링크가 이 앱으로 들어와 404가 된다. 그 경우를 처리하기 위해 필요하다."""
     prefixes: dict[str, str] = {}
     for card in external_services():

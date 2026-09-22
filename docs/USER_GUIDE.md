@@ -78,7 +78,7 @@ python scripts/sync_product_knowledge.py --dry-run
 ```
 
 ```bash
-python scripts/sync_product_knowledge.py --product VXvue --report-to http://10.13.0.222:12000
+python scripts/sync_product_knowledge.py --product VXvue --report-to http://10.13.0.222:24357
 ```
 
 자세한 절차·규약·정리 규칙: 앱 안 [`/knowledge/guide`](../app/modules/knowledge/templates/guide.html)

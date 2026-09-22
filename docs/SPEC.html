@@ -1,0 +1,1864 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>QA 검증 관리 시스템 — 요구사항 및 기능사양서</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --ink:#1b2430; --muted:#5b6b7a;
+  --line:#e1e6ea; --accent:#0b5cab; --accent-soft:#e8f1fb;
+  --done:#1a7f4b; --done-bg:#e6f6ec;
+  --partial:#a15c00; --partial-bg:#fdf0dc;
+  --todo:#5b6b7a; --todo-bg:#eef1f4;
+  --wontdo:#b0231e; --wontdo-bg:#fbe9e8;
+  --code-bg:#f0f2f4;
+  --sidebar-w:320px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.7;}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  background:#12202e;color:#cfe0ee;overflow-y:auto;padding:20px 0 60px;}
+.sidebar .brand{padding:0 20px 16px;border-bottom:1px solid #263b4d;margin-bottom:12px}
+.sidebar .brand .t1{font-size:13px;color:#7fa8cc;letter-spacing:.04em;text-transform:uppercase}
+.sidebar .brand .t2{font-size:17px;font-weight:700;color:#fff;margin-top:4px}
+.sidebar input#q{width:calc(100% - 40px);margin:0 20px 12px;padding:8px 10px;border-radius:6px;
+  border:1px solid #2c4258;background:#0d1a26;color:#e8f1fb;font-size:13px}
+.toc-root{list-style:none;margin:0;padding:0 8px}
+.toc-root ul{list-style:none;margin:2px 0 6px 0;padding:0}
+.toc-root li.toc-l2{margin-top:10px}
+.toc-root li.toc-l2>a{display:block;padding:6px 12px;font-weight:700;color:#fff;border-radius:6px}
+.toc-root li.toc-l2>a:hover{background:#1c3348;text-decoration:none}
+.toc-root li.toc-l3>a{display:block;padding:4px 12px 4px 22px;font-size:13.5px;color:#a9c4dc;
+  border-left:2px solid transparent;border-radius:0 6px 6px 0}
+.toc-root li.toc-l3>a:hover{background:#1c3348;color:#fff;border-left-color:var(--accent);text-decoration:none}
+.toc-root li.toc-l3.hide,.toc-root li.toc-l2.hide{display:none}
+
+.main{flex:1 1 auto;min-width:0;padding:0}
+.masthead{background:linear-gradient(135deg,#0b3a63,#0b5cab);color:#fff;padding:40px 56px 32px}
+.masthead h1{margin:0 0 8px;font-size:26px}
+.masthead .meta{color:#cfe3f6;font-size:13.5px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}
+.legend .item{background:rgba(255,255,255,.12);border-radius:8px;padding:6px 12px;font-size:13px}
+
+.content{max-width:920px;margin:0 auto;padding:40px 56px 120px;overflow-x:auto}
+
+h2{font-size:22px;margin:56px 0 18px;padding-top:20px;border-top:3px solid var(--accent);
+  scroll-margin-top:20px}
+.content>h2:first-of-type{margin-top:0;border-top:none;padding-top:0}
+h3{font-size:18px;margin:40px 0 14px;padding:14px 18px;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:6px;scroll-margin-top:20px}
+h4{font-size:15px;margin:26px 0 8px;color:var(--accent);border-bottom:1px dashed var(--line);
+  padding-bottom:4px}
+.secno{display:inline-block;background:var(--accent);color:#fff;font-weight:700;
+  font-size:.82em;padding:2px 9px;border-radius:5px;margin-right:9px;font-variant-numeric:tabular-nums}
+h2 .secno{background:#0b3a63}
+
+p{margin:10px 0}
+hr{border:none;border-top:1px solid var(--line);margin:36px 0}
+blockquote{margin:16px 0;padding:12px 18px;background:#fffaf0;border-left:4px solid var(--partial);
+  border-radius:4px;color:#5b4a2a}
+code{background:var(--code-bg);padding:1px 6px;border-radius:4px;font-size:.92em;
+  font-family:Consolas,"D2Coding",monospace}
+pre{background:#0d1a26;color:#dfe9f2;padding:16px 18px;border-radius:8px;overflow-x:auto}
+pre code{background:none;padding:0;color:inherit}
+
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+thead th{background:#eef3f8;font-weight:700}
+tbody tr:nth-child(even){background:#fafbfc}
+div.tablewrap{overflow-x:auto}
+
+figure.shot{margin:20px 0;text-align:center}
+figure.shot img{max-width:100%;border:1px solid var(--line);border-radius:8px;
+  box-shadow:0 4px 18px rgba(20,40,60,.12);background:#fff;padding:4px}
+figure.shot figcaption{margin-top:8px;font-size:13px;color:var(--muted)}
+
+.stbadge{display:inline-block;border-radius:5px;padding:0 6px;font-weight:600}
+.st-done{color:var(--done);background:var(--done-bg)}
+.st-partial{color:var(--partial);background:var(--partial-bg)}
+.st-todo{color:var(--todo);background:var(--todo-bg)}
+.st-wontdo{color:var(--wontdo);background:var(--wontdo-bg)}
+
+.backtop{position:fixed;right:28px;bottom:28px;background:var(--accent);color:#fff;
+  border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:18px}
+
+@media (max-width: 980px){
+  .sidebar{position:fixed;left:-320px;z-index:50;transition:left .2s}
+  .sidebar.open{left:0}
+  .main{margin-left:0}
+  .masthead,.content{padding-left:20px;padding-right:20px}
+}
+@media print{
+  .sidebar,.backtop{display:none}
+  .main{width:100%}
+  h2{page-break-before:always;border-top:none}
+  .content>h2:first-of-type{page-break-before:auto}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="t1">QA 검증 관리 시스템</div>
+      <div class="t2">요구사항 · 기능사양서</div>
+    </div>
+    <input id="q" type="search" placeholder="화면/항목 검색...">
+    <ul class="toc-root">
+<li class="toc-l2"><a href="#0">0. 이 문서를 읽는 법</a>
+<ul>
+<li class="toc-l3"><a href="#01">0.1 사양번호 체계</a></li>
+<li class="toc-l3"><a href="#02">0.2 상태 기호</a></li>
+<li class="toc-l3"><a href="#03">0.3 스크린샷에 대해</a></li>
+<li class="toc-l3"><a href="#04">0.4 대분류 목록</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#00">00 공통 기반</a>
+<ul>
+<li class="toc-l3"><a href="#00-01">00-01 배경과 목적</a></li>
+<li class="toc-l3"><a href="#00-02">00-02 범위</a></li>
+<li class="toc-l3"><a href="#00-03">00-03 시스템 구성</a></li>
+<li class="toc-l3"><a href="#00-04">00-04 제품 지식 자산 관리</a></li>
+<li class="toc-l3"><a href="#00-05">00-05 지식 최신화</a></li>
+<li class="toc-l3"><a href="#00-06">00-06 보안</a></li>
+<li class="toc-l3"><a href="#00-07">00-07 비용과 모델 선택</a></li>
+<li class="toc-l3"><a href="#00-08">00-08 추적성</a></li>
+<li class="toc-l3"><a href="#00-09">00-09 비기능요구사항</a></li>
+<li class="toc-l3"><a href="#00-10">00-10 무엇을 기록해 두는가</a></li>
+<li class="toc-l3"><a href="#00-11">00-11 외부 인터페이스</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#01-qa-agent">01 QA Agent</a>
+<ul>
+<li class="toc-l3"><a href="#01-01">01-01 분석 실행 화면</a></li>
+<li class="toc-l3"><a href="#01-02">01-02 분석 이력 화면</a></li>
+<li class="toc-l3"><a href="#01-03">01-03 분석 상세 화면</a></li>
+<li class="toc-l3"><a href="#01-04">01-04 규칙 자동화 현황 화면</a></li>
+<li class="toc-l3"><a href="#01-05">01-05 사용법 화면</a></li>
+<li class="toc-l3"><a href="#01-06">01-06 알려진 한계와 미구현</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#02-regression">02 Regression 영향 분석</a>
+<ul>
+<li class="toc-l3"><a href="#02-01">02-01 분석 실행 화면</a></li>
+<li class="toc-l3"><a href="#02-02">02-02 분석 이력 화면</a></li>
+<li class="toc-l3"><a href="#02-03">02-03 분석 상세 화면</a></li>
+<li class="toc-l3"><a href="#02-04-html">02-04 HTML 리포트 화면</a></li>
+<li class="toc-l3"><a href="#02-05">02-05 사용법 화면</a></li>
+<li class="toc-l3"><a href="#02-06">02-06 알려진 한계와 미구현</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#03_1">03 매뉴얼 개정 검증</a>
+<ul>
+<li class="toc-l3"><a href="#03-01">03-01 검증 등록·이력 화면</a></li>
+<li class="toc-l3"><a href="#03-02">03-02 개정 상세 화면</a></li>
+<li class="toc-l3"><a href="#03-03">03-03 사용법 화면</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#04-knowledge">04 Knowledge 관리</a>
+<ul>
+<li class="toc-l3"><a href="#04-01-knowledge">04-01 Knowledge 메인 화면</a></li>
+<li class="toc-l3"><a href="#04-02-tc">04-02 TC 컬럼 매핑 화면</a></li>
+<li class="toc-l3"><a href="#04-03">04-03 사용법 화면</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#05">05 비용 대시보드</a>
+<ul>
+<li class="toc-l3"><a href="#05-01">05-01 비용/캐시 대시보드 화면</a></li>
+<li class="toc-l3"><a href="#05-02">05-02 사용법 화면</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#06-qa-manual-hub">06 QA Manual Hub (하위 서비스)</a>
+</li>
+<li class="toc-l2"><a href="#07">07 운영</a>
+</li>
+<li class="toc-l2"><a href="#a">부록 A. 화면 목록</a>
+</li>
+<li class="toc-l2"><a href="#b">부록 B. 남은 결정과 조치</a>
+<ul>
+<li class="toc-l3"><a href="#b1">B.1 사용자 조치가 필요한 것</a></li>
+<li class="toc-l3"><a href="#b2">B.2 함께 결정해야 하는 것</a></li>
+<li class="toc-l3"><a href="#b3">B.3 화면 문구가 실제 구현을 못 따라간 사례</a></li>
+<li class="toc-l3"><a href="#b4">B.4 지금 남아 있는 데이터 이슈</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#c">부록 C. 요구할 수 있는 확장 후보</a>
+<ul>
+<li class="toc-l3"><a href="#c1-qa-agent-01-03">C.1 QA Agent 기능 확장 (01-03)</a></li>
+<li class="toc-l3"><a href="#c2">C.2 정확도</a></li>
+<li class="toc-l3"><a href="#c3">C.3 사용성</a></li>
+<li class="toc-l3"><a href="#c4">C.4 연동</a></li>
+<li class="toc-l3"><a href="#c5">C.5 운영</a></li>
+</ul>
+</li>
+<li class="toc-l2"><a href="#d">부록 D. 관련 문서</a>
+</li>
+</ul>
+  </nav>
+  <div class="main">
+    <header class="masthead">
+      <h1>QA 검증 관리 시스템 — 요구사항 및 기능사양서</h1>
+      <div class="meta">작성 기준: 2026-09-09 · 운영 서버 10.13.0.222 반영 완료분 · 사양번호 체계: 대분류-중분류 (예: 01-03)</div>
+      <div class="legend">
+        <span class="item"><span class="stbadge st-done">✅</span> 구현·운영중</span>
+        <span class="item"><span class="stbadge st-partial">◐</span> 일부 구현</span>
+        <span class="item"><span class="stbadge st-todo">○</span> 미구현</span>
+        <span class="item"><span class="stbadge st-wontdo">✋</span> 의도적으로 하지 않음</span>
+      </div>
+    </header>
+    <article class="content">
+<h1 id="qa">QA 검증 관리 시스템 — 요구사항 및 기능사양서</h1>
+<p>작성 기준: 2026-09-09 · 운영 서버 <code>10.13.0.222</code> 반영 완료분 · 화면 스크린샷은 실제 화면을
+캡처한 것</p>
+<hr />
+<h2 id="0">0. 이 문서를 읽는 법</h2>
+<p>이 문서는 <strong>화면에서 실제로 무엇을 보고, 무엇을 누르면 어떤 결과가 나오는지</strong>를
+기준으로 정리했다. 내부 구현 방식(코드 구조, 통신 방식 등)은 다루지 않는다 — 다만
+사용자가 화면에서 체감하는 차이(예: 진행 상황이 실시간으로 바뀌는지, 저장 후 새로고침이
+필요한지)는 남겨 두었다.</p>
+<h3 id="01">0.1 사양번호 체계</h3>
+<p>모든 항목에 <strong><code>대분류-중분류</code></strong> 형식의 사양번호를 붙였다. 예: <code>01-03</code>.</p>
+<ul>
+<li><strong>대분류(2자리)</strong> — 시스템 화면(탭) 단위. <code>00</code>은 특정 탭에 속하지 않는 <strong>공통 기반</strong>이고,
+  <code>01</code>~<code>07</code>은 실제 메뉴 탭 하나씩에 대응한다.</li>
+<li><strong>중분류(2자리)</strong> — <strong>화면 하나</strong>. 그 화면의 진입 경로·화면 구성·버튼과 결과·표시
+  데이터·조건에 따라 달라지는 표시를 전부 이 번호 하나 아래에 모아서 정리했다. 화면
+  안에 탭이나 섹션이 여러 개 있으면(예: 분석 상세 화면의 6개 탭) 같은 번호 안에서
+  <code>####</code> 소제목으로 구분했다.</li>
+</ul>
+<p><strong>"01-03 을 이렇게 바꿔줘", "04-01 에 이 버튼을 추가해줘"</strong> 처럼 사양번호로 지목하면 된다.</p>
+<h3 id="02">0.2 상태 기호</h3>
+<table>
+<thead>
+<tr>
+<th>기호</th>
+<th>뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="stbadge st-done">✅</span></td>
+<td>구현되어 운영 서버에서 동작</td>
+</tr>
+<tr>
+<td><span class="stbadge st-partial">◐</span></td>
+<td>일부만 구현 (무엇이 빠졌는지 항목에 적음)</td>
+</tr>
+<tr>
+<td><span class="stbadge st-todo">○</span></td>
+<td>미구현 — 요구하면 만들 수 있음</td>
+</tr>
+<tr>
+<td><span class="stbadge st-wontdo">✋</span></td>
+<td><strong>의도적으로 하지 않음</strong> — 이유가 항목에 있음. 뒤집으려면 그 이유를 함께 봐야 함</td>
+</tr>
+</tbody>
+</table>
+<h3 id="03">0.3 스크린샷에 대해</h3>
+<p>이 문서의 스크린샷은 목업이 아니라 실제 화면을 그대로 캡처한 것이다. 다만 로컬에 있는
+데이터 그대로 찍었으므로, 일부 화면(QA Agent 분석 상세 등)은 예시로 고른 분석 건이 하필
+결과가 빈약해 보일 수 있다. <strong>화면 레이아웃과 구성 요소를 확인하는 용도</strong>로 보고, 실제
+값(건수·상태)은 운영 서버의 실제 데이터로 다시 확인해야 한다. 데이터가 아예 없어 캡처가
+불가능한 화면은 그 항목에 사유를 적어 두었다.</p>
+<h3 id="04">0.4 대분류 목록</h3>
+<table>
+<thead>
+<tr>
+<th>번호</th>
+<th>대분류</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00</td>
+<td>공통 기반</td>
+<td>배경·범위·시스템구성·공통요구사항 (화면 없음)</td>
+</tr>
+<tr>
+<td>01</td>
+<td>QA Agent</td>
+<td><code>/qa-agent</code> — Issue 기반 Regression 분석, 5개 화면</td>
+</tr>
+<tr>
+<td>02</td>
+<td>Regression 영향 분석</td>
+<td><code>/impact-analyzer</code> — 5개 화면</td>
+</tr>
+<tr>
+<td>03</td>
+<td>매뉴얼 개정 검증</td>
+<td><code>/manual-review</code> — 3개 화면</td>
+</tr>
+<tr>
+<td>04</td>
+<td>Knowledge 관리</td>
+<td><code>/knowledge</code> — 3개 화면</td>
+</tr>
+<tr>
+<td>05</td>
+<td>비용 대시보드</td>
+<td><code>/cost-dashboard</code> — 2개 화면</td>
+</tr>
+<tr>
+<td>06</td>
+<td>QA Manual Hub</td>
+<td><code>/manual-hub</code> — 하위 서비스(별도 시스템)</td>
+</tr>
+<tr>
+<td>07</td>
+<td>운영</td>
+<td>배포·감시·백업 (화면 없음)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="00"><span class="secno">00</span> 공통 기반</h2>
+<p>화면이 아니라 전체 시스템에 걸친 배경·제약·정책이다. 각 항목은 특정 화면이 아니라
+여러 화면(01~06)이 공유하는 동작을 규정한다.</p>
+<h3 id="00-01"><span class="secno">00-01</span> 배경과 목적</h3>
+<p><strong>풀려는 문제.</strong> SW 가 바뀔 때마다 QA 는 <strong>"어떤 Test Case 를 다시 검증해야 하는가"</strong> 를
+판단한다. 지금은 사람이 사양서·매뉴얼·기존 TC 를 뒤져서 판단하므로 두 방향으로 틀린다 —
+<strong>누락</strong>(변경과 무관해 보이지만 실제로 영향받는 TC 를 빠뜨림, 상태 전이·저장/재시작·권한·
+연동 경로에서 특히 자주)과 <strong>과잉</strong>(확신이 없어 필요 이상으로 넓게 잡아 검증 시간이 늘어남).
+판단 근거(사양서·매뉴얼·TC)는 이미 문서로 존재한다. 사람이 그것을 매번 다시 찾는 것이
+비용이다.</p>
+<p><strong>보안 원칙 — <span class="stbadge st-wontdo">✋</span>.</strong> 가장 쉬운 해법은 사양서·매뉴얼 전체를 AI 서비스에 올리고 물어보는
+것이다. <strong>그렇게 하지 않는다.</strong> 제품 사양서와 매뉴얼은 사내 자산이고, 전체를 외부로
+올리는 것 자체가 문제다. 그래서 이 시스템은 문서를 사내 서버에만 두고, <strong>필요한 부분만
+추려 요약한 뒤</strong> 그 조각만 AI 에게 보낸다. 실측(VXvue Issue 1건 기준): 사내에 있는 원문
+전체 2.11MB 중 실제 외부로 나간 양은 30,207자 — <strong>1.37%</strong>, AI 호출은 1회.</p>
+<p><strong>시스템 목표.</strong> ① 변경 1건에 대해 재검증 대상 TC 를 근거와 함께 제시한다 ② 근거 없는
+판단을 내놓지 않는다 — 모르면 "모른다"고 말한다 ③ 최종 판단과 승인은 사람이 한다
+④ 제품이 늘어도 새로 개발하지 않고 설정만 추가해 확장한다.</p>
+<h3 id="00-02"><span class="secno">00-02</span> 범위</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>대상 제품</td>
+<td>VXvue, Bellalun Viewer (설정 추가만으로 확장 가능)</td>
+</tr>
+<tr>
+<td>사용자</td>
+<td>QA 파트 약 5명</td>
+</tr>
+<tr>
+<td>운영 서버</td>
+<td><code>10.13.0.222</code> (사내망 전용)</td>
+</tr>
+<tr>
+<td>규칙 기준</td>
+<td><code>[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드 Rev1.12</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>범위 밖 — <span class="stbadge st-wontdo">✋</span></strong>: 자동 승인(규칙 §55 가 8가지 자동 확정을 금지, 이 시스템은 초안만 만든다),
+테스트 자동 실행(TC 를 고르는 것까지가 범위), Polarion 직접 쓰기(읽기만 한다).</p>
+<h3 id="00-03"><span class="secno">00-03</span> 시스템 구성</h3>
+<pre><code>   담당자 PC                                  운영 서버 (사내망 전용)
+   ─────────────────                        ──────────────────────────
+   지식 폴더 (사양서·매뉴얼·TC·규칙)   ──업로드──▶  ① 정문 (웹 접속 주소)
+   ALM 크롤러 결과                    ──업로드──▶     │
+   Polarion Issue 내보내기            ──첨부────▶     ├─▶ ② 핵심 앱 (QA Agent·영향분석·매뉴얼검증·Knowledge·비용대시보드)
+   작업 스케줄러 (주 1회)                            │
+                                                     └─▶ ③ QA Manual Hub (매뉴얼 서버)
+                                              ② ──────▶ AI 서비스 (요약된 조각만)
+</code></pre>
+<ul>
+<li><strong>핵심 앱과 매뉴얼 서버는 서로 독립적이다 — <span class="stbadge st-done">✅</span></strong>: 한쪽에 문제가 생겨도 다른 쪽은 계속
+  동작한다. 서로 연결되는 지점은 화면의 링크뿐이다.</li>
+<li><strong>자동 복구 — <span class="stbadge st-done">✅</span></strong>: 서버가 재부팅되거나 앱이 죽어도 자동으로 다시 켜진다.</li>
+<li><strong>재시작 후 작업 정리 — <span class="stbadge st-done">✅</span></strong>: 재시작 도중 끊긴 분석은 정리되고, 대기 중이던 분석은
+  이어서 처리된다.</li>
+<li><strong>모든 화면의 공통 레이아웃 — <span class="stbadge st-done">✅</span></strong>: <code>01</code>~<code>05</code> 화면은 공통 상단 헤더(제목·부제·메뉴
+  링크)를 공유한다. 홈 화면만 메뉴가 없다. 파일을 올리는 영역은 어느 화면에서나 클릭하거나
+  파일을 끌어다 놓는 방식으로 동작하고, 화면에 표시되는 시각은 항상 한국 시간(KST) 기준으로
+  보인다.</li>
+</ul>
+<h3 id="00-04"><span class="secno">00-04</span> 제품 지식 자산 관리</h3>
+<p><strong>제품 확장 — <span class="stbadge st-done">✅</span>.</strong> 새 제품을 추가할 때 새로 개발하지 않는다. 제품별로 설정 하나만
+추가하면 된다.</p>
+<p><strong>파일명 규칙 기반 자동 분류 — <span class="stbadge st-done">✅</span>.</strong> 파일 이름에 붙은 표기로 사양서·매뉴얼·TC·QA 규칙을
+자동으로 구분한다.</p>
+<table>
+<thead>
+<tr>
+<th>파일명</th>
+<th>분류</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(사양서) …</code>, <code>…SRS 사양서…</code>, <code>…사양서N…</code></td>
+<td>사양서</td>
+</tr>
+<tr>
+<td><code>(매뉴얼) …</code>, <code>…Operation Manual…</code>, <code>…Service Manual…</code>, <code>…Conformance Statement…</code>, <code>System Integration Guide…</code>, <code>…API Protocol Manual…</code></td>
+<td>매뉴얼</td>
+</tr>
+<tr>
+<td><code>(TC) …</code>, <code>…Test Case…</code>, <code>…TestCase…</code>, <code>…Checklist…</code></td>
+<td>Test Case</td>
+</tr>
+<tr>
+<td><code>[QA 작성 규칙] …</code></td>
+<td>QA 규칙</td>
+</tr>
+<tr>
+<td><code>…지침 프롬프트…</code></td>
+<td>지침 프롬프트</td>
+</tr>
+</tbody>
+</table>
+<p><strong>최신 리비전 자동 판별 — <span class="stbadge st-done">✅</span>.</strong> 같은 문서의 여러 버전 중 최신 하나만 고른다 — 날짜
+<code>(260907)</code>(사양서), 버전 <code>V1.0.11</code>/<code>V1.0.12W1</code>/<code>v1.4.4</code>(매뉴얼), Rev <code>Rev1.12</code>(QA 규칙)
+같은 표기를 인식한다. 같은 문서가 PDF/Word 원본과 사람이 따로 뽑아둔 텍스트본으로 둘 다
+있으면 원본을 우선한다(텍스트본은 갱신을 잊기 쉽다). 문서번호는 리비전 표기와 구분해서
+인식하고, 상태 꼬리표(<code>_확인완료</code>, <code>(개정)</code>)는 문서 구분에서 무시하며, 한국어/영어처럼
+언어가 다른 파일은 별개 문서로 본다.</p>
+<p><strong>잘못 등록된 문서 자동 정리 — <span class="stbadge st-done">✅</span>.</strong> 같은 문서의 확실히 더 오래된 버전은 자동으로 지운다.
+<strong>내용이 완전히 같은 파일이 서로 다른 종류로 중복 등록</strong>돼 있으면(실제로 매뉴얼 4건이
+사양서로도 등록돼 있었던 사례가 있었다 — 검색에 두 번 잡혀 진짜 사양서를 밀어낸다) 이것도
+자동으로 정리한다. 이때 <strong>등록만 지우고 원본 파일은 남긴다</strong> — 잘못 지웠을 때 되돌릴 수
+있어야 하기 때문이다. 판단이 애매한 경우는 지우지 않고 보고만 한다. 원본 파일이 이미
+사라진 등록은 지운다.</p>
+<p><strong>현재 등록된 제품 (참고)</strong></p>
+<table>
+<thead>
+<tr>
+<th>제품</th>
+<th>사양서</th>
+<th>매뉴얼</th>
+<th>TC</th>
+<th>규칙</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VXvue</td>
+<td>6</td>
+<td>5</td>
+<td>4</td>
+<td>Rev1.12</td>
+</tr>
+<tr>
+<td>Bellalun Viewer</td>
+<td>2</td>
+<td>5</td>
+<td>4</td>
+<td>수집됨</td>
+</tr>
+</tbody>
+</table>
+<h3 id="00-05"><span class="secno">00-05</span> 지식 최신화</h3>
+<p>담당자가 폴더에 최신본을 두면 서버가 그것을 쓴다 (화면 조작은 <code>04-01</code> 참고).</p>
+<ul>
+<li><strong>업로드 방식 — <span class="stbadge st-done">✅</span></strong>: 담당자 PC 에서 서버로 최신 파일을 전송하는 별도 도구를 실행한다.</li>
+<li><strong>PC 폴더를 서버가 직접 들여다보지 않는 이유 — <span class="stbadge st-wontdo">✋</span></strong>: 담당자 PC 가 사내 Wi-Fi 를 쓰고
+  외근도 잦아 항상 같은 위치·같은 네트워크에 있지 않다. 서버가 PC 폴더를 직접 참조하는
+  방식이었다면, PC 가 네트워크에 없는 주에는 수집 자체가 비어버렸을 것이다. 그래서 PC 가
+  서버로 보내는 방식으로 정했다.</li>
+<li><strong>바뀐 파일만 전송 — <span class="stbadge st-done">✅</span></strong>: 서버가 이미 가진 파일과 비교해 새로 바뀐 파일만 보낸다.
+  실측: 첫 회 VXvue 106MB → 같은 내용으로 다시 실행하면 0MB.</li>
+<li><strong>처리 순서 — <span class="stbadge st-done">✅</span></strong>: 먼저 서버가 가진 파일 목록을 확인하고, 바뀐 파일만 전송한 뒤,
+  마지막에 등록을 확정하고 오래된 파일을 정리한다.</li>
+<li><strong>정리 규칙 — <span class="stbadge st-done">✅</span></strong>: 오래된 버전은 지운다. 파일 하나가 실패해도 나머지 전송은 계속
+  진행되고, 실패 목록이 결과에 남는다. 전송 중 파일이 손상되면 서버에 남기지 않는다.</li>
+<li><strong>자동 실행 — <span class="stbadge st-done">✅</span></strong>: 작업 스케줄러로 주 1회 자동 실행(VXvue 월 07:30, Bellalun 월 07:45).
+  VXvue 사양서는 별도의 자동화 도구가 최신본을 읽어 자동으로 등록한다.</li>
+<li><strong>업로드 실패 알림 — <span class="stbadge st-todo">○</span></strong>: 지금은 실행 결과 화면에만 표시된다.</li>
+<li><strong>한글 파일명 복구 — <span class="stbadge st-done">✅</span></strong>: 한글 파일명이 시스템 이동 중 깨지는 경우가 있는데, 이를 자동
+  복구한다. 복구가 안 되면 원인을 남기고 넘어간다.</li>
+</ul>
+<h3 id="00-06"><span class="secno">00-06</span> 보안</h3>
+<ul>
+<li><strong>원문 비전송 원칙 — <span class="stbadge st-done">✅</span></strong>: 원본 문서 전체를 외부로 보내지 않는다(<code>00-01</code> 참고 — 실측
+  1.37%).</li>
+<li><strong>개인정보·사내 식별자 가리기 — <span class="stbadge st-done">✅</span></strong>: 외부로 나가는 문자열에서 개인정보·사내 정보를
+  가린다 — 예: 네트워크 경로, PC 경로, 이메일, 환자 ID·이름, 병원명, 고객명, 시리얼번호,
+  계정, 비밀정보. 지우지 않고 자리표로 바꾼다(예: <code>[환자ID]</code>). QA 판단에 꼭 필요한
+  식별자(SRS/Issue 번호, DICOM Tag, Command 번호, 버전, 에러코드)는 가리지 않는다. 감사
+  화면(<code>01-03</code>, <code>02-03</code>)에서는 실제로 전송된 내용을 그대로 볼 수 있다. 이 가리기 기능은
+  설정에서 끌 수 있지만 기본은 켜져 있다. 가리는 규칙을 화면에서 추가·수정하는 기능은
+  — <span class="stbadge st-todo">○</span>(지금은 개발 작업이 필요).</li>
+<li><strong>접근 통제 — <span class="stbadge st-partial">◐</span></strong>: 사내망 안에서만 접속할 수 있고, 보안 연결(HTTPS)을 쓴다. <strong>사용자
+  로그인이 없다 — <span class="stbadge st-todo">○</span>.</strong> 사내망 안이면 누구나 들어올 수 있고, QA 승인 기록에 "누가"가
+  남지 않는다(<code>부록 B</code> 참고). 업로드하는 파일 이름은 그대로 신뢰하지 않고, 이상한 경로가
+  섞여 있으면 거절한다. 업로드는 문서 형식(PDF·Word·Excel·텍스트)만, 한 파일 200MB
+  까지 허용한다.</li>
+</ul>
+<h3 id="00-07"><span class="secno">00-07</span> 비용과 모델 선택</h3>
+<ul>
+<li><strong>비용을 줄이는 설계 — <span class="stbadge st-done">✅</span></strong>: 분석 1건에 AI 호출은 1회뿐이다. QA 규칙 전체를 매번 보내는
+  대신 그 상황에 맞는 부분만 추려서 보낸다. 같은 입력으로 다시 분석하면 이전 결과를
+  그대로 재사용해 추가 비용이 들지 않는다. 하루 누적 사용량이 정해진 한도를 넘으면 새
+  분석을 막아 비용이 통제 범위를 벗어나지 않게 한다(이미 실행 중인 분석에는 영향 없다).</li>
+<li><strong>모델 선택 기준 — <span class="stbadge st-done">✅</span> / <span class="stbadge st-wontdo">✋</span></strong>: 이 Issue 가 얼마나 복잡한지는 AI 에게 묻지 않고, Issue 에
+  적힌 정보(원인이 명시됐는지, 근거 문서가 몇 개인지 등)로 자동 판단해 적절한 등급의
+  모델을 고른다. <strong>더 고급 모델(Pro 계열)은 쓰지 않는다 — <span class="stbadge st-wontdo">✋</span>.</strong> 같은 입력으로 비교해 보니,
+  고급 모델은 응답 속도가 훨씬 느리면서도 근거가 하나도 없는데 전부 "이상 없음"으로
+  단정하는 등 오히려 위험한 결과를 냈다. 지금 쓰는 모델은 훨씬 빠르고 저렴하면서, 실제로
+  근거가 있는 항목만 골라내는 더 신중한 결과를 낸다. 선택한 모델을 계정에서 쓸 수 없게
+  되면 기본 모델로 자동 전환하고, 전환됐다는 사실을 기록에 남긴다(조용히 바꾸지 않는다).</li>
+<li><strong>비용 추정 — <span class="stbadge st-done">✅</span> / <span class="stbadge st-partial">◐</span></strong>: 건당 약 $0.010, 5명이 월 1,000건 분석한다고 가정하면 월 약 $10.
+  최신 모델의 공식 단가는 아직 잠정값이라 확인이 필요하다(<code>부록 B</code> A-3).</li>
+<li><strong>오류 메일 알림 — <span class="stbadge st-done">✅</span> / <span class="stbadge st-partial">◐</span></strong>: AI 사용량 한도 초과, 결제 문제, 모델 사용 불가 등 시스템이
+  스스로 해결할 수 없는 문제가 생기면 담당자에게 메일로 알린다. 같은 문제로 메일이 반복해서
+  가지 않도록 일정 시간 간격을 둔다. 메일 발송에 실패해도 분석 자체는 실패하지 않는다.
+  메일 내용도 개인정보 가리기를 거친다. <strong>메일 발송 계정 설정이 아직 안 되어 있다 — <span class="stbadge st-partial">◐</span></strong>
+  (<code>부록 B</code> A-1). 알림 대상을 다른 상황(분석 실패, 동기화 실패 등)으로 넓히는 것 — <span class="stbadge st-todo">○</span>.</li>
+</ul>
+<h3 id="00-08"><span class="secno">00-08</span> 추적성</h3>
+<p><strong>"왜 그렇게 판단했는지" 되짚을 수 있어야 한다 — <span class="stbadge st-done">✅</span>.</strong> 분석마다 입력했던 내용, 찾아낸
+근거, 조건 통과 여부와 이유, 실제로 AI 에게 전달된 내용, 가려진 개인정보 요약, 사용한
+모델과 비용, AI 의 응답 원문을 전부 남긴다 — 이 전부가 <code>01-03</code>/<code>02-03</code> 상세 화면의
+"AI 요청 기록"에서 그대로 보인다. 근거 없는 판정은 신뢰도가 낮게 표시된다. 진행 상황은
+화면에서 확인할 수 있다(기능에 따라 화면이 자동으로 계속 갱신되거나, 완료 후 새로고침이
+필요할 수 있다 — 각 화면 항목에 표시). 지식 문서를 언제·무엇을·어떤 결과로 업데이트했는지
+이력도 남는다.</p>
+<h3 id="00-09"><span class="secno">00-09</span> 비기능요구사항</h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>현재</th>
+<th>상태</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>분석 1건 소요</td>
+<td>약 10초(AI 응답) + 검색 시간</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>동시 분석</td>
+<td>2건까지 (초과하면 잠시 후 다시 시도해야 함)</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>분석 1건 비용</td>
+<td>약 $0.010</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>외부 전송량</td>
+<td>원문의 1.37%</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>테스트 통과</td>
+<td>625건(로컬) / 620건(서버)</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>지식 전송량</td>
+<td>첫 회 190MB, 이후 변경분만</td>
+<td><span class="stbadge st-done">✅</span></td>
+</tr>
+<tr>
+<td>가용성</td>
+<td>단일 서버, 장애 시 자동 재시작</td>
+<td><span class="stbadge st-partial">◐</span></td>
+</tr>
+<tr>
+<td>동시 사용자</td>
+<td>미측정(5명 상정)</td>
+<td><span class="stbadge st-partial">◐</span></td>
+</tr>
+</tbody>
+</table>
+<h3 id="00-10"><span class="secno">00-10</span> 무엇을 기록해 두는가</h3>
+<p>시스템이 오래 보관하는 정보는 다음과 같다.</p>
+<table>
+<thead>
+<tr>
+<th>기록</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>제품과 버전</td>
+<td>등록된 제품 목록과 각 제품의 버전</td>
+</tr>
+<tr>
+<td>문서</td>
+<td>등록된 사양서·매뉴얼·Test Case (분석의 근거가 되는 원천)</td>
+</tr>
+<tr>
+<td>분석 이력</td>
+<td>QA Agent·Regression 영향 분석 실행 기록</td>
+</tr>
+<tr>
+<td>정확도 평가</td>
+<td>QA 가 확정한 정답 TC 와 그에 따른 정확도 수치</td>
+</tr>
+<tr>
+<td>QA 승인/반려 기록</td>
+<td>누가 언제 무엇을 승인·반려했는지</td>
+</tr>
+<tr>
+<td>AI 응답 재사용 기록</td>
+<td>같은 입력에 대해 재사용한 이전 응답</td>
+</tr>
+<tr>
+<td>동기화 이력</td>
+<td>지식 폴더 수집이 언제·어떤 결과로 실행됐는지</td>
+</tr>
+<tr>
+<td>매뉴얼 개정 검증 기록</td>
+<td>개정 검증 이력, 변경 항목, 코멘트, 다른 매뉴얼 영향</td>
+</tr>
+<tr>
+<td>알림 발송 이력</td>
+<td>메일 알림이 언제 발송됐는지(반복 발송 방지 판단용)</td>
+</tr>
+</tbody>
+</table>
+<p>문서 원본과 등록 정보는 제품별로 구분해 보관되며, 등록만 지워도 원본 파일은 남는 경우가
+많다(<code>00-04</code> 참고).</p>
+<h3 id="00-11"><span class="secno">00-11</span> 외부 인터페이스</h3>
+<table>
+<thead>
+<tr>
+<th>대상</th>
+<th>방향</th>
+<th>방식</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI 서비스(Gemini)</td>
+<td>나감</td>
+<td>보안 연결, 요약된 조각만, 개인정보 가린 뒤 전송</td>
+</tr>
+<tr>
+<td>ALM 사양서 자동 수집 도구</td>
+<td>들어옴</td>
+<td>그 결과물을 읽기만 함(해당 도구 자체는 건드리지 않음)</td>
+</tr>
+<tr>
+<td>Polarion Issue 내보내기 도구</td>
+<td>들어옴</td>
+<td>내보낸 Issue 파일을 읽기만 함</td>
+</tr>
+<tr>
+<td>QA Manual Hub</td>
+<td>양방향</td>
+<td>화면 간 연동</td>
+</tr>
+<tr>
+<td>메일 서버</td>
+<td>나감</td>
+<td>운영 알림 발송</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="01-qa-agent"><span class="secno">01</span> QA Agent</h2>
+<p><code>/qa-agent</code> · <strong>이 시스템의 핵심</strong> · Polarion Issue 하나를 받아 QA 규칙에 따라 분석하고,
+재검증할 TC 와 Regression 범위를 근거와 함께 제시한다. 5개 화면으로 구성된다.</p>
+<h3 id="01-01"><span class="secno">01-01</span> 분석 실행 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/qa-agent</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"Issue 기반 검증 범위 분석"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/01-01-qa-agent-index.png" alt="QA Agent 분석 실행 화면" loading="lazy"><figcaption>QA Agent 분석 실행 화면</figcaption></figure></p>
+<p>등록된 제품이 하나도 없으면 폼 대신 "등록된 제품이 없습니다. Knowledge에서 제품과
+사양서·TC를 먼저 등록하세요." 안내만 나온다. 제품이 있으면 분석을 신청하는 폼이 3구획으로
+표시된다.</p>
+<ul>
+<li><strong>제품 선택</strong> — 제품을 바꾸면 화면이 그 제품 기준으로 다시 표시되고, 상단에 <strong>준비상태
+  요약</strong>이 뜬다 — 사양서 건수, TC 건수, QA 규칙 수집 여부(수집되지 않았으면 빨간색으로
+  강조되고 "이 제품의 QA 규칙 문서가 없어 분석이 진행되지 않습니다" 경고), 지식 수집
+  시각, Issue 목록을 바로 선택할 수 있는지 여부.</li>
+<li><strong>"1. 분석할 Issue"</strong> — Issue 목록에서 고르거나, Issue 번호를 직접 입력하거나, Polarion
+  에서 내보낸 파일을 첨부한다.</li>
+<li><strong>"2. 검증 환경"</strong> — QA 만 아는 사실이라 사람이 답해야 하는 항목이다. 실제 수행 가능
+  여부 / Test Data 준비 여부 / X-ray Exposure 가능 여부 / Dose Table 제공 여부 —
+  각 예/아니오/모름 중 선택. 확보한 관찰 수단·이 검증에 반드시 필요한 관찰 수단(UI 화면/
+  제품 로그/API·WebSocket/DB/실장비/DICOM 수신 장비 중 체크). 환경 메모(자유 텍스트).</li>
+<li><strong>"3. 조사 범위와 초안 허용"</strong> — 조사 범위를 제한하는 메모, "정보가 부족해도 초안으로
+  작성" 여부.</li>
+</ul>
+<p><strong>버튼과 결과</strong></p>
+<table>
+<thead>
+<tr>
+<th>버튼</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>분석 실행</td>
+<td>Issue 도 파일도 고르지 않았으면 안내 메시지가 뜨고 진행되지 않는다. 조건이 맞으면 화면 아래에 진행 상황 패널이 나타난다</td>
+</tr>
+</tbody>
+</table>
+<p>제출 후에는 진행 상황이 화면에서 <strong>자동으로 계속 갱신</strong>되며(새로고침 불필요), 아래 단계가
+순서대로 표시된다.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>화면에 표시되는 단계</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Issue 구조화</td>
+</tr>
+<tr>
+<td>2</td>
+<td>지식 문서 로드</td>
+</tr>
+<tr>
+<td>3</td>
+<td>QA 규칙 로드</td>
+</tr>
+<tr>
+<td>4</td>
+<td>근거 검색</td>
+</tr>
+<tr>
+<td>5</td>
+<td>조건 확인 (여기서 조건이 부족하면 분석이 멈추고 AI 는 호출되지 않는다)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>AI 분석</td>
+</tr>
+<tr>
+<td>7</td>
+<td>결과 검증</td>
+</tr>
+<tr>
+<td>8</td>
+<td>최종 조건 확인</td>
+</tr>
+</tbody>
+</table>
+<p>완료되면 자동으로 <code>01-03</code> 분석 상세 화면으로 넘어간다. 실패하면 진행바가 빨갛게 바뀌고
+오류 메시지가 표시된다.</p>
+<p>조건 확인 기준을 화면에서 직접 조정하는 기능 — <span class="stbadge st-todo">○</span>(지금은 별도 작업 필요). 여러 Issue 를
+한 번에 분석하는 기능 — <span class="stbadge st-todo">○</span>(지금은 1건씩).</p>
+<h3 id="01-02"><span class="secno">01-02</span> 분석 이력 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/qa-agent/analyses</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"QA Agent 분석 이력"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/01-02-qa-agent-history.png" alt="QA Agent 분석 이력 화면" loading="lazy"><figcaption>QA Agent 분석 이력 화면</figcaption></figure></p>
+<p>상단에 "총 N건. 조건 확인에서 멈춘 분석은 AI 호출이 0회입니다."라는 안내가 있다. 표에는
+분석 ID(누르면 상세 화면으로 이동) / 상태 배지(조건 확인에서 막힌 경우 "조건 미충족"
+표시 추가) / Issue 번호 / AI 호출 여부 / 진행 단계 / 생성 시각이 나온다. 이력이 없으면
+"아직 분석이 없습니다. 새 분석을 실행하세요." 안내와 <code>01-01</code> 로 가는 링크가 뜬다. 목록이
+길면 페이지를 넘기는 링크가 아래에 나온다.</p>
+<h3 id="01-03"><span class="secno">01-03</span> 분석 상세 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/qa-agent/analyses/{분석 ID}</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>Issue 번호</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/01-03-qa-agent-detail.png" alt="QA Agent 분석 상세 화면" loading="lazy"><figcaption>QA Agent 분석 상세 화면</figcaption></figure></p>
+<p>이 시스템에서 <strong>정보가 가장 많이 모여 있는 화면</strong>이다. 상단 요약(상태 배지, 제품명·
+Issue 유형·AI 호출 여부·소요 시간)과 그 아래 <strong>조건 확인 카드</strong>, <strong>6개 탭</strong>으로 구성된다.</p>
+<p><strong>조건 확인 카드.</strong> 5가지 조건(G1~G5)을 카드로 보여주고, 각각 통과/보완 필요/입력 필요/
+막힘/대기 중 하나의 상태로 표시된다. 조건이 막히면 "진행하지 못한 이유" 안내와 함께
+무엇을 보완해야 하는지 알려준다.</p>
+<table>
+<thead>
+<tr>
+<th>조건</th>
+<th>확인하는 것</th>
+<th>확인 시점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td>Issue·문서·TC·버전 정보가 충분한가</td>
+<td>AI 분석 전</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>공식 사양에서 근거를 찾았는가</td>
+<td>AI 분석 전</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>기존 TC 가 원인을 실제로 다루는가</td>
+<td>AI 분석 후</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>실제로 검증을 수행할 수 있는 상황인가</td>
+<td>AI 분석 전</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Issue·사양·TC·기대 결과가 서로 모순되지 않는가</td>
+<td>AI 분석 후</td>
+</tr>
+</tbody>
+</table>
+<p>이 중 G1·G2·G4 가 하나라도 막히면 <strong>AI 분석 자체가 진행되지 않는다</strong> — 근거 없이 물어봐야
+근거 없는 답만 나오기 때문이다.</p>
+<h4 id="issue">Issue 탭</h4>
+<p>Issue 유형, 발생/목표 버전, 재현 빈도, 연결된 SRS·Issue, Issue 내용이 정해진 형식을
+따랐는지 여부가 표시된다. Precondition / Step / Expected Result / Actual Result 가 4개
+박스로 나뉘어 보인다. AI 가 분석한 원인·수정 대상·변경 전후 내용도 함께 표시된다. 본문에
+이미지가 있으면 파일명 목록만 보여주고, 이미지 자체는 AI 가 판정하지 않는다는 안내가
+붙는다.</p>
+<h4 id="specification">Specification 탭</h4>
+<p>관련 사양이 몇 건 검색됐는지 요약이 뜨고, 사양 관련도 판정마다 카드가 나온다 — 판정
+내용, 근거 목록(근거가 없으면 "근거 없음"이라고 표시되고 이 판정만으로는 확정하지 않는다는
+안내가 붙는다), 그리고 QA 가 승인·반려를 남기는 영역(아래 "QA Action" 설명 참고).</p>
+<h4 id="tc-coverage">TC Coverage 탭</h4>
+<p>검토 대상 TC 건수 요약과, TC 마다 판정 카드가 나온다 — TC 번호, 판정(아래 표), 원인
+검출 가능 여부, 판정 신뢰도, 판정 사유, 근거 목록. 판정이 "유지"가 아니면 "실제 TC는
+자동으로 바뀌지 않으며 QA 승인 후 반영됩니다"라는 안내가 붙는다.</p>
+<table>
+<thead>
+<tr>
+<th>판정</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>유지</td>
+</tr>
+<tr>
+<td>경미 수정</td>
+</tr>
+<tr>
+<td>수정 필수</td>
+</tr>
+<tr>
+<td>신규 TC 필요</td>
+</tr>
+<tr>
+<td>Issue Link 수정</td>
+</tr>
+<tr>
+<td>사양 확인 필요</td>
+</tr>
+</tbody>
+</table>
+<h4 id="regression">Regression 탭</h4>
+<p><strong>8가지 확인 항목은 항상 고정된 순서로 전부 표시</strong>된다 — AI 가 일부를 빠뜨려도 화면에는
+8개가 모두 나오고, 각각 "해당/비해당"과 이유가 채워진다.</p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DIRECT</td>
+<td>변경된 기능 자체</td>
+</tr>
+<tr>
+<td>STATE</td>
+<td>상태 전환(A→B, B→A, A→B→A), 오류→정상, 연결→해제→재연결</td>
+</tr>
+<tr>
+<td>DATA</td>
+<td>캐시·에러코드·목록·환자·검사 정보의 잔존·오염</td>
+</tr>
+<tr>
+<td>PERSISTENCE</td>
+<td>저장·재로드·재진입·재시작 후에도 값이 유지되는지</td>
+</tr>
+<tr>
+<td>INTEGRATION</td>
+<td>DICOM·API·WebSocket·외부 장치 연동</td>
+</tr>
+<tr>
+<td>PERMISSION</td>
+<td>계정 권한에 따른 노출·동작 차이</td>
+</tr>
+<tr>
+<td>PRIOR_ISSUE</td>
+<td>같은 원인으로 과거에 있었던 Issue 의 재발</td>
+</tr>
+<tr>
+<td>GENERATOR</td>
+<td>Generator 관련 동작</td>
+</tr>
+</tbody>
+</table>
+<h4 id="gate">Gate 상세 탭</h4>
+<p>5가지 조건 각각의 상태와, 시스템이 남긴 메모(문제 심각도와 내용)를 보여준다. 응답에서
+실제로 존재하지 않는 TC 번호나 근거가 있었다면 여기서 걸러낸 내용을 알려준다. AI 가
+"추가로 확인이 필요하다"고 판단한 내용이 있으면 그것도 표시된다.</p>
+<h4 id="qa-action">QA Action 탭</h4>
+<p>이 화면에서 나온 판정 중 QA 승인이 꼭 필요한 항목(실제 TC 변경, SRS 연결 확정, Pass/Fail,
+Issue 종료, 새로운 결함 확정, Release 승인)을 요약해서 보여준다. 표에는 구분(사양 관련도/
+TC Coverage/Regression) / 대상 / AI 판정 / 근거 유무 / QA 결정(아직 결정 안 됐으면
+"미결정")이 나온다.</p>
+<p><strong>QA 승인 방법</strong> — Specification·TC Coverage·Regression 탭의 각 판정 카드마다 QA 가
+"승인/거절/수정 후 승인/근거 추가 필요" 중 하나를 고르고 메모를 남길 수 있다. <strong>저장</strong> 을
+누르면 화면이 새로고침되며 QA 의 결정이 함께 표시된다 — <strong>AI 의 원래 판정은 지워지지
+않고 QA 결정과 나란히 남는다.</strong></p>
+<p><strong>근거 등급.</strong> 사양 확인 결과를 "기대 결과"의 근거로 쓸 수 있는지는 근거의 출처에 따라
+정해진다.</p>
+<table>
+<thead>
+<tr>
+<th>등급</th>
+<th>근거</th>
+<th>기대 결과 근거로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>이번 요청에서 사용자가 직접 명시한 사양</td>
+<td>가능</td>
+</tr>
+<tr>
+<td>2</td>
+<td>실제 수행 절차·캡처·검증 결과</td>
+<td>가능</td>
+</tr>
+<tr>
+<td>3</td>
+<td>최신 유효 사양서</td>
+<td>가능</td>
+</tr>
+<tr>
+<td>4</td>
+<td>매뉴얼 / 연동 문서</td>
+<td><strong>가능 (한계선)</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>기존 TC</td>
+<td>불가</td>
+</tr>
+<tr>
+<td>6</td>
+<td>이전 버전 문서</td>
+<td>불가</td>
+</tr>
+<tr>
+<td>9</td>
+<td>연구소 코멘트</td>
+<td><strong>불가 — 참고용일 뿐</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>표준 판정 문구.</strong> 모르는 것을 지어내지 않고 정해진 문구 중 하나로 답한다(16종): <code>문서상
+확인되지 않음</code> · <code>추가 사양 확인 필요</code> · <code>기존 TC에서 확인되지 않음</code> · <code>사양 확인 전
+Pass/Fail 판정 불가</code> · <code>실제 수행 확인 필요</code> · <code>검증 범위 제외</code> · <code>UI 경로 간 동작
+불일치</code> · <code>관련 SRS 존재는 확인되나 본문 직접 확인 필요</code> · <code>전체 분할 사양서 조사 완료 전
+존재 여부 확정 불가</code> · <code>취소선/삭제 사양으로 현재 적용 여부 확인 필요</code> · <code>별도 API/WebSocket
+검증 필요</code> · <code>Issue Link 의미 일치 확인 필요</code> · <code>Root Cause Coverage 부족</code> · <code>문서 수정
+확인 대상</code> · <code>Runtime TC 불필요</code>.</p>
+<p><strong>감사(Audit) 정보.</strong> 화면 하단에서 펼쳐 볼 수 있는 영역에서 AI 에게 실제로 전달된 내용과
+AI 가 응답한 내용을 그대로 확인할 수 있다(캐시로 재사용된 응답인지도 표시된다). 하단에는
+"결과 내려받기", "분석 이력", "새 분석" 링크가 있다.</p>
+<p>승인자를 기록에 남기는 기능 — <span class="stbadge st-todo">○</span>(로그인 기능 없음, <code>00-06</code> 참고). Polarion 에 결과를
+되돌려 쓰는 기능 — <span class="stbadge st-todo">○</span>. 결과를 TC 관리 Excel 에 직접 반영하는 기능 — <span class="stbadge st-todo">○</span>.</p>
+<h3 id="01-04"><span class="secno">01-04</span> 규칙 자동화 현황 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/qa-agent/rules</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"규칙 구현현황"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/01-04-qa-agent-rules.png" alt="QA Agent 규칙 자동화 현황 화면" loading="lazy"><figcaption>QA Agent 규칙 자동화 현황 화면</figcaption></figure></p>
+<p>QA 규칙 문서의 각 절이 이 시스템에서 어떻게 다뤄지는지 보여준다. 상단에 전체 절 개수와
+구현 방식별·상태별 건수 요약이 있다. <strong>"제품별 규칙 주입량"</strong> — 제품을 고르면 그 제품
+규칙에서 각 기능(Skill)마다 실제로 사용된 절이 몇 개인지, 규칙 전체 대비 얼마나 줄여서
+사용했는지 보여준다(사용된 절이 0개라고 해서 결함은 아니다 — 그 제품 규칙이 그 주제를
+다루지 않는다는 뜻일 수 있다). 규칙 문서가 아직 수집되지 않은 제품은 안내 문구만 나온다.
+<strong>"절별 구현 방식"</strong> 표는 제품과 무관하게 규칙의 각 절이 구현됐는지/예정인지/아직인지
+보여준다.</p>
+<p>이 화면은 조회 전용이며, 현재 규칙 56개 절 중 49개(88%)가 자동화 가능한 것으로 분류돼
+있고 그중 33개가 구현돼 있다.</p>
+<h3 id="01-05"><span class="secno">01-05</span> 사용법 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/qa-agent/guide</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"QA Agent 사용법"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/01-05-qa-agent-guide.png" alt="QA Agent 사용법 화면" loading="lazy"><figcaption>QA Agent 사용법 화면</figcaption></figure></p>
+<p>이 기능이 대신하는 일, Issue 를 넣는 방법, 검증 환경을 입력하는 이유, 조건 확인 카드
+읽는 법, 탭별로 무엇을 보는지, 감사 정보 확인법, 자주 막히는 경우와 해결법, 다른 기능과의
+관계를 안내하는 순수 설명 화면이다.</p>
+<h3 id="01-06"><span class="secno">01-06</span> 알려진 한계와 미구현</h3>
+<ul>
+<li><strong>TC 후보가 너무 많다 — <span class="stbadge st-partial">◐</span></strong>: TC 후보를 40건 정도 검토 대상으로 올리는데, 실제로 관련
+  있다고 판정되는 것은 2~3건뿐이다. 단순히 개수를 줄이는 기준만으로는 관련 있는 TC 를
+  놓칠 위험이 있어, 실제로 몇 위 안에 관련 TC 가 들어오는지 측정한 뒤 기준을 정해야 한다.</li>
+<li><strong>의미 기반 검색 — <span class="stbadge st-todo">○</span></strong>: 지금은 정확히 일치하는 표현과 키워드 유사도로만 검색한다.
+  의미 기반 검색을 쓰려면 외부 서비스에 사양서 내용을 보내야 해서 <code>00-01</code>(보안 원칙)과
+  충돌한다. 지금 방식의 탐지율을 먼저 측정해야 한다.</li>
+<li>SRS 문서의 세부 메타데이터(SRS 번호, 상위/하위 관계, 연결된 SRS) 자동 추출 — <span class="stbadge st-todo">○</span></li>
+<li><strong>조건 확인 기준 화면 조정, 여러 Issue 일괄 분석, 2차 기능 확장(수정 확인 TC 생성,
+  Issue 작성 지원, API/DICOM 검증, Generator 검증, Release 검증 범위 산출) — <span class="stbadge st-todo">○</span></strong>
+  (<code>부록 C</code> 참고)</li>
+</ul>
+<hr />
+<h2 id="02-regression"><span class="secno">02</span> Regression 영향 분석</h2>
+<p><code>/impact-analyzer</code> · Issue 가 아니라 <strong>변경사항 문서</strong>(변경점 정리 문서, Release Note
+등)를 받아 재검증 TC 를 추천한다. QA Agent(<code>01</code>) 보다 먼저 만들어진 기능으로, 입력이
+Polarion 이 아닐 때 쓴다. 5개 화면으로 구성된다.</p>
+<h3 id="02-01"><span class="secno">02-01</span> 분석 실행 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/impact-analyzer</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"Regression 분석"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/02-01-impact-analyzer-index.png" alt="Regression 영향 분석 실행 화면" loading="lazy"><figcaption>Regression 영향 분석 실행 화면</figcaption></figure></p>
+<p>화면 상단에 AI 서비스 연결 상태 배너가 있고, "설정 다시 읽기" 버튼으로 즉시 갱신할 수
+있다. 사용량 한도를 넘었으면 배너에 그 사실이 표시된다. 등록된 제품이 없으면 폼 대신
+안내문이 뜬다. 있으면 폼 — <strong>제품</strong> 선택 · <strong>변경사항 문서</strong>(PDF/Word, 여러 개 첨부
+가능, 선택 사항) · <strong>사용자 요청 사항</strong>(선택 사항). 문서 없이 요청 사항만 입력해도 되고,
+선택한 제품에 등록된 모든 사양서·TC 를 자동으로 검토 대상에 넣는다.</p>
+<p><strong>버튼과 결과</strong></p>
+<table>
+<thead>
+<tr>
+<th>버튼</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>분석 실행</td>
+<td>파일도 요청사항도 없으면 안내 메시지가 뜨고 진행되지 않는다. 조건이 맞으면 진행 상황 패널이 나타난다</td>
+</tr>
+</tbody>
+</table>
+<p>제출 후 진행 상황은 <strong>화면에서 자동으로 계속 갱신</strong>된다(새로고침 불필요). 단계는 "입력
+문서 분석 → 변경사항 추출 → 최신 사양서 조회 → TC 후보 검색 → AI 영향도 분석 →
+Regression TC 선정 → 신규 TC 초안 검증 → 결과 생성" 순으로 표시되고, 완료되면 "완료 ·
+추천 N건 · HTML Report 링크 · XLSX 링크"(있으면 "TC 초안" 링크도)가 뜬다.</p>
+<h3 id="02-02"><span class="secno">02-02</span> 분석 이력 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/analyses</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"분석 이력 (전체 N건)"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/02-02-impact-analyzer-history.png" alt="Regression 영향 분석 이력 화면" loading="lazy"><figcaption>Regression 영향 분석 이력 화면</figcaption></figure></p>
+<p>QA Agent 이력과는 분리되어 이 기능의 분석만 표시된다. 검색 상자(분석 ID·변경 문서명),
+상태 필터, 제품 필터가 있고, 필터를 적용 중이면 "필터 초기화" 링크가 뜬다. 표에는 시각 /
+상태 / 변경 문서 / AI 가 실제로 검토한 TC 수 / 추천 건수 / 영향도(높음·중간·낮음 건수) /
+결과(상세·Report·XLSX·TC초안 링크, 실패 시 오류 메시지)가 나온다. 완료된 분석에만
+Report·XLSX 링크가 보이고, 신규 TC 초안이 실제로 만들어졌을 때만 그 링크가 보인다.</p>
+<h3 id="02-03"><span class="secno">02-03</span> 분석 상세 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/analyses/{분석 ID}/view</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"분석 상세 · {ID}"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/02-03-impact-analyzer-detail.png" alt="Regression 영향 분석 상세 화면" loading="lazy"><figcaption>Regression 영향 분석 상세 화면</figcaption></figure></p>
+<p>6개(완료 시 7개) 섹션으로 구성된다.</p>
+<ol>
+<li><strong>헤더</strong> — 상태, 생성 시각. 완료됐거나 실패한 분석에는 <strong>"같은 입력으로 재실행"</strong> 버튼이
+   있어, 누르면 같은 조건으로 새 분석이 시작된다(원본 파일이 이미 삭제됐으면 재실행할 수
+   없다).</li>
+<li><strong>요청 입력</strong> — 제품, 사용자 요청 원문, 변경 문서 파일명.</li>
+<li><strong>사용한 지식 문서</strong> — 이 분석에 실제로 사용된 사양서·TC 목록(문서명·버전·등록 시각).</li>
+<li><strong>AI 요청 기록</strong> — 사용한 모델, 이전 결과를 재사용했는지 여부, 그리고 펼쳐서 볼 수 있는
+   영역에 실제로 AI 에게 전달된 내용과 AI 의 응답 원문이 있다.</li>
+<li><strong>AI 검토 대상 TC 선정 기준</strong> — 어떤 기준으로 TC 후보를 추려 AI 에게 넘겼는지 설명과,
+   펼쳐서 볼 수 있는 "선정 순위" 목록.</li>
+<li><strong>분석 결과 요약</strong> — 전체 TC 수·검토 대상 수, TC 별 영향도·추천 여부·신뢰도·판단 근거
+   표. 완료된 분석에는 HTML Report·XLSX 링크가 있다.</li>
+<li><strong>(완료된 분석만) QA 정답 확정 · 정확도 평가</strong> — 실제로 재검증이 필요하다고 QA 가
+   확정한 TC 번호를 입력하는 칸과 메모 칸이 있다. <strong>"QA 정답 저장 및 평가"</strong> 버튼을
+   누르면 화면이 새로고침되며 이 분석의 Precision/Recall/F1 결과와 그동안 누적된 평균
+   결과가 함께 표시된다.</li>
+</ol>
+<h3 id="02-04-html"><span class="secno">02-04</span> HTML 리포트 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td>분석 완료 후 생성되는 결과 보고서 링크</td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"AI Regression Impact Analysis Report"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/02-05-impact-analyzer-report.png" alt="Regression 분석 HTML 리포트 화면" loading="lazy"><figcaption>Regression 분석 HTML 리포트 화면</figcaption></figure></p>
+<p>분석이 끝나면 자동으로 만들어지는 열람 전용 보고서다. 6개 섹션 — 분석 개요(시각, 사용한
+사양서/TC/변경 문서, 분석된 TC 수, 추천 건수), 변경사항 요약(변경 기능·관련 모듈·수정
+유형·재현 방법 등), 영향 분석(전체/검토대상/추천/높음/중간/낮음 건수와 기능별 영향
+영역), 추천 Regression TC 목록(TC 번호·영향도·AI 확신도·선정 이유·확인 포인트, "확인
+필요"로 강제 표시되는 항목도 있음), 신규 TC 제안(기존 TC 로 다루지 못하는 변경사항이
+있을 때만), AI 판단 주의사항("최종 범위는 검증 담당자가 확정해야 한다"는 고정 안내).</p>
+<h3 id="02-05"><span class="secno">02-05</span> 사용법 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/impact-analyzer/guide</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"Regression 영향 분석 사용법"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/02-04-impact-analyzer-guide.png" alt="Regression 영향 분석 사용법 화면" loading="lazy"><figcaption>Regression 영향 분석 사용법 화면</figcaption></figure></p>
+<p>"3단계면 됩니다 — 등록하고, 올리고, 결과를 봅니다."라는 안내로 시작해 ① Knowledge 등록
+② 분석 실행(진행 단계가 실제 진행 상황을 그대로 따라간다는 설명) ③ 결과 확인(보고서
+섹션 순서, 영향도 값의 의미)을 설명한다. VXvue 사양서 자동 동기화 안내와 비용 관리(호출
+1회, 재사용, 하루 사용량 한도) 안내도 있다.</p>
+<h3 id="02-06"><span class="secno">02-06</span> 알려진 한계와 미구현</h3>
+<p>QA Agent(<code>01</code>)와 이 기능을 하나로 통합하는 것 — <span class="stbadge st-todo">○</span>(지금은 입력 형태가 달라 별도 화면).</p>
+<hr />
+<h2 id="03_1"><span class="secno">03</span> 매뉴얼 개정 검증</h2>
+<p><code>/manual-review</code> · Word/PDF 매뉴얼의 개정 내용이 사양서와 맞는지 AI 가 1차 검토한다.
+사람이 매뉴얼 전체를 사양서와 대조하던 작업을 줄인다. 3개 화면으로 구성된다.</p>
+<h3 id="03-01"><span class="secno">03-01</span> 검증 등록·이력 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/manual-review</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"매뉴얼 개정 검증"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/03-01-manual-review-index.png" alt="매뉴얼 개정 검증 등록 화면" loading="lazy"><figcaption>매뉴얼 개정 검증 등록 화면</figcaption></figure></p>
+<p><strong>"현재 검증 근거 SRS" 패널</strong> — 제품별로 펼쳐 보는 목록. 요약줄에 "제품명 · 사양서 N개 ·
+최근 동기화 상태"가 나오고, 펼치면 사양서 파일명·버전·등록시각이 보인다. 사양서가 없으면
+"등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다."라고 안내한다.</p>
+<p><strong>검증 등록 폼</strong> — 제품 · 매뉴얼 종류(입력하면 이 제품에서 썼던 이름이 자동으로 제안됨) ·
+제품 버전(예: "1.1.0" 처럼 입력하면 앞에 V 가 자동으로 붙는다) · <strong>이전 검증</strong>("없음(새
+검증 계보)" 또는 기존 검증 중 선택 — 제품·매뉴얼 종류를 고르면 그에 맞는 후보만 보인다) ·
+개정 Manual 파일(Word Track Changes 또는 PDF, 필수) · Release Note(선택, 첨부하지 않으면
+그 제품에 등록된 최신 문서를 자동으로 사용) · 설계검토보고서(선택, 동일).</p>
+<p><strong>버튼과 결과</strong></p>
+<table>
+<thead>
+<tr>
+<th>버튼</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>검증 시작</td>
+<td>필수 항목이 비어 있으면 안내 메시지가 뜬다. 조건이 맞으면 진행률 패널이 나타나고, <strong>화면에서 자동으로 계속 갱신</strong>된다(새로고침 불필요). 완료되면 "완료 · 변경 N건 분석 대상 M건 · 누락 의심 X/Y건 · 결과 보기" 링크가 뜬다(PDF 를 처음 등록한 경우는 "기준 등록 완료 · 다음 검증에서는 이전 검증으로 선택하세요"라고 안내)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>검증 이력</strong> 표 — 등록 시각 / 제품 / 매뉴얼 / 제품 버전 / 검증 회차 / 상태 / 결과
+링크(<code>03-02</code>로 이동).</p>
+<h3 id="03-02"><span class="secno">03-02</span> 개정 상세 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td>검증 이력에서 "결과 보기"를 눌러 들어가는 화면</td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"매뉴얼 개정 검증 결과"</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>로컬에 아직 완료된 검증 이력이 없어 이 화면은 스크린샷을 캡처하지 못했다. 실제
+데이터가 쌓이면 다시 캡처해 채워 넣어야 한다.</p>
+</blockquote>
+<p>상단에 제품 · 매뉴얼명 · 검증 회차 · 제품 버전과 "판정 요약: {판정} {건수}건"이 나온다.
+원본이 Word 파일이면 <strong>"Word Comment 삽입 DOCX 생성"</strong> 링크가 뜨고, PDF 면 대신 "PDF
+변경은 모든 항목에 사람 확인이 필요하며 Word Comment 생성은 지원하지 않습니다."라는
+안내가 뜬다.</p>
+<p><strong>아래 항목은 데이터가 있을 때만 화면에 나타난다.</strong></p>
+<ol>
+<li><strong>누락 의심(Release Note/설계검토보고서 대비)</strong> — 있을 때만 표시. 참고용 정보이며
+   버튼은 없다.</li>
+<li><strong>다른 Manual 영향 확인</strong> — 있을 때만 표시. 대상 매뉴얼명·근거·QA 상태를 보여주고,
+   QA 가 "확인 필요/영향 있음/영향 없음" 중 하나를 골라 <strong>확정</strong>할 수 있다. 저장하면
+   화면이 새로고침되며 상태가 반영된다.</li>
+<li><strong>이전 검증에서 미해결이었던 지적사항</strong> — 있을 때만 표시. 이전 지적사항과 현재 변경을
+   참고용으로 짝지어 보여주고, QA 가 "해결됨/미해결/재오픈/QA 판단으로 제외" 중 하나를
+   골라 <strong>확정</strong>한다. <strong>이전 지적사항이 자동으로 재사용·재삽입되지는 않는다</strong> — QA 가
+   직접 최종 상태를 정하는 구조다.</li>
+<li><strong>변경사항(N건)</strong> — 항상 표시. 각 변경 항목마다 종류(추가/삭제/이동 등) 표시, 이미지가
+   바뀐 변경이나 PDF 비교로 판정된 항목은 "사람 확인 필요" 표시가 추가된다. 단순 서식
+   변경으로 분류된 항목은 그 사실만 표시되고, 실질적인 변경에는 AI 판정(문제없음/보강
+   필요/수정 필요/삭제 필요/누락 의심/사양 확인 필요/버전 확인 필요/판단 불가)과 판정
+   신뢰도가 함께 표시된다. QA 가 판정을 바꾸면 "QA 재판정" 표시가 추가되고, <strong>AI 의 원래
+   판정은 지워지지 않고 QA 재판정과 나란히 남는다.</strong> 변경 내용, 근거(사양서명·항목 등),
+   AI 가 제안한 코멘트 문구가 함께 표시된다. 실질적인 변경마다 QA 가 판정을 바꾸고
+   메모를 남길 수 있는 영역이 있으며, <strong>저장</strong>을 누르면 화면이 새로고침되며 반영된다.</li>
+</ol>
+<p><strong>"Word Comment 삽입 DOCX 생성" 링크</strong> — 누르면, 원본 Word 파일에 문제가 있다고 판정된
+항목마다 해당 문단에 코멘트가 삽입된 새 파일이 즉시 다운로드된다. 코멘트 내용은 AI 가
+제안한 문구와 QA 가 남긴 메모를 합친 것이다. 원본의 기존 변경 이력·코멘트는 그대로
+보존된다. 코멘트를 넣을 문제 항목이 하나도 없으면 이 기능은 사용할 수 없다.</p>
+<h3 id="03-03"><span class="secno">03-03</span> 사용법 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/manual-review/guide</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"매뉴얼 개정 검증 사용법"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/03-02-manual-review-guide.png" alt="매뉴얼 개정 검증 사용법 화면" loading="lazy"><figcaption>매뉴얼 개정 검증 사용법 화면</figcaption></figure></p>
+<p>검증 등록 방법, 결과 확인과 QA 판정 방법, Word Comment 다운로드 방법, 현재 지원 범위를
+설명하는 정적 안내 화면이다.</p>
+<blockquote>
+<p><strong>화면 문구가 실제와 다른 부분 (부록 B 참고)</strong>: 이 화면의 "현재 지원 범위" 문구는 "다른
+Manual 영향 확인" 기능을 "준비 중"이라고 적어 두었지만, 실제로는 <code>03-02</code> 화면에 이미
+있고 동작한다. 다음에 이 화면 문구를 고쳐야 한다.</p>
+</blockquote>
+<hr />
+<h2 id="04-knowledge"><span class="secno">04</span> Knowledge 관리</h2>
+<p><code>/knowledge</code> · 세 분석 기능(<code>01</code>·<code>02</code>·<code>03</code>)이 함께 쓰는 제품별 사양서·TC·매뉴얼·QA 규칙을
+관리한다. 3개 화면으로 구성된다.</p>
+<h3 id="04-01-knowledge"><span class="secno">04-01</span> Knowledge 메인 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/knowledge</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"공용 Knowledge"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/04-01-knowledge-index.png" alt="Knowledge 메인 화면" loading="lazy"><figcaption>Knowledge 메인 화면</figcaption></figure></p>
+<p><strong>제품별로 보기</strong> — 제품을 고르면 그 제품의 항목만 화면에 남고 나머지는 가려진다.</p>
+<p><strong>새 제품 추가</strong> — 제품명을 입력하고 <strong>"제품 추가"</strong> 를 누르면 저장되고 화면이 새로고침되며
+목록에 나타난다. 여기서 추가한 제품은 <code>01</code>·<code>02</code>·<code>03</code> 의 제품 목록에도 함께 표시된다.</p>
+<p><strong>제품 지식 폴더 수집</strong> — 제품별로 현재 상태를 보여준다 — 폴더 경로가 설정되지 않음 /
+설정됐지만 서버가 접근할 수 없음 / 접근 가능(수집 대기 중인 파일 종류별 건수). "마지막
+수집" 시각, QA 규칙 수집 여부(안 됐으면 빨간 글씨로 "미수집"), 구버전 정리 건수(있을
+때만)가 표시된다. <strong>"지금 수집"</strong> 버튼(접근 가능한 제품에만 표시) — 누르면 즉시 비활성화
+되고 "수집 중..."으로 바뀌며, 완료되면 결과가 팝업으로 뜨고 화면이 새로고침된다. <strong>"스캔
+결과 보기"</strong> 링크로 상세 내용을 새 창에서 확인할 수 있다. 하단 <strong>"죽은 등록 정리"</strong> 버튼 —
+확인 메시지 후 실행하면, 원본 파일이 이미 사라진 등록을 전부 찾아 정리하고 결과를
+팝업으로 보여준다(정리된 것이 있으면 화면이 새로고침된다).</p>
+<p><strong>ALM 사양서 동기화 상태</strong> — VXvue 전용 상태 표시. 마지막 동기화 시각과 상태를 보여준다
+(자동으로 주 1회 실행됨).</p>
+<p><strong>사양서 / Manual 등록</strong>(왼쪽) — 제품명·버전을 입력하고 PDF/Word 파일을 올린 뒤 <strong>"등록"</strong>
+을 누르면 목록에 추가된다. 같은 제품·버전에 서로 다른 문서를 여러 개 등록해도 이전
+문서를 대체하지 않는다. 목록의 각 문서마다 <strong>"다운로드"</strong> / <strong>"삭제"</strong>(확인 메시지 후
+삭제, 원본 파일도 함께 지워짐) 버튼이 있다.</p>
+<p><strong>Test Case 등록</strong>(오른쪽) — 같은 방식으로 Excel 파일을 등록한다. <strong>자동으로 컬럼을
+인식하지 못하면 파일은 지워지지 않고</strong> <code>04-02</code> 화면으로 넘어가 직접 지정하게 된다.</p>
+<p><strong>매뉴얼 / Protocol</strong>(지식 폴더 수집으로만 채워짐) — 등록 폼은 없고, 목록과 다운로드/삭제
+버튼만 있다.</p>
+<h3 id="04-02-tc"><span class="secno">04-02</span> TC 컬럼 매핑 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td>TC 등록에서 컬럼을 자동으로 인식하지 못했을 때만 연결되는 화면</td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"TC 컬럼 매핑"</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>실패한 업로드가 있을 때만 들어오는 화면이라, 지금 데이터로는 재현하지 못해 스크린샷을
+생략했다.</p>
+</blockquote>
+<p>업로드한 원본 파일명과, 있다면 오류 메시지가 표시된다. 시트를 고르고 "항목명이 적힌
+행(헤더 행)" 번호를 지정한 뒤 <strong>"미리보기 갱신"</strong> 을 누르면 그 시트의 내용이 표로
+보인다(헤더 행은 강조 표시됨). 그 아래에서 TC ID(필수)·분류·기능명·사전조건·시험절차·
+예상결과·결과·비고 각각을 어느 열에 매칭할지 고른다(비슷한 이름의 열은 미리 추천되어
+선택돼 있다). <strong>"이 매핑으로 등록"</strong> 을 누르면 그 설정대로 등록되고 <code>04-01</code> 화면으로
+돌아간다(이후 같은 파일 형식은 이 설정을 기억한다). TC ID 를 매칭하지 않는 등 필수
+항목이 빠지면 오류 메시지와 함께 같은 화면이 다시 표시된다.</p>
+<h3 id="04-03"><span class="secno">04-03</span> 사용법 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/knowledge/guide</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"Knowledge 사용법"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/04-03-knowledge-guide.png" alt="Knowledge 사용법 화면" loading="lazy"><figcaption>Knowledge 사용법 화면</figcaption></figure></p>
+<p>무엇이 여기에 들어가는지(사양서·매뉴얼·TC·QA 규칙의 역할과 근거로서의 신뢰도), 권장
+방식(제품 지식 폴더 수집 절차와 파일명 규칙), 서버가 폴더에 접근하지 못할 때의 대안,
+개별 파일 수동 등록 방법, TC Excel 이 어떻게 읽히는지, 등록 후 확인 방법, 새 제품 추가
+절차, 사내 문서가 어디에 보관되는지(외부로는 발췌만 나간다는 점)를 안내하는 정적 화면이다.</p>
+<hr />
+<h2 id="05"><span class="secno">05</span> 비용 대시보드</h2>
+<p><code>/cost-dashboard</code> · AI 호출이 실제로 얼마나 발생했는지, 무엇이 비용을 줄이고 있는지
+기능별로 집계한다. 2개 화면으로 구성된다.</p>
+<h3 id="05-01"><span class="secno">05-01</span> 비용/캐시 대시보드 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/cost-dashboard</code> (최근 7일/30일/90일 중 선택 가능)</td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"비용/캐시 대시보드"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/05-01-cost-dashboard.png" alt="비용 대시보드 화면" loading="lazy"><figcaption>비용 대시보드 화면</figcaption></figure></p>
+<p>조회 전용 화면이며, 값을 바꾸는 버튼은 없다.</p>
+<ul>
+<li><strong>오늘 토큰 사용량</strong> — 사용량과 한도, 한도를 넘었는지 여부가 배지로 표시된다.</li>
+<li><strong>조회 기간</strong> — 최근 7일/30일/90일 중 선택.</li>
+<li><strong>기능별 사용량</strong> — 기능마다 분석 건수·총 사용량·건당 평균.</li>
+<li><strong>캐시 재사용 현황</strong> — 같은 입력을 재사용해 실제 호출을 얼마나 줄였는지 비율로 표시.</li>
+<li><strong>일별 토큰 사용량</strong> — 날짜별 분석 건수와 사용량을 표와 막대로 표시.</li>
+<li><strong>최근 분석(최대 50건)</strong> — 완료 시각·기능·제품·사용량·캐시 재사용 여부·분석 ID.</li>
+</ul>
+<p>사용자별 사용량 집계(로그인 기능 없음) — <span class="stbadge st-todo">○</span>. 예산 초과 예상 시 사전 경고 — <span class="stbadge st-todo">○</span>.</p>
+<h3 id="05-02"><span class="secno">05-02</span> 사용법 화면</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>화면 주소</td>
+<td><code>/cost-dashboard/guide</code></td>
+</tr>
+<tr>
+<td>화면 제목</td>
+<td>"비용 대시보드 사용법"</td>
+</tr>
+</tbody>
+</table>
+<p><figure class="shot"><img src="images/05-02-cost-dashboard-guide.png" alt="비용 대시보드 사용법 화면" loading="lazy"><figcaption>비용 대시보드 사용법 화면</figcaption></figure></p>
+<p>각 지표를 읽는 법, 비용이 줄어드는 이유들, 하루 사용량 한도 설정법, 모델 등급별 단가,
+비용이 예상보다 많이 나올 때 확인하는 순서를 안내하는 정적 화면이다.</p>
+<hr />
+<h2 id="06-qa-manual-hub"><span class="secno">06</span> QA Manual Hub (하위 서비스)</h2>
+<p><code>/manual-hub</code> — 제품 매뉴얼과 기술문서를 한 곳에 모아 보관하는 별도의 문서관리 시스템이다.
+핵심 앱(<code>01</code>~<code>05</code>)과는 완전히 분리된 별도 시스템이라, 이번 개정에서는 화면 단위 상세
+조사를 진행하지 않았다. 화면별 상세 사양이 필요하면 별도로 조사해야 한다. 아래는 기존에
+확인된 기능 수준의 요약이다.</p>
+<ul>
+<li><strong>문서 보관과 이력 — <span class="stbadge st-done">✅</span></strong>: 제품 매뉴얼·기술문서를 이전 버전을 지우지 않고 보관한다.
+  한 번 등록된 버전은 삭제해도 완전히 사라지지 않고 보관함으로 옮겨진다.</li>
+<li><strong>핵심 앱과의 연결 — <span class="stbadge st-done">✅</span></strong>: 핵심 앱 화면에서 링크로 연결될 뿐, 데이터나 처리 과정을
+  공유하지 않는다.</li>
+<li><strong>계정·백업 — <span class="stbadge st-done">✅</span></strong>: 로그인 계정으로 접근하고, 업로드한 사람이 자동으로 기록된다. 매일
+  자동으로 백업된다.</li>
+</ul>
+<hr />
+<h2 id="07"><span class="secno">07</span> 운영</h2>
+<p>화면은 없고 배포·감시·백업 절차로 구성된다.</p>
+<ul>
+<li><strong>배포 — <span class="stbadge st-done">✅</span></strong>: 로컬 테스트 통과 → 서버 반영 → 재기동 → 정상 동작 확인까지 한 번에
+  진행된다. 서버에 이미 있는 운영 데이터·비밀 설정은 배포 때 덮어쓰지 않는다.</li>
+<li><strong>감시와 백업 — <span class="stbadge st-done">✅</span></strong>: 서버 상태를 주기적으로 자동 점검하고, 매일 자동으로 백업한다.</li>
+<li><strong>운영 상태 확인 — <span class="stbadge st-done">✅</span></strong>: 운영 담당자가 서버 상태(데이터 정합성, 실행 중인 작업, 멈춘
+  작업)를 확인할 수 있는 별도 화면이 있고, 설정을 앱 재기동 없이 다시 불러올 수 있다.</li>
+<li><strong>배포 되돌리기(롤백) — <span class="stbadge st-todo">○</span></strong>: 지금은 이전 버전을 수동으로 다시 올려야 한다. <strong>무중단
+  배포 — <span class="stbadge st-todo">○</span></strong>: 재기동 시 짧게(수 초) 끊긴다.</li>
+</ul>
+<hr />
+<h2 id="a">부록 A. 화면 목록</h2>
+<table>
+<thead>
+<tr>
+<th>사양번호</th>
+<th>화면 주소</th>
+<th>화면</th>
+<th>스크린샷</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—</td>
+<td><code>/</code></td>
+<td>홈 (기능 카드)</td>
+<td><code>images/00-hub.png</code></td>
+</tr>
+<tr>
+<td>01-01</td>
+<td><code>/qa-agent</code></td>
+<td>QA Agent 분석 실행</td>
+<td><code>images/01-01-qa-agent-index.png</code></td>
+</tr>
+<tr>
+<td>01-02</td>
+<td><code>/qa-agent/analyses</code></td>
+<td>분석 이력</td>
+<td><code>images/01-02-qa-agent-history.png</code></td>
+</tr>
+<tr>
+<td>01-03</td>
+<td><code>/qa-agent/analyses/{id}</code></td>
+<td>분석 상세·승인</td>
+<td><code>images/01-03-qa-agent-detail.png</code></td>
+</tr>
+<tr>
+<td>01-04</td>
+<td><code>/qa-agent/rules</code></td>
+<td>규칙 자동화 현황</td>
+<td><code>images/01-04-qa-agent-rules.png</code></td>
+</tr>
+<tr>
+<td>01-05</td>
+<td><code>/qa-agent/guide</code></td>
+<td>사용법</td>
+<td><code>images/01-05-qa-agent-guide.png</code></td>
+</tr>
+<tr>
+<td>02-01</td>
+<td><code>/impact-analyzer</code></td>
+<td>Regression 영향 분석 실행</td>
+<td><code>images/02-01-impact-analyzer-index.png</code></td>
+</tr>
+<tr>
+<td>02-02</td>
+<td><code>/analyses</code></td>
+<td>영향 분석 이력</td>
+<td><code>images/02-02-impact-analyzer-history.png</code></td>
+</tr>
+<tr>
+<td>02-03</td>
+<td><code>/analyses/{id}/view</code></td>
+<td>영향 분석 상세</td>
+<td><code>images/02-03-impact-analyzer-detail.png</code></td>
+</tr>
+<tr>
+<td>02-04</td>
+<td>(분석 완료 시 생성)</td>
+<td>HTML 리포트</td>
+<td><code>images/02-05-impact-analyzer-report.png</code></td>
+</tr>
+<tr>
+<td>02-05</td>
+<td><code>/impact-analyzer/guide</code></td>
+<td>사용법</td>
+<td><code>images/02-04-impact-analyzer-guide.png</code></td>
+</tr>
+<tr>
+<td>03-01</td>
+<td><code>/manual-review</code></td>
+<td>매뉴얼 개정 검증 등록·이력</td>
+<td><code>images/03-01-manual-review-index.png</code></td>
+</tr>
+<tr>
+<td>03-02</td>
+<td>(검증 이력에서 진입)</td>
+<td>개정 상세</td>
+<td>(미캡처 — 이력 데이터 없음)</td>
+</tr>
+<tr>
+<td>03-03</td>
+<td><code>/manual-review/guide</code></td>
+<td>사용법</td>
+<td><code>images/03-02-manual-review-guide.png</code></td>
+</tr>
+<tr>
+<td>04-01</td>
+<td><code>/knowledge</code></td>
+<td>지식 관리</td>
+<td><code>images/04-01-knowledge-index.png</code></td>
+</tr>
+<tr>
+<td>04-02</td>
+<td>(실패 업로드에서 진입)</td>
+<td>TC 컬럼 매핑</td>
+<td>(미캡처 — 실패 업로드로만 진입)</td>
+</tr>
+<tr>
+<td>04-03</td>
+<td><code>/knowledge/guide</code></td>
+<td>사용법</td>
+<td><code>images/04-03-knowledge-guide.png</code></td>
+</tr>
+<tr>
+<td>05-01</td>
+<td><code>/cost-dashboard</code></td>
+<td>비용</td>
+<td><code>images/05-01-cost-dashboard.png</code></td>
+</tr>
+<tr>
+<td>05-02</td>
+<td><code>/cost-dashboard/guide</code></td>
+<td>사용법</td>
+<td><code>images/05-02-cost-dashboard-guide.png</code></td>
+</tr>
+<tr>
+<td>06</td>
+<td><code>/manual-hub/</code></td>
+<td>QA Manual Hub</td>
+<td>(별도 시스템 — 미캡처)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="b">부록 B. 남은 결정과 조치</h2>
+<h3 id="b1">B.1 사용자 조치가 필요한 것</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A-1</td>
+<td><strong>메일 발송 계정 설정</strong> — 설정하면 알림이 바로 동작 (<code>00-07</code>)</td>
+</tr>
+<tr>
+<td>A-2</td>
+<td><strong>AI 유료 사용 사내 승인</strong> — 결제는 완료, 승인만 남음</td>
+</tr>
+<tr>
+<td>A-3</td>
+<td><strong>최신 모델 공식 단가 확인</strong> — 현재 잠정값 (<code>00-07</code>)</td>
+</tr>
+<tr>
+<td>A-4</td>
+<td><strong>GitHub Support 캐시 삭제 요청</strong> — <code>docs/local/SECURITY_INCIDENT_2026-09-09.md</code></td>
+</tr>
+<tr>
+<td>A-5</td>
+<td><strong>작업 스케줄러 등록</strong> — 지식 업로드 주 1회 자동화 (<code>00-05</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b2">B.2 함께 결정해야 하는 것</h3>
+<ul>
+<li><strong>사용자 로그인 + 보안 연결</strong> (<code>00-06</code>) — 승인 기록에 "누가"를 남기려면 필요하지만,
+  로그인만 먼저 붙이면 오히려 정보가 노출될 위험이 있어 함께 결정해야 한다</li>
+<li><strong>TC 후보 상한</strong> (<code>01-06</code>) — 정확도 평가 데이터가 쌓여야 근거 있게 내릴 수 있다</li>
+</ul>
+<h3 id="b3">B.3 화면 문구가 실제 구현을 못 따라간 사례</h3>
+<ul>
+<li><code>03-03</code>(매뉴얼 개정 검증 사용법 화면)이 "다른 Manual 영향 확인"을 "준비 중"이라고 적어
+  두었지만 <code>03-02</code> 화면에는 이미 구현·동작 중이다. 다음 배포에서 화면 문구를 고쳐야 한다.</li>
+</ul>
+<h3 id="b4">B.4 지금 남아 있는 데이터 이슈</h3>
+<p>VXvue 의 매뉴얼 문서 한 건이 사양서로 잘못 등록돼 있다. 같은 문서의 최신 버전이 매뉴얼로
+따로 등록돼 있어 <strong>옛 버전이 사양서로 검색되는 상태</strong>다. 내용이 달라 자동으로 지우지
+않았다 — <code>04-01</code>에서 삭제하면 된다.</p>
+<hr />
+<h2 id="c">부록 C. 요구할 수 있는 확장 후보</h2>
+<p>이 문서를 보고 무엇을 더 요구할지 정하는 데 쓰라고 정리한다. <strong>우선순위는 정하지 않았다.</strong></p>
+<h3 id="c1-qa-agent-01-03">C.1 QA Agent 기능 확장 (<code>01-03</code>)</h3>
+<ul>
+<li>수정된 Issue 의 수정 확인 TC 생성</li>
+<li>Issue 작성 초안·종료 조건 점검</li>
+<li>Command·Tag·WebSocket 단위 검증 항목 도출</li>
+<li>Generator 연동 검증</li>
+<li>릴리스 단위 검증 범위 산출</li>
+</ul>
+<h3 id="c2">C.2 정확도</h3>
+<ul>
+<li>평가 데이터를 쌓아 TC 후보 상한 최적화 (<code>01-06</code>)</li>
+<li>오판 사례 축적과 재발 방지</li>
+<li>제품별 검색 가중치 튜닝</li>
+</ul>
+<h3 id="c3">C.3 사용성</h3>
+<ul>
+<li>여러 Issue 일괄 분석 (<code>01-01</code>)</li>
+<li>결과를 TC 관리 Excel 로 직접 반영 (<code>01-03</code>)</li>
+<li>분석 결과 비교 (이전 분석과 무엇이 달라졌나)</li>
+<li>문서 미리보기·버전 비교 (<code>04-01</code>)</li>
+<li>검색이 무엇을 찾았는지 보여주는 화면</li>
+</ul>
+<h3 id="c4">C.4 연동</h3>
+<ul>
+<li>Polarion 쓰기 (승인 결과 반영, <code>01-03</code>)</li>
+<li>Redmine·메일 알림 연동</li>
+<li>CI 연동 (빌드마다 자동 분석)</li>
+</ul>
+<h3 id="c5">C.5 운영</h3>
+<ul>
+<li>사용자 로그인·권한 (<code>00-06</code>)</li>
+<li>사용자별 사용량·비용 (<code>05-01</code>)</li>
+<li>무중단 배포, 되돌리기 (<code>07</code>)</li>
+<li>알림 종류 확대 (<code>00-07</code>)</li>
+</ul>
+<hr />
+<h2 id="d">부록 D. 관련 문서</h2>
+<table>
+<thead>
+<tr>
+<th>문서</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/QA_AGENT_ARCHITECTURE.md</code></td>
+<td>QA Agent 내부 구조</td>
+</tr>
+<tr>
+<td><code>docs/PRODUCT_ONBOARDING.md</code></td>
+<td>새 제품 추가 절차</td>
+</tr>
+<tr>
+<td><code>docs/USER_GUIDE.md</code></td>
+<td>사용자 안내</td>
+</tr>
+<tr>
+<td><code>docs/DEPLOYMENT.md</code></td>
+<td>배포</td>
+</tr>
+<tr>
+<td><code>docs/SERVERS.md</code></td>
+<td>서버 3개 역할과 명령</td>
+</tr>
+<tr>
+<td><code>docs/OPERATIONS.md</code></td>
+<td>운영</td>
+</tr>
+<tr>
+<td><code>docs/POST_DEPLOY_TESTS.md</code></td>
+<td>배포 후 테스트</td>
+</tr>
+<tr>
+<td><code>docs/COST_OPTIMIZATION.md</code></td>
+<td>토큰 절약</td>
+</tr>
+<tr>
+<td><code>docs/EVALUATION.md</code></td>
+<td>정확도 평가</td>
+</tr>
+<tr>
+<td><code>docs/CONTEXT_ENGINEERING.md</code></td>
+<td>프롬프트 구성</td>
+</tr>
+<tr>
+<td><code>NEXT_STEPS.md</code> · <code>OPEN_QUESTIONS.md</code></td>
+<td>남은 작업·미결정</td>
+</tr>
+</tbody>
+</table>
+    </article>
+  </div>
+</div>
+<a class="backtop" href="#top" title="맨 위로">↑</a>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var q = document.getElementById('q');
+  if(q){
+    q.addEventListener('input',function(){
+      var v = q.value.trim().toLowerCase();
+      document.querySelectorAll('.toc-root li.toc-l2, .toc-root li.toc-l3').forEach(function(li){
+        var t = li.querySelector('a').textContent.toLowerCase();
+        var show = !v || t.indexOf(v) !== -1;
+        li.classList.toggle('hide', !show);
+      });
+    });
+  }
+  document.querySelectorAll('table').forEach(function(t){
+    var wrap = document.createElement('div');
+    wrap.className = 'tablewrap';
+    t.parentNode.insertBefore(wrap, t);
+    wrap.appendChild(t);
+  });
+});
+</script>
+</body>
+</html>

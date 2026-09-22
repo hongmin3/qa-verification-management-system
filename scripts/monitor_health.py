@@ -4,8 +4,9 @@
 있는데 nginx 가 죽었거나, 핵심 앱은 멀쩡한데 하위 서비스(매뉴얼 서버)가 내려간 상황을
 `--check` 로 함께 감시한다.
 
+    # --base-url 을 생략하면 config.yaml 의 app.port 로 자기 자신을 본다.
     python scripts/monitor_health.py \
-        --base-url http://127.0.0.1:12000 \
+        --base-url http://127.0.0.1:24357 \
         --check nginx=http://127.0.0.1/health \
         --check manual_hub=http://127.0.0.1/manual-hub/api/health \
         --disk-path .
@@ -19,9 +20,14 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.core.config import app_self_url  # noqa: E402
 
 
 def fetch_json(url: str) -> dict:
@@ -50,7 +56,8 @@ def parse_check(raw: str) -> tuple[str, str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-url", default="http://127.0.0.1:12000")
+    # 기본값을 문자열로 굳히지 않는다 — 포트의 단일 원본은 config.yaml 의 app.port 다.
+    parser.add_argument("--base-url", default=None)
     parser.add_argument(
         "--check",
         type=parse_check,
@@ -63,7 +70,9 @@ def main() -> int:
     parser.add_argument("--min-free-gb", type=float, default=2.0)
     args = parser.parse_args()
 
-    base = args.base_url.rstrip("/")
+    # --base-url 을 주지 않으면 config.yaml 의 app.port 로 자기 자신을 본다. 여기에
+    # 포트를 굳혀 두면 config.yaml 을 바꾼 뒤 점검만 옛 포트를 두드리게 된다.
+    base = (args.base_url or app_self_url()).rstrip("/")
     alerts: list[str] = []
 
     health, health_error = probe(f"{base}/health")

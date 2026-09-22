@@ -61,9 +61,9 @@ def test_external_services_skips_blank_url(monkeypatch):
 def test_relative_service_url_redirects_to_nginx_origin_when_hit_on_app_port():
     """앱 포트로 직접 들어온 /manual-hub 요청은 포트 없는 같은 호스트로 돌려보낸다.
 
-    nginx를 거치면 이 경로는 앱까지 오지 않는다. 앱 포트(:12000 등)로 직접 접속한
+    nginx를 거치면 이 경로는 앱까지 오지 않는다. 앱 포트(:24357 등)로 직접 접속한
     사용자의 홈 카드가 404로 끝나지 않게 하기 위한 폴백이다."""
-    client = TestClient(app, base_url="http://10.0.0.5:12000")
+    client = TestClient(app, base_url="http://10.0.0.5:24357")
     response = client.get("/manual-hub/documents?q=x", follow_redirects=False)
     assert response.status_code == 307
     assert response.headers["location"] == "http://10.0.0.5/manual-hub/documents?q=x"

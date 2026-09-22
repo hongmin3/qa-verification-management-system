@@ -117,7 +117,8 @@ qa-verification-management-system/
 │  │  ├─ manual_review/     매뉴얼 개정 검증              → /manual-review
 │  │  ├─ knowledge/         문서·규칙 관리 (전 기능 공유)  → /knowledge
 │  │  └─ cost_dashboard/    AI 사용량 집계                → /cost-dashboard
-│  └─ web/                  모듈 라우터를 한 서버에 취합하는 얇은 계층 + 공용 template/static
+│  ├─ web/                  모듈 라우터를 한 서버에 취합하는 얇은 계층 + 공용 template/static
+│  └─ serve.py              서버 진입점 — config.yaml 의 app.host/app.port 로 uvicorn 기동
 │
 ├─ services/                ② 하위 서비스 — 별도 프로세스·별도 DB
 │  └─ qa-manual-hub/        매뉴얼 서버                   → /manual-hub
@@ -157,7 +158,7 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
         ┌──────────────────┴──────────────────┐
         │ /                                   │ /manual-hub/
         ▼                                     ▼
-  핵심 앱 (uvicorn :12000)              Manual Hub SPA (정적 파일)
+  핵심 앱 (uvicorn :24357)              Manual Hub SPA (정적 파일)
   FastAPI + Jinja2                      + 백엔드 (uvicorn :9180)
         │                                     │
         ▼                                     ▼
@@ -465,7 +466,7 @@ Unit Test는 Gemini Mock Response를 사용하므로 테스트에 API 비용이 
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item secrets.example.txt secrets.txt -Force   # GEMINI_API_KEY 입력
-.\scripts\run.ps1                                   # http://localhost:12000
+.\scripts\run.ps1                                   # http://localhost:24357 (포트는 config.yaml 의 app.port)
 ```
 
 ```bash

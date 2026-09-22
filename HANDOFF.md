@@ -57,7 +57,7 @@ WorkingDirectory도 새 경로로 갱신되어 있음을 실제로 확인했다(
   미생성.
 - **QA Manual Hub 통합**(`services/qa-manual-hub/`): 제품 문서를 Git처럼 Revision 이력으로
   보관하는 별도 FastAPI+PostgreSQL 서비스. 코드/DB는 공유하지 않고 HTTP API로만 연동해
-  Cross-Manual 대조 소스로 활용한다. 같은 호스트 nginx가 `/`(핵심 앱 :12000)와
+  Cross-Manual 대조 소스로 활용한다. 같은 호스트 nginx가 `/`(핵심 앱 :24357)와
   `/manual-hub/*`(SPA+백엔드 :9180)를 하나의 진입점으로 라우팅하며, 80은 443(self-signed
   인증서)으로 강제 리다이렉트한다(모니터링 헬스체크 경로만 예외).
 - 운영: `qa-verification.service`/`qa-manual-hub.service`/`nginx` 모두 systemd로 자동
@@ -121,8 +121,8 @@ SSH는 이미 키 인증으로 동작한다. `ssh -o BatchMode=yes ubuntu@10.13.
 ```bash
 cd /home/ubuntu/ai-regression-impact-analyzer
 .venv/bin/python -m pytest -q
-curl -fsS http://127.0.0.1:12000/health
-ss -ltnp 'sport = :12000'
+curl -fsS http://127.0.0.1:24357/health
+ss -ltnp 'sport = :24357'
 ```
 
 ## 9. 비밀정보 파일

@@ -12,6 +12,15 @@ from app.core.secrets_loader import DEFAULTS, resolve_secrets, secret_files_stat
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# listen 주소·포트의 단일 원본은 `config.yaml` 의 `app.host` / `app.port` 다. 아래 값은
+# 그 키가 없거나 비었을 때만 쓰이는 최후 기본값이며, 운영 포트를 바꾸는 자리가 아니다.
+#
+# 24357 을 고른 이유: 1024 초과(권한 불필요), 서버의 ephemeral 범위(실측 32768~60999)
+# 밖이라 나가는 연결의 source port 와 겹칠 수 없고, 잘 알려진 서비스가 없는 비라운드
+# 번호라 같은 호스트의 다른 도구가 우연히 집을 확률이 낮다.
+DEFAULT_APP_HOST = "0.0.0.0"
+DEFAULT_APP_PORT = 24357
+
 
 class Secrets(BaseModel):
     gemini_api_key: str = DEFAULTS["gemini_api_key"]
@@ -79,3 +88,28 @@ def reload_settings() -> Settings:
     """`secrets.txt`/`secrets.json`을 수정한 뒤 재시작 없이 다시 읽는다."""
     get_settings.cache_clear()
     return get_settings()
+
+
+def app_bind(settings: Settings | None = None) -> tuple[str, int]:
+    """`config.yaml` 의 `app.host` / `app.port` 를 uvicorn 인자로 바꾼다.
+
+    키가 없거나 값이 비어 있으면 위 기본값으로 떨어진다. 포트가 정수로 읽히지 않으면
+    조용히 기본값으로 가지 않고 그대로 터뜨린다 — 오타 난 포트로 엉뚱한 자리에 뜨는
+    것보다 뜨지 않는 편이 낫다.
+    """
+    settings = settings if settings is not None else get_settings()
+    host = str(settings.get("app.host") or DEFAULT_APP_HOST)
+    raw_port = settings.get("app.port")
+    port = DEFAULT_APP_PORT if raw_port in (None, "") else int(raw_port)
+    return host, port
+
+
+def app_self_url(settings: Settings | None = None) -> str:
+    """이 앱이 자기 자신을 HTTP 로 호출할 때 쓰는 주소.
+
+    예약 동기화와 Knowledge 동기화가 같은 프로세스의 REST API 를 다시 부른다. 항상
+    루프백으로 나가므로 `app.host` 가 `0.0.0.0` 이어도 `127.0.0.1` 을 쓴다 — 바깥으로
+    나가지 않고, 방화벽 규칙과도 무관하다.
+    """
+    _, port = app_bind(settings)
+    return f"http://127.0.0.1:{port}"

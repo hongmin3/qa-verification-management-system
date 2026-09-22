@@ -20,13 +20,13 @@ manual_types:
 # QA_KNOWLEDGE_DIR_VXVUE 를 설정하면 되고 PC 는 아무것도 하지 않아도 된다.
 # 서버 설정: /etc/systemd/system/<유닛>.d/override.conf 의 Environment= 또는 .env
 knowledge_source:
-  dir: "${QA_KNOWLEDGE_DIR_VXVUE:-C:/Users/2024980/Documents/자동화/VXvue/VXvue 지식파일}"
+  dir: "${QA_KNOWLEDGE_DIR_VXVUE:-C:/Users/2024980/Documents/자동화/vxvue/VXvue 지식파일}"
 
 specification:
   # alm_crawler: 별도 프로젝트(ALM 사양서 최신화 크롤링)가 Polarion에서 이미 수집한 PDF를 읽기만 한다.
   source: alm_crawler
   # 크롤러 프로젝트의 output 폴더. 크롤러 코드/설정은 건드리지 않고 이 경로만 읽는다.
-  crawler_output_dir: "C:/Users/2024980/Documents/자동화/ALM 사양서 최신화 크롤링/output"
+  crawler_output_dir: "C:/Users/2024980/Documents/자동화/vxvue-srs-spec-automation/output"
   filename_patterns:
     - "(사양서) VXvue 사양서*.pdf"
     - "(사양서) Licence Manager SRS 사양서*.pdf"

@@ -13,7 +13,7 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.core.config import get_settings
+from app.core.config import app_self_url
 from app.core.product_config import load_product_config
 from app.core.storage import Storage
 
@@ -33,8 +33,7 @@ def _sync_specification_job() -> None:
         return
     sync_id = storage.sync_start(product, "specification", "alm_crawler")
     try:
-        port = get_settings().get("app.port", 12000)
-        result = run(f"http://127.0.0.1:{port}")
+        result = run(app_self_url())
         storage.sync_finish(sync_id, result["status"], result["detail"])
         logger.info("scheduled_sync_finished product=%s status=%s detail=%s", product, result["status"], result["detail"])
     except Exception as exc:

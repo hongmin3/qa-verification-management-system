@@ -7,7 +7,7 @@
     python scripts/sync_product_knowledge.py                       # 설정된 모든 제품 (로컬 DB)
     python scripts/sync_product_knowledge.py --product VXvue
     python scripts/sync_product_knowledge.py --dry-run             # 무엇이 바뀌는지만 확인
-    python scripts/sync_product_knowledge.py --upload-to http://10.13.0.222:12000
+    python scripts/sync_product_knowledge.py --upload-to http://10.13.0.222:24357
 
 **운영 서버에 반영하려면 `--upload-to` 를 쓴다.** 서버는 이 폴더를 볼 수 없으므로(담당자 PC
 는 Wi-Fi DHCP 이고 사내 DNS 에 이름이 없다), 폴더를 볼 수 있는 이 PC 가 수집한 뒤 바뀐
@@ -19,7 +19,7 @@
 Windows 작업 스케줄러 등록 예 (운영 서버 반영):
 
     schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON /ST 07:45 ^
-      /TR "C:\\path\\to\\.venv\\Scripts\\python.exe C:\\path\\to\\scripts\\sync_product_knowledge.py --upload-to http://10.13.0.222:12000"
+      /TR "C:\\path\\to\\.venv\\Scripts\\python.exe C:\\path\\to\\scripts\\sync_product_knowledge.py --upload-to http://10.13.0.222:24357"
 """
 
 from __future__ import annotations

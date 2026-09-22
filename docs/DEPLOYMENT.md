@@ -27,14 +27,14 @@ macOS/Linux는 `.venv/bin/python`을 쓰고, `secrets.example.txt`를 `secrets.t
 ## 3. 로컬 실행 및 확인
 
 ```powershell
-.\scripts\run.ps1        # http://localhost:12000
+.\scripts\run.ps1        # http://localhost:24357
 ```
 
 ```bash
 ./scripts/run.sh         # Linux/macOS
 ```
 
-브라우저에서 `http://localhost:12000/health`가 `{"status":"ok"}`를 반환하는지, `/impact-analyzer/guide`와 `/manual-review/guide`에서
+브라우저에서 `http://localhost:24357/health`가 `{"status":"ok"}`를 반환하는지, `/impact-analyzer/guide`와 `/manual-review/guide`에서
 사용법이 보이는지 확인한다.
 
 ```powershell
@@ -92,7 +92,7 @@ DEPLOY_TARGET_DIRECTORY=/path/to/qa-verification-management-system
 ```bash
 ssh your-user@your-server
 sudo systemctl restart qa-verification
-curl -fsS http://127.0.0.1:12000/health
+curl -fsS http://127.0.0.1:24357/health
 ```
 
 ### 4-4. 비밀정보 입력 (서버에서 1회)
@@ -112,26 +112,26 @@ nano secrets.txt   # GEMINI_API_KEY=...
 
 ```bash
 sudo systemctl restart qa-verification
-curl -fsS http://127.0.0.1:12000/health
+curl -fsS http://127.0.0.1:24357/health
 ```
 
 **systemd 없이 임시로 띄우는 경우** (개발 서버 등). 이 방식은 재부팅에서 살아남지 않는다.
 
 ```bash
 cd /path/to/qa-verification-management-system
-nohup .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000 > output/logs/uvicorn.out 2>&1 &
+nohup .venv/bin/python -m app.serve > output/logs/uvicorn.out 2>&1 &
 disown
-curl -fsS http://127.0.0.1:12000/health
+curl -fsS http://127.0.0.1:24357/health
 ```
 
 이때 재배포 후 코드 변경을 반영하려면 같은 포트를 쓰는 기존 프로세스를 종료하고 위 명령으로
 다시 띄운다:
 
 ```bash
-OLD_PID=$(ss -ltnp 'sport = :12000' | grep -oP 'pid=\K[0-9]+')
+OLD_PID=$(ss -ltnp 'sport = :24357' | grep -oP 'pid=\K[0-9]+')
 kill "$OLD_PID"
 # 프로세스 종료 확인 후
-nohup .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 12000 > output/logs/uvicorn.out 2>&1 &
+nohup .venv/bin/python -m app.serve > output/logs/uvicorn.out 2>&1 &
 disown
 ```
 
@@ -140,8 +140,8 @@ disown
 서버가 UFW 등으로 포트별 허용 목록을 쓰는 경우, 사용할 포트를 명시적으로 열어야 한다:
 
 ```bash
-sudo ufw allow 12000/tcp
-sudo ufw status | grep 12000
+sudo ufw allow 24357/tcp
+sudo ufw status | grep 24357
 ```
 
 사내망 전용으로 운영한다면 그 서버가 사내망에서만 라우팅되는지 네트워크 담당자에게 확인한다.
@@ -152,11 +152,11 @@ sudo ufw status | grep 12000
 systemd 로 관리되므로, 핵심 앱도 같은 방식으로 맞춘다.
 
 유닛 템플릿은 저장소에 있다 — [`deploy/systemd/qa-verification.service`](../deploy/systemd/qa-verification.service).
-플레이스홀더 3개(`__APP_ROOT__`, `__SERVICE_USER__`, `__PORT__`)만 실제 값으로 바꿔 설치한다.
+플레이스홀더 2개(`__APP_ROOT__`, `__SERVICE_USER__`)만 실제 값으로 바꿔 설치한다. 포트는 유닛에 넣지 않는다 — `config.yaml` 의 `app.port` 가 단일 원본이다 (REQ-DEPLOY-001).
 
 ```bash
 APP_ROOT=/path/to/qa-verification-management-system
-sed -e "s|__APP_ROOT__|$APP_ROOT|g"     -e "s|__SERVICE_USER__|$(whoami)|g"     -e "s|__PORT__|12000|g"     "$APP_ROOT/deploy/systemd/qa-verification.service"   | sudo tee /etc/systemd/system/qa-verification.service > /dev/null
+sed -e "s|__APP_ROOT__|$APP_ROOT|g"     -e "s|__SERVICE_USER__|$(whoami)|g"     "$APP_ROOT/deploy/systemd/qa-verification.service"   | sudo tee /etc/systemd/system/qa-verification.service > /dev/null
 
 sudo systemctl daemon-reload
 sudo systemctl enable qa-verification
@@ -165,11 +165,11 @@ sudo systemctl enable qa-verification
 이미 `nohup` 으로 띄워 둔 프로세스가 있으면 **먼저 종료해야** 포트가 겹치지 않는다.
 
 ```bash
-OLD_PID=$(ss -ltnp 'sport = :12000' | grep -oP 'pid=\K[0-9]+' | head -1)
+OLD_PID=$(ss -ltnp 'sport = :24357' | grep -oP 'pid=\K[0-9]+' | head -1)
 [ -n "$OLD_PID" ] && kill "$OLD_PID"
 sudo systemctl start qa-verification
 systemctl is-active qa-verification && systemctl is-enabled qa-verification
-curl -fsS http://127.0.0.1:12000/health
+curl -fsS http://127.0.0.1:24357/health
 ```
 
 유닛에서 눈여겨볼 점:
@@ -190,7 +190,7 @@ curl -fsS http://127.0.0.1:12000/health
 
 1. `config/products/vxvue.yaml`의 `specification.crawler_output_dir`를 실제 크롤러 output 경로로
    맞춘다.
-2. 크롤러가 있는 Windows PC에서 `scripts/sync_vxvue_spec.py --target-url http://<서버>:12000`을
+2. 크롤러가 있는 Windows PC에서 `scripts/sync_vxvue_spec.py --target-url http://<서버>:24357`을
    Windows 작업 스케줄러에 매일 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
    서버에서 실행할 수 없다).
 3. 앱 내부 스케줄러(`app/core/scheduler.py`)는 신규 systemd 없이 이미 함께 뜨며, `/knowledge`
@@ -211,7 +211,7 @@ curl -fsS http://127.0.0.1:12000/health
 있어야 하고, 그 역할을 nginx가 맡는다.
 
 ```text
-브라우저 → nginx :80 ┬ /             → 핵심 앱          127.0.0.1:12000
+브라우저 → nginx :80 ┬ /             → 핵심 앱          127.0.0.1:24357
                      ├ /manual-hub/  → Manual Hub SPA   (정적 파일)
                      └ /manual-hub/api → Manual Hub 백엔드 127.0.0.1:9180
 ```
