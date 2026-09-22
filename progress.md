@@ -7,12 +7,17 @@
   CHANGELOG 갱신.
 - 검증 완료: `pytest` 634 passed / 1 skipped, 새 검사 6종의 negative control, 실제 기동 후
   `/health` 200, `config.yaml` 만 바꿔 바인딩 포트가 따라오는 것까지 확인.
-- **남은 사람 조치 (서버에서 실행)**: 이 저장소 밖이며 아직 하지 않았다.
-  1. `sudo ufw allow 24357/tcp` · 기존 `12000/tcp` 규칙 정리
-  2. `deploy/nginx/qa-platform.conf` 배치 후 `sudo nginx -t && sudo systemctl reload nginx`
-  3. systemd 유닛 재설치(`__PORT__` 없어짐) 후 `sudo systemctl restart qa-verification`
-  4. 크롤러 Windows PC 의 작업 스케줄러에 `:12000` 이 박힌 인자가 있으면 갱신
-  - 조치 전까지 서버는 `12000` 으로 동작하고, 새 nginx 설정을 먼저 적용하면 502 가 된다.
+- **서버 반영 완료 (2026-09-22)**: ufw `24357/tcp` 허용 · nginx 설정 교체 후 reload ·
+  systemd 유닛 재설치(`__PORT__` 제거) · 서비스 재기동 · ufw `12000/tcp` 규칙 제거.
+  전환 스크립트는 실패 시 자동 원복하도록 했고 이전 설정은 서버
+  `/root/qa-port-cutover-20260921-205343/` 에 백업돼 있다.
+- **전환 중 발견해 함께 고친 것**: 서버 crontab 의 `monitor_health.py` 줄이
+  `--base-url http://127.0.0.1:12000` 을 들고 있었다. 그대로 두면 10분마다 상시 alert 가
+  된다. 그 인자만 제거했다(백업 `/home/ubuntu/crontab-backup-20260921-205528.txt`).
+- 서버 검증: 주요 경로 9개 + 하위 서비스 2개 모두 nginx 경유 200, 옛 포트 무응답,
+  **외부 클라이언트에서** `:80` 과 `:24357` 200(= ufw 통과 확인), cron 명령 실제 실행 시
+  `alerts: []`.
+- 크롤러 PC 스케줄 작업은 인자 없이 돌아 새 포트를 자동으로 따라간다 — 조치 불필요.
 - 미완료(이전부터): SPEC 13절 전체 기능 사양화, 그 외 운영 검증.
 
 ## 2026-09-21 공통 개발 기준 도입

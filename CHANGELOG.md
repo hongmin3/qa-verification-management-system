@@ -23,8 +23,25 @@
 - 검증: `pytest` 634 passed / 1 skipped. 새 검사는 고의 파손으로 실패하는 것까지 확인했다.
   `python -m app.serve` 로 실제 기동해 `0.0.0.0:24357` LISTEN 과 `/health` 200 을 확인했고,
   `config.yaml` 만 24361 로 바꿔 재기동하면 그 포트로 따라오는 것도 확인했다.
-- **서버에는 아직 반영되지 않았다.** 방화벽·nginx·systemd 조치가 필요하다 —
-  `docs/DEPLOYMENT.md` 참고.
+- **운영 서버(10.13.0.222)에 반영 완료.** `scripts/deploy.ps1` 로 파일·의존성을 올린 뒤
+  ufw `24357/tcp` 허용 → nginx 설정 배치 및 `nginx -t` 선검사 → systemd 유닛 재설치
+  (`__PORT__` 없음) → `systemctl restart` → `nginx -s reload` 순서로 전환했다. 실패 시
+  자동 원복하도록 했고, 이전 설정은 서버의 `/root/qa-port-cutover-20260921-205343/` 에
+  백업했다. 전환 후 ufw 의 `12000/tcp` 규칙은 제거했다.
+- 서버 crontab 의 10분 주기 `monitor_health.py` 가 `--base-url http://127.0.0.1:12000` 을
+  들고 있어 전환 즉시 상시 alert 가 될 상태였다. 그 인자를 제거해 `config.yaml` 을 따르게
+  했다(같은 crontab 의 다른 프로젝트 줄은 그대로 두었고, 백업은 서버의
+  `/home/ubuntu/crontab-backup-20260921-205528.txt`).
+- 서버 검증: 유닛 `active`/`enabled`, `0.0.0.0:24357` LISTEN, nginx 경유 `/health`
+  `/config/status` `/operations/status` `/` `/knowledge` `/impact-analyzer`
+  `/manual-review` `/cost-dashboard` `/qa-agent` 모두 200, 하위 서비스
+  `/manual-hub/api/health` 와 `/manual-hub/` 도 200. 옛 포트 12000 은 응답 없음.
+  **외부 클라이언트(개발 PC)** 에서 `http://10.13.0.222/` 와 `http://10.13.0.222:24357/health`
+  200 확인 — loopback 은 ufw 를 통과하지 않으므로 이 확인이 방화벽 검증이다.
+  cron 이 실제로 돌릴 명령을 그대로 실행해 `alerts: []`, `checks: {nginx: ok, manual_hub: ok}`
+  를 확인했다.
+- 크롤러 PC 의 작업 스케줄러 `AIRegressionAnalyzer_VXvueSpecSync` 는 인자 없이 실행되므로
+  기본 `--target-url` 이 `http://10.13.0.222:24357` 로 자동으로 따라간다. 별도 조치 없음.
 
 ## 2026-09-21
 
