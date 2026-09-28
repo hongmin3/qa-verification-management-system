@@ -59,10 +59,13 @@ def build_prompt(task: Task, run: RunWorkspace) -> str:
 
 
 def build_command(claude_command: str, model: str = "") -> list[str]:
+    # stream-json(+ --verbose)은 도구 호출을 한 줄씩 내보낸다. 무엇을 읽고 검색했는지 감사
+    # 기록에 남기려면 이 형식이어야 한다 (json 형식은 최종 결과 한 덩어리만 준다).
     command = [
         claude_command,
         "-p",
-        "--output-format", "json",
+        "--output-format", "stream-json",
+        "--verbose",
         "--permission-mode", "dontAsk",
         "--setting-sources", "project",
         "--strict-mcp-config",
@@ -86,17 +89,62 @@ def build_env(token: str, base: dict[str, str] | None = None) -> dict[str, str]:
     return env
 
 
+META_KEYS = ("subtype", "is_error", "num_turns", "duration_ms", "total_cost_usd", "usage", "session_id", "permission_denials")
+#: 도구 입력 가운데 감사 기록에 남길 키. 파일 경로와 검색어만 남기고, 쓴 내용(content)은
+#: 결과 파일에 있으므로 길이만 남긴다.
+TOOL_INPUT_KEYS = ("file_path", "path", "pattern", "glob", "skill", "offset", "limit")
+
+
+def _tool_call(block: dict) -> dict:
+    tool_input = block.get("input") or {}
+    call = {"tool": block.get("name", ""), **{key: tool_input[key] for key in TOOL_INPUT_KEYS if key in tool_input}}
+    if "content" in tool_input:
+        call["content_chars"] = len(str(tool_input["content"]))
+    return call
+
+
+def _result_meta(result: dict) -> dict:
+    meta = {key: result.get(key) for key in META_KEYS if key in result}
+    if result.get("is_error"):
+        # 사용량 한도 초과처럼 실패 이유가 결과 문장에만 있다. 응답 본문이 아니라 오류 문장이다.
+        meta["error_text"] = str(result.get("result") or "")[:300]
+    return meta
+
+
+def parse_output(stdout: str) -> tuple[dict, list[dict]]:
+    """CLI 출력에서 감사 기록에 남길 값(`meta`)과 도구 호출 목록을 고른다.
+
+    stream-json 은 한 줄에 사건 하나다: 도구 호출은 `assistant` 메시지의 `tool_use` 블록,
+    마지막 줄은 `result`. 예전 json 형식(한 덩어리)이 와도 읽는다.
+    """
+    meta: dict = {}
+    calls: list[dict] = []
+    lines = [line for line in (stdout or "").splitlines() if line.strip()]
+    events = []
+    for line in lines:
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            continue
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") == "assistant":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    calls.append(_tool_call(block))
+        elif event.get("type") == "result":
+            meta = _result_meta(event)
+    if not meta and len(events) == 1 and isinstance(events[0], dict) and "subtype" in events[0]:
+        meta = _result_meta(events[0])
+    if not meta:
+        meta = {"parse_error": True}
+    meta["tool_calls"] = len(calls)
+    return meta, calls
+
+
 def _safe_meta(stdout: str) -> dict:
-    """CLI 가 돌려준 JSON 에서 감사 기록에 남길 값만 고른다 (응답 본문은 결과 파일에 있다)."""
-    try:
-        data = json.loads(stdout)
-    except ValueError:
-        return {"parse_error": True}
-    return {
-        key: data.get(key)
-        for key in ("subtype", "is_error", "num_turns", "duration_ms", "total_cost_usd", "usage", "session_id", "permission_denials")
-        if key in data
-    }
+    return parse_output(stdout)[0]
 
 
 class ClaudeRunner:
@@ -125,13 +173,14 @@ class ClaudeRunner:
             return RunnerOutcome(False, -1, time.monotonic() - started, f"제한 시간 {self.timeout_seconds}초 초과")
         except FileNotFoundError:
             return RunnerOutcome(False, -1, 0.0, f"Claude CLI 를 찾을 수 없습니다: {self.claude_command}")
-        meta = _safe_meta(completed.stdout or "")
-        (log_dir / f"{task.task_id}.claude.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+        meta, calls = parse_output(completed.stdout or "")
+        log = {**meta, "tool_call_log": calls}
+        (log_dir / f"{task.task_id}.claude.json").write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
         error = ""
         if completed.returncode != 0 or meta.get("is_error"):
             # stderr 에 토큰이 찍히는 일은 없지만, 혹시 몰라 토큰 문자열은 지운다.
             tail = (completed.stderr or "")[-600:].replace(self.token, "***") if self.token else (completed.stderr or "")[-600:]
-            error = f"exit={completed.returncode} {meta.get('subtype', '')} {tail}".strip()
+            error = f"exit={completed.returncode} {meta.get('error_text', '')} {tail}".strip()
         return RunnerOutcome(completed.returncode == 0 and not meta.get("is_error"), completed.returncode,
                              time.monotonic() - started, error, meta)
 

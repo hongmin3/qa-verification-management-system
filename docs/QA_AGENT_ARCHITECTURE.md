@@ -113,7 +113,7 @@ qa-verification-management-system/
 | `modules/qa_agent/evidence.py` | Evidence Store |
 | `modules/qa_agent/schemas.py` | 응답 스키마 · Regression 축 |
 | `modules/qa_agent/validation.py` | ID 교차검증 |
-| `modules/qa_agent/rule_capability.py` | 규칙 56개 절 구현현황 표 |
+| `modules/qa_agent/rule_capability.py` | 규칙 절별(Rev1.17 기준 79개) 구현현황 표 |
 | `modules/qa_agent/scheduled_jobs.py` | 지식 폴더 수집 cron |
 | `modules/qa_agent/router.py` + `templates/` | 화면 |
 | `prompts/qa_agent_issue_impact.yaml` | 단일 구조화 호출 프롬프트 |
@@ -501,6 +501,8 @@ Tag(`(0008,0018)`), `V`로 시작하는 버전(`V1.0.11`).
 ---
 
 ## 15. 규칙 Rev1.12 전체 구현 가능성
+
+> **2026-09-28 갱신.** 규칙이 Rev1.17 로 오르며 최상위 절이 79개가 됐다. 새 23개(§57~§79)를 같은 표에 분류했다. 현재 합계는 구현 방식 기준 결정적 코드 31 · 코드+LLM 32 · QA 입력 4 · 초안까지만 6 · 대상 아님 6이다. 자동화 범위(코드·코드+LLM·초안)는 69/79절(87%)이고 구현됨은 34절이다. 새로 구현됨이 된 두 절(§74 산출물 서식, §75 실행용·분석용 시트 분리)은 일일 QA 점검의 초안 Excel 이다. 나머지 새 절은 QA Agent 에 아직 반영되지 않았다(예정). 아래 표와 분석은 Rev1.12 기준 기록이다.
 
 56개 최상위 절 전부를 분류해 `app/modules/qa_agent/rule_capability.py`에 표로 두었다.
 

@@ -65,7 +65,8 @@ DEFAULT_CLASSIFIERS: dict[str, tuple[str, ...]] = {
     KIND_MANUAL: ("(매뉴얼)*", "System Integration Guide*", "*Conformance Statement*", "*Operation Manual*", "*Service Manual*", "*API Protocol Manual*"),
     KIND_TESTCASE: ("(TC)*", "*Test Case*", "*TestCase*", "*Checklist*"),
     KIND_QA_RULES: ("[[]QA 작성 규칙[]]*",),
-    KIND_INSTRUCTION_PROMPT: ("*지침 프롬프트*",),
+    # 띄어쓰기 대신 밑줄로 이어 쓴 이름도 있다 (`VXvue_검증_DB_AI_지침_프롬프트_Rev1.17.txt`).
+    KIND_INSTRUCTION_PROMPT: ("*지침 프롬프트*", "*지침_프롬프트*"),
 }
 
 # 분류 우선순위. 예: "(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx"는

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v6">
 <meta name="spec-html-renderer" content="v6">
-<meta name="spec-source-sha256" content="ca7c3ad565ccee9321475b3cc8c1e3ae8f578602bb7f3d6941323c82950a666d">
+<meta name="spec-source-sha256" content="63e751ffe3f3a2848fa0579b631d4b18e5dd33d514be46db9386f144290bb554">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -213,17 +213,22 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <section class="card kind-req" id="REQ-DEPLOY-001">
 <h3><span class="idtag">REQ-DEPLOY-001</span> listen 주소·포트의 단일 원본</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/serve.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-09-28 · 지식 폴더 자동 업로드 · 감사 기록 보강 · 문서 보강</span> 문서: README 에 일일 QA 점검의 위치·외부 전송 범위·시험 실행을 넣었다. <code>docs/AUTOMATION.md</code> 에 지식 업로드 작업과 하루 실행 순서를, SPEC <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a> 에 입력 자료가 오는 곳을 적었다. 보안 문서의 &quot;필요한 항목만 보낸다&quot;를 실제 동작(<span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 전체 색인 가운데 Claude 가 읽은 부분이 나감)대로 고쳤다. <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> 의 긴 문단을 나눴다.</li>
 <li><span class="hist">2026-09-22 · listen 포트를 `config.yaml` 단일 원본으로, 운영 포트 12000 → 24357</span> SPEC 에 <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> / <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a> 을 추가했다.</li>
 </ul>
 </details>
 <p>핵심 앱이 listen 하는 주소와 포트는 <code>config.yaml</code> 의 <code>app.host</code> / <code>app.port</code> 하나로 결정한다.
 진입점(<code>scripts/run.sh</code>, <code>scripts/run.ps1</code>, <code>deploy/systemd/qa-verification.service</code>)은 포트를
-직접 지정하지 않고 <code>python -m app.serve</code> 로 앱을 띄우며, <code>app.serve</code> 가 그 값을 읽어 uvicorn 에
-넘긴다. 앱이 자기 자신을 HTTP 로 호출하는 주소와 운영 점검(<code>scripts/monitor_health.py</code>)의 기본
-대상도 같은 값에서 파생한다. 키가 없거나 비었을 때만 기본값(<code>0.0.0.0</code> / <code>24357</code>)으로 떨어지고,
-포트가 정수로 읽히지 않으면 기본값으로 대체하지 않고 실패시킨다.</p>
+직접 지정하지 않고 <code>python -m app.serve</code> 로 앱을 띄운다. <code>app.serve</code> 가 그 값을 읽어 uvicorn 에 넘긴다.</p>
+<p>같은 값에서 파생하는 것:</p>
+<ul>
+<li>앱이 자기 자신을 HTTP 로 호출하는 주소</li>
+<li>운영 점검(<code>scripts/monitor_health.py</code>)의 기본 대상</li>
+</ul>
+<p>키가 없거나 비었을 때만 기본값(<code>0.0.0.0</code> / <code>24357</code>)을 쓴다. 포트가 정수로 읽히지 않으면 기본값으로
+대체하지 않고 실패시킨다.</p>
 <p>nginx 는 YAML 을 읽지 못하므로 <code>deploy/nginx/qa-platform.conf</code> 의 upstream 포트만 이 원본을
 자동으로 따라가지 못한다. 두 값이 다르면 검사에서 실패해야 한다.</p>
 <p>운영 포트는 <code>24357</code> 이다. 1024 초과이고, 서버의 ephemeral 포트 범위(실측 <code>32768~60999</code>) 밖이며,
@@ -235,8 +240,9 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <section class="card kind-req" id="REQ-DAILY-001">
 <h3><span class="idtag">REQ-DAILY-001</span> 일일 점검 실행 순서</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code>, <code>scripts/run_daily_qa.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-09-28 · 지식 폴더 자동 업로드 · 감사 기록 보강 · 문서 보강</span> 문서: README 에 일일 QA 점검의 위치·외부 전송 범위·시험 실행을 넣었다. <code>docs/AUTOMATION.md</code> 에 지식 업로드 작업과 하루 실행 순서를, SPEC <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a> 에 입력 자료가 오는 곳을 적었다. 보안 문서의 &quot;필요한 항목만 보낸다&quot;를 실제 동작(<span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 전체 색인 가운데 Claude 가 읽은 부분이 나감)대로 고쳤다. <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> 의 긴 문단을 나눴다.</li>
 <li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>: <code>scripts/run_daily_qa.py</code> 가 평일 아침 한 번 도는 <span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>을 추가했다. 잠금 파일로 중복 실행을 막고, 단계 하나가 실패해도 나머지는 계속 돈다. 실행마다 실행 기록과 <code>output/daily_qa/&lt;실행ID&gt;/</code> 가 생긴다.</li>
 </ul>
 </details>
@@ -251,9 +257,20 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 </ol>
 <p>실행마다 실행 기록(<code>daily_qa_runs</code>) 한 줄과 실행 폴더(<code>output/daily_qa/&lt;실행ID&gt;/</code>)가 생긴다. 한 단계가 실패해도 다른 단계는 계속 돌고, 실패한 단계와 이유가 실행 기록과 메일에 남는다.</p>
 <aside class="callout callout-example"><span class="callout-label">예시</span>
-<p>Polarion 조회가 실패하면 B·C는 <code>실패</code>로 남고, 지식 폴더만 쓰는 E는 그대로 돈다.</p>
+<p>Polarion 조회가 실패하면 B·C는 <code>실패</code>로 남고, 저장된 SRS 스냅샷과 TC 사본을 쓰는 E는 그대로 돈다.</p>
 </aside>
 <p><code>--dry-run</code> 은 Claude를 부르지 않고 입력 묶음과 결정적 계산만 만든다.</p>
+<p>입력 자료는 두 곳에서 온다. 서버는 담당자 PC 의 지식 폴더를 직접 볼 수 없다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>자료</th><th>가져오는 곳</th><th>갱신 시점</th></tr></thead>
+<tbody>
+<tr><td>SRS, 이슈</td><td>Polarion (점검이 실행될 때 서버가 직접 읽는다)</td><td>매 실행</td></tr>
+<tr><td>TC Excel, 매뉴얼, <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span>·지침 프롬프트</td><td>서버의 지식 사본(<code>data/product_knowledge/&lt;제품&gt;/</code>)</td><td>담당자 PC 가 올릴 때 (PC 의 예약 작업, 평일 10:00)</td></tr>
+</tbody>
+</table></div>
+<aside class="callout callout-warn"><span class="callout-label">주의</span>
+<p>PC 가 꺼져 있거나 업로드가 실패하면 서버의 TC·매뉴얼·규칙은 마지막으로 올린 것 그대로 쓰인다. 마지막 업로드 시각과 규칙 판은 <code>/knowledge</code> 화면의 제품별 &quot;마지막 수집&quot; 줄에서 본다.</p>
+</aside>
 </section>
 <section class="card kind-req" id="REQ-DAILY-002">
 <h3><span class="idtag">REQ-DAILY-002</span> Polarion 읽기 전용 수집</h3>
@@ -394,8 +411,9 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <section class="card kind-nfr" id="NFR-SEC-001">
 <h3><span class="idtag">NFR-SEC-001</span> AI 실행 격리</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-09-28 · 지식 폴더 자동 업로드 · 감사 기록 보강 · 문서 보강</span> <a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a>: Claude CLI 를 <code>stream-json</code> 출력으로 돌려 도구 호출(읽은 파일·검색어)을 <code>output/daily_qa/&lt;실행ID&gt;/claude_logs/</code> 에 남긴다. 쓴 내용은 길이만 남긴다. CLI 가 오류로 끝나면(예: 사용량 한도 초과는 <code>subtype: success</code>, <code>is_error: true</code> 로 온다) 오류 문장을 남긴다. 실제 CLI 의 stream 형식은 계정 한도 때문에 오늘 확인하지 못했다.</li>
 <li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a>: Claude 는 저장소 밖 격리 <span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>에서 <code>--permission-mode dontAsk</code>, <code>--setting-sources project</code>, <code>--strict-mcp-config</code> 로 돈다. 읽기·검색·결과 폴더 쓰기만 허용하고, 입력은 마스킹 후 보관하며, 프로세스에는 Claude 토큰 외의 비밀값을 넘기지 않는다. 보안 통제 목록은 <code>docs/SECURITY_AI_AGENT.md</code>.</li>
 </ul>
 </details>
@@ -409,7 +427,8 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <tr><td>입력</td><td><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>에 쓰기 전에 마스킹(<code>app/core/security_filter.py</code>)을 거친다</td></tr>
 <tr><td>인증</td><td><code>CLAUDE_CODE_OAUTH_TOKEN</code> 을 비밀 설정에서 읽어 그 프로세스 환경에만 넘긴다</td></tr>
 <tr><td>외부 통신</td><td>원격 측정과 오류 보고를 끄는 환경변수를 넣는다</td></tr>
-<tr><td>기록</td><td>보낸 입력, 받은 결과, 실행 시간, 사용량을 실행 폴더에 남긴다</td></tr>
+<tr><td>기록</td><td>보낸 입력, 받은 결과, 실행 시간, 사용량, Claude 가 부른 도구와 그 대상(읽은 파일·검색어)을 실행 폴더에 남긴다. 쓴 내용은 결과 파일에 있으므로 도구 기록에는 길이만 남긴다. 실패하면 CLI 의 오류 문장도 남긴다</td></tr>
+<tr><td><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span> 자료</td><td>작업 입력(변경분·후보) 밖에, 연관 사양과 다른 TC 를 찾을 수 있도록 오늘 SRS 전체·TC 전체 색인·매뉴얼 텍스트(모두 마스킹본)를 둔다. Claude 가 그중 읽은 부분이 외부로 나간다</td></tr>
 </tbody>
 </table></div>
 <p class="why"><span class="why-label">이유</span> 사내 사양서와 이슈를 외부 AI로 보내므로, 무엇이 나갔는지 확인할 수 있어야 하고 AI가 서버의 다른 파일이나 네트워크에 손대지 못해야 한다.</p>
@@ -508,7 +527,14 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 </section>
 <section class="card kind-test" id="TEST-DAILY-006">
 <h3><span class="idtag">TEST-DAILY-006</span></h3>
-<p><code>tests/test_daily_qa_runner.py</code> 로 Claude 실행 명령의 도구 허용·금지 목록, 설정 출처 제한, <span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>가 저장소 안이면 거부하는지, 입력 마스킹, 비밀값이 로그에 남지 않는지, 규칙 판 불일치 시 AI 단계를 건너뛰는지, 메일 본문에 사양 본문이 없는지 본다.</p>
+<p><code>tests/test_daily_qa_runner.py</code> 로 아래를 본다.</p>
+<ul>
+<li>Claude 실행 명령의 도구 허용·금지 목록, 설정 출처 제한, 도구 호출이 기록되는 출력 형식</li>
+<li><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>가 저장소 안이면 거부하는지, 입력 마스킹, 비밀값이 로그에 남지 않는지</li>
+<li>도구 호출 기록에 파일 경로·검색어만 남고 쓴 내용은 남지 않는지</li>
+<li>사용량 한도 초과처럼 CLI 가 오류로 끝나면 실패로 처리하고 그 이유를 남기는지</li>
+<li>규칙 판 불일치 시 AI 단계를 건너뛰는지, 메일 본문에 사양 본문이 없는지</li>
+</ul>
 <p>실행 명령:</p>
 <pre><code class="language-text">python -m pytest tests/test_daily_qa_pipeline.py tests/test_daily_qa_polarion.py tests/test_daily_qa_packages.py tests/test_daily_qa_outputs.py tests/test_daily_qa_router.py tests/test_daily_qa_runner.py -q
 </code></pre>

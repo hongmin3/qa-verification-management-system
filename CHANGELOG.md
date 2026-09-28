@@ -2,6 +2,16 @@
 
 ## 2026-09-28
 
+### 지식 폴더 자동 업로드 · 감사 기록 보강 · 문서 보강
+
+- 담당자 PC 에 작업 스케줄러 `QA_ProductKnowledge_Sync`(평일 10:00, S4U)를 등록했다. 지식 폴더를 수집해 서버에 없는 파일만 올린다. 사양서 동기화(09:40) 뒤에 두어, 같은 사양서 PDF 가 두 경로로 올라가도 서버에서 바로 1건으로 정리되게 했다. 등록 직후 두 번 실행해 결과 0, 서버 QA 규칙이 Rev1.12 → Rev1.17 로, 사양서가 9/28판 6건(중복 0)으로 바뀐 것을 확인했다.
+- 지침 프롬프트 파일명을 밑줄로 이어 쓴 경우(`VXvue_검증_DB_AI_지침_프롬프트_Rev1.17.txt`)도 지침 프롬프트로 분류한다(`*지침_프롬프트*`). 이전에는 규약 밖으로 제외되어 서버에서 지침 프롬프트가 빠졌다.
+- VXvue 지식 폴더의 `polarion_query_backup.pdf`(이슈 조회 보고서 PDF)를 제품 설정 `knowledge_source.ignore` 로 수집 대상에서 뺐다.
+- 실폴더 분류 테스트가 로컬 설정의 옛 경로 때문에 skip 되고 있었다. 경로를 고치자 위 두 파일을 잡았고, 테스트는 제품 설정의 무시 목록을 따르도록 했다.
+- NFR-SEC-001: Claude CLI 를 `stream-json` 출력으로 돌려 도구 호출(읽은 파일·검색어)을 `output/daily_qa/<실행ID>/claude_logs/` 에 남긴다. 쓴 내용은 길이만 남긴다. CLI 가 오류로 끝나면(예: 사용량 한도 초과는 `subtype: success`, `is_error: true` 로 온다) 오류 문장을 남긴다. 실제 CLI 의 stream 형식은 계정 한도 때문에 오늘 확인하지 못했다.
+- 규칙 구현현황표(`app/modules/qa_agent/rule_capability.py`)에 Rev1.15~1.17 에서 늘어난 §57~§79 를 분류했다. 서버·PC 의 규칙 사본이 Rev1.17 이 되자 `tests/test_rule_capability.py` 가 설계대로 새 절 23개를 잡았다. 구현됨은 코드와 테스트가 있는 §74·§75(일일 QA 초안 Excel)뿐이고, 나머지 실질 규칙은 QA Agent 미반영(예정)으로 두었다. 현재 79절 중 자동화 범위 69절(87%), 구현됨 34절.
+- 문서: README 에 일일 QA 점검의 위치·외부 전송 범위·시험 실행을 넣었다. `docs/AUTOMATION.md` 에 지식 업로드 작업과 하루 실행 순서를, SPEC REQ-DAILY-001 에 입력 자료가 오는 곳을 적었다. 보안 문서의 "필요한 항목만 보낸다"를 실제 동작(작업 폴더의 전체 색인 가운데 Claude 가 읽은 부분이 나감)대로 고쳤다. REQ-DEPLOY-001 의 긴 문단을 나눴다.
+
 ### `projects/` 재배치·ALM-QA-Automation 통합 뒤의 경로와 동기화 시각 정리
 
 - `config/products/vxvue.yaml` 의 없어진 경로 3개를 새 위치로 바꿨다. 지식 폴더는 `projects/vxvue/VXvue 지식파일`, 사양서 PDF 는 `projects/ALM-QA-Automation/apps/srs-spec/output`, 이슈 Export 는 `projects/ALM-QA-Automation/apps/issue-export/polarion_backup` 이다. 곧 지워질 `projects/_org/` 는 가리키지 않는다. 새 경로에서 `sync_vxvue_spec.py --dry-run` 이 9/28 사양서 PDF 6건을 찾는 것을 확인했다.

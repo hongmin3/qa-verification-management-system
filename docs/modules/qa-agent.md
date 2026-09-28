@@ -269,7 +269,7 @@ app/modules/qa_agent/
   evidence.py            Evidence Store (근거 수준 · 위치)
   schemas.py             응답 스키마 (TC 판정 · Regression 축)
   validation.py          ID 교차검증 · Step–Expected 번호
-  rule_capability.py     규칙 56개 절의 구현 방식 표
+  rule_capability.py     규칙 절별(Rev1.17 기준 79개) 구현 방식 표
   scheduled_jobs.py      제품 지식 폴더 수집 cron
   router.py              화면·API
   templates/             index · analysis(6탭) · guide · rules · history

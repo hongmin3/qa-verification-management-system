@@ -21,6 +21,11 @@ manual_types:
 # 서버 설정: /etc/systemd/system/<유닛>.d/override.conf 의 Environment= 또는 .env
 knowledge_source:
   dir: "${QA_KNOWLEDGE_DIR_VXVUE:-C:/Users/2024980/Documents/자동화/projects/vxvue/VXvue 지식파일}"
+  # 지식 폴더에 함께 두지만 이 시스템의 지식 자산이 아닌 파일. 수집하지 않는다.
+  # polarion_query_backup.pdf 는 Polarion 이슈 조회 결과를 묶은 보고서 PDF 로, 파일명 규약의 어느
+  # 종류에도 속하지 않는다. 이 시스템은 이슈를 issue_source.export_dir 에서 읽는다.
+  ignore:
+    - "polarion_query_backup*"
 
 specification:
   # alm_crawler: 별도 프로젝트 ALM-QA-Automation 의 srs-spec 앱이 Polarion에서 이미 수집한 PDF를 읽기만 한다.

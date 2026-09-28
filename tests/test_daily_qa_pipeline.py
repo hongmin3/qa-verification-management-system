@@ -200,3 +200,22 @@ def test_scheduler_registers_weekday_job():
     register_scheduled_jobs(scheduler)
     trigger = str(scheduler.get_job(JOB_ID).trigger)
     assert "day_of_week='mon-fri'" in trigger and "hour='7'" in trigger and "minute='30'" in trigger
+
+
+def test_claude_tool_logs_are_collected_into_the_run_folder(env):
+    """Validates: NFR-SEC-001 — 보낸 입력과 Claude 가 읽은 기록이 같은 실행 폴더에 모인다."""
+
+    def producer(task, run):
+        _producer(task, run)
+        log_dir = run.run_dir / "logs"
+        log_dir.mkdir(exist_ok=True)
+        (log_dir / f"{task.task_id}.claude.json").write_text(
+            json.dumps({"tool_calls": 1, "tool_call_log": [{"tool": "Read", "file_path": "runs/x/context/tc_index.jsonl"}]}),
+            encoding="utf-8",
+        )
+
+    outcome = _run(env, runner=FakeRunner(producer), today=TUESDAY)
+    logs = env["cfg"].output_dir / outcome["run_id"] / "claude_logs"
+    saved = json.loads((logs / "B-001.attempt1.claude.json").read_text(encoding="utf-8"))
+    assert saved["tool_call_log"][0]["file_path"].endswith("tc_index.jsonl")
+    assert (env["cfg"].output_dir / outcome["run_id"] / "sent" / "B-001.json").is_file()

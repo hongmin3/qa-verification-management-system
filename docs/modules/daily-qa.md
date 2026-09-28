@@ -31,6 +31,20 @@ SQLite(daily_qa_*) -> /daily-qa 검토 화면 -> 사람의 승인·거절
 | `app/modules/daily_qa/router.py` | `/daily-qa` 검토 화면 |
 | `app/modules/daily_qa/scheduled_jobs.py` | 예약 실행 (앱 내장 스케줄러가 분리 프로세스로 띄운다) |
 
+## 입력 자료와 외부로 나가는 것
+
+| 자료 | 어디서 오나 | 언제 새로워지나 |
+|---|---|---|
+| SRS, 이슈 | Polarion. 서버가 점검할 때 직접 읽는다 | 매 실행 |
+| TC Excel, 매뉴얼, QA 규칙·지침 프롬프트 | 서버의 지식 사본. 담당자 PC 의 `QA_ProductKnowledge_Sync` 가 올린다 | 평일 10:00 업로드 뒤 다음 점검부터 |
+
+PC 쪽 예약 작업과 하루 순서는 [자동화 아키텍처 §7.1·§7.2](../AUTOMATION.md) 에 있다.
+
+Claude 의 작업 폴더에는 작업 입력(변경분·후보 TC) 밖에도 **오늘 SRS 전체, TC 전체 색인, 매뉴얼
+텍스트**가 마스킹된 채로 놓인다. 연관 사양과 번호로 못 찾은 TC 를 검색하게 하려는 것이다. 이 가운데
+Claude 가 실제로 읽은 부분이 Anthropic 으로 전송된다. 무엇을 읽고 검색했는지는 실행 폴더의
+`claude_logs/` 에 남는다 (쓴 내용은 결과 파일에 있으므로 길이만 남긴다).
+
 ## Skill
 
 | Skill | 단계 | 무인 실행 |
@@ -68,8 +82,9 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 .venv/bin/python scripts/run_daily_qa.py --check
 ```
 
-모든 줄이 `[OK]` 여야 한다. QA 규칙 판이 `확인 필요` 면 담당자 PC 에서 지식 폴더 동기화
-(`scripts/sync_product_knowledge.py --upload-to ...`)로 최신 규칙(Rev1.17)을 서버에 올린다.
+모든 줄이 `[OK]` 여야 한다. QA 규칙은 담당자 PC 의 지식 업로드 작업(`QA_ProductKnowledge_Sync`, 평일
+10:00)이 서버에 올린다. 2026-09-28 에 서버 사본이 Rev1.17 인 것을 확인했다. 규칙 줄이 OK 가 아니면
+`/knowledge` 화면의 VXvue "마지막 수집" 시각과 규칙 판을 먼저 본다.
 
 8. **시험 실행** — Claude 를 부르지 않는 dry-run, 그다음 메일 없이 정식 1회:
 
@@ -100,6 +115,9 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 | 마지막 실행 로그 | `output/logs/daily_qa.out`, `app.log` 의 `daily_qa_launched` / `daily_qa_skipped` |
 | 실행별 상세 | `/daily-qa/runs/<실행ID>` · `output/daily_qa/<실행ID>/audit.json` |
 | AI 에 보낸 입력 | `output/daily_qa/<실행ID>/sent/*.json` (마스킹 후 원본 그대로) |
+| Claude 가 읽고 검색한 것 | `output/daily_qa/<실행ID>/claude_logs/*.claude.json` 의 `tool_call_log` (파일 경로·검색어) |
+| Claude 실패 이유 | 같은 파일의 `error_text` (예: 사용량 한도 초과) · `audit.json` 의 작업별 `error` |
+| 서버 지식 사본의 시각·판 | `/knowledge` 화면의 VXvue "마지막 수집" |
 | 토큰 만료 | 발급일 + 1년. 만료 30일 전에 2단계를 다시 한다 |
 
 종료 코드: `0` 성공, `1` 일부·전체 실패, `2` 설정 오류, `3` 다른 실행이 진행 중.
@@ -109,4 +127,9 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 - TC 의 옛 Legacy SRS 번호와 현재 `oldId` 가 대부분 맞지 않아(2026-09-28 기준 317종 중 239종),
   E 의 `TC 없음` 에 실제로는 TC 가 있는 SRS 가 섞인다. `vxvue-trace-gap` 으로 대화형 확인한다.
 - 새 이슈 조회식(`daily_qa.polarion.issue_query`)은 잠정값이다 (SPEC §13).
+- 도구 호출 기록(`claude_logs/`)은 CLI 의 stream-json 출력을 읽어 만든다. 형식은 합성 출력으로 검증했고,
+  실제 CLI 로는 2026-09-28 에 계정 사용량 한도 때문에 확인하지 못했다. 서버 첫 정식 실행 뒤
+  `claude_logs/` 에 `Read`·`Grep` 기록이 찍혔는지 본다. 비어 있으면 출력 형식이 달라진 것이다.
+- Claude 가 작업 폴더의 SRS·TC 전체 색인을 검색할 수 있으므로, 외부로 나가는 양은 작업마다 다르다.
+  범위를 후보만으로 좁힐지는 결정 대기다 (좁히면 B 의 "후보 밖 TC 찾기"가 약해진다).
 - Codex 교차 검증(G7)은 이후 고도화 범위다.

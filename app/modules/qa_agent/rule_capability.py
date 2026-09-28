@@ -78,7 +78,7 @@ def _cap(section: str, title: str, mode: str, status: str, where: str = "", note
     return section, RuleCapability(section=section, title=title, mode=mode, status=status, where=where, note=note)
 
 
-# 규칙 Rev1.12 기준 56개 최상위 절. 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
+# 규칙 Rev1.17 기준 79개 최상위 절(1~56 은 Rev1.12 때, 57~79 는 2026-09-28 에 분류). 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
 RULE_CAPABILITY: dict[str, RuleCapability] = dict(
     [
         _cap("1", "전체 Agentic Workflow", MODE_CODE, STATUS_IMPLEMENTED,
@@ -213,7 +213,50 @@ RULE_CAPABILITY: dict[str, RuleCapability] = dict(
         _cap("55", "자동화 금지 원칙", MODE_CODE, STATUS_IMPLEMENTED,
              where="app/modules/qa_agent/standard_findings.py::AUTOMATION_PROHIBITIONS",
              note="8개 금지 항목을 가드레일로 구현했다. Issue Close 경로가 없고, TC 파일을 읽기만 하며, 근거 없는 판정은 G5가 기록한다."),
-        _cap("56", "Rev.1.12 핵심 강화 사항", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
+        _cap("56", "Rev.1.14 핵심 강화 사항", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
+             note="규칙 문서의 변경 이력. 구현 대상이 아니다. (Rev1.12 판에서는 'Rev.1.12 핵심 강화 사항')"),
+        # --- Rev1.15~1.17 에 추가된 절 (2026-09-28 분류). QA Agent 는 Rev1.12 기준으로 만들어져
+        # 아래 절을 아직 반영하지 않았다. 일일 QA 점검(app/modules/daily_qa)의 Skill 은 일부 절을 원문에서
+        # 읽도록 지시하지만, 그것만으로는 구현됨으로 보지 않는다 — 코드와 테스트가 있는 것만 IMPLEMENTED.
+        _cap("57", "Rev.1.15 추가 강화 사항 (Title Prefix·QA 문체·내부 구현 추정 금지 등)", MODE_CODE_LLM, STATUS_PLANNED,
+             note="57.1 Title 분류 Prefix 는 코드로 검사할 수 있다. 일일 QA Skill 이 57.1~57.3 을 읽도록 지시한다. QA Agent 미반영."),
+        _cap("58", "Rev.1.16 Test State Validity 원칙", MODE_CODE_LLM, STATUS_PLANNED,
+             note="일일 QA C 단계 Skill 이 초안 전에 읽도록 지시한다. QA Agent 미반영."),
+        _cap("59", "Rev.1.16 상태 생성 사양 역추적", MODE_CODE_LLM, STATUS_PLANNED,
+             note="일일 QA B·C 단계 Skill 이 연관 SRS 를 역추적하도록 지시한다. QA Agent 미반영."),
+        _cap("60", "Rev.1.16 Cross-layer Constraint Check", MODE_CODE_LLM, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("61", "Rev.1.16 신규 TC Necessity / Duplication Gate", MODE_CODE_LLM, STATUS_PLANNED,
+             note="일일 QA B·C 단계 Skill 이 신규 TC 판단 전에 읽도록 지시한다. QA Agent 미반영."),
+        _cap("62", "Rev.1.16 Agentic Workflow Gate 확장", MODE_CODE, STATUS_PLANNED,
+             note="§76 이 다시 정의했다. QA Agent 의 gates.py 는 §44 의 G1~G5 그대로다."),
+        _cap("63", "Rev.1.16 Reverse Validation", MODE_CODE_LLM, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("64", "Rev.1.16 최종 자체검토 추가 항목", MODE_CODE, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("65", "Rev.1.16 최종 중단 조건 추가", MODE_CODE, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("66", "Rev.1.16 적용 및 호환 원칙", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
+             note="판 사이의 적용 순서를 정한 운영 원칙이다. 런타임 동작이 아니다."),
+        _cap("67", "Rev.1.16 핵심 강화 사항", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
+             note="규칙 문서의 변경 이력. 구현 대상이 아니다."),
+        _cap("68", "Rev.1.17 질문 최소화 및 Version 질문 규칙", MODE_CODE_LLM, STATUS_PLANNED,
+             note="일일 QA Skill 은 무인 모드라 질문을 open_questions 로 모으고 이 절의 '결과에 영향을 줄 때만 질문'을 따르도록 지시한다. QA Agent 미반영."),
+        _cap("69", "Rev.1.17 완료 TC 의미 보존 편집 상세", MODE_DRAFT_ONLY, STATUS_PLANNED,
+             note="일일 QA B 단계 Skill 이 결과가 있는 TC 의 의미 변경은 신규 TC 분리 검토로 적도록 지시한다. QA Agent 미반영."),
+        _cap("70", "Rev.1.17 TC Coverage Review 확장", MODE_CODE_LLM, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("71", "Rev.1.17 QA 문체 확장", MODE_CODE_LLM, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("72", "Rev.1.17 Issue 상태별 Scope", MODE_CODE, STATUS_PLANNED,
+             note="상태(verified/in_review 등)로 결정적으로 나눌 수 있다. 일일 QA C 단계 Skill 이 분류 전에 읽도록 지시한다. QA Agent 미반영."),
+        _cap("73", "Rev.1.17 Fix Verification과 Regression TC 경계", MODE_DRAFT_ONLY, STATUS_PLANNED,
+             note="일일 QA C 단계 Skill 이 초안 전에 읽도록 지시한다. QA Agent 미반영."),
+        _cap("74", "Rev.1.17 Artifact Formatting Gate", MODE_CODE, STATUS_IMPLEMENTED,
+             where="app/modules/daily_qa/checklist_xlsx.py",
+             note="일일 QA 초안 Excel 이 원본 영향성평가 Checklist 의 머리글 서식을 복사하고 본문 셀에 배경색을 넣지 않는다 (tests/test_daily_qa_outputs.py). QA Agent 산출물에는 미적용."),
+        _cap("75", "Rev.1.17 실행용 TC와 분석용 Review 분리", MODE_CODE, STATUS_IMPLEMENTED,
+             where="app/modules/daily_qa/checklist_xlsx.py",
+             note="일일 QA 초안 Excel 의 'Checklist 초안' 시트에는 등록 가능한 열만, AI 판단·근거는 'Review' 시트에 둔다 (tests/test_daily_qa_outputs.py). QA Agent 산출물에는 미적용."),
+        _cap("76", "Rev.1.17 Agentic Workflow Gate 재정의 (G1~G7)", MODE_CODE, STATUS_PLANNED,
+             note="일일 QA Skill 은 §76 기준 G1~G7 로 gate_status 를 쓴다(skills/vxvue-qa-rules/references/gates.md). QA Agent 의 gates.py 는 G1~G5 그대로다."),
+        _cap("77", "Rev.1.17 Issue 간결 작성 표준", MODE_DRAFT_ONLY, STATUS_NOT_PLANNED, note="S06 확장 시. 초안까지만 (§29 와 같다)."),
+        _cap("78", "Rev.1.17 최종 자체검토 추가 항목", MODE_CODE, STATUS_PLANNED, note="QA Agent 미반영."),
+        _cap("79", "Rev.1.17 핵심 강화 사항", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
              note="규칙 문서의 변경 이력. 구현 대상이 아니다."),
     ]
 )

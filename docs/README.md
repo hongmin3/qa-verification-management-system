@@ -27,7 +27,7 @@
 | **에이전트와 개발할 때 폴더·지식을 어떻게 관리하는지** | [Context Engineering](CONTEXT_ENGINEERING.md) |
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
 | **추천 정확도 측정** | [정확도 평가](EVALUATION.md) |
-| **사양서 자동 동기화 설정** | [자동화 아키텍처](AUTOMATION.md) |
+| **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
 | **일일 QA 점검을 서버에 설치·운영하기** | [일일 QA 점검](modules/daily-qa.md) |
 | **AI 점검의 보안 통제를 설명하기** | [AI 점검 보안 통제](SECURITY_AI_AGENT.md) |
@@ -79,7 +79,7 @@
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | precision·recall·F1 기반 추천 정확도 평가 |
-| [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서 자동 동기화, 보고서 구조 |
+| [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서·지식 폴더 자동 동기화(PC 예약 작업), 하루 실행 순서, 보고서 구조 |
 | [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | 일일 QA 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
 | [modules/daily-qa.md](modules/daily-qa.md) | 일일 QA 점검 구조, Skill, 서버 설치, 운영 |
 | [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |

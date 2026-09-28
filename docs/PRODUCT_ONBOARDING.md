@@ -76,7 +76,7 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to htt
 | `(매뉴얼)`, `System Integration Guide*`, `*Conformance Statement*`, `*Operation Manual*`, `*Service Manual*`, `*API Protocol Manual*` | manual | O |
 | `(TC)`, `*Test Case*`, `*TestCase*`, `*Checklist*` | testcase | O |
 | `[QA 작성 규칙]` | qa_rules | X (규칙 로더가 읽음) |
-| `*지침 프롬프트*` | instruction_prompt | X (규칙 로더가 읽음) |
+| `*지침 프롬프트*`, `*지침_프롬프트*` | instruction_prompt | X (규칙 로더가 읽음) |
 
 `(TC)` 접두사가 있으면 `*Checklist*` 패턴보다 먼저 testcase로 확정된다 — 분류 우선순위가
 정해져 있다.

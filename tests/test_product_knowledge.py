@@ -26,6 +26,7 @@ from app.core.product_knowledge import (
     parse_asset_name,
     product_dir,
     product_slug,
+    resolve_config,
     scan_source,
     sync_product,
 )
@@ -61,6 +62,7 @@ def _write(directory: Path, name: str, body: str = "본문") -> Path:
         ("(TC) RA16-148-002_Acme_TestCase.xlsx", KIND_TESTCASE),
         ("[QA 작성 규칙] Acme TC 설계 및 자체검토 가이드_Rev1.12.md", KIND_QA_RULES),
         ("Acme 업무 자동화 지침 프롬프트.txt", KIND_INSTRUCTION_PROMPT),
+        ("Acme_검증_DB_AI_지침_프롬프트_Rev1.17.txt", KIND_INSTRUCTION_PROMPT),
         ("회의록 2026-09-08.md", KIND_UNKNOWN),
     ],
 )
@@ -375,7 +377,11 @@ def test_real_knowledge_dir_has_no_unclassified_assets() -> None:
     """
     source = _real_knowledge_dir()
     assert source is not None
-    scan = scan_source(_config(source))
+    # 제품 설정이 일부러 제외한 파일(`knowledge_source.ignore`)은 규약 위반이 아니다.
+    # 무시 목록은 설정 파일에 이름으로 적혀 있어 검토할 수 있고, 새로 들어온 파일은 여전히 걸린다.
+    product = resolve_config("vxvue")
+    ignore = list(product.knowledge_source.ignore) if product else []
+    scan = scan_source(_config(source, ignore=ignore))
 
     unclassified = [asset.file_name for asset in scan.assets if asset.kind == KIND_UNKNOWN]
     assert unclassified == [], f"분류되지 않은 파일: {unclassified}"

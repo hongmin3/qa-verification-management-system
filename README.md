@@ -45,6 +45,10 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 | 이 **변경**으로 어디까지 다시 검증해야 하는가 | [Regression 영향 분석](docs/modules/impact-analyzer.md) |
 | 매뉴얼이 최신 사양을 반영했는가 | [매뉴얼 개정 검증](docs/modules/manual-review.md) |
 | 매뉴얼의 최신본이 어느 것인가 | [QA Manual Hub](services/qa-manual-hub/README.md) |
+| 어제 바뀐 VXvue 사양·이슈 가운데 **오늘 검토할 것**은 무엇인가 | [일일 QA 점검](docs/modules/daily-qa.md) |
+
+일일 QA 점검은 사람이 자료를 넣지 않습니다. 서버가 평일 아침마다 Polarion 을 직접 읽어 초안을 만들고,
+사람은 아침 메일을 받아 검토 화면에서 승인·거절만 합니다.
 
 세 분석 기능은 **입력이 다릅니다.** 목적이 아니라 손에 있는 자료로 고릅니다 —
 Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영향 분석, 개정 매뉴얼을
@@ -71,6 +75,10 @@ Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영�
   값 자체는 반환하지 않습니다 ([SECURITY.md](SECURITY.md)).
 - 무엇이 실제로 전송됐는지는 분석 상세 화면에서 **전송된 입력 JSON 원문 그대로** 확인할 수
   있습니다. 추정이 아니라 실제 payload를 봅니다.
+- **예외: 일일 QA 점검**은 회사 Claude Team 계정으로 Claude CLI 를 씁니다. 격리된 작업 폴더에 마스킹한
+  SRS·TC 색인을 두고 Claude 가 필요한 부분을 검색해 읽으므로, 나가는 양이 작업마다 다릅니다. 보낸 입력과
+  Claude 가 읽은 파일·검색어가 실행마다 남습니다. 통제 목록과 남은 확인 사항은
+  [AI 점검 보안 통제](docs/SECURITY_AI_AGENT.md) 에 있습니다.
 
 ### 2. 반복 업무는 재현 가능해야 한다
 
@@ -116,6 +124,7 @@ qa-verification-management-system/
 │  │  ├─ impact_analyzer/   Regression 영향 분석          → /impact-analyzer
 │  │  ├─ manual_review/     매뉴얼 개정 검증              → /manual-review
 │  │  ├─ knowledge/         문서·규칙 관리 (전 기능 공유)  → /knowledge
+│  │  ├─ daily_qa/          VXvue 일일 QA 점검 (Claude Skill 5개 포함) → /daily-qa
 │  │  └─ cost_dashboard/    AI 사용량 집계                → /cost-dashboard
 │  ├─ web/                  모듈 라우터를 한 서버에 취합하는 얇은 계층 + 공용 template/static
 │  └─ serve.py              서버 진입점 — config.yaml 의 app.host/app.port 로 uvicorn 기동
@@ -127,6 +136,8 @@ qa-verification-management-system/
 │     └─ deploy/            자체 설치·배포·백업 스크립트
 │
 ├─ deploy/nginx/            두 배포 단위를 하나의 origin으로 묶는 nginx 설정
+├─ deploy/claude/           (선택) 서버 전체 Claude 사용 정책
+├─ scripts/                 운영 CLI (일일 점검, 사양서·지식 폴더 동기화, 점검·백업)
 ├─ docs/                    설계·운영 문서 (docs/README.md 가 지도)
 ├─ knowledge/               AI 에이전트용 Knowledge (Akela)
 ├─ config/products/         제품별 설정
@@ -165,9 +176,14 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
      SQLite                              PostgreSQL 16
   + 파일 저장소                          + 문서 저장소
         │
-        ▼
-  Gemini API  ← 마지막 판단에만, 최소 입력으로
+        ├──▶ Gemini API  ← 분석 기능의 마지막 판단에만, 최소 입력으로
+        └──▶ 일일 QA 점검 (평일 07:30, 앱과 분리된 프로세스)
+               ├─ Polarion REST (읽기 전용)
+               └─ Claude CLI (격리 작업 폴더, 회사 Team 계정)
 ```
+
+담당자 PC 는 사양서 PDF(평일 09:40)와 지식 폴더(평일 10:00)를 서버로 올립니다. 서버는 그 폴더를
+직접 볼 수 없기 때문입니다 ([자동화 아키텍처](docs/AUTOMATION.md) §7).
 
 ### 분석 파이프라인
 
@@ -468,7 +484,7 @@ Unit Test는 Gemini Mock Response를 사용하므로 테스트에 API 비용이 
 | DB | SQLite (WAL) | PostgreSQL 16, SQLAlchemy 2.0, Alembic |
 | 문서 처리 | PyMuPDF, openpyxl, python-docx | — |
 | 검색 | rank-bm25 | PostgreSQL ILIKE |
-| AI | Google Gemini (Structured Output) | — |
+| AI | Google Gemini (Structured Output), Claude Code CLI (일일 QA 점검) | — |
 | 인증 | 사내망 전용 | Argon2id + 서버 세션 |
 | 테스트 | pytest | pytest (실제 PostgreSQL 필요) |
 | 배포 | uvicorn / systemd | systemd + rsync 또는 Docker Compose |
@@ -492,7 +508,25 @@ Copy-Item secrets.example.txt secrets.txt -Force   # GEMINI_API_KEY 입력
 ./scripts/run.sh    # Linux / macOS
 ```
 
-띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`에서 각 기능의 사용법을 볼 수 있습니다.
+띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`, `/daily-qa/guide`에서 각 기능의 사용법을 볼 수 있습니다.
+
+### 일일 QA 점검 시험 실행
+
+설정과 자격증명이 갖춰졌는지 먼저 봅니다. 모든 줄이 `[OK]` 면 서버에서 정식 실행할 수 있습니다.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_daily_qa.py --check
+```
+
+Claude 를 부르지 않고 입력 묶음과 코드 계산(추적 공백 등)만 해 봅니다. 메일도 보내지 않습니다.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_daily_qa.py --dry-run --no-email
+```
+
+기대 결과: 단계별 상태가 한 줄씩 출력되고, `/daily-qa` 에 실행 기록이 생깁니다. Polarion·Claude
+자격증명이 없는 PC 에서는 수집·AI 단계가 `skipped` 로 나오는 것이 정상입니다. 서버 설치와 정식 실행은
+[일일 QA 점검](docs/modules/daily-qa.md) "서버 설치"를 따릅니다.
 
 ### 테스트
 
@@ -536,6 +570,8 @@ pytest tests -q
 | [docs/SERVERS.md](docs/SERVERS.md) | 운영 서버에 떠 있는 3개 서버(핵심 앱/Manual Hub/nginx) 각각의 역할과 필수 명령 |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | 작업 복구 · 백업 · 모니터링 |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | 추천 정확도 평가 |
-| [docs/AUTOMATION.md](docs/AUTOMATION.md) | 진행 상태 · 사양서 자동 동기화 |
+| [docs/AUTOMATION.md](docs/AUTOMATION.md) | 진행 상태 · 사양서/지식 폴더 자동 동기화 · PC 예약 작업과 하루 실행 순서 |
+| [docs/modules/daily-qa.md](docs/modules/daily-qa.md) | 일일 QA 점검 구조 · Skill · 서버 설치 · 운영 |
+| [docs/SECURITY_AI_AGENT.md](docs/SECURITY_AI_AGENT.md) | 일일 QA 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
 | [SECURITY.md](SECURITY.md) | 비밀정보 취급 규칙 |
 | [NEXT_STEPS.md](NEXT_STEPS.md) · [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | 남은 작업 · 결정 대기 항목 |

@@ -389,6 +389,11 @@ def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all
             result_path.unlink(missing_ok=True)
             outcome = runner.run(task, workspace)
             entry[f"attempt{attempt}"] = {"ok": outcome.ok, "seconds": round(outcome.seconds, 1), "error": outcome.error[:300], "meta": outcome.meta}
+            # Claude 가 읽고 검색한 기록(도구 호출)을 보낸 입력과 같은 실행 폴더에 모은다 (NFR-SEC-001).
+            claude_log = workspace.run_dir / "logs" / f"{task.task_id}.claude.json"
+            if claude_log.is_file():
+                (out_dir / "claude_logs").mkdir(exist_ok=True)
+                shutil.copy2(claude_log, out_dir / "claude_logs" / f"{task.task_id}.attempt{attempt}.claude.json")
             if not outcome.ok and dry_run:
                 break
             try:

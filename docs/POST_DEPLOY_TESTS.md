@@ -26,7 +26,7 @@ cd /srv/qa-verification-management-system && git pull && ./scripts/deploy.ps1 -R
 | 마스킹 규칙 33건 | `tests/test_security_filter.py` |
 | 두 제품 지식 폴더 스캔·분류·리비전 판별 | `tests/test_product_knowledge.py` (실제 폴더 opt-in 포함) |
 | 실제 Issue 38건 파싱 | `tests/test_polarion_issue.py` (실제 Export opt-in) |
-| 규칙 56개 절 분류 드리프트 | `tests/test_rule_capability.py` |
+| 규칙 절 분류 드리프트 (규칙 Rev 가 오르면 새 절을 분류해야 통과) | `tests/test_rule_capability.py` |
 
 ---
 

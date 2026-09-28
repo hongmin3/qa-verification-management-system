@@ -1,5 +1,12 @@
 # 진행 상태
 
+## 2026-09-28 저녁 지식 업로드 예약 · 감사 기록 · 문서 보강
+
+- 완료: `QA_ProductKnowledge_Sync` 등록(평일 10:00) 및 실제 실행 2회(결과 0, 서버 규칙 Rev1.17), 지침 프롬프트 밑줄 파일명 분류, `polarion_query_backup.pdf` 수집 제외, 도구 호출 감사 기록(`claude_logs/`), README·AUTOMATION·daily-qa·보안 문서·SPEC 보강.
+- ALM-QA-Automation 로컬 설정(git 제외)의 옛 경로 2개를 고쳤다: `knowledge_folder`, `mail.credentials_ini`. 고치기 전 `automation.py --check-local` 이 메일 설정 오류로 실패했고(내일 09:00 실행이 수집 전에 멈출 상태), 고친 뒤 OK 다. 백업은 그 저장소 `.project-governance-backups/config-20260928/`.
+- 확인만 한 것: Redmine 알림 작업 두 개는 이미 새 경로를 쓰고 `--dry-run` 이 정상 종료했다(알림 설정은 꺼져 있음).
+- 남은 일: 서버 설치(`docs/modules/daily-qa.md`), 서버 첫 정식 실행 뒤 `claude_logs/` 에 도구 기록이 찍히는지 확인. 결정 대기는 `OPEN_QUESTIONS.md` 3~6.
+
 ## 2026-09-28 재배치 뒤 경로·동기화 시각 정리 (REQ-ISSUE-001)
 
 - 완료: `vxvue.yaml` 경로 3개 교체, 사양서 동기화 평일 09:40 (설정과 작업 스케줄러 둘 다, XML 백업 있음), QA Agent 이슈 Export 실행 폴더 구조 대응, 옛 프로젝트 이름 정리.

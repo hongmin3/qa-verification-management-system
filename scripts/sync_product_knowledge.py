@@ -16,10 +16,9 @@
 `--report-to` 는 로컬 DB 에 수집하면서 원격 sync 로그에만 결과를 남기는 옛 방식이다
 (`--upload-to` 를 쓰면 서버가 스스로 남기므로 함께 쓰지 않는다).
 
-Windows 작업 스케줄러 등록 예 (운영 서버 반영):
-
-    schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON /ST 07:45 ^
-      /TR "C:\\path\\to\\.venv\\Scripts\\python.exe C:\\path\\to\\scripts\\sync_product_knowledge.py --upload-to http://10.13.0.222:24357"
+담당자 PC 에는 작업 스케줄러 `QA_ProductKnowledge_Sync` 로 등록돼 있다 (2026-09-28, 평일 10:00,
+S4U, 인자 `--product VXvue --upload-to http://10.13.0.222:24357`). 사양서 동기화(평일 09:40) 뒤에
+돌아야 같은 사양서 PDF 의 이중 등록이 바로 정리된다 — 이유는 `docs/AUTOMATION.md` §7.1.
 """
 
 from __future__ import annotations
