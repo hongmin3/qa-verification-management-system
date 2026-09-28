@@ -16,7 +16,7 @@
 
 ## 2. 프로젝트 범위
 
-포함: 추천 평가 지표 및 누락 판정, 핵심 앱의 listen 주소·포트 결정 방식, VXvue 일일 QA 자동 점검(사양 변경 영향, 이슈 수정확인 초안, 사양–TC 추적 공백, 매뉴얼 누락 후보)과 그 결과의 메일 요약·검토 대기열, QA Agent 가 읽는 Polarion 이슈 Export 폴더의 구조.
+포함: 추천 평가 지표 및 누락 판정, 핵심 앱의 listen 주소·포트 결정 방식, VXvue 일일 QA 자동 점검(사양 변경 영향, 이슈 수정확인 초안, 사양–TC 추적 공백, 매뉴얼 누락 후보)과 그 결과의 메일 요약·검토 대기열, QA Agent 가 읽는 Polarion 이슈 Export 폴더의 구조, 담당자 PC 에서 서버로 가는 사양서·지식 폴더 동기화.
 
 제외: 운영 데이터·비밀 설정의 열람/변경, 인증 방식 변경, listen 포트 외의 배포 절차 변경. 기존 기능은 REQ-ISSUE-001(이슈 Export 폴더 구조 대응) 외에는 동작을 바꾸지 않는다. 이 제외는 작업 경계이며 기존 제품 기능을 제거한다는 뜻이 아니다.
 
@@ -27,6 +27,49 @@
 | 작업 폴더 | Claude가 읽고 쓰는 격리된 폴더(`daily_qa.workspace_dir`). 저장소 밖에 둔다 |
 | Finding | AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다 |
 | QA 규칙 | `[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev*.md` 와 지침 프롬프트 |
+| 지식 폴더 | QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(`projects/vxvue/VXvue 지식파일`) |
+| 지식 사본 | 서버가 지식 폴더에서 받아 둔 사본(`data/product_knowledge/<제품>/`). 서버는 지식 폴더를 직접 볼 수 없다 |
+
+## 4. 전체 자동화 흐름
+
+사람이 매일 하는 일은 아침 메일을 읽고 검토 화면에서 승인·거절하는 것뿐이다. 나머지는 담당자 PC 와 운영 서버의 예약 실행이 한다.
+
+평일 하루의 순서 (시각은 한국 시간):
+
+```flow
+07:30 서버: 일일 QA 점검 -> Polarion 직접 조회 -> B·C·E·F 초안 -> 요약 메일
+09:00 PC: ALM 통합 수집(ALM-QA-Automation) -> 사양서 PDF 를 크롤러 output 과 지식 폴더에 배포
+09:40 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
+10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 서버 지식 사본 갱신 -> 다음 날 07:30 점검이 사용
+```
+
+서버 일일 점검 한 번의 흐름 (REQ-DAILY-001):
+
+```flow
+잠금 -> 사전 점검(규칙 판·자격증명·작업 폴더) -> SRS 스냅샷·비교 -> 이슈 수집 -> TC 색인
+TC 색인 -> 추적 공백 E(코드) -> 저장
+TC 색인 -> 작업 묶음 B·C·F -> Claude Skill(격리 작업 폴더) -> 결과 형식 검증 -> 저장
+결과 형식 검증 -(형식 오류)-> 한 번 더 실행 -(또 오류)-> 작업 실패로 기록
+저장 -> C 초안 Excel -> 요약 메일
+```
+
+사람 검토 고리 (REQ-DAILY-008, REQ-DAILY-009):
+
+```flow
+요약 메일 -> /daily-qa 검토 대기열 -> 승인·거절·근거 추가 필요
+검토 대기열 -> AI 질문에 답변 -> 다음 날 점검 입력에 반영
+승인한 초안 -> 사람이 원본 Checklist·Polarion 에 직접 반영
+```
+
+어디서 끊기면 무엇이 달라지는가:
+
+| 멈춘 곳 | 결과 |
+|---|---|
+| Polarion 조회 실패 | B·C 는 `실패`. E 는 저장된 스냅샷으로 돈다 |
+| Claude 토큰 없음·사용량 한도 | AI 단계 `건너뜀` 또는 `실패`, 이유가 메일과 `audit.json` 에 남는다 |
+| QA 규칙 판이 Skill 기준과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다(REQ-DAILY-010) |
+| PC 가 꺼져 있음 | 서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다 |
+| ALM 수집 실패 | 새 사양서 PDF 가 없으므로 사양서 동기화·지식 업로드는 바뀐 것이 없다고 끝난다 |
 
 ## 5. 기능 요구사항
 
@@ -36,6 +79,7 @@
 | DEPLOY | 배포 설정 |
 | DAILY | VXvue 일일 QA 자동 점검 |
 | ISSUE | Polarion 이슈 Export 읽기 |
+| SYNC | 담당자 PC → 서버 동기화 |
 | SEC | AI 실행 보안(비기능) |
 
 ### REQ-CORE-001 평가 지표
@@ -220,6 +264,37 @@ QA Agent 는 제품 설정의 이슈 Export 폴더(`issue_source.export_dir`)에
 
 > **예시** 2026-09-28 실데이터에서 예전 구조 20건과 실행 폴더 21건이 함께 있었다. 예전 구조만 읽으면 최신 21건이 목록에서 빠진다.
 
+### REQ-SYNC-001 사양서 동기화
+
+담당자 PC 의 작업 스케줄러 `AIRegressionAnalyzer_VXvueSpecSync` 가 평일 09:40 에 `scripts/sync_vxvue_spec.py` 를 부른다. 동작은 다음 순서다.
+
+1. ALM 크롤러 output(`specification.crawler_output_dir`)에서 가장 최근 날짜 폴더의 사양서 PDF 를 찾는다.
+2. 지난 실행 이후 크기·수정 시각이 바뀐 PDF 만 서버에 사양서로 등록한다. 바뀐 것이 없으면 아무것도 올리지 않는다.
+3. 올린 문서와 이름에서 날짜만 다른 옛 리비전을 서버에서 지운다. 이름이 같은 문서는 지우지 않는다.
+
+이유: 09:40 은 ALM 통합 수집(09:00)이 끝난 뒤다. 그 전에 돌면 전날 사양서를 올린다.
+
+### REQ-SYNC-002 지식 폴더 업로드
+
+담당자 PC 의 작업 스케줄러 `QA_ProductKnowledge_Sync` 가 평일 10:00 에 `scripts/sync_product_knowledge.py --product VXvue --upload-to <서버>` 를 부른다.
+
+1. 지식 폴더를 수집해 무엇을 쓸지(종류·최신 리비전)를 PC 에서 정한다.
+2. 서버가 같은 sha256 으로 이미 가진 파일은 보내지 않고, 나머지만 올린다.
+3. 서버는 받은 목록을 확정하고, 목록에서 빠진 옛 파일을 지운 뒤 문서로 등록한다.
+4. 같은 바이트의 문서가 다른 경로로 이미 등록돼 있으면(예: 사양서 동기화가 올린 같은 PDF) 지식 사본 쪽 하나만 남긴다.
+
+새 리비전의 텍스트를 서버가 읽지 못하면 다음처럼 한다.
+
+- 같은 문서의 이전 리비전 가운데 읽을 수 있던 것이 서버에 있으면, 그것을 지우지 않고 계속 쓴다.
+- 결과를 `PARTIAL` 로 두고, 읽지 못한 파일과 대신 유지한 파일을 결과에 적는다.
+- `PARTIAL`·`FAILED` 이면 스크립트는 종료 코드 1 로 끝난다. 작업 스케줄러의 마지막 결과가 0 이 아니게 되어 사람이 알아챈다.
+
+이유: 읽지 못하는 새 판이 읽을 수 있는 옛 판을 밀어내면, 그 문서가 검색에서 통째로 빠져 "사양 없음" 판정으로 이어진다. 낡은 판은 "마지막 수집" 줄에 드러나지만, 사라진 문서는 어디에도 드러나지 않는다.
+
+> **예시** 2026-09-29 재현: 사양서1(260928)을 정상으로 올린 뒤 읽을 수 없는 사양서1(260929)를 올리자, 260928 파일은 지워지고 260929 는 등록되지 않아 쓸 수 있는 사양서1 이 0건이 됐다. 이 요구사항은 그 결과를 막는다.
+
+10:00 은 사양서 동기화(09:40) 뒤다. 순서가 반대면 사양서 동기화의 3번 규칙(이름이 같으면 지우지 않음) 때문에 같은 사양서가 다음 날까지 두 번 등록된 채 남는다.
+
 ## 9. 오류 처리 정책
 
 누락 TC를 성공으로 숨기지 않고 missing_tc_ids로 반환한다. 공집합의 지표 처리는 구현의 명시적 분기와 함께 후속 테스트 범위에서 확인한다. 외부 AI 오류·전체 분석 파이프라인 오류 정책은 이번 범위 밖이다.
@@ -317,6 +392,30 @@ REQ-ISSUE-001을 `tests/test_polarion_issue.py` 로 검증한다.
 python -m pytest tests/test_polarion_issue.py -q
 ```
 
+### TEST-SYNC-001
+
+REQ-SYNC-001을 `tests/test_vxvue_spec_sync.py` 로 검증한다. 올린 문서와 날짜만 다른 옛 리비전만 지우고, 이름이 다른 문서는 지우지 않는지 본다.
+
+```text
+python -m pytest tests/test_vxvue_spec_sync.py -q
+```
+
+### TEST-SYNC-002
+
+REQ-SYNC-002를 `tests/test_knowledge_upload.py` 로 검증한다.
+
+- 서버가 같은 sha256 으로 가진 파일은 다시 보내지 않는다.
+- 사양서 동기화가 먼저 올린 같은 바이트의 PDF 는 지식 사본 쪽 1건으로 정리된다.
+- 읽지 못하는 새 판을 올려도 읽을 수 있던 이전 판이 남는다. 이튿날 같은 목록을 다시 올려도 그렇다.
+- 새 판이 읽히면 옛 판은 여전히 정리된다.
+- 결과가 `PARTIAL` 이면 스크립트가 종료 코드 1 로 끝난다.
+
+이 검사들은 해당 코드를 빼면 실패하는 것까지 확인했다(2026-09-29).
+
+```text
+python -m pytest tests/test_knowledge_upload.py -q
+```
+
 ## 12. 요구사항 추적성
 
 | Requirement | Implementation | Test | Status |
@@ -337,6 +436,8 @@ python -m pytest tests/test_polarion_issue.py -q
 | REQ-DAILY-010 | `app/modules/daily_qa/rules.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
 | NFR-SEC-001 | `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/workspace.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
 | REQ-ISSUE-001 | `app/parsers/polarion_issue.py` | TEST-ISSUE-001: `tests/test_polarion_issue.py` | implemented |
+| REQ-SYNC-001 | `app/modules/impact_analyzer/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py` | implemented |
+| REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/sync_product_knowledge.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py` | implemented |
 
 implemented는 구현·테스트 소스 연결을 확인했다는 뜻이며 실제 실행 통과를 의미하지 않는다. DAILY·SEC 항목은 2026-09-28 에 테스트를 실제로 실행해 통과했지만, 이 저장소에는 테스트를 돌리는 게이트(`botyard.json` 의 `verify`)가 없어 implemented 로 둔다. verified는 테스트를 실제로 실행해 통과했고, 고의 파손으로 실패하는 것까지 확인했으며, 대표 실행 경로(`python -m app.serve` 로 기동 후 `/health` 조회)를 실제로 돌렸다는 뜻이다.
 

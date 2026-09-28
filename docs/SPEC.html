@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v6">
 <meta name="spec-html-renderer" content="v6">
-<meta name="spec-source-sha256" content="63e751ffe3f3a2848fa0579b631d4b18e5dd33d514be46db9386f144290bb554">
+<meta name="spec-source-sha256" content="f87c66ac41cef6f51271f6f68dac96348c490224cd2a8ce179cabf0f791516c6">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -89,7 +89,7 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.3.0</b></span><span class="chip"><span>Last Updated</span><b>2026-09-28</b></span><span class="chip"><span>Status</span><b>draft — 기존 계약 일부의 근거 기반 사양화</b></span></div>
-<div class="stats"><div class="stat"><b>15</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>1</b><span>비기능 NFR</span></div><div class="stat"><b>11</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>15</b><span>implemented</span></div><div class="stat st-verified"><b>1</b><span>verified</span></div></div>
+<div class="stats"><div class="stat"><b>17</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>1</b><span>비기능 NFR</span></div><div class="stat"><b>13</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>17</b><span>implemented</span></div><div class="stat st-verified"><b>1</b><span>verified</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -97,6 +97,7 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <ul><li class="toc-2"><a href="#feature-index">기능 목록</a></li>
 <li class="toc-2"><a href="#sec-1">1. 목적</a></li>
 <li class="toc-2"><a href="#sec-2">2. 프로젝트 범위</a></li>
+<li class="toc-2"><a href="#sec-4">4. 전체 자동화 흐름</a></li>
 <li class="toc-2"><a href="#sec-5">5. 기능 요구사항</a></li>
 <li class="toc-id kind-req"><a href="#REQ-CORE-001">REQ-CORE-001 <span>평가 지표</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-CORE-002">REQ-CORE-002 <span>누락과 비추천 구분</span></a></li>
@@ -114,6 +115,8 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-DAILY-010">REQ-DAILY-010 <span>QA 규칙 판 확인</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-SEC-001">NFR-SEC-001 <span>AI 실행 격리</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-ISSUE-001">REQ-ISSUE-001 <span>이슈 Export 폴더 읽기</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-SYNC-001">REQ-SYNC-001 <span>사양서 동기화</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-SYNC-002">REQ-SYNC-002 <span>지식 폴더 업로드</span></a></li>
 <li class="toc-2"><a href="#sec-9">9. 오류 처리 정책</a></li>
 <li class="toc-2"><a href="#sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-CORE-001">TEST-CORE-001</a></li>
@@ -127,6 +130,8 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-DAILY-005">TEST-DAILY-005</a></li>
 <li class="toc-id kind-test"><a href="#TEST-DAILY-006">TEST-DAILY-006</a></li>
 <li class="toc-id kind-test"><a href="#TEST-ISSUE-001">TEST-ISSUE-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-SYNC-001">TEST-SYNC-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-SYNC-002">TEST-SYNC-002</a></li>
 <li class="toc-2"><a href="#sec-12">12. 요구사항 추적성</a></li>
 <li class="toc-2"><a href="#sec-13">13. 미확정 사항</a></li></ul>
 </nav>
@@ -157,6 +162,9 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <tr><td><a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a></td><td>AI 실행 격리</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ISSUE</span> Polarion 이슈 Export 읽기</th></tr>
 <tr><td><a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a></td><td>이슈 Export 폴더 읽기</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/parsers/polarion_issue.py</code></td><td><a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a>: <code>tests/test_polarion_issue.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">SYNC</span> 담당자 PC → 서버 동기화</th></tr>
+<tr><td><a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a></td><td>사양서 동기화</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/impact_analyzer/vxvue_spec_sync.py</code>, <code>scripts/sync_vxvue_spec.py</code></td><td><a class="idref" href="#TEST-SYNC-001">TEST-SYNC-001</a>: <code>tests/test_vxvue_spec_sync.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></td><td>지식 폴더 업로드</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/core/knowledge_push.py</code>, <code>app/core/knowledge_upload.py</code>, <code>scripts/sync_product_knowledge.py</code></td><td><a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a>: <code>tests/test_knowledge_upload.py</code></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -167,7 +175,7 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 </section>
 <section class="chapter" id="sec-2">
 <h2>2. 프로젝트 범위</h2>
-<p>포함: 추천 평가 지표 및 누락 판정, 핵심 앱의 listen 주소·포트 결정 방식, VXvue 일일 QA 자동 점검(사양 변경 영향, 이슈 수정확인 초안, 사양–TC 추적 공백, 매뉴얼 누락 후보)과 그 결과의 메일 요약·검토 대기열, QA Agent 가 읽는 Polarion 이슈 Export 폴더의 구조.</p>
+<p>포함: 추천 평가 지표 및 누락 판정, 핵심 앱의 listen 주소·포트 결정 방식, VXvue 일일 QA 자동 점검(사양 변경 영향, 이슈 수정확인 초안, 사양–TC 추적 공백, 매뉴얼 누락 후보)과 그 결과의 메일 요약·검토 대기열, QA Agent 가 읽는 Polarion 이슈 Export 폴더의 구조, 담당자 PC 에서 서버로 가는 사양서·<span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(projects/vxvue/VXvue 지식파일)" tabindex="0">지식 폴더</span> 동기화.</p>
 <p>제외: 운영 데이터·비밀 설정의 열람/변경, 인증 방식 변경, listen 포트 외의 배포 절차 변경. 기존 기능은 <a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a>(이슈 Export 폴더 구조 대응) 외에는 동작을 바꾸지 않는다. 이 제외는 작업 경계이며 기존 제품 기능을 제거한다는 뜻이 아니다.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>용어</th><th>뜻</th></tr></thead>
@@ -177,6 +185,100 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <tr><td>작업 폴더</td><td>Claude가 읽고 쓰는 격리된 폴더(<code>daily_qa.workspace_dir</code>). 저장소 밖에 둔다</td></tr>
 <tr><td>Finding</td><td>AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다</td></tr>
 <tr><td>QA 규칙</td><td><code>[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev*.md</code> 와 지침 프롬프트</td></tr>
+<tr><td>지식 폴더</td><td>QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(<code>projects/vxvue/VXvue 지식파일</code>)</td></tr>
+<tr><td>지식 사본</td><td>서버가 지식 폴더에서 받아 둔 사본(<code>data/product_knowledge/&lt;제품&gt;/</code>). 서버는 지식 폴더를 직접 볼 수 없다</td></tr>
+</tbody>
+</table></div>
+</section>
+<section class="chapter" id="sec-4">
+<h2>4. 전체 자동화 흐름</h2>
+<p>사람이 매일 하는 일은 아침 메일을 읽고 검토 화면에서 승인·거절하는 것뿐이다. 나머지는 담당자 PC 와 운영 서버의 예약 실행이 한다.</p>
+<p>평일 하루의 순서 (시각은 한국 시간):</p>
+<figure class="flow">
+<svg viewBox="0 0 1211 292" width="1211" height="292" role="img" aria-label="07:30 서버: 일일 QA 점검 → Polarion 직접 조회, Polarion 직접 조회 → B·C·E·F 초안, B·C·E·F 초안 → 요약 메일, 09:00 PC: ALM 통합 수집(ALM-QA-Automation) → 사양서 PDF 를 크롤러 output 과 지식 폴더에 배포, 09:40 PC: 사양서 동기화(REQ-SYNC-001) → 서버 사양서 등록, 10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) → 서버 지식 사본 갱신, 서버 지식 사본 갱신 → 다음 날 07:30 점검이 사용">
+<defs><marker id="flow-arrow-1" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M104 44 L255.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M255.5 124 L495.5 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M495.5 204 L605.5 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M389.5 44 L528.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M724 44 L791 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1048 44 L955.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M955.5 124 L672.5 168" marker-end="url(#flow-arrow-1)"/>
+<g class="node"><rect x="8" y="8" width="192" height="36" rx="8"/><text x="104" y="26">07:30 서버: 일일 QA 점검</text></g>
+<g class="node"><rect x="180" y="88" width="151" height="36" rx="8"/><text x="255.5" y="106">Polarion 직접 조회</text></g>
+<g class="node"><rect x="440.5" y="168" width="110" height="36" rx="8"/><text x="495.5" y="186">B·C·E·F 초안</text></g>
+<g class="node"><rect x="563.5" y="248" width="84" height="36" rx="8"/><text x="605.5" y="266">요약 메일</text></g>
+<g class="node"><rect x="224" y="8" width="331" height="36" rx="8"/><text x="389.5" y="26">09:00 PC: ALM 통합 수집(ALM-QA-Automation)</text></g>
+<g class="node"><rect x="355" y="88" width="347" height="36" rx="8"/><text x="528.5" y="106">사양서 PDF 를 크롤러 output 과 지식 폴더에 배포</text></g>
+<g class="node"><rect x="579" y="8" width="290" height="36" rx="8"/><text x="724" y="26">09:40 PC: 사양서 동기화(REQ-SYNC-001)</text></g>
+<g class="node"><rect x="726" y="88" width="130" height="36" rx="8"/><text x="791" y="106">서버 사양서 등록</text></g>
+<g class="node"><rect x="893" y="8" width="310" height="36" rx="8"/><text x="1048" y="26">10:00 PC: 지식 폴더 업로드(REQ-SYNC-002)</text></g>
+<g class="node"><rect x="880" y="88" width="151" height="36" rx="8"/><text x="955.5" y="106">서버 지식 사본 갱신</text></g>
+<g class="node"><rect x="574.5" y="168" width="196" height="36" rx="8"/><text x="672.5" y="186">다음 날 07:30 점검이 사용</text></g>
+</svg>
+</figure>
+<p>서버 <span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span> 한 번의 흐름 (<a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>):</p>
+<figure class="flow">
+<svg viewBox="0 0 309 852" width="309" height="852" role="img" aria-label="잠금 → 사전 점검(규칙 판·자격증명·작업 폴더), 사전 점검(규칙 판·자격증명·작업 폴더) → SRS 스냅샷·비교, SRS 스냅샷·비교 → 이슈 수집, 이슈 수집 → TC 색인, TC 색인 → 추적 공백 E(코드), 추적 공백 E(코드) → 저장, TC 색인 → 작업 묶음 B·C·F, 작업 묶음 B·C·F → Claude Skill(격리 작업 폴더), Claude Skill(격리 작업 폴더) → 결과 형식 검증, 결과 형식 검증 → 저장, 결과 형식 검증 → 한 번 더 실행, 한 번 더 실행 → 작업 실패로 기록, 저장 → C 초안 Excel, C 초안 Excel → 요약 메일">
+<defs><marker id="flow-arrow-2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M154.5 44 L154.5 88" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 124 L154.5 168" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 204 L154.5 248" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 284 L154.5 328" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 364 L78 408" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M78 444 L86.5 648" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 364 L236.5 408" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M236.5 444 L154.5 488" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 524 L154.5 568" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 604 L86.5 648" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M154.5 604 L202.5 648" marker-end="url(#flow-arrow-2)"/><text class="elabel" x="178.5" y="626">형식 오류</text>
+<path class="edge" d="M202.5 684 L87.5 728" marker-end="url(#flow-arrow-2)"/><text class="elabel" x="145" y="706">또 오류</text>
+<path class="edge" d="M86.5 684 L231.5 728" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M231.5 764 L154.5 808" marker-end="url(#flow-arrow-2)"/>
+<g class="node"><rect x="118.5" y="8" width="72" height="36" rx="8"/><text x="154.5" y="26">잠금</text></g>
+<g class="node"><rect x="18.5" y="88" width="272" height="36" rx="8"/><text x="154.5" y="106">사전 점검(규칙 판·자격증명·작업 폴더)</text></g>
+<g class="node"><rect x="91" y="168" width="127" height="36" rx="8"/><text x="154.5" y="186">SRS 스냅샷·비교</text></g>
+<g class="node"><rect x="112.5" y="248" width="84" height="36" rx="8"/><text x="154.5" y="266">이슈 수집</text></g>
+<g class="node"><rect x="118" y="328" width="73" height="36" rx="8"/><text x="154.5" y="346">TC 색인</text></g>
+<g class="node"><rect x="8" y="408" width="140" height="36" rx="8"/><text x="78" y="426">추적 공백 E(코드)</text></g>
+<g class="node"><rect x="50.5" y="648" width="72" height="36" rx="8"/><text x="86.5" y="666">저장</text></g>
+<g class="node"><rect x="172" y="408" width="129" height="36" rx="8"/><text x="236.5" y="426">작업 묶음 B·C·F</text></g>
+<g class="node"><rect x="43.5" y="488" width="222" height="36" rx="8"/><text x="154.5" y="506">Claude Skill(격리 작업 폴더)</text></g>
+<g class="node"><rect x="96" y="568" width="117" height="36" rx="8"/><text x="154.5" y="586">결과 형식 검증</text></g>
+<g class="node"><rect x="146.5" y="648" width="112" height="36" rx="8"/><text x="202.5" y="666">한 번 더 실행</text></g>
+<g class="node"><rect x="22.5" y="728" width="130" height="36" rx="8"/><text x="87.5" y="746">작업 실패로 기록</text></g>
+<g class="node"><rect x="176.5" y="728" width="110" height="36" rx="8"/><text x="231.5" y="746">C 초안 Excel</text></g>
+<g class="node"><rect x="112.5" y="808" width="84" height="36" rx="8"/><text x="154.5" y="826">요약 메일</text></g>
+</svg>
+</figure>
+<p>사람 검토 고리 (<a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-DAILY-009">REQ-DAILY-009</a>):</p>
+<figure class="flow">
+<svg viewBox="0 0 682 212" width="682" height="212" role="img" aria-label="요약 메일 → /daily-qa 검토 대기열, /daily-qa 검토 대기열 → 승인·거절·근거 추가 필요, 검토 대기열 → AI 질문에 답변, AI 질문에 답변 → 다음 날 점검 입력에 반영, 승인한 초안 → 사람이 원본 Checklist·Polarion 에 직접 반영">
+<defs><marker id="flow-arrow-3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M220 44 L94 88" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M94 124 L237 168" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M334.5 44 L263.5 88" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M263.5 124 L445 168" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M455.5 44 L510.5 88" marker-end="url(#flow-arrow-3)"/>
+<g class="node"><rect x="178" y="8" width="84" height="36" rx="8"/><text x="220" y="26">요약 메일</text></g>
+<g class="node"><rect x="8" y="88" width="172" height="36" rx="8"/><text x="94" y="106">/daily-qa 검토 대기열</text></g>
+<g class="node"><rect x="145" y="168" width="184" height="36" rx="8"/><text x="237" y="186">승인·거절·근거 추가 필요</text></g>
+<g class="node"><rect x="286" y="8" width="97" height="36" rx="8"/><text x="334.5" y="26">검토 대기열</text></g>
+<g class="node"><rect x="204" y="88" width="119" height="36" rx="8"/><text x="263.5" y="106">AI 질문에 답변</text></g>
+<g class="node"><rect x="353" y="168" width="184" height="36" rx="8"/><text x="445" y="186">다음 날 점검 입력에 반영</text></g>
+<g class="node"><rect x="407" y="8" width="97" height="36" rx="8"/><text x="455.5" y="26">승인한 초안</text></g>
+<g class="node"><rect x="347" y="88" width="327" height="36" rx="8"/><text x="510.5" y="106">사람이 원본 Checklist·Polarion 에 직접 반영</text></g>
+</svg>
+</figure>
+<p>어디서 끊기면 무엇이 달라지는가:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>멈춘 곳</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td>Polarion 조회 실패</td><td>B·C 는 <code>실패</code>. E 는 저장된 스냅샷으로 돈다</td></tr>
+<tr><td>Claude 토큰 없음·사용량 한도</td><td>AI 단계 <code>건너뜀</code> 또는 <code>실패</code>, 이유가 메일과 <code>audit.json</code> 에 남는다</td></tr>
+<tr><td><span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> 판이 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> 기준과 다름</td><td>AI 단계가 <code>규칙 판 불일치</code> 로 멈춘다(<a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a>)</td></tr>
+<tr><td>PC 가 꺼져 있음</td><td>서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다</td></tr>
+<tr><td>ALM 수집 실패</td><td>새 사양서 PDF 가 없으므로 사양서 동기화·지식 업로드는 바뀐 것이 없다고 끝난다</td></tr>
 </tbody>
 </table></div>
 </section>
@@ -189,6 +291,7 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <tr><td>DEPLOY</td><td>배포 설정</td></tr>
 <tr><td>DAILY</td><td>VXvue 일일 QA 자동 점검</td></tr>
 <tr><td>ISSUE</td><td>Polarion 이슈 Export 읽기</td></tr>
+<tr><td>SYNC</td><td>담당자 PC → 서버 동기화</td></tr>
 <tr><td>SEC</td><td>AI 실행 보안(비기능)</td></tr>
 </tbody>
 </table></div>
@@ -260,12 +363,12 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>Polarion 조회가 실패하면 B·C는 <code>실패</code>로 남고, 저장된 SRS 스냅샷과 TC 사본을 쓰는 E는 그대로 돈다.</p>
 </aside>
 <p><code>--dry-run</code> 은 Claude를 부르지 않고 입력 묶음과 결정적 계산만 만든다.</p>
-<p>입력 자료는 두 곳에서 온다. 서버는 담당자 PC 의 지식 폴더를 직접 볼 수 없다.</p>
+<p>입력 자료는 두 곳에서 온다. 서버는 담당자 PC 의 <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(projects/vxvue/VXvue 지식파일)" tabindex="0">지식 폴더</span>를 직접 볼 수 없다.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>자료</th><th>가져오는 곳</th><th>갱신 시점</th></tr></thead>
 <tbody>
 <tr><td>SRS, 이슈</td><td>Polarion (점검이 실행될 때 서버가 직접 읽는다)</td><td>매 실행</td></tr>
-<tr><td>TC Excel, 매뉴얼, <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span>·지침 프롬프트</td><td>서버의 지식 사본(<code>data/product_knowledge/&lt;제품&gt;/</code>)</td><td>담당자 PC 가 올릴 때 (PC 의 예약 작업, 평일 10:00)</td></tr>
+<tr><td>TC Excel, 매뉴얼, <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span>·지침 프롬프트</td><td>서버의 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span>(<code>data/product_knowledge/&lt;제품&gt;/</code>)</td><td>담당자 PC 가 올릴 때 (PC 의 예약 작업, 평일 10:00)</td></tr>
 </tbody>
 </table></div>
 <aside class="callout callout-warn"><span class="callout-label">주의</span>
@@ -352,7 +455,7 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-006">REQ-DAILY-006</a>: <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-manual-completeness</code> 가 지난 7일 바뀐 SRS 의 매뉴얼 누락 후보를 낸다. 운영 첫 주처럼 7일 전 스냅샷이 없으면 가장 오래된 스냅샷과 비교한다.</li>
 </ul>
 </details>
-<p>설정한 요일이거나 지식 폴더의 매뉴얼 파일이 바뀐 날에 돈다. 지난 7일 동안 바뀐 SRS 가운데 매뉴얼에 들어가야 할 내용이 빠졌을 수 있는 것을 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-manual-completeness</code> 가 후보로 낸다. 결과는 항상 <code>보강 권장</code> 이하의 후보이며 확정 판정이 아니다.</p>
+<p>설정한 요일이거나 <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(projects/vxvue/VXvue 지식파일)" tabindex="0">지식 폴더</span>의 매뉴얼 파일이 바뀐 날에 돈다. 지난 7일 동안 바뀐 SRS 가운데 매뉴얼에 들어가야 할 내용이 빠졌을 수 있는 것을 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-manual-completeness</code> 가 후보로 낸다. 결과는 항상 <code>보강 권장</code> 이하의 후보이며 확정 판정이 아니다.</p>
 </section>
 <section class="card kind-req" id="REQ-DAILY-007">
 <h3><span class="idtag">REQ-DAILY-007</span> AI 결과 형식 검증</h3>
@@ -459,6 +562,51 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>2026-09-28 실데이터에서 예전 구조 20건과 실행 폴더 21건이 함께 있었다. 예전 구조만 읽으면 최신 21건이 목록에서 빠진다.</p>
 </aside>
 </section>
+<section class="card kind-req" id="REQ-SYNC-001">
+<h3><span class="idtag">REQ-SYNC-001</span> 사양서 동기화</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/impact_analyzer/vxvue_spec_sync.py</code>, <code>scripts/sync_vxvue_spec.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SYNC-001">TEST-SYNC-001</a>: <code>tests/test_vxvue_spec_sync.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-SYNC-001">TEST-SYNC-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-29 · 전체 자동화 흐름 사양화 · 지식 업로드의 문서 소실 결함 수정</span> <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>: 원래 있던 사양서 동기화(평일 09:40)를 사양으로 적고 기존 테스트에 연결했다.</li>
+</ul>
+</details>
+<p>담당자 PC 의 작업 스케줄러 <code>AIRegressionAnalyzer_VXvueSpecSync</code> 가 평일 09:40 에 <code>scripts/sync_vxvue_spec.py</code> 를 부른다. 동작은 다음 순서다.</p>
+<ol>
+<li>ALM 크롤러 output(<code>specification.crawler_output_dir</code>)에서 가장 최근 날짜 폴더의 사양서 PDF 를 찾는다.</li>
+<li>지난 실행 이후 크기·수정 시각이 바뀐 PDF 만 서버에 사양서로 등록한다. 바뀐 것이 없으면 아무것도 올리지 않는다.</li>
+<li>올린 문서와 이름에서 날짜만 다른 옛 리비전을 서버에서 지운다. 이름이 같은 문서는 지우지 않는다.</li>
+</ol>
+<p class="why"><span class="why-label">이유</span> 09:40 은 ALM 통합 수집(09:00)이 끝난 뒤다. 그 전에 돌면 전날 사양서를 올린다.</p>
+</section>
+<section class="card kind-req" id="REQ-SYNC-002">
+<h3><span class="idtag">REQ-SYNC-002</span> 지식 폴더 업로드</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/knowledge_push.py</code>, <code>app/core/knowledge_upload.py</code>, <code>scripts/sync_product_knowledge.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a>: <code>tests/test_knowledge_upload.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a></span></div>
+<details class="history"><summary>변경 이력 3</summary>
+<ul>
+<li><span class="hist">2026-09-29 · 전체 자동화 흐름 사양화 · 지식 업로드의 문서 소실 결함 수정</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(projects/vxvue/VXvue 지식파일)" tabindex="0">지식 폴더</span> 업로드(평일 10:00)를 사양으로 적었다. 서버에 있는 파일은 다시 보내지 않는 것, 사양서 동기화와 겹친 같은 바이트의 PDF 가 1건으로 정리되는 것을 테스트로 고정했다.</li>
+<li><span class="hist">2026-09-29 · 전체 자동화 흐름 사양화 · 지식 업로드의 문서 소실 결함 수정</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 새 리비전의 텍스트를 서버가 읽지 못하면, 읽을 수 있던 이전 리비전까지 지워져 문서가 통째로 사라지던 결함을 고쳤다(2026-09-29 재현: 쓸 수 있는 사양서1 0건). 이제 이전 판을 유지하고 결과에 <code>kept_previous</code> 로 적는다. 이튿날 같은 목록이 다시 와도 유지되도록 &quot;읽지 못함&quot; 표시를 이어받는다. 이 부분은 서버에서 도는 코드라 서버에 배포해야 적용된다.</li>
+<li><span class="hist">2026-09-29 · 전체 자동화 흐름 사양화 · 지식 업로드의 문서 소실 결함 수정</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 업로드 결과가 <code>PARTIAL</code> 이면 <code>scripts/sync_product_knowledge.py</code> 가 종료 코드 1 로 끝난다. 전에는 0 이라 작업 스케줄러에 성공으로 보였다.</li>
+</ul>
+</details>
+<p>담당자 PC 의 작업 스케줄러 <code>QA_ProductKnowledge_Sync</code> 가 평일 10:00 에 <code>scripts/sync_product_knowledge.py --product VXvue --upload-to &lt;서버&gt;</code> 를 부른다.</p>
+<ol>
+<li><span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더(projects/vxvue/VXvue 지식파일)" tabindex="0">지식 폴더</span>를 수집해 무엇을 쓸지(종류·최신 리비전)를 PC 에서 정한다.</li>
+<li>서버가 같은 sha256 으로 이미 가진 파일은 보내지 않고, 나머지만 올린다.</li>
+<li>서버는 받은 목록을 확정하고, 목록에서 빠진 옛 파일을 지운 뒤 문서로 등록한다.</li>
+<li>같은 바이트의 문서가 다른 경로로 이미 등록돼 있으면(예: 사양서 동기화가 올린 같은 PDF) <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span> 쪽 하나만 남긴다.</li>
+</ol>
+<p>새 리비전의 텍스트를 서버가 읽지 못하면 다음처럼 한다.</p>
+<ul>
+<li>같은 문서의 이전 리비전 가운데 읽을 수 있던 것이 서버에 있으면, 그것을 지우지 않고 계속 쓴다.</li>
+<li>결과를 <code>PARTIAL</code> 로 두고, 읽지 못한 파일과 대신 유지한 파일을 결과에 적는다.</li>
+<li><code>PARTIAL</code>·<code>FAILED</code> 이면 스크립트는 종료 코드 1 로 끝난다. 작업 스케줄러의 마지막 결과가 0 이 아니게 되어 사람이 알아챈다.</li>
+</ul>
+<p class="why"><span class="why-label">이유</span> 읽지 못하는 새 판이 읽을 수 있는 옛 판을 밀어내면, 그 문서가 검색에서 통째로 빠져 &quot;사양 없음&quot; 판정으로 이어진다. 낡은 판은 &quot;마지막 수집&quot; 줄에 드러나지만, 사라진 문서는 어디에도 드러나지 않는다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>2026-09-29 재현: 사양서1(260928)을 정상으로 올린 뒤 읽을 수 없는 사양서1(260929)를 올리자, 260928 파일은 지워지고 260929 는 등록되지 않아 쓸 수 있는 사양서1 이 0건이 됐다. 이 요구사항은 그 결과를 막는다.</p>
+</aside>
+<p>10:00 은 사양서 동기화(09:40) 뒤다. 순서가 반대면 사양서 동기화의 3번 규칙(이름이 같으면 지우지 않음) 때문에 같은 사양서가 다음 날까지 두 번 등록된 채 남는다.</p>
+</section>
 </section>
 <section class="chapter" id="sec-9">
 <h2>9. 오류 처리 정책</h2>
@@ -550,6 +698,26 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <pre><code class="language-text">python -m pytest tests/test_polarion_issue.py -q
 </code></pre>
 </section>
+<section class="card kind-test" id="TEST-SYNC-001">
+<h3><span class="idtag">TEST-SYNC-001</span></h3>
+<p><a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>을 <code>tests/test_vxvue_spec_sync.py</code> 로 검증한다. 올린 문서와 날짜만 다른 옛 리비전만 지우고, 이름이 다른 문서는 지우지 않는지 본다.</p>
+<pre><code class="language-text">python -m pytest tests/test_vxvue_spec_sync.py -q
+</code></pre>
+</section>
+<section class="card kind-test" id="TEST-SYNC-002">
+<h3><span class="idtag">TEST-SYNC-002</span></h3>
+<p><a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>를 <code>tests/test_knowledge_upload.py</code> 로 검증한다.</p>
+<ul>
+<li>서버가 같은 sha256 으로 가진 파일은 다시 보내지 않는다.</li>
+<li>사양서 동기화가 먼저 올린 같은 바이트의 PDF 는 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span> 쪽 1건으로 정리된다.</li>
+<li>읽지 못하는 새 판을 올려도 읽을 수 있던 이전 판이 남는다. 이튿날 같은 목록을 다시 올려도 그렇다.</li>
+<li>새 판이 읽히면 옛 판은 여전히 정리된다.</li>
+<li>결과가 <code>PARTIAL</code> 이면 스크립트가 종료 코드 1 로 끝난다.</li>
+</ul>
+<p>이 검사들은 해당 코드를 빼면 실패하는 것까지 확인했다(2026-09-29).</p>
+<pre><code class="language-text">python -m pytest tests/test_knowledge_upload.py -q
+</code></pre>
+</section>
 </section>
 <section class="chapter" id="sec-12">
 <h2>12. 요구사항 추적성</h2>
@@ -572,6 +740,8 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <tr><td><a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a></td><td><code>app/modules/daily_qa/rules.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td><a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a></td><td><code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td><a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a></td><td><code>app/parsers/polarion_issue.py</code></td><td><a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a>: <code>tests/test_polarion_issue.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a></td><td><code>app/modules/impact_analyzer/vxvue_spec_sync.py</code>, <code>scripts/sync_vxvue_spec.py</code></td><td><a class="idref" href="#TEST-SYNC-001">TEST-SYNC-001</a>: <code>tests/test_vxvue_spec_sync.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></td><td><code>app/core/knowledge_push.py</code>, <code>app/core/knowledge_upload.py</code>, <code>scripts/sync_product_knowledge.py</code></td><td><a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a>: <code>tests/test_knowledge_upload.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
 <p>implemented는 구현·테스트 소스 연결을 확인했다는 뜻이며 실제 실행 통과를 의미하지 않는다. DAILY·SEC 항목은 2026-09-28 에 테스트를 실제로 실행해 통과했지만, 이 저장소에는 테스트를 돌리는 게이트(<code>botyard.json</code> 의 <code>verify</code>)가 없어 implemented 로 둔다. verified는 테스트를 실제로 실행해 통과했고, 고의 파손으로 실패하는 것까지 확인했으며, 대표 실행 경로(<code>python -m app.serve</code> 로 기동 후 <code>/health</code> 조회)를 실제로 돌렸다는 뜻이다.</p>

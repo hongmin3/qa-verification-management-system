@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -370,3 +371,165 @@ def test_a_different_version_under_another_kind_is_reported_not_deleted(server) 
     )
     assert server.storage.active_documents("specification", PRODUCT), "내용이 다른 문서를 지웠습니다"
     assert result["duplicates"]
+
+
+# --- 사양서 동기화와 지식 업로드의 이중 경로 (REQ-SYNC-002) ----------------------
+
+
+def test_same_spec_uploaded_by_both_paths_ends_as_one_document(server) -> None:
+    """Validates: REQ-SYNC-002 — 사양서 동기화가 먼저 올린 같은 PDF 를 지식 업로드가 1건으로 정리한다.
+
+    ALM 이 같은 사양서 PDF 를 크롤러 output 과 지식 폴더에 모두 배포한다(2026-09-28 에 6건 모두 바이트가
+    같았다). 사양서 동기화(09:40)는 `data/specifications/` 에, 지식 업로드(10:00)는 수집 폴더에 등록한다.
+    """
+    import fitz  # PyMuPDF — 서버가 텍스트를 뽑을 수 있는 실제 PDF 여야 등록된다
+
+    document = fitz.open()
+    document.new_page().insert_text((72, 72), "VXvue spec 1 body")
+    body = document.tobytes()
+    document.close()
+    name = "(사양서) VXvue 사양서1(260928).pdf"
+    by_spec_sync = server.root / "data" / "specifications" / "vxvue" / "original" / "2026-09-28" / name
+    by_spec_sync.parent.mkdir(parents=True, exist_ok=True)
+    by_spec_sync.write_bytes(body)
+    server.storage.add_document(kind="specification", product=PRODUCT, version="", revision="Rev.1",
+                                name=name, path=by_spec_sync, metadata={})
+    record = store_asset(PRODUCT, "specification", name, body, root=server.root)
+
+    commit(
+        PRODUCT,
+        {"assets": [{"file_name": record["file_name"], "kind": "specification", "sha256": record["sha256"],
+                     "base_name": "VXvue 사양서1", "revision": "260928", "revision_kind": "date"}]},
+        uploaded={record["file_name"]: record},
+        storage=server.storage,
+        root=server.root,
+    )
+
+    documents = server.storage.active_documents("specification", PRODUCT)
+    assert len(documents) == 1, [document["path"] for document in documents]
+    assert "product_knowledge" in str(documents[0]["path"]).replace("\\", "/")
+
+
+def test_push_sends_only_files_the_server_does_not_have(tmp_path, monkeypatch) -> None:
+    """Validates: REQ-SYNC-002 — 보내는 쪽은 서버가 같은 sha256 으로 가진 파일을 다시 올리지 않는다."""
+    from app.core import knowledge_push
+
+    have = tmp_path / "have.pdf"
+    have.write_bytes(b"already on server")
+    new = tmp_path / "new.xlsx"
+    new.write_bytes(b"new testcase")
+    assets = [
+        {"kind": "specification", "file_name": "have.pdf", "sha256": "aaa"},
+        {"kind": "testcase", "file_name": "new.xlsx", "sha256": "bbb"},
+    ]
+    posted = []
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def get(self, url, params=None):
+            return FakeResponse({"assets": [{"kind": "specification", "file_name": "have.pdf", "sha256": "aaa"}]})
+
+        def post(self, url, data=None, files=None):
+            posted.append((url.rsplit("/", 1)[-1], (files or {}).get("file", ("",))[0]))
+            return FakeResponse({"status": "SUCCESS", "detail": "ok"} if url.endswith("commit") else {"file_name": "new.xlsx"})
+
+    monkeypatch.setattr(knowledge_push, "resolve_config", lambda product: SimpleNamespace(product=PRODUCT, knowledge_source=SimpleNamespace(dir="x")))
+    monkeypatch.setattr(knowledge_push, "source_available", lambda config: True)
+    monkeypatch.setattr(knowledge_push, "sync_product", lambda config, dry_run=False: SimpleNamespace(status="SUCCESS", detail="수집 2건"))
+    monkeypatch.setattr(knowledge_push, "load_manifest", lambda product: {"assets": assets})
+    monkeypatch.setattr(knowledge_push, "collected_path", lambda product, asset: tmp_path / asset["file_name"])
+    monkeypatch.setattr(knowledge_push, "_client", lambda timeout: FakeClient())
+
+    result = knowledge_push.push_product(PRODUCT, "http://server")
+    assert result["uploaded"] == ["new.xlsx"] and result["skipped"] == ["have.pdf"]
+    assert posted == [("asset", "new.xlsx"), ("commit", "")]
+
+
+def _pdf(text: str) -> bytes:
+    import fitz
+
+    document = fitz.open()
+    document.new_page().insert_text((72, 72), text)
+    body = document.tobytes()
+    document.close()
+    return body
+
+
+def _push_spec(server, name: str, body: bytes, revision: str) -> dict:
+    record = store_asset(PRODUCT, "specification", name, body, root=server.root)
+    return commit(
+        PRODUCT,
+        {"assets": [{"file_name": name, "kind": "specification", "sha256": record["sha256"],
+                     "base_name": "VXvue 사양서1", "revision": revision, "revision_kind": "date"}]},
+        uploaded={name: record},
+        storage=server.storage,
+        root=server.root,
+    )
+
+
+def test_unreadable_new_revision_keeps_the_previous_readable_one(server) -> None:
+    """Validates: REQ-SYNC-002 — 읽지 못하는 새 판이 읽을 수 있던 옛 판을 밀어내지 않는다 (2026-09-29 재현)."""
+    first = _push_spec(server, "(사양서) VXvue 사양서1(260928).pdf", _pdf("good 0928"), "260928")
+    assert first["status"] == "SUCCESS"
+
+    second = _push_spec(server, "(사양서) VXvue 사양서1(260929).pdf", b"%PDF-1.7 broken bytes", "260929")
+
+    usable = [document for document in server.storage.active_documents("specification", PRODUCT) if Path(document["path"]).is_file()]
+    assert [Path(document["path"]).name for document in usable] == ["(사양서) VXvue 사양서1(260928).pdf"]
+    assert second["status"] == "PARTIAL"
+    assert second["kept_previous"] and "260928" in second["kept_previous"][0] and "260929" in second["kept_previous"][0]
+    assert "260928" in json.dumps(server_state(PRODUCT, root=server.root), ensure_ascii=False)
+
+
+def test_readable_new_revision_still_replaces_the_old_one(server) -> None:
+    """이전 판 유지는 새 판을 못 읽을 때만이다. 읽히면 옛 판은 여전히 정리된다."""
+    _push_spec(server, "(사양서) VXvue 사양서1(260928).pdf", _pdf("good 0928"), "260928")
+    result = _push_spec(server, "(사양서) VXvue 사양서1(260929).pdf", _pdf("good 0929"), "260929")
+    names = [Path(document["path"]).name for document in server.storage.active_documents("specification", PRODUCT)]
+    assert names == ["(사양서) VXvue 사양서1(260929).pdf"] and result["status"] == "SUCCESS" and not result["kept_previous"]
+
+
+@pytest.mark.parametrize(("status", "expected"), [("SUCCESS", 0), ("PARTIAL", 1), ("FAILED", 1)])
+def test_upload_cli_exit_code_shows_partial_results(monkeypatch, status, expected) -> None:
+    """Validates: REQ-SYNC-002 — PARTIAL 도 종료 코드 1 이라 작업 스케줄러에 실패로 보인다."""
+    import importlib.util
+    import sys
+
+    from app.core import knowledge_push
+
+    spec = importlib.util.spec_from_file_location("sync_product_knowledge_cli", Path(__file__).resolve().parents[1] / "scripts" / "sync_product_knowledge.py")
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    monkeypatch.setattr(knowledge_push, "push_product", lambda product, url, dry_run=False: {"status": status, "detail": "d"})
+    monkeypatch.setattr(sys, "argv", ["sync_product_knowledge.py", "--product", PRODUCT, "--upload-to", "http://server"])
+    assert cli.main() == expected
+
+
+def test_previous_revision_stays_kept_on_the_next_days_upload(server) -> None:
+    """이튿날에는 서버가 읽지 못한 새 판을 이미 가지고 있어 PC 가 다시 보내지 않는다. 그래도 옛 판을 유지해야 한다."""
+    _push_spec(server, "(사양서) VXvue 사양서1(260928).pdf", _pdf("good 0928"), "260928")
+    broken = store_asset(PRODUCT, "specification", "(사양서) VXvue 사양서1(260929).pdf", b"%PDF-1.7 broken bytes", root=server.root)
+    manifest = {"assets": [{"file_name": broken["file_name"], "kind": "specification", "sha256": broken["sha256"],
+                            "base_name": "VXvue 사양서1", "revision": "260929", "revision_kind": "date"}]}
+    commit(PRODUCT, manifest, uploaded={broken["file_name"]: broken}, storage=server.storage, root=server.root)
+
+    next_day = commit(PRODUCT, manifest, uploaded={}, storage=server.storage, root=server.root)
+
+    usable = [document for document in server.storage.active_documents("specification", PRODUCT) if Path(document["path"]).is_file()]
+    assert [Path(document["path"]).name for document in usable] == ["(사양서) VXvue 사양서1(260928).pdf"]
+    assert next_day["status"] == "PARTIAL" and next_day["kept_previous"]

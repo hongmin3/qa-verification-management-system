@@ -39,6 +39,7 @@ from app.core.product_knowledge import (
     load_manifest,
     manifest_path,
     normalize_file_name,
+    parse_asset_name,
     product_dir,
     product_slug,
     register_collected,
@@ -155,8 +156,9 @@ def store_asset(product: str, kind: str, file_name: str, data: bytes, sha256: st
     try:
         text = _extract_text(target)
     except Exception as exc:
-        # 텍스트 추출 실패가 업로드 실패는 아니다. 원본은 이미 서버에 있고 등록도 된다.
-        # 검색에서 빠질 뿐이므로 그 사실을 기록해 commit 응답에 실어 보낸다.
+        # 텍스트 추출 실패가 업로드 실패는 아니다. 원본은 서버에 남지만, 텍스트가 없으면 검색에
+        # 쓸 수 없으므로 문서로 등록되지 않는다(collected_assets 가 error 자산을 거른다).
+        # 같은 문서의 읽을 수 있던 이전 판은 commit 이 유지한다(_keep_previous_readable, REQ-SYNC-002).
         record["error"] = f"정규화 실패 {type(exc).__name__}: {exc}"
         return record
 
@@ -198,6 +200,34 @@ def _prune_orphans(base: Path, keep: set[tuple[str, str]]) -> list[str]:
     return removed
 
 
+def _logical_key(asset: dict) -> tuple[str, str]:
+    base_name = asset.get("base_name") or parse_asset_name(asset.get("file_name", ""))["base_name"]
+    return asset.get("kind", ""), str(base_name).casefold()
+
+
+def _keep_previous_readable(base: Path, kept: list[dict], previous_assets: list[dict]) -> list[str]:
+    """읽지 못한 새 판이 있으면, 같은 문서의 이전 판 가운데 읽을 수 있던 것을 `kept` 에 되살린다 (REQ-SYNC-002).
+
+    그대로 두면 `_prune_orphans` 가 옛 판을 지우고, 새 판은 텍스트가 없어 등록되지 않아
+    문서가 통째로 사라진다 — "사양 없음" 오판으로 바로 이어진다(2026-09-29 재현).
+    낡은 판을 쓰는 편이 낫다. 낡았다는 사실은 결과(`kept_previous`)와 PARTIAL 상태로 드러난다.
+    """
+    notes: list[str] = []
+    kept_keys = {(record["kind"], record["file_name"]) for record in kept}
+    for record in [item for item in kept if item.get("error")]:
+        logical = _logical_key(record)
+        for old in previous_assets:
+            key = (old.get("kind", ""), old.get("file_name", ""))
+            if old.get("error") or key in kept_keys or _logical_key(old) != logical:
+                continue
+            if not (base / "original" / key[0] / key[1]).is_file():
+                continue
+            kept.append({**old, "kept_because": f"새 판 {record['file_name']} 을 읽지 못함"})
+            kept_keys.add(key)
+            notes.append(f"{key[0]}/{key[1]} (새 판 {record['file_name']} 을 읽지 못함)")
+    return notes
+
+
 def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None, storage=None, root: Path | None = None) -> dict:
     """PC 가 보낸 manifest 를 서버 상태로 확정하고 문서로 등록한다.
 
@@ -208,6 +238,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
     config = _require_product(product)
     base = product_dir(config.product, root)
     uploaded = uploaded or {}
+    previous_assets = load_manifest(config.product, root).get("assets", [])
 
     kept: list[dict] = []
     missing: list[str] = []
@@ -226,14 +257,19 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         record["file_name"] = file_name
         record["kind"] = kind
         record.update({key: value for key, value in (uploaded.get(file_name) or {}).items() if key in ("normalized_path", "normalized_chars", "collected_at", "error")})
-        if not record.get("normalized_path"):
+        if not record.get("normalized_path") and file_name not in uploaded:
             # 이번에 올리지 않은(=서버가 이미 가진) 파일은 지난 manifest 의 값을 잇는다.
-            previous = next((item for item in load_manifest(config.product, root).get("assets", []) if item.get("file_name") == file_name), {})
+            # "읽지 못함"(error)도 잇는다 — 잇지 않으면 이튿날 읽지 못한 판이 읽힌 판으로 둔갑해
+            # 아래의 이전 판 유지가 풀린다.
+            previous = next((item for item in previous_assets if item.get("file_name") == file_name), {})
             record["normalized_path"] = previous.get("normalized_path", "")
             record["normalized_chars"] = previous.get("normalized_chars", 0)
             record.setdefault("collected_at", previous.get("collected_at", ""))
+            if previous.get("error"):
+                record["error"] = previous["error"]
         kept.append(record)
 
+    kept_previous = _keep_previous_readable(base, kept, previous_assets)
     keep_keys = {(record["kind"], record["file_name"]) for record in kept}
     removed = _prune_orphans(base, keep_keys)
 
@@ -258,6 +294,8 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         detail += f" / 업로드 누락 {len(missing)}건: {', '.join(missing[:5])}"
     if failures:
         detail += f" / 정규화 실패 {len(failures)}건"
+    if kept_previous:
+        detail += f" / 읽지 못한 새 판 대신 이전 판 유지 {len(kept_previous)}건: {', '.join(kept_previous[:3])}"
     return {
         "status": "PARTIAL" if (missing or failures) else "SUCCESS",
         "detail": detail,
@@ -265,6 +303,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         "removed": removed,
         "missing": missing,
         "failures": failures,
+        "kept_previous": kept_previous,
         "registered": registered.detail,
         "duplicates": registered.duplicates,
     }

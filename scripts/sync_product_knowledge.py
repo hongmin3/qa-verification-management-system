@@ -121,7 +121,11 @@ def main() -> int:
             print(f"  서버에서 정리: {note}")
         if args.report_to:
             _report_remote(args.report_to, product, result["status"], result["detail"])
-        if result["status"] in ("FAILED", "NEEDS_CONFIG"):
+        for note in result.get("kept_previous", []):
+            print(f"  읽지 못해 이전 판 유지: {note}")
+        # PARTIAL(업로드 누락·텍스트 추출 실패)도 1 로 끝낸다. 0 으로 끝나면 작업 스케줄러에
+        # 성공으로 보여 아무도 모른다 (REQ-SYNC-002).
+        if result["status"] in ("FAILED", "NEEDS_CONFIG", "PARTIAL"):
             exit_code = 1
     return exit_code
 
