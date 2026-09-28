@@ -311,6 +311,42 @@ def test_missing_export_dir_is_not_an_error(tmp_path: Path) -> None:
     assert load_exported_issue(tmp_path / "없는폴더", "AP-1") is None
 
 
+def _write_backup(folder: Path, issue_id: str, title: str) -> None:
+    path = folder / issue_id / "backup.json"
+    path.parent.mkdir(parents=True)
+    payload = _payload(attributes={"id": issue_id, "title": title})
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def test_issues_inside_run_folders_are_found(tmp_path: Path) -> None:
+    """Validates: REQ-ISSUE-001 — 통합 후 구조 `<실행폴더>/<ISSUE-ID>/backup.json`."""
+    _write_backup(tmp_path / "20260922_113858-aaaa1111", "AP-2001", "실행 폴더 안")
+    _write_backup(tmp_path, "AP-1001", "예전 구조")
+    assert list_exported_issues(tmp_path) == ["AP-1001", "AP-2001"]
+    record = load_exported_issue(tmp_path, "AP-2001")
+    assert record is not None and record.title == "실행 폴더 안"
+    assert load_exported_issue(tmp_path, "AP-1001").title == "예전 구조"
+
+
+def test_latest_run_folder_wins_for_the_same_issue(tmp_path: Path) -> None:
+    """Validates: REQ-ISSUE-001 — 같은 Issue 가 여러 실행에 있으면 가장 최근 실행의 것."""
+    _write_backup(tmp_path / "20260901_090000-aaaa", "AP-2001", "옛 수집")
+    _write_backup(tmp_path / "20260922_113858-bbbb", "AP-2001", "새 수집")
+    _write_backup(tmp_path, "AP-2001", "예전 구조")
+    assert list_exported_issues(tmp_path) == ["AP-2001"]
+    assert load_exported_issue(tmp_path, "AP-2001").title == "새 수집"
+
+
+def test_staging_and_previous_run_folders_are_ignored(tmp_path: Path) -> None:
+    """Validates: REQ-ISSUE-001 — 내보내는 중이거나 교체 전 보관본은 읽지 않는다."""
+    _write_backup(tmp_path / "20260922_113858-bbbb", "AP-2001", "확정본")
+    _write_backup(tmp_path / ".20260930_090000.staging-x1", "AP-2001", "내보내는 중")
+    _write_backup(tmp_path / "20260922_113858-bbbb.previous-r2", "AP-3001", "교체 전 보관본")
+    assert list_exported_issues(tmp_path) == ["AP-2001"]
+    assert load_exported_issue(tmp_path, "AP-2001").title == "확정본"
+    assert load_exported_issue(tmp_path, "AP-3001") is None
+
+
 @pytest.mark.parametrize(
     ("version_id", "expected"),
     [("VXvue_1_1_0_001", "1.1.0.001"), ("Acme_2_0", "2.0"), ("", ""), ("NoVersion", "NoVersion")],
@@ -339,6 +375,26 @@ def test_real_export_parses_every_issue_without_error() -> None:
     for issue_id in issue_ids:
         record = load_exported_issue(export_dir, issue_id)
         assert record is not None and record.issue_id == issue_id
+
+
+@pytest.mark.skipif(_real_export_dir() is None, reason="Polarion Export 폴더가 이 호스트에 없음")
+def test_real_export_lists_every_backup_on_disk() -> None:
+    """Validates: REQ-ISSUE-001 — 목록이 디스크의 backup.json 과 따로 센 수와 같아야 한다.
+
+    "목록이 비어 있지 않다"만 보면 예전 구조 20건만 읽고 실행 폴더 21건을 놓쳐도 통과한다
+    (2026-09-28 실측). 그래서 목록을 만드는 코드와 다른 방법으로 센 값과 대조한다.
+    """
+    export_dir = _real_export_dir()
+    assert export_dir is not None
+    excluded = (".staging-", ".previous-")
+    on_disk = {path.parent.name for path in export_dir.glob("*/backup.json")}
+    on_disk |= {
+        path.parent.name
+        for path in export_dir.glob("*/*/backup.json")
+        if not path.parent.parent.name.startswith(".") and not any(mark in path.parent.parent.name for mark in excluded)
+    }
+    assert on_disk, "Export 폴더에 backup.json 이 없다"
+    assert set(list_exported_issues(export_dir)) == on_disk
 
 
 @pytest.mark.skipif(_real_export_dir() is None, reason="Polarion Export 폴더가 이 호스트에 없음")

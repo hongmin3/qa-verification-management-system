@@ -1,0 +1,19 @@
+<div class="table-wrap">
+  <table class="history">
+    <thead><tr><th>#</th><th>Skill</th><th>대상</th><th>판정</th><th>요약</th><th>근거</th><th>검토</th></tr></thead>
+    <tbody>
+      {% for item in findings %}
+      <tr>
+        <td><a href="/daily-qa/findings/{{ item.id }}">{{ item.id }}</a></td>
+        <td>{{ skill_labels.get(item.skill, item.skill) }}</td>
+        <td>{{ item.subject }}{% if item.subject_title %}<br><span class="hint">{{ item.subject_title }}</span>{% endif %}</td>
+        <td><span class="pill">{{ item.verdict }}</span>{% if item.issue_type %}<br><span class="hint">{{ item.issue_type }}</span>{% endif %}</td>
+        <td>{{ item.summary }}</td>
+        <td class="hint">{% for ev in item.evidence[:2] %}{{ ev.location }}<br>{% endfor %}{% if item.evidence|length > 2 %}외 {{ item.evidence|length - 2 }}건{% endif %}</td>
+        <td><span class="badge {{ item.review_status }}">{{ item.review_label }}</span>{% if item.reviewer %}<br><span class="hint">{{ item.reviewer }}</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      {% if not findings %}<tr><td colspan="7" class="hint">해당하는 Finding 이 없습니다.</td></tr>{% endif %}
+    </tbody>
+  </table>
+</div>

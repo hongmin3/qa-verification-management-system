@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="botyard render-spec-html v6">
+<meta name="spec-html-renderer" content="v6">
+<meta name="spec-source-sha256" content="ca7c3ad565ccee9321475b3cc8c1e3ae8f578602bb7f3d6941323c82950a666d">
+<title>QA 검증 관리 시스템 사양서</title>
+<style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
+--req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
+--warn-bg:#fdf6e7;--info-bg:#eef4fe;--ex-bg:#ecf8f1;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1a1f29;--text:#e4e8f0;--muted:#9aa4b7;--line:#2c3444;--accent:#6ea0ff;--code:#232a37;
+--req:#6ea0ff;--nfr:#b58cff;--test:#3cc4a6;--draft:#8f99ad;--implemented:#e3a93a;--verified:#45c47c;--deprecated:#ef6b62;--active:#6ea0ff;
+--warn-bg:#2a2518;--info-bg:#1a2436;--ex-bg:#172a21;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",sans-serif;word-break:keep-all;overflow-wrap:break-word}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);border-radius:4px;padding:.1em .35em}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto}pre code{background:none;padding:0}
+.top{background:var(--panel);border-bottom:1px solid var(--line);padding:24px 32px}
+.top h1{margin:0 0 12px;font-size:26px;line-height:1.3}
+.chips,.stats{display:flex;flex-wrap:wrap;gap:8px}.chips{margin-bottom:14px}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:13px}
+.chip>span{color:var(--muted)}
+.stat{border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:96px;background:var(--bg)}
+.stat b{display:block;font-size:22px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}
+.stat.st-draft b{color:var(--draft)}.stat.st-implemented b{color:var(--implemented)}.stat.st-verified b{color:var(--verified)}.stat.st-deprecated b{color:var(--deprecated)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;max-width:1280px;margin:0 auto;padding:24px 32px}
+.toc{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto;font-size:13px}
+.toc input{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);margin-bottom:10px;font:inherit}
+.toc ul{list-style:none;margin:0;padding:0}.toc li{margin:1px 0}.toc a{display:block;padding:2px 8px;border-radius:6px;color:var(--text)}
+.toc a:hover{background:var(--code);text-decoration:none}
+.toc .toc-2{margin-top:8px;font-weight:600}.toc .toc-id a{padding-left:20px;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--muted)}
+main{min-width:0}
+.chapter{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 24px 16px;margin-bottom:20px}
+.chapter>h2{font-size:20px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.card{border:1px solid var(--line);border-left:4px solid var(--req);border-radius:8px;padding:2px 16px 8px;margin:14px 0;background:var(--bg)}
+.card.kind-nfr{border-left-color:var(--nfr)}.card.kind-test{border-left-color:var(--test)}
+.card h3,.card h4{margin:12px 0 4px}.card h4{font-size:14px;color:var(--muted)}
+.card{padding:4px 20px 12px}.card p,.card li{max-width:46em}.card p{margin:.4em 0 .9em;line-height:1.85}
+.field{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:0 18px;border-top:1px solid var(--line);padding:10px 0 2px}
+.field>h4,.field>h5,.field>h6{margin:.15em 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.field-body>:first-child{margin-top:0}.field-body>:last-child{margin-bottom:.4em}
+.field-body ol{list-style:none;counter-reset:step;padding-left:0}
+.field-body ol>li{counter-increment:step;position:relative;padding-left:2.1em;margin:.45em 0}
+.field-body ol>li::before{content:counter(step);position:absolute;left:0;top:.2em;width:1.5em;height:1.5em;border-radius:50%;background:var(--code);color:var(--accent);font-size:12px;font-weight:700;line-height:1.5em;text-align:center}
+.field-body ul{padding-left:1.2em}.field-body li{margin:.3em 0}
+.callout{display:block;margin:12px 0;padding:10px 14px 10px 14px;border-radius:8px;border:1px solid var(--line);border-left:4px solid var(--muted);background:var(--panel)}
+.callout>p{margin:.3em 0}.callout-label{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:0 8px;margin-bottom:2px;color:#fff;background:var(--muted)}
+.callout-warn{border-left-color:var(--implemented);background:var(--warn-bg)}.callout-warn .callout-label{background:var(--implemented)}
+.callout-info{border-left-color:var(--accent);background:var(--info-bg)}.callout-info .callout-label{background:var(--accent)}
+.callout-example{border-left-color:var(--verified);background:var(--ex-bg)}.callout-example .callout-label{background:var(--verified)}
+p.why{color:var(--muted);border-left:3px solid var(--line);padding-left:10px}.why-label{font-size:12px;font-weight:700;color:var(--accent);margin-right:4px}
+.term{text-decoration:underline dotted var(--muted);text-underline-offset:3px;cursor:help}code.term{text-decoration-color:var(--accent)}
+.idtag{font:600 13px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--req);color:#fff;border-radius:6px;padding:2px 8px}
+.kind-nfr .idtag{background:var(--nfr)}.kind-test .idtag{background:var(--test)}
+.idref{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;white-space:nowrap}
+.idtag,.badge{white-space:nowrap}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;margin:2px 0 6px}
+.meta b{color:var(--muted);font-weight:600;margin-right:4px}
+details.history{font-size:13px;margin:4px 0 8px}details.history summary{cursor:pointer;color:var(--muted)}
+details.history ul{margin:6px 0;padding-left:18px}.hist{color:var(--muted);font-size:12px}
+tr.group th{background:var(--bg);text-align:left;font-size:14px;padding-top:12px}.gcode{font:600 12px/1.4 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-right:4px}
+table.index td:first-child{white-space:nowrap}table.index td:nth-child(2){min-width:10em}table.index td:nth-child(4){min-width:13em}.untitled{color:var(--muted);font-style:italic}
+.toc .toc-id span{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:var(--text)}
+.toc a.active{background:var(--code);color:var(--accent);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}.toc a.in-chapter{color:var(--accent)}
+figure.flow{margin:12px 0;overflow-x:auto}figure.flow svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.flow .node rect{fill:var(--panel);stroke:var(--accent);stroke-width:1.5}
+.flow text{font-size:13px;fill:var(--text);text-anchor:middle;dominant-baseline:central}
+.flow .edge{fill:none;stroke:var(--muted);stroke-width:1.5}.flow .edge.back{stroke-dasharray:5 4}.flow marker path{fill:var(--muted)}
+.flow .elabel{font-size:12px;fill:var(--muted);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.nohist{color:var(--muted)}
+main img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.table-wrap{overflow-x:auto;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:600}
+.badge{display:inline-block;border-radius:999px;padding:0 10px;font-size:12px;font-weight:600;color:#fff;background:var(--draft)}
+.st-implemented.badge{background:var(--implemented)}.st-verified.badge{background:var(--verified)}.st-deprecated.badge{background:var(--deprecated)}.st-active.badge{background:var(--active)}
+blockquote{margin:10px 0;padding:4px 16px;border-left:4px solid var(--line);color:var(--muted)}
+li.task{list-style:none;margin-left:-1.2em}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);font-size:13px}
+.hidden{display:none}
+@media (max-width:860px){.field{grid-template-columns:1fr}.layout{grid-template-columns:1fr;padding:16px}.toc{position:static;max-height:260px}.top{padding:18px 16px}.chapter{padding:2px 14px 12px}footer{padding:8px 16px 32px}}
+@media print{.toc,footer{display:none}.layout{display:block;padding:0}.chapter{break-inside:auto;border:0}.card{break-inside:avoid}body{background:#fff}}</style>
+</head>
+<body>
+<header class="top">
+<h1>QA 검증 관리 시스템 사양서</h1>
+<div class="chips"><span class="chip"><span>Document Version</span><b>0.3.0</b></span><span class="chip"><span>Last Updated</span><b>2026-09-28</b></span><span class="chip"><span>Status</span><b>draft — 기존 계약 일부의 근거 기반 사양화</b></span></div>
+<div class="stats"><div class="stat"><b>15</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>1</b><span>비기능 NFR</span></div><div class="stat"><b>11</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>15</b><span>implemented</span></div><div class="stat st-verified"><b>1</b><span>verified</span></div></div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="목차">
+<input type="search" id="toc-filter" placeholder="목차·ID 검색" aria-label="목차 검색">
+<ul><li class="toc-2"><a href="#feature-index">기능 목록</a></li>
+<li class="toc-2"><a href="#sec-1">1. 목적</a></li>
+<li class="toc-2"><a href="#sec-2">2. 프로젝트 범위</a></li>
+<li class="toc-2"><a href="#sec-5">5. 기능 요구사항</a></li>
+<li class="toc-id kind-req"><a href="#REQ-CORE-001">REQ-CORE-001 <span>평가 지표</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-CORE-002">REQ-CORE-002 <span>누락과 비추천 구분</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-CORE-003">REQ-CORE-003 <span>집계 방식</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DEPLOY-001">REQ-DEPLOY-001 <span>listen 주소·포트의 단일 원본</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-001">REQ-DAILY-001 <span>일일 점검 실행 순서</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-002">REQ-DAILY-002 <span>Polarion 읽기 전용 수집</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-003">REQ-DAILY-003 <span>사양 변경 → TC 영향 (B)</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-004">REQ-DAILY-004 <span>이슈 → 수정확인·Regression 초안 (C)</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-005">REQ-DAILY-005 <span>사양–TC 추적 공백 (E)</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-006">REQ-DAILY-006 <span>매뉴얼 누락 후보 (F)</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-007">REQ-DAILY-007 <span>AI 결과 형식 검증</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-008">REQ-DAILY-008 <span>요약 메일</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-009">REQ-DAILY-009 <span>검토 대기열 화면</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-DAILY-010">REQ-DAILY-010 <span>QA 규칙 판 확인</span></a></li>
+<li class="toc-id kind-nfr"><a href="#NFR-SEC-001">NFR-SEC-001 <span>AI 실행 격리</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-ISSUE-001">REQ-ISSUE-001 <span>이슈 Export 폴더 읽기</span></a></li>
+<li class="toc-2"><a href="#sec-9">9. 오류 처리 정책</a></li>
+<li class="toc-2"><a href="#sec-11">11. 테스트 사양</a></li>
+<li class="toc-id kind-test"><a href="#TEST-CORE-001">TEST-CORE-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-CORE-002">TEST-CORE-002</a></li>
+<li class="toc-id kind-test"><a href="#TEST-CORE-003">TEST-CORE-003</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-001">TEST-DAILY-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-002">TEST-DAILY-002</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-003">TEST-DAILY-003</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-004">TEST-DAILY-004</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-005">TEST-DAILY-005</a></li>
+<li class="toc-id kind-test"><a href="#TEST-DAILY-006">TEST-DAILY-006</a></li>
+<li class="toc-id kind-test"><a href="#TEST-ISSUE-001">TEST-ISSUE-001</a></li>
+<li class="toc-2"><a href="#sec-12">12. 요구사항 추적성</a></li>
+<li class="toc-2"><a href="#sec-13">13. 미확정 사항</a></li></ul>
+</nav>
+<main>
+<section class="chapter" id="feature-index">
+<h2>기능 목록</h2>
+<div class="table-wrap"><table class="index">
+<thead><tr><th>ID</th><th>이름</th><th>상태</th><th>구현</th><th>테스트</th></tr></thead>
+<tbody>
+<tr class="group"><th colspan="5"><span class="gcode">CORE</span> 추천 평가 지표</th></tr>
+<tr><td><a class="idref" href="#REQ-CORE-001">REQ-CORE-001</a></td><td>평가 지표</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-001">TEST-CORE-001</a>: <code>tests/test_evaluation.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-CORE-002">REQ-CORE-002</a></td><td>누락과 비추천 구분</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-002">TEST-CORE-002</a>: <code>tests/test_evaluation.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-CORE-003">REQ-CORE-003</a></td><td>집계 방식</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-003">TEST-CORE-003</a>: <code>tests/test_evaluation.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">DEPLOY</span> 배포 설정</th></tr>
+<tr><td><a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a></td><td>listen 주소·포트의 단일 원본</td><td><span class="badge st-verified">verified</span></td><td><code>app/core/config.py</code>, <code>app/serve.py</code></td><td><a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">DAILY</span> VXvue 일일 QA 자동 점검</th></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a></td><td>일일 점검 실행 순서</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code>, <code>scripts/run_daily_qa.py</code></td><td><a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-002">REQ-DAILY-002</a></td><td>Polarion 읽기 전용 수집</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code></td><td><a class="idref" href="#TEST-DAILY-002">TEST-DAILY-002</a>: <code>tests/test_daily_qa_polarion.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-003">REQ-DAILY-003</a></td><td>사양 변경 → TC 영향 (B)</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-spec-change-impact/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-004">REQ-DAILY-004</a></td><td>이슈 → 수정확인·Regression 초안 (C)</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/checklist_xlsx.py</code>, <code>app/modules/daily_qa/skills/vxvue-issue-verification/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-005">REQ-DAILY-005</a></td><td>사양–TC 추적 공백 (E)</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/packages.py</code></td><td><a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-006">REQ-DAILY-006</a></td><td>매뉴얼 누락 후보 (F)</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-manual-completeness/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-007">REQ-DAILY-007</a></td><td>AI 결과 형식 검증</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/schema.py</code></td><td><a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a></td><td>요약 메일</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/report.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-009">REQ-DAILY-009</a></td><td>검토 대기열 화면</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/router.py</code>, <code>app/core/daily_qa_storage.py</code></td><td><a class="idref" href="#TEST-DAILY-005">TEST-DAILY-005</a>: <code>tests/test_daily_qa_router.py</code></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a></td><td>QA 규칙 판 확인</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/rules.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">NFR SEC</span> AI 실행 보안(비기능)</th></tr>
+<tr><td><a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a></td><td>AI 실행 격리</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">ISSUE</span> Polarion 이슈 Export 읽기</th></tr>
+<tr><td><a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a></td><td>이슈 Export 폴더 읽기</td><td><span class="badge st-implemented">implemented</span></td><td><code>app/parsers/polarion_issue.py</code></td><td><a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a>: <code>tests/test_polarion_issue.py</code></td></tr>
+</tbody>
+</table></div>
+</section>
+<p>기존 코드와 테스트의 명시적 약속을 처음으로 연결한 제한된 기준선이다. 전체 제품 사양이나 운영 검증 완료를 뜻하지 않는다. 기존 약속과 구현의 차이는 SPEC / CODE MISMATCH로 남기고 코드에 맞춰 약속을 바꾸지 않는다.</p>
+<section class="chapter" id="sec-1">
+<h2>1. 목적</h2>
+<p>변경사항과 사양·Test Case를 대조하여 검증 대상과 근거를 제공한다.</p>
+</section>
+<section class="chapter" id="sec-2">
+<h2>2. 프로젝트 범위</h2>
+<p>포함: 추천 평가 지표 및 누락 판정, 핵심 앱의 listen 주소·포트 결정 방식, VXvue 일일 QA 자동 점검(사양 변경 영향, 이슈 수정확인 초안, 사양–TC 추적 공백, 매뉴얼 누락 후보)과 그 결과의 메일 요약·검토 대기열, QA Agent 가 읽는 Polarion 이슈 Export 폴더의 구조.</p>
+<p>제외: 운영 데이터·비밀 설정의 열람/변경, 인증 방식 변경, listen 포트 외의 배포 절차 변경. 기존 기능은 <a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a>(이슈 Export 폴더 구조 대응) 외에는 동작을 바꾸지 않는다. 이 제외는 작업 경계이며 기존 제품 기능을 제거한다는 뜻이 아니다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>일일 점검</td><td>서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(<code>daily_qa</code> 실행)</td></tr>
+<tr><td>Skill</td><td>Claude Code가 읽는 작업 설명서 폴더(<code>SKILL.md</code>). 이 저장소의 <code>app/modules/daily_qa/skills/</code> 에 있다</td></tr>
+<tr><td>작업 폴더</td><td>Claude가 읽고 쓰는 격리된 폴더(<code>daily_qa.workspace_dir</code>). 저장소 밖에 둔다</td></tr>
+<tr><td>Finding</td><td>AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다</td></tr>
+<tr><td>QA 규칙</td><td><code>[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev*.md</code> 와 지침 프롬프트</td></tr>
+</tbody>
+</table></div>
+</section>
+<section class="chapter" id="sec-5">
+<h2>5. 기능 요구사항</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>카테고리</th><th>이름</th></tr></thead>
+<tbody>
+<tr><td>CORE</td><td>추천 평가 지표</td></tr>
+<tr><td>DEPLOY</td><td>배포 설정</td></tr>
+<tr><td>DAILY</td><td>VXvue 일일 QA 자동 점검</td></tr>
+<tr><td>ISSUE</td><td>Polarion 이슈 Export 읽기</td></tr>
+<tr><td>SEC</td><td>AI 실행 보안(비기능)</td></tr>
+</tbody>
+</table></div>
+<section class="card kind-req" id="REQ-CORE-001">
+<h3><span class="idtag">REQ-CORE-001</span> 평가 지표</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/evaluation.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-CORE-001">TEST-CORE-001</a>: <code>tests/test_evaluation.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-CORE-001">TEST-CORE-001</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<p>정답 TC 집합과 추천 TC 집합의 교집합을 TP, 추천에만 있는 항목을 FP, 정답에만 있는 항목을 FN으로 센다. 정답과 추천이 각 2개이며 공통 1개이면 precision/recall/F1은 각각 0.5다.</p>
+<p>관련 구현: <code>app/core/evaluation.py</code>. 관련 테스트: <code>tests/test_evaluation.py</code>의 <code>test_recommendation_metrics_counts_precision_and_recall</code>.</p>
+</section>
+<section class="card kind-req" id="REQ-CORE-002">
+<h3><span class="idtag">REQ-CORE-002</span> 누락과 비추천 구분</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/evaluation.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-CORE-002">TEST-CORE-002</a>: <code>tests/test_evaluation.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-CORE-002">TEST-CORE-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<p>recommended가 참인 결정만 추천 목록에 포함한다. 정답에 있지만 추천되지 않은 ID는 missing_tc_ids로 보고하고 recommended=false인 항목은 예상외 추천으로 세지 않는다.</p>
+<p>관련 구현: <code>app/core/evaluation.py</code>. 관련 테스트: <code>tests/test_evaluation.py</code>의 <code>test_evaluate_analysis_lists_missing_and_unexpected_ids</code>.</p>
+</section>
+<section class="card kind-req" id="REQ-CORE-003">
+<h3><span class="idtag">REQ-CORE-003</span> 집계 방식</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/evaluation.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-CORE-003">TEST-CORE-003</a>: <code>tests/test_evaluation.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-CORE-003">TEST-CORE-003</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<p>여러 평가의 TP/FP/FN을 먼저 합친 뒤 micro 평균 precision/recall/F1을 산출한다. 개별 case 비율의 단순 평균으로 바꾸지 않는다.</p>
+<p>관련 구현: <code>app/core/evaluation.py</code>. 관련 테스트: <code>tests/test_evaluation.py</code>의 <code>test_aggregate_evaluations_uses_micro_average</code>.</p>
+</section>
+<section class="card kind-req" id="REQ-DEPLOY-001">
+<h3><span class="idtag">REQ-DEPLOY-001</span> listen 주소·포트의 단일 원본</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/serve.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-22 · listen 포트를 `config.yaml` 단일 원본으로, 운영 포트 12000 → 24357</span> SPEC 에 <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> / <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a> 을 추가했다.</li>
+</ul>
+</details>
+<p>핵심 앱이 listen 하는 주소와 포트는 <code>config.yaml</code> 의 <code>app.host</code> / <code>app.port</code> 하나로 결정한다.
+진입점(<code>scripts/run.sh</code>, <code>scripts/run.ps1</code>, <code>deploy/systemd/qa-verification.service</code>)은 포트를
+직접 지정하지 않고 <code>python -m app.serve</code> 로 앱을 띄우며, <code>app.serve</code> 가 그 값을 읽어 uvicorn 에
+넘긴다. 앱이 자기 자신을 HTTP 로 호출하는 주소와 운영 점검(<code>scripts/monitor_health.py</code>)의 기본
+대상도 같은 값에서 파생한다. 키가 없거나 비었을 때만 기본값(<code>0.0.0.0</code> / <code>24357</code>)으로 떨어지고,
+포트가 정수로 읽히지 않으면 기본값으로 대체하지 않고 실패시킨다.</p>
+<p>nginx 는 YAML 을 읽지 못하므로 <code>deploy/nginx/qa-platform.conf</code> 의 upstream 포트만 이 원본을
+자동으로 따라가지 못한다. 두 값이 다르면 검사에서 실패해야 한다.</p>
+<p>운영 포트는 <code>24357</code> 이다. 1024 초과이고, 서버의 ephemeral 포트 범위(실측 <code>32768~60999</code>) 밖이며,
+해당 호스트에서 다른 서비스가 점유하지 않는다.</p>
+<p>관련 구현: <code>app/core/config.py</code> 의 <code>app_bind</code> / <code>app_self_url</code>, <code>app/serve.py</code>.
+관련 테스트: <code>tests/test_serve_bind.py</code>, <code>tests/test_monitor_health.py</code> 의
+<code>test_default_base_url_comes_from_config_yaml</code>.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-001">
+<h3><span class="idtag">REQ-DAILY-001</span> 일일 점검 실행 순서</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code>, <code>scripts/run_daily_qa.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>: <code>scripts/run_daily_qa.py</code> 가 평일 아침 한 번 도는 <span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>을 추가했다. 잠금 파일로 중복 실행을 막고, 단계 하나가 실패해도 나머지는 계속 돈다. 실행마다 실행 기록과 <code>output/daily_qa/&lt;실행ID&gt;/</code> 가 생긴다.</li>
+</ul>
+</details>
+<p>앱 내장 스케줄러가 평일 07:30(한국 시간, <code>daily_qa.schedule</code>)에 <code>scripts/run_daily_qa.py</code> 를 웹 프로세스와 분리된 별도 프로세스로 띄운다. Polarion·Claude 자격증명이 없는 호스트에서는 띄우지 않는다. 점검은 아래 순서로 한 번 돈다.</p>
+<ol>
+<li>같은 점검이 이미 돌고 있으면 새 실행은 바로 끝난다(잠금 파일).</li>
+<li>사전 점검: <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> 판(Rev), 필요한 자격증명, <span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span> 위치를 확인한다.</li>
+<li>Polarion에서 SRS와 이슈를 읽어 온다(<a class="idref" href="#REQ-DAILY-002">REQ-DAILY-002</a>).</li>
+<li>사양 변경 영향(B), 이슈 수정확인 초안(C)을 매일 만든다. 추적 공백(E)과 매뉴얼 누락 후보(F)는 설정한 요일에만 만든다.</li>
+<li>각 결과를 검증하고(<a class="idref" href="#REQ-DAILY-007">REQ-DAILY-007</a>) 저장한다.</li>
+<li>요약 메일을 보낸다(<a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>).</li>
+</ol>
+<p>실행마다 실행 기록(<code>daily_qa_runs</code>) 한 줄과 실행 폴더(<code>output/daily_qa/&lt;실행ID&gt;/</code>)가 생긴다. 한 단계가 실패해도 다른 단계는 계속 돌고, 실패한 단계와 이유가 실행 기록과 메일에 남는다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>Polarion 조회가 실패하면 B·C는 <code>실패</code>로 남고, 지식 폴더만 쓰는 E는 그대로 돈다.</p>
+</aside>
+<p><code>--dry-run</code> 은 Claude를 부르지 않고 입력 묶음과 결정적 계산만 만든다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-002">
+<h3><span class="idtag">REQ-DAILY-002</span> Polarion 읽기 전용 수집</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-002">TEST-DAILY-002</a>: <code>tests/test_daily_qa_polarion.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-002">REQ-DAILY-002</a>: Polarion 을 GET 만 하는 읽기 전용 클라이언트로 SRS·이슈를 읽는다. SRS 는 날짜별 스냅샷으로 저장해 전날과 비교한다. 조회 결과가 0건이면 스냅샷을 저장하지 않는다(다음 날 전부 삭제로 보이는 것을 막는다).</li>
+</ul>
+</details>
+<p><span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>은 Polarion에서 읽기만 한다. 수집 코드는 GET 요청만 만들 수 있고, 다른 방식의 요청을 만드는 함수가 없다.</p>
+<ul>
+<li>SRS: 설정한 조회식(<code>daily_qa.polarion.srs_query</code>)으로 전체를 읽어 그날의 스냅샷(<code>data/daily_qa/snapshots/&lt;날짜&gt;.json</code>)으로 저장한다. 직전 스냅샷과 비교해 신규·삭제·변경 SRS를 만든다. 직전 스냅샷이 없으면 비교 없이 기준만 저장한다.</li>
+<li>이슈: 설정한 조회식(<code>daily_qa.polarion.issue_query</code>)으로 읽고, 마지막 성공 실행 이후 바뀐 이슈만 새 이슈로 본다.</li>
+</ul>
+<p>토큰(<code>POLARION_TOKEN</code>)과 주소(<code>POLARION_HOST</code>)는 비밀 설정에서만 읽는다. 둘 중 하나가 없으면 수집 단계는 <code>건너뜀</code>으로 남는다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-003">
+<h3><span class="idtag">REQ-DAILY-003</span> 사양 변경 → TC 영향 (B)</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-spec-change-impact/SKILL.md</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-003">REQ-DAILY-003</a>: 바뀐 SRS 의 후보 TC 를 SRS 번호 열로 고르고 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-spec-change-impact</code> 가 판정한다. 삭제된 SRS 를 가리키는 TC 는 코드로 찾는다.</li>
+</ul>
+</details>
+<p>바뀐 SRS마다 영향을 받을 수 있는 기존 TC를 먼저 코드로 고른다. TC의 SRS 번호 열(<code>Old SRS ID</code>, <code>SRS No</code>)이 SRS의 Legacy 번호(<code>oldId</code>)나 SRS ID와 같으면 후보다. 그다음 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-spec-change-impact</code> 가 후보 TC마다 아래 중 하나로 판정한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>판정</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>유지</td><td>바뀐 사양에서도 TC 그대로 유효</td></tr>
+<tr><td>경미 수정</td><td>문구만 고치면 된다</td></tr>
+<tr><td>수정 필수</td><td>Step 또는 Expected가 바뀐 사양과 다르다</td></tr>
+<tr><td>신규 TC 필요</td><td>기존 TC로 검출할 수 없는 변경이다</td></tr>
+<tr><td>사양 확인 요청</td><td>근거가 모자라 판정할 수 없어 사람에게 사양 확인을 넘긴다</td></tr>
+</tbody>
+</table></div>
+<p>삭제된 SRS를 아직 가리키는 TC는 AI 없이 코드로 찾아 <code>수정 필수</code> 후보로 올린다.</p>
+<aside class="callout callout-info"><span class="callout-label">참고</span>
+<p>화면과 결과 파일에 쓰는 판정 이름은 <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span>의 표기를 그대로 따른다. 정확한 문자열 목록은 <code>app/modules/daily_qa/schema.py</code> 의 <code>VERDICTS</code> 에 있다. 위 표의 &quot;사양 확인 요청&quot;은 규칙 표기로 &quot;사양 확인&quot; 뒤에 &quot;필요&quot;가 붙은 이름이다.</p>
+</aside>
+</section>
+<section class="card kind-req" id="REQ-DAILY-004">
+<h3><span class="idtag">REQ-DAILY-004</span> 이슈 → 수정확인·Regression 초안 (C)</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/checklist_xlsx.py</code>, <code>app/modules/daily_qa/skills/vxvue-issue-verification/SKILL.md</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-004">REQ-DAILY-004</a>: <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-issue-verification</code> 이 이슈 유형을 나누고 Program Fixed 만 TC 초안을 만든다. 초안은 영향성평가 Checklist 와 같은 열 순서의 새 Excel 로 저장하고, AI 판단은 <code>Review</code> 시트에 분리한다.</li>
+</ul>
+</details>
+<p>새 이슈마다 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-issue-verification</code> 이 이슈 유형을 먼저 나눈다(<span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> §6의 일곱 유형). 수정확인 TC와 Regression TC 초안은 <code>Program Fixed</code> 유형에만 만든다. 다른 유형은 판정과 근거만 남긴다.</p>
+<p>초안은 새 Excel 파일(<code>output/daily_qa/&lt;실행ID&gt;/impact_checklist_draft.xlsx</code>)로 만든다. 열 순서는 변경사항 영향성평가 Checklist와 같다(<code>Category | TC ID | 버전 | SRS No | 변경사항 | 변경사항 상세 | Title | Precondition | Test Step | Expected Result | Test Data</code>). AI 판단과 근거는 같은 파일의 <code>Review</code> 시트에 따로 둔다.</p>
+<aside class="callout callout-warn"><span class="callout-label">주의</span>
+<p>기존 Checklist와 TC 원본 파일은 읽기만 하고 고치지 않는다.</p>
+</aside>
+</section>
+<section class="card kind-req" id="REQ-DAILY-005">
+<h3><span class="idtag">REQ-DAILY-005</span> 사양–TC 추적 공백 (E)</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/packages.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-005">REQ-DAILY-005</a>: 추적 공백(E)을 AI 없이 계산한다. 실데이터에서 TC 의 Legacy 번호 317종 가운데 239종이 현재 <code>oldId</code> 와 맞지 않아, Legacy 번호 불일치는 삭제로 단정하지 않고 건수로만 남긴다.</li>
+</ul>
+</details>
+<p>설정한 요일(<code>daily_qa.weekly_day</code>, 기본 월요일)에 코드로 계산한다.</p>
+<ul>
+<li>TC가 하나도 가리키지 않는 유효 SRS(분류용 Category 항목 제외) → <code>TC 없음</code></li>
+<li>스냅샷에 없는 Polarion ID(<code>VP-123</code> 모양)를 가리키는 TC → <code>삭제된 SRS 참조</code></li>
+</ul>
+<p>Legacy 번호(<code>03-10-05</code> 모양)가 스냅샷의 어느 <code>oldId</code>와도 맞지 않으면 삭제로 단정하지 않고 <code>구 번호로 확인 불가</code> 건수로만 요약에 적는다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>2026-09-28 실데이터에서 TC가 쓰는 Legacy 번호 317종 가운데 239종이 현재 <code>oldId</code>와 맞지 않았다. 옛 번호 체계로 보이며, 이것을 삭제로 올리면 오탐이 된다.</p>
+</aside>
+<p>이 단계는 AI를 부르지 않는다. 결과는 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span>으로 저장한다. 같은 SRS·같은 판정의 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span>이 이미 <code>검토 대기</code>·<code>승인</code>·<code>근거 추가 필요</code> 상태로 남아 있으면 새로 만들지 않는다(B도 같다).</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-006">
+<h3><span class="idtag">REQ-DAILY-006</span> 매뉴얼 누락 후보 (F)</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-manual-completeness/SKILL.md</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-006">REQ-DAILY-006</a>: <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-manual-completeness</code> 가 지난 7일 바뀐 SRS 의 매뉴얼 누락 후보를 낸다. 운영 첫 주처럼 7일 전 스냅샷이 없으면 가장 오래된 스냅샷과 비교한다.</li>
+</ul>
+</details>
+<p>설정한 요일이거나 지식 폴더의 매뉴얼 파일이 바뀐 날에 돈다. 지난 7일 동안 바뀐 SRS 가운데 매뉴얼에 들어가야 할 내용이 빠졌을 수 있는 것을 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> <code>vxvue-manual-completeness</code> 가 후보로 낸다. 결과는 항상 <code>보강 권장</code> 이하의 후보이며 확정 판정이 아니다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-007">
+<h3><span class="idtag">REQ-DAILY-007</span> AI 결과 형식 검증</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/schema.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>, <a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-007">REQ-DAILY-007</a>: <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> 결과 JSON 을 검증한다. 근거 위치가 없거나, 판정 값이 목록 밖이거나, 이슈 종료·TC 덮어쓰기를 담은 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span> 은 버린다. 결과 파일이 깨지면 한 번 다시 실행한다.</li>
+</ul>
+</details>
+<p><span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span>은 정해진 JSON 형식(<code>app/modules/daily_qa/schema.py</code>)으로 결과 파일을 쓴다. 코드가 그 파일을 검사하고, 다음 중 하나라도 해당하면 그 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span>을 버리고 이유를 남긴다.</p>
+<ul>
+<li>근거(<code>evidence</code>)가 하나도 없거나, 근거에 문서 위치(SRS ID, 시트·행, 절)가 없다.</li>
+<li>판정 값이 정해진 목록에 없다.</li>
+<li>이슈를 닫거나 기존 TC를 덮어쓰라는 조치를 담고 있다.</li>
+</ul>
+<p>결과 파일 자체가 없거나 JSON이 아니면 한 번 더 실행하고, 그래도 안 되면 그 작업을 <code>실패</code>로 남긴다. 모든 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span>은 <code>검토 대기</code> 상태로 저장된다.</p>
+<p class="why"><span class="why-label">이유</span> <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> §55는 근거 없는 판정 저장, 자동 Close, 기존 TC 덮어쓰기를 금지한다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-008">
+<h3><span class="idtag">REQ-DAILY-008</span> 요약 메일</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/report.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>: 실행이 끝나면 건수·상태·링크만 담은 요약 메일을 보낸다 (<code>app/core/notifier.py</code> 의 <code>send_report</code>).</li>
+</ul>
+</details>
+<p>실행이 끝나면 수신자(<code>DAILY_QA_EMAIL_TO</code>, 없으면 <code>NOTIFY_EMAIL_TO</code>)에게 요약 메일을 한 통 보낸다. 메일에는 단계별 상태, <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span>별 <span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span> 수, 판정별 건수, 답이 필요한 질문 수, 검토 화면 링크가 들어간다. 사양이나 이슈 본문은 메일에 넣지 않는다. 메일 발송이 실패해도 실행 결과는 그대로 저장된다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-009">
+<h3><span class="idtag">REQ-DAILY-009</span> 검토 대기열 화면</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/router.py</code>, <code>app/core/daily_qa_storage.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-005">TEST-DAILY-005</a>: <code>tests/test_daily_qa_router.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-009">REQ-DAILY-009</a>: <code>/daily-qa</code> 검토 화면(실행 목록, 대기열 필터, 승인·거절·근거 추가 필요, AI 질문 답변)을 추가했다. 답변은 다음 실행 입력에 들어간다. 한글 검토자 이름이 쿠키 저장에서 오류 나던 문제를 테스트로 잡아 URL 인코딩으로 고쳤다.</li>
+</ul>
+</details>
+<p><code>/daily-qa</code> 화면에서 다음을 할 수 있다.</p>
+<ol>
+<li>실행 목록과 실행별 단계 상태, 결과 파일을 본다.</li>
+<li><span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span> 목록을 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span>·판정·검토 상태로 걸러 본다.</li>
+<li><span class="term" title="AI가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다" tabindex="0">Finding</span>마다 <code>승인</code>, <code>거절</code>, <code>근거 추가 필요</code> 중 하나와 메모를 남긴다. 누가 언제 남겼는지 저장된다.</li>
+<li>AI가 남긴 질문에 답을 적는다. 답은 다음 실행의 입력에 들어간다.</li>
+</ol>
+<p>화면의 결정은 이 시스템 안에만 저장된다. Polarion이나 원본 TC 파일로 내보내지 않는다.</p>
+</section>
+<section class="card kind-req" id="REQ-DAILY-010">
+<h3><span class="idtag">REQ-DAILY-010</span> QA 규칙 판 확인</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/rules.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a>: 수집된 <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> 판이 <span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span> 기준(Rev1.17)과 다르면 AI 단계를 멈추고 메일 첫 줄에 알린다.</li>
+</ul>
+</details>
+<p><span class="term" title="Claude Code가 읽는 작업 설명서 폴더(SKILL.md). 이 저장소의 app/modules/daily_qa/skills/ 에 있다" tabindex="0">Skill</span>은 자기가 따르는 <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> 판(<code>SUPPORTED_RULES_REV</code>)을 갖는다. 수집된 <span class="term" title="[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md 와 지침 프롬프트" tabindex="0">QA 규칙</span> 파일 이름의 Rev가 이와 다르거나 규칙 파일이 없으면, AI 단계(B·C·F)는 돌지 않고 <code>규칙 판 불일치</code> 로 남는다. 결정적 단계(E)는 계속 돈다. 메일 첫 줄에 이 사실을 적는다.</p>
+</section>
+<section class="card kind-nfr" id="NFR-SEC-001">
+<h3><span class="idtag">NFR-SEC-001</span> AI 실행 격리</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · VXvue 일일 QA 점검 (`/daily-qa`, 서버 예약 실행)</span> <a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a>: Claude 는 저장소 밖 격리 <span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>에서 <code>--permission-mode dontAsk</code>, <code>--setting-sources project</code>, <code>--strict-mcp-config</code> 로 돈다. 읽기·검색·결과 폴더 쓰기만 허용하고, 입력은 마스킹 후 보관하며, 프로세스에는 Claude 토큰 외의 비밀값을 넘기지 않는다. 보안 통제 목록은 <code>docs/SECURITY_AI_AGENT.md</code>.</li>
+</ul>
+</details>
+<p>Claude는 아래 조건에서만 실행한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>항목</th><th>조건</th></tr></thead>
+<tbody>
+<tr><td><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span></td><td>저장소 밖(<code>daily_qa.workspace_dir</code>). 저장소 안이면 실행을 거부한다</td></tr>
+<tr><td>도구</td><td>읽기·검색·쓰기 도구만 허용한다. 명령 실행(Bash), 웹 조회, MCP는 금지한다</td></tr>
+<tr><td>설정</td><td><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 설정만 읽는다(<code>--setting-sources project</code>, <code>--strict-mcp-config</code>)</td></tr>
+<tr><td>입력</td><td><span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>에 쓰기 전에 마스킹(<code>app/core/security_filter.py</code>)을 거친다</td></tr>
+<tr><td>인증</td><td><code>CLAUDE_CODE_OAUTH_TOKEN</code> 을 비밀 설정에서 읽어 그 프로세스 환경에만 넘긴다</td></tr>
+<tr><td>외부 통신</td><td>원격 측정과 오류 보고를 끄는 환경변수를 넣는다</td></tr>
+<tr><td>기록</td><td>보낸 입력, 받은 결과, 실행 시간, 사용량을 실행 폴더에 남긴다</td></tr>
+</tbody>
+</table></div>
+<p class="why"><span class="why-label">이유</span> 사내 사양서와 이슈를 외부 AI로 보내므로, 무엇이 나갔는지 확인할 수 있어야 하고 AI가 서버의 다른 파일이나 네트워크에 손대지 못해야 한다.</p>
+</section>
+<section class="card kind-req" id="REQ-ISSUE-001">
+<h3><span class="idtag">REQ-ISSUE-001</span> 이슈 Export 폴더 읽기</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/parsers/polarion_issue.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a>: <code>tests/test_polarion_issue.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-28 · `projects/` 재배치·ALM-QA-Automation 통합 뒤의 경로와 동기화 시각 정리</span> <a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a>: QA Agent 가 이슈 Export 폴더의 실행 폴더 구조(<code>&lt;실행폴더&gt;/&lt;이슈ID&gt;/backup.json</code>)도 읽는다. 같은 이슈가 여러 실행에 있으면 가장 최근 실행의 것을 쓰고, <code>.staging-</code>·<code>.previous-</code> 폴더는 읽지 않는다. 실데이터에는 예전 구조 20건과 실행 폴더 21건이 있어, 이전 코드로는 최신 21건이 목록에서 빠졌다.</li>
+</ul>
+</details>
+<p>QA Agent 는 제품 설정의 이슈 Export 폴더(<code>issue_source.export_dir</code>)에서 이슈 목록과 이슈 본문(<code>backup.json</code>)을 읽는다. 폴더 안의 두 가지 구조를 모두 읽는다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>구조</th><th>모양</th><th>만든 곳</th></tr></thead>
+<tbody>
+<tr><td>예전 구조</td><td><code>&lt;이슈ID&gt;/backup.json</code></td><td>통합 전 <code>alm-issue-export</code></td></tr>
+<tr><td>실행 폴더 구조</td><td><code>&lt;실행폴더&gt;/&lt;이슈ID&gt;/backup.json</code></td><td>ALM-QA-Automation 의 issue-export 앱</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>같은 이슈가 여러 실행 폴더에 있으면 가장 최근 실행 폴더의 것을 쓴다. 실행 폴더 이름이 실행 시각으로 시작하므로 이름이 뒤에 오는 쪽이 최근이다.</li>
+<li>실행 폴더에도 예전 구조에도 있으면 실행 폴더 쪽을 쓴다.</li>
+<li>이름이 <code>.</code> 으로 시작하거나 <code>.staging-</code>·<code>.previous-</code> 가 들어간 폴더는 내보내는 중이거나 교체 전 보관본이므로 읽지 않는다.</li>
+<li>폴더가 없으면 오류 없이 빈 목록을 돌려준다.</li>
+</ul>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>2026-09-28 실데이터에서 예전 구조 20건과 실행 폴더 21건이 함께 있었다. 예전 구조만 읽으면 최신 21건이 목록에서 빠진다.</p>
+</aside>
+</section>
+</section>
+<section class="chapter" id="sec-9">
+<h2>9. 오류 처리 정책</h2>
+<p>누락 TC를 성공으로 숨기지 않고 missing_tc_ids로 반환한다. 공집합의 지표 처리는 구현의 명시적 분기와 함께 후속 테스트 범위에서 확인한다. 외부 AI 오류·전체 분석 파이프라인 오류 정책은 이번 범위 밖이다.</p>
+</section>
+<section class="chapter" id="sec-11">
+<h2>11. 테스트 사양</h2>
+<p>루트 핵심 앱의 순수 평가 함수만 검사한다. services 하위 서비스, 실제 API/기밀 E2E fixture/운영 DB를 호출하는 명령으로 확대하지 않는다.</p>
+<p>개발 의존성을 준비하고 프로젝트 루트에서 실행할 명령:</p>
+<pre><code class="language-text">python -m pytest tests/test_evaluation.py -q
+</code></pre>
+<p>이번 작업에서는 테스트 본문과 구현 연결을 확인했으며 명령을 실제 실행하지 않았다.</p>
+<section class="card kind-test" id="TEST-CORE-001">
+<h3><span class="idtag">TEST-CORE-001</span></h3>
+<p><a class="idref" href="#REQ-CORE-001">REQ-CORE-001</a>의 입력과 결과를 <code>tests/test_evaluation.py</code>의 <code>test_recommendation_metrics_counts_precision_and_recall</code> fixture/assertion으로 검증한다. 해당 assertion 실패는 검사 실패다.</p>
+</section>
+<section class="card kind-test" id="TEST-CORE-002">
+<h3><span class="idtag">TEST-CORE-002</span></h3>
+<p><a class="idref" href="#REQ-CORE-002">REQ-CORE-002</a>의 입력과 결과를 <code>tests/test_evaluation.py</code>의 <code>test_evaluate_analysis_lists_missing_and_unexpected_ids</code> fixture/assertion으로 검증한다. 해당 assertion 실패는 검사 실패다.</p>
+</section>
+<section class="card kind-test" id="TEST-CORE-003">
+<h3><span class="idtag">TEST-CORE-003</span></h3>
+<p><a class="idref" href="#REQ-CORE-003">REQ-CORE-003</a>의 입력과 결과를 <code>tests/test_evaluation.py</code>의 <code>test_aggregate_evaluations_uses_micro_average</code> fixture/assertion으로 검증한다. 해당 assertion 실패는 검사 실패다.</p>
+</section>
+<section class="card kind-test" id="TEST-DEPLOY-001">
+<h3><span class="idtag">TEST-DEPLOY-001</span></h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-22 · listen 포트를 `config.yaml` 단일 원본으로, 운영 포트 12000 → 24357</span> SPEC 에 <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> / <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a> 을 추가했다.</li>
+</ul>
+</details>
+<p><a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a>을 <code>tests/test_serve_bind.py</code>로 검증한다. 세 가지를 분리해서 본다.</p>
+<ul>
+<li>동작 검증: 임시 루트에 다른 포트를 적은 <code>config.yaml</code> 을 놓고 실제 <code>build_settings()</code> 를
+통과시켜 <code>app_bind()</code> 의 결과가 따라오는지 본다. 빈 값일 때만 기본값으로 떨어지는지,
+정수가 아닌 포트에서 실패하는지도 같은 방식으로 본다.</li>
+<li>텍스트 검사: 세 진입점이 <code>--port</code> 를 들고 있지 않고 <code>app.serve</code> 를 부르는지 본다. 이 검사는
+파일에 포트 지정이 없다는 것만 증명하며 서버가 어느 포트에 뜨는지는 증명하지 않는다.</li>
+<li>텍스트 대조: nginx upstream 포트가 <code>config.yaml</code> 의 <code>app.port</code> 와 같은지 본다.</li>
+</ul>
+<p><code>tests/test_monitor_health.py</code> 의 <code>test_default_base_url_comes_from_config_yaml</code> 은 운영 점검의
+기본 대상이 같은 원본에서 나오는지를 별도로 본다. 해당 assertion 실패는 검사 실패다.</p>
+<p>실행 명령:</p>
+<pre><code class="language-text">python -m pytest tests/test_serve_bind.py tests/test_monitor_health.py -q
+</code></pre>
+</section>
+<section class="card kind-test" id="TEST-DAILY-001">
+<h3><span class="idtag">TEST-DAILY-001</span></h3>
+<p><span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span> 전체 흐름을 <code>tests/test_daily_qa_pipeline.py</code> 로 검증한다. 가짜 Polarion 응답과 가짜 Claude 실행기(실제 CLI 대신 정해진 결과 파일을 쓰는 함수)를 넣어 실행 기록, 단계 상태, 잠금, 단계 하나가 실패해도 나머지가 도는지 본다.</p>
+</section>
+<section class="card kind-test" id="TEST-DAILY-002">
+<h3><span class="idtag">TEST-DAILY-002</span></h3>
+<p><code>tests/test_daily_qa_polarion.py</code> 로 수집 코드가 GET만 쓰는지, 스냅샷 비교가 신규·삭제·변경을 맞게 나누는지, 이슈를 마지막 성공 시각 이후로 거르는지 본다.</p>
+</section>
+<section class="card kind-test" id="TEST-DAILY-003">
+<h3><span class="idtag">TEST-DAILY-003</span></h3>
+<p><code>tests/test_daily_qa_packages.py</code> 로 TC 색인과 후보 선택(B), 삭제 SRS 참조 TC 탐지, 추적 공백 계산(E)을 본다.</p>
+</section>
+<section class="card kind-test" id="TEST-DAILY-004">
+<h3><span class="idtag">TEST-DAILY-004</span></h3>
+<p><code>tests/test_daily_qa_outputs.py</code> 로 결과 형식 검증(<a class="idref" href="#REQ-DAILY-007">REQ-DAILY-007</a>)과 초안 Excel 열 순서·Review 시트 분리(<a class="idref" href="#REQ-DAILY-004">REQ-DAILY-004</a>)를 본다.</p>
+</section>
+<section class="card kind-test" id="TEST-DAILY-005">
+<h3><span class="idtag">TEST-DAILY-005</span></h3>
+<p><code>tests/test_daily_qa_router.py</code> 로 검토 화면의 목록·필터·결정 저장·질문 답변을 본다.</p>
+</section>
+<section class="card kind-test" id="TEST-DAILY-006">
+<h3><span class="idtag">TEST-DAILY-006</span></h3>
+<p><code>tests/test_daily_qa_runner.py</code> 로 Claude 실행 명령의 도구 허용·금지 목록, 설정 출처 제한, <span class="term" title="Claude가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>가 저장소 안이면 거부하는지, 입력 마스킹, 비밀값이 로그에 남지 않는지, 규칙 판 불일치 시 AI 단계를 건너뛰는지, 메일 본문에 사양 본문이 없는지 본다.</p>
+<p>실행 명령:</p>
+<pre><code class="language-text">python -m pytest tests/test_daily_qa_pipeline.py tests/test_daily_qa_polarion.py tests/test_daily_qa_packages.py tests/test_daily_qa_outputs.py tests/test_daily_qa_router.py tests/test_daily_qa_runner.py -q
+</code></pre>
+</section>
+<section class="card kind-test" id="TEST-ISSUE-001">
+<h3><span class="idtag">TEST-ISSUE-001</span></h3>
+<p><a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a>을 <code>tests/test_polarion_issue.py</code> 로 검증한다.</p>
+<ul>
+<li>합성 폴더: 두 구조가 섞인 목록, 같은 이슈가 여러 실행에 있을 때 최근 실행 우선, <code>.staging-</code>·<code>.previous-</code> 폴더 제외.</li>
+<li>실데이터(이 PC에 Export 폴더가 있을 때만): 목록이 디스크의 <code>backup.json</code> 을 목록 코드와 다른 방법으로 센 값과 같은지 본다. &quot;목록이 비어 있지 않다&quot;만 확인하면 예전 구조만 읽어도 통과하기 때문이다.</li>
+</ul>
+<p>실행 명령:</p>
+<pre><code class="language-text">python -m pytest tests/test_polarion_issue.py -q
+</code></pre>
+</section>
+</section>
+<section class="chapter" id="sec-12">
+<h2>12. 요구사항 추적성</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Requirement</th><th>Implementation</th><th>Test</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td><a class="idref" href="#REQ-CORE-001">REQ-CORE-001</a></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-001">TEST-CORE-001</a>: <code>tests/test_evaluation.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-CORE-002">REQ-CORE-002</a></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-002">TEST-CORE-002</a>: <code>tests/test_evaluation.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-CORE-003">REQ-CORE-003</a></td><td><code>app/core/evaluation.py</code></td><td><a class="idref" href="#TEST-CORE-003">TEST-CORE-003</a>: <code>tests/test_evaluation.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a></td><td><code>app/core/config.py</code>, <code>app/serve.py</code></td><td><a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></td><td><span class="badge st-verified">verified</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a></td><td><code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code>, <code>scripts/run_daily_qa.py</code></td><td><a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-002">REQ-DAILY-002</a></td><td><code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code></td><td><a class="idref" href="#TEST-DAILY-002">TEST-DAILY-002</a>: <code>tests/test_daily_qa_polarion.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-003">REQ-DAILY-003</a></td><td><code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-spec-change-impact/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-004">REQ-DAILY-004</a></td><td><code>app/modules/daily_qa/checklist_xlsx.py</code>, <code>app/modules/daily_qa/skills/vxvue-issue-verification/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-005">REQ-DAILY-005</a></td><td><code>app/modules/daily_qa/packages.py</code></td><td><a class="idref" href="#TEST-DAILY-003">TEST-DAILY-003</a>: <code>tests/test_daily_qa_packages.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-006">REQ-DAILY-006</a></td><td><code>app/modules/daily_qa/packages.py</code>, <code>app/modules/daily_qa/skills/vxvue-manual-completeness/SKILL.md</code></td><td><a class="idref" href="#TEST-DAILY-001">TEST-DAILY-001</a>: <code>tests/test_daily_qa_pipeline.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-007">REQ-DAILY-007</a></td><td><code>app/modules/daily_qa/schema.py</code></td><td><a class="idref" href="#TEST-DAILY-004">TEST-DAILY-004</a>: <code>tests/test_daily_qa_outputs.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a></td><td><code>app/modules/daily_qa/report.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-009">REQ-DAILY-009</a></td><td><code>app/modules/daily_qa/router.py</code>, <code>app/core/daily_qa_storage.py</code></td><td><a class="idref" href="#TEST-DAILY-005">TEST-DAILY-005</a>: <code>tests/test_daily_qa_router.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a></td><td><code>app/modules/daily_qa/rules.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a></td><td><code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/daily_qa/workspace.py</code></td><td><a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>: <code>tests/test_daily_qa_runner.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td><a class="idref" href="#REQ-ISSUE-001">REQ-ISSUE-001</a></td><td><code>app/parsers/polarion_issue.py</code></td><td><a class="idref" href="#TEST-ISSUE-001">TEST-ISSUE-001</a>: <code>tests/test_polarion_issue.py</code></td><td><span class="badge st-implemented">implemented</span></td></tr>
+</tbody>
+</table></div>
+<p>implemented는 구현·테스트 소스 연결을 확인했다는 뜻이며 실제 실행 통과를 의미하지 않는다. DAILY·SEC 항목은 2026-09-28 에 테스트를 실제로 실행해 통과했지만, 이 저장소에는 테스트를 돌리는 게이트(<code>botyard.json</code> 의 <code>verify</code>)가 없어 implemented 로 둔다. verified는 테스트를 실제로 실행해 통과했고, 고의 파손으로 실패하는 것까지 확인했으며, 대표 실행 경로(<code>python -m app.serve</code> 로 기동 후 <code>/health</code> 조회)를 실제로 돌렸다는 뜻이다.</p>
+</section>
+<section class="chapter" id="sec-13">
+<h2>13. 미확정 사항</h2>
+<ul>
+<li><p>(TBD) 새 이슈 조회식 <code>daily_qa.polarion.issue_query</code> 의 기본값은 <code>verified</code> 상태 또는 연구소 검토 결과 <code>lab_fixed</code> 인 이슈다. 실제 운영에서 쓰는 조회식은 확인 필요.</p></li>
+<li><p>(TBD) TC의 옛 Legacy SRS 번호와 현재 <code>oldId</code> 를 잇는 대응표가 있는지 확인 필요. 대응표가 있으면 B의 후보 선택과 E의 <code>TC 없음</code> 정확도가 올라간다.</p></li>
+<li><p>(TBD) Codex로 결과를 한 번 더 확인하는 교차 검증(G7)은 이후 고도화 범위다.</p></li>
+<li><p>분석·매뉴얼 검토·저장·웹 UI·독립 하위 서비스의 전체 사양 추적성과 실제 운영 검증은 확인 필요다.</p></li>
+<li><p>미확정 범위 검토 전에는 전체 프로젝트 readiness 완료로 보고하지 않는다.</p></li>
+<li><p><a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> 은 2026-09-22 에 운영 서버(10.13.0.222)에 실제로 반영했다. 방화벽·nginx·systemd 는 저장소 밖의 조치이므로 사양의 검증 범위에 들어가지 않는다 — 수행 절차와 검증 결과는 <code>CHANGELOG.md</code> 와 <code>progress.md</code> 에 있다. nginx upstream 포트는 <code>config.yaml</code> 을 자동으로 따라가지 못하므로 배포마다 사람이 맞춰야 하고, 어긋남은 <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a> 이 잡는다.</p></li>
+</ul>
+</section>
+</main>
+</div>
+<footer>이 페이지는 <code>SPEC.md</code>에서 생성된 사본입니다. 직접 고치지 말고 <code>SPEC.md</code>를 고친 뒤 <code>node .project-check/render-spec-html.js .</code>를 실행하세요.</footer>
+<script>(function(){var f=document.getElementById('toc-filter');if(!f)return;f.addEventListener('input',function(){var q=f.value.trim().toLowerCase();
+document.querySelectorAll('.toc li').forEach(function(li){li.classList.toggle('hidden',q!==''&&li.textContent.toLowerCase().indexOf(q)<0);});});})();
+function activeIndex(tops, offset, atBottom) {
+  if (atBottom && tops.length) return tops.length - 1;
+  var found = -1;
+  for (var i = 0; i < tops.length; i++) if (tops[i] <= offset) found = i;
+  return found;
+}
+(function(){var toc=document.querySelector('.toc');if(!toc)return;
+var links=[].slice.call(toc.querySelectorAll('a[href^="#"]'));
+var targets=links.map(function(a){return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));});
+var current=-2;
+function chapterOf(i){for(var j=i;j>=0;j--)if(links[j].parentNode.classList.contains('toc-2'))return j;return -1;}
+// requestAnimationFrame에 기대지 않는다 — 숨은 탭에서는 실행되지 않아 표시가 멈춘다. 링크 수십 개의 위치만 읽으므로 스크롤마다 계산해도 가볍다.
+function update(){
+var tops=targets.map(function(t){return t?t.getBoundingClientRect().top:Infinity;});
+var doc=document.documentElement,bottom=window.innerHeight+window.pageYOffset>=doc.scrollHeight-2;
+var i=activeIndex(tops,96,bottom);if(i===current)return;current=i;
+links.forEach(function(a){a.classList.remove('active');a.classList.remove('in-chapter');a.removeAttribute('aria-current');});
+if(i<0)return;var a=links[i];a.classList.add('active');a.setAttribute('aria-current','location');
+var c=chapterOf(i);if(c>=0&&c!==i)links[c].classList.add('in-chapter');
+if(toc.scrollHeight>toc.clientHeight){var r=a.getBoundingClientRect(),t=toc.getBoundingClientRect();
+if(r.top<t.top+40||r.bottom>t.bottom-8)toc.scrollTop+=r.top-t.top-toc.clientHeight/3;}}
+window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);window.addEventListener('hashchange',update);update();})();</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{% extends "daily_qa_base.html" %}
+{% block content %}
+<section>
+  <h2>검토 현황</h2>
+  <p>
+    검토 대기 <a href="/daily-qa/queue?status=PENDING"><b>{{ counts.get('PENDING', 0) }}</b>건</a> ·
+    근거 추가 필요 <a href="/daily-qa/queue?status=NEED_EVIDENCE"><b>{{ counts.get('NEED_EVIDENCE', 0) }}</b>건</a> ·
+    승인 {{ counts.get('APPROVED', 0) }}건 · 거절 {{ counts.get('REJECTED', 0) }}건 ·
+    답이 필요한 질문 <a href="/daily-qa/questions"><b>{{ open_questions }}</b>건</a>
+  </p>
+</section>
+<section>
+  <h2>실행 목록</h2>
+  <div class="table-wrap">
+    <table class="history">
+      <thead><tr><th>실행 ID</th><th>결과</th><th>Finding</th><th>질문</th><th>메일</th><th>시작</th></tr></thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a href="/daily-qa/runs/{{ run.id }}">{{ run.id }}</a>{% if run.dry_run %} <span class="pill">dry-run</span>{% endif %}</td>
+          <td><span class="badge {{ run.status }}">{{ run.status_label }}</span></td>
+          <td>{{ run.summary.get('findings', 0) }}</td>
+          <td>{{ run.summary.get('questions', 0) }}</td>
+          <td>{{ run.email_status or '—' }}</td>
+          <td>{{ run.started_at[:16] }}</td>
+        </tr>
+        {% endfor %}
+        {% if not runs %}<tr><td colspan="6" class="hint">아직 실행 기록이 없습니다. <a href="/daily-qa/guide">사용법</a>을 참고해 서버 예약 실행을 설정하세요.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

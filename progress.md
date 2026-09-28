@@ -1,5 +1,23 @@
 # 진행 상태
 
+## 2026-09-28 재배치 뒤 경로·동기화 시각 정리 (REQ-ISSUE-001)
+
+- 완료: `vxvue.yaml` 경로 3개 교체, 사양서 동기화 평일 09:40 (설정과 작업 스케줄러 둘 다, XML 백업 있음), QA Agent 이슈 Export 실행 폴더 구조 대응, 옛 프로젝트 이름 정리.
+- 검증 완료: 새 경로에서 사양서 dry-run 6건 감지, 이슈 목록 41건(이전 코드 20건), 새 테스트 4개의 이전 코드 실패 확인.
+- 남은 일: 이 PC 에는 지식 폴더를 서버로 올리는 예약 작업이 없다. 서버의 QA 규칙을 Rev1.17 로 올리려면 `scripts/sync_product_knowledge.py --upload-to <서버>` 를 사람이 실행하거나 예약 작업을 새로 등록해야 한다 (등록 여부는 사용자 결정).
+
+## 2026-09-28 VXvue 일일 QA 점검 (REQ-DAILY-001~010, NFR-SEC-001)
+
+- 완료: `app/modules/daily_qa/` 모듈(수집·색인·격리 실행·검증·메일·검토 화면), Skill 5개, CLI, 앱 내장 예약(평일 07:30, 분리 프로세스), SPEC·문서.
+- 검증 완료: 전체 `pytest` 685 passed, 보안 검사 변이 5건 실패 확인, 실제 Claude CLI 로 B 작업 1건 end-to-end, 로컬 dry-run(E 실데이터), 검토 화면 승인 흐름.
+- 미완료 (서버에서 사람이 할 일, `docs/modules/daily-qa.md` "서버 설치"):
+  1. 서버에 Claude CLI 설치, 회사 Team 계정으로 `claude setup-token` 발급 → `secrets.txt`.
+  2. 읽기 전용 Polarion PAT·주소, 메일 수신자, `daily_qa.review_base_url` 설정.
+  3. 담당자 PC 지식 폴더 동기화로 QA 규칙 Rev1.17 을 서버에 올리기 (현재 서버 수집본 판 미확인, 개발 PC 수집본은 Rev1.12).
+  4. `--check` → `--dry-run` → 정식 1회 → 앱 재시작(내장 예약 등록 확인).
+  5. 정보보안팀 검토 (`docs/SECURITY_AI_AGENT.md` 1·14~16번).
+- 결정 필요 (SPEC §13): 새 이슈 조회식, TC Legacy 번호 대응표 존재 여부. Codex 교차 검증은 이후 고도화.
+
 ## 2026-09-22 listen 포트 단일 원본화 (REQ-DEPLOY-001)
 
 - 완료: `app/serve.py` 신규, `app_bind()`/`app_self_url()` 도입, 진입점 3곳·운영 스크립트 3곳의

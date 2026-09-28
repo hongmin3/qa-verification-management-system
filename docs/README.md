@@ -15,7 +15,7 @@
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [QA Agent](modules/qa-agent.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [일일 QA 점검](modules/daily-qa.md) · [QA Agent](modules/qa-agent.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
@@ -29,6 +29,8 @@
 | **추천 정확도 측정** | [정확도 평가](EVALUATION.md) |
 | **사양서 자동 동기화 설정** | [자동화 아키텍처](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
+| **일일 QA 점검을 서버에 설치·운영하기** | [일일 QA 점검](modules/daily-qa.md) |
+| **AI 점검의 보안 통제를 설명하기** | [AI 점검 보안 통제](SECURITY_AI_AGENT.md) |
 
 ## 사용법은 앱 안에 있다
 
@@ -38,6 +40,7 @@
 | 주소 | 내용 |
 |---|---|
 | `/` | 허브 — 기능 선택 |
+| `/daily-qa/guide` | 일일 QA 점검 사용법 (검토 대기열, 승인·거절) |
 | `/qa-agent/guide` | QA Agent 사용법 (Issue 검증 범위) |
 | `/impact-analyzer/guide` | Regression 영향 분석 사용법 |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
@@ -77,6 +80,8 @@
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | precision·recall·F1 기반 추천 정확도 평가 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서 자동 동기화, 보고서 구조 |
+| [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | 일일 QA 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
+| [modules/daily-qa.md](modules/daily-qa.md) | 일일 QA 점검 구조, Skill, 서버 설치, 운영 |
 | [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |
 | [QA_AGENT_ARCHITECTURE.md](QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit 설계 |
 | [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 파일명 규약, 리비전 판별, 코드 변경 없이 편입 |

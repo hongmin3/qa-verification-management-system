@@ -103,7 +103,7 @@
    `/qa-agent/rules` 또는 `python scripts/rule_capability_report.py --status NOT_PLANNED`.
 7. **사양 Chunk에 SRS 메타데이터가 없다.** SRS ID·Status·Parent/Child·Linked SRS를 뽑지
    않고 본문 exact 검색으로 찾는다. Polarion REST API로 SRS 워크아이템을 수집하면 채울 수
-   있다(`alm-issue-export`가 이미 그 접근을 갖고 있다).
+   있다(ALM-QA-Automation 의 srs-spec 앱이 이미 그 접근을 갖고 있다).
 8. **Semantic Search 미구현.** exact+BM25의 Recall을 먼저 측정해야 하고, 외부 Embedding은
    이 프로젝트의 전제(원문 미전송)와 충돌한다. 로컬 임베딩이 준비되면 `Retriever` Protocol
    구현체만 추가하면 된다.

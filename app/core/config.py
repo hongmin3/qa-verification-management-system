@@ -33,6 +33,11 @@ class Secrets(BaseModel):
     notify_email_to: str = DEFAULTS["notify_email_to"]
     smtp_user: str = DEFAULTS["smtp_user"]
     smtp_password: str = DEFAULTS["smtp_password"]
+    # 일일 QA 점검 (app/modules/daily_qa). 비어 있으면 해당 단계가 건너뜀으로 남는다.
+    polarion_host: str = DEFAULTS["polarion_host"]
+    polarion_token: str = DEFAULTS["polarion_token"]
+    claude_code_oauth_token: str = DEFAULTS["claude_code_oauth_token"]
+    daily_qa_email_to: str = DEFAULTS["daily_qa_email_to"]
 
 
 class Settings(BaseModel):

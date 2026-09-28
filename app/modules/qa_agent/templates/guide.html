@@ -26,7 +26,7 @@
   <p class="hint">규칙 문서가 없으면 분석하지 않습니다. 규칙 없이 낸 판정은 담당자마다 달라지고 근거를 되짚을 수 없기 때문입니다.</p>
 
   <h3>2. Issue 넣기 — 두 가지 방법</h3>
-  <p><b>① Export 폴더에서 고르기.</b> 이 PC에 <code>alm-issue-export</code> 프로젝트의 <code>polarion_backup/</code> 폴더가 있으면 Issue ID 목록이 자동으로 채워집니다. 목록에서 고르면 됩니다.</p>
+  <p><b>① Export 폴더에서 고르기.</b> 이 PC에 ALM-QA-Automation 의 issue-export 앱 <code>polarion_backup/</code> 폴더가 있으면 Issue ID 목록이 자동으로 채워집니다. 실행마다 생기는 하위 폴더까지 찾고, 같은 Issue 가 여러 번 수집됐으면 가장 최근 것을 씁니다. 목록에서 고르면 됩니다.</p>
   <p><b>② JSON 첨부.</b> 서버처럼 그 폴더가 없는 환경에서는 <code>&lt;ISSUE-ID&gt;/backup.json</code> 파일을 직접 첨부합니다.</p>
   <p class="hint">Issue 본문이 <code>[Precondition]</code> / <code>[Step]</code> / <code>[Expected Result]</code> / <code>[Actual Result]</code> 형식으로 작성돼 있으면 구획이 자동 분리됩니다. 형식을 안 지킨 Issue도 분석되지만, 어느 구획이 없는지 결과에 표시됩니다.</p>
 

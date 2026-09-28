@@ -9,6 +9,7 @@ from app.core.scheduler import start_scheduler, stop_scheduler
 from app.core.storage import Storage
 from app.modules.impact_analyzer.scheduled_jobs import register_scheduled_jobs
 from app.modules.qa_agent.scheduled_jobs import register_scheduled_jobs as register_knowledge_jobs
+from app.modules.daily_qa.scheduled_jobs import register_scheduled_jobs as register_daily_qa_jobs
 from app.modules.impact_analyzer.router import resume_queued_jobs as resume_queued_impact_jobs
 from app.modules.manual_review.router import resume_queued_jobs as resume_queued_manual_jobs
 from app.modules.qa_agent.router import resume_queued_jobs as resume_queued_qa_agent_jobs
@@ -24,7 +25,7 @@ async def lifespan(_: FastAPI):
     resume_queued_impact_jobs()
     resume_queued_manual_jobs()
     resume_queued_qa_agent_jobs()
-    start_scheduler([register_scheduled_jobs, register_knowledge_jobs])
+    start_scheduler([register_scheduled_jobs, register_knowledge_jobs, register_daily_qa_jobs])
     yield
     stop_scheduler()
 

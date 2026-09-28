@@ -216,6 +216,35 @@ def notify(kind: str, detail: str, context: dict | None = None, storage: Storage
         return result
 
 
+def send_report(subject: str, text_body: str, html_body: str = "", recipients: tuple[str, ...] = ()) -> dict:
+    """정기 보고 메일 (일일 QA 점검 요약 등). 쿨다운 없이 한 통 보낸다. **예외를 올리지 않는다.**
+
+    수신자를 넘기지 않으면 `NOTIFY_EMAIL_TO` 로 보낸다. 반환값: `sent` / `not_configured` / `failed`.
+    """
+    result: dict = {"status": "not_configured"}
+    try:
+        config = load_email_settings()
+        targets = tuple(recipients) or config.recipients
+        if not (config.enabled and config.host and config.sender and targets):
+            return result
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = config.sender
+        message["To"] = ", ".join(targets)
+        message["Date"] = formatdate(localtime=True)
+        message.set_content(text_body)
+        if html_body:
+            message.add_alternative(html_body, subtype="html")
+        _send(config, message)
+        result = {"status": "sent", "recipients": len(targets)}
+        logger.info("report_sent recipients=%d", len(targets))
+        return result
+    except Exception as exc:
+        result = {"status": "failed", "error": type(exc).__name__}
+        logger.warning("report_failed error_type=%s", type(exc).__name__)
+        return result
+
+
 def notify_for_error(message: str, context: dict | None = None, storage: Storage | None = None) -> dict | None:
     """오류 메시지가 알림 대상이면 보낸다. 대상이 아니면 아무것도 하지 않는다."""
     kind = classify_error(message)

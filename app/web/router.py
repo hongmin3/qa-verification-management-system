@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.modules.cost_dashboard.router import router as cost_dashboard_router
+from app.modules.daily_qa.router import router as daily_qa_router
 from app.modules.impact_analyzer.router import router as impact_analyzer_router
 from app.modules.knowledge.router import router as knowledge_router
 from app.modules.manual_review.router import router as manual_review_router
@@ -112,4 +113,5 @@ def build_router() -> APIRouter:
     api.include_router(manual_review_router, prefix="/manual-review")
     api.include_router(qa_agent_router, prefix="/qa-agent")
     api.include_router(cost_dashboard_router)
+    api.include_router(daily_qa_router, prefix="/daily-qa")
     return api

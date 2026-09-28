@@ -69,8 +69,8 @@ class KnowledgeSourceConfig(BaseModel):
 class IssueSourceConfig(BaseModel):
     """Polarion Issue Export 산출물이 쌓이는 폴더.
 
-    별도 프로젝트(`alm-issue-export`)가 Polarion REST API로 수집해 `<ISSUE-ID>/backup.json`과
-    `report.html`을 만든다. 이 프로젝트는 그 결과물만 읽고 크롤러 코드·설정은 건드리지 않는다.
+    별도 프로젝트 ALM-QA-Automation 의 issue-export 앱(통합 전 `alm-issue-export`)이 Polarion REST API로
+    수집해 `<실행폴더>/<ISSUE-ID>/backup.json`과 `report.html`을 만든다 (예전 구조는 `<ISSUE-ID>/` 바로 아래). 이 프로젝트는 그 결과물만 읽고 크롤러 코드·설정은 건드리지 않는다.
     """
 
     source: str = "manual"

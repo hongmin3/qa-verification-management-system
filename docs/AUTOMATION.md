@@ -43,10 +43,11 @@ scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundSche
 
 ## 3. VXvue 사양서 자동 동기화 구조
 
-VXvue 최신 사양서는 별도 프로젝트
-(`C:\Users\2024980\Documents\자동화\vxvue-srs-spec-automation`)가 **Polarion ALM REST API**로
-이미 매주 자동 수집하고 있었다. 이 프로젝트를 재구현하지 않고 그 결과물(`output/<날짜>/pdf/`)만
-읽는다.
+VXvue 최신 사양서는 별도 프로젝트 ALM-QA-Automation 의 srs-spec 앱
+(`C:\Users\2024980\Documents\자동화\projects\ALM-QA-Automation\apps\srs-spec`, 통합 전 이름
+`vxvue-srs-spec-automation`)이 **Polarion ALM REST API**로 평일 09:00 에 자동 수집한다
+(작업 스케줄러 `ALM_QA_Automation_Daily`). 이 프로젝트를 재구현하지 않고 그 결과물
+(`output/<날짜>/pdf/`)만 읽는다.
 
 ```text
 app/modules/impact_analyzer/vxvue_spec_sync.py   ← 실제 로직 (run, is_available_on_this_host, report_sync_log)
@@ -103,11 +104,11 @@ data/specifications/<uuid>.pdf                       Knowledge 등록용 실제 
   output 폴더에 접근할 수 없으므로 이 스케줄러는 실질적으로 트리거되어도 조용히 건너뛴다
   (`is_available_on_this_host()`가 False) — **실제 자동 실행은 아래 Windows 작업 스케줄러**가
   전담한다.
-- 트리거 시각은 `config/products/vxvue.yaml`의 `sync.day_of_week`(`mon`)/`sync.schedule_time`
-  (`07:30`, `Asia/Seoul` 기준 — 서버 시스템 타임존이 `America/New_York`이라 명시했다). 매일이
-  아니라 **매주 월요일**로 바꾼 이유는 ALM 크롤러 자체가 매주 월요일에만 새 사양서를 수집하기
-  때문이며(그 외 요일엔 어차피 변경분이 없음), 07:30은 같은 PC의 크롤러 작업(07:00)이 끝날
-  시간을 30분 확보하기 위함이다.
+- 트리거 시각은 `config/products/vxvue.yaml`의 `sync.day_of_week`(`mon-fri`)/`sync.schedule_time`
+  (`09:40`, `Asia/Seoul` 기준 — 서버 시스템 타임존이 `America/New_York`이라 명시했다).
+- 2026-09-28 에 ALM 수집이 주 1회(월 07:00)에서 평일 통합 수집(09:00)으로 바뀌어, 그 40분 뒤
+  평일마다 돌도록 옮겼다. 옛 시각(월 07:30)을 그대로 두면 월요일에 지난주 사양서를 올리게 된다.
+  사양서가 바뀌지 않은 날은 다시 올리지 않고 미변경 건수만 기록하므로 매일 돌아도 부담이 없다.
 - **Windows 작업 스케줄러에 실제 등록 완료**(`Register-ScheduledTask`로 생성, 예시 아님):
 
 ```powershell
@@ -118,8 +119,8 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
   | 설정 | 값 |
   |---|---|
-  | 트리거 | Weekly, Monday 07:30 (KST) — 기존 `VXvue_SRS_Spec_Automation`(월 07:00)보다 정확히 30분 뒤 |
-  | 실행 파일 | `...\qa-verification-management-system\.venv\Scripts\python.exe` (2026-09-01 폴더 rename 후 `Set-ScheduledTask`로 Action 경로 갱신 필요 — `HANDOFF.md` 참고) |
+  | 트리거 | Weekly, 월~금 09:40 (KST) — ALM 통합 수집 `ALM_QA_Automation_Daily`(평일 09:00)보다 40분 뒤. 2026-09-28 에 월 07:30 에서 바꿨고, 바꾸기 전 설정 XML 은 이 PC 의 `backups/`(Git 제외)에 있다 |
+  | 실행 파일 | `...\자동화\projects\qa-verification-management-system\.venv\Scripts\python.exe` (2026-09-28 `projects/` 재배치 때 Action 경로를 갱신했다) |
   | 인자 | `scripts\sync_vxvue_spec.py` (기본 `--target-url`이 운영 서버라 생략) |
   | LogonType | `S4U` — 비밀번호를 저장하지 않고 로그인하지 않은 상태에서도 실행 (기존 ALM 크롤러 작업과 동일 패턴) |
   | StartWhenAvailable | `True` — PC가 꺼져 있거나 화면이 잠겨 있어도, 켜지는 즉시(또는 잠금 여부와 무관하게 S4U로) 가능한 가장 빠른 시점에 실행 |
@@ -137,7 +138,7 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
   직접 실행한다. 수동 트리거용 백엔드 엔드포인트(`POST /knowledge/sync/specification`)
   자체는 남겨뒀다(스크립트나 다른 자동화가 재사용할 수 있도록).
 - CLI: `\.venv\Scripts\python.exe scripts\sync_vxvue_spec.py --target-url http://10.13.0.222:24357`
-  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 매주 월요일 07:30에는 위 작업
+  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 평일 09:40에는 위 작업
   스케줄러가 인자 없이 이 스크립트를 자동 실행한다(기본 대상이 운영 서버이므로 `--target-url`
   생략).
 - 같은 문서의 이전 리비전(파일명에서 `(YYMMDD)` 날짜 부분만 다른 동일 문서, 예:

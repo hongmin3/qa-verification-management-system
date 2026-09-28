@@ -1,7 +1,8 @@
 """Polarion Issue Export 를 정규화한다 (로드맵 Layer 2 — Source 구조화).
 
-입력은 별도 프로젝트(`alm-issue-export`)가 Polarion REST API 로 만든
-`<ISSUE-ID>/backup.json` 이다. 그 프로젝트의 코드·설정은 읽지 않고 산출물만 읽는다
+입력은 별도 프로젝트 ALM-QA-Automation 의 issue-export 앱(통합 전 이름 `alm-issue-export`)이
+Polarion REST API 로 만든 `backup.json` 이다. 통합 후에는 `<실행폴더>/<ISSUE-ID>/backup.json`,
+예전에는 `<ISSUE-ID>/backup.json` 에 있다. 그 프로젝트의 코드·설정은 읽지 않고 산출물만 읽는다
 (`vxvue_spec_sync` 가 ALM 크롤러 output 만 읽는 것과 같은 방식).
 
 **이 파서가 LLM 을 부르지 않는 이유.** 실제 Issue 는 다음 두 가지 덕에 결정적으로 구조화된다.
@@ -404,16 +405,48 @@ def load_issue(path: Path) -> IssueRecord:
     return parse_issue_backup(payload, source_path=str(path))
 
 
+def _run_folders(export_dir: Path) -> list[Path]:
+    """실행별 하위 폴더 (최근 것부터). 폴더 이름이 실행 시각으로 시작하므로 이름 역순이 최신순이다.
+
+    `.staging-` / `.previous-` 처럼 export 도중이거나 교체 전 보관본은 제외한다.
+    """
+    folders = [
+        child for child in export_dir.iterdir()
+        if child.is_dir() and not child.name.startswith(".")
+        and ".staging-" not in child.name and ".previous-" not in child.name
+        and not (child / "backup.json").is_file()
+    ]
+    return sorted(folders, key=lambda folder: folder.name, reverse=True)
+
+
+def _backup_path(export_dir: Path, issue_id: str) -> Path | None:
+    """Issue 하나의 backup.json. 여러 실행에 있으면 가장 최근 실행의 것을 쓴다."""
+    for folder in _run_folders(export_dir):
+        candidate = folder / issue_id / "backup.json"
+        if candidate.is_file():
+            return candidate
+    flat = export_dir / issue_id / "backup.json"
+    return flat if flat.is_file() else None
+
+
 def list_exported_issues(export_dir: Path) -> list[str]:
-    """Export 폴더에 있는 Issue ID 목록. 폴더가 없으면 빈 목록 (오류 아님)."""
+    """Export 폴더에 있는 Issue ID 목록. 폴더가 없으면 빈 목록 (오류 아님).
+
+    `<ISSUE-ID>/backup.json`(예전 구조)과 `<실행폴더>/<ISSUE-ID>/backup.json`(통합 후 구조)을 모두 본다.
+    """
     if not export_dir.is_dir():
         return []
-    return sorted(child.name for child in export_dir.iterdir() if child.is_dir() and (child / "backup.json").is_file())
+    found = {child.name for child in export_dir.iterdir() if child.is_dir() and (child / "backup.json").is_file()}
+    for folder in _run_folders(export_dir):
+        found.update(child.name for child in folder.iterdir() if child.is_dir() and (child / "backup.json").is_file())
+    return sorted(found)
 
 
 def load_exported_issue(export_dir: Path, issue_id: str) -> IssueRecord | None:
-    path = export_dir / issue_id / "backup.json"
-    return load_issue(path) if path.is_file() else None
+    if not export_dir.is_dir():
+        return None
+    path = _backup_path(export_dir, issue_id)
+    return load_issue(path) if path else None
 
 
 def normalize_version_label(version_id: str) -> str:

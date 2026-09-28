@@ -156,3 +156,41 @@ notifications:
     # 같은 문제로 이 시간 안에는 다시 보내지 않는다. 크레딧이 소진되면 실행마다 같은
     # 오류가 나므로 쿨다운이 없으면 메일이 폭주한다.
     cooldown_minutes: 180
+
+# VXvue 일일 QA 점검 (app/modules/daily_qa, SPEC REQ-DAILY-*). 앱 내장 스케줄러가 아래 시각에
+# scripts/run_daily_qa.py 를 분리된 별도 프로세스로 띄운다 (점검 자체는 웹 프로세스 밖에서 돈다).
+# Polarion·Claude 자격증명이 없는 호스트(개발 PC)에서는 시각에 깨어나도 건너뛴다.
+# 비밀값(POLARION_HOST, POLARION_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, DAILY_QA_EMAIL_TO)은 secrets.txt 에 둔다.
+daily_qa:
+  enabled: true
+  product: "VXvue"
+  schedule:
+    day_of_week: "mon-fri"
+    time: "07:30"
+  # Claude 가 읽고 쓰는 격리 폴더. **반드시 저장소 밖**이어야 한다 (NFR-SEC-001).
+  # 저장소 안이면 저장소의 개발용 CLAUDE.md/AGENTS.md 가 함께 읽혀 실행이 거부된다.
+  # 빈 값이면 사용자 홈의 ~/.qa-daily-workspace 를 쓴다.
+  workspace_dir: ""
+  # Claude CLI 실행 파일. PATH 에 있으면 이름만 둔다.
+  claude_command: "claude"
+  # 작업 하나(입력 묶음 하나)당 제한 시간(초). 넘으면 그 작업만 실패로 남는다.
+  task_timeout_seconds: 900
+  # 한 실행에서 AI 에 보낼 작업 묶음 수 상한 (비용·시간 보호).
+  max_tasks_per_run: 30
+  # 묶음 하나에 넣을 항목 수 (SRS 변경 / 이슈).
+  batch_size: 5
+  # B 에서 SRS 하나당 AI 에 보낼 TC 후보 상한.
+  tc_candidate_limit: 15
+  # 추적 공백(E)·매뉴얼 누락(F)을 도는 요일 (mon~sun).
+  weekly_day: "mon"
+  polarion:
+    project_id: "VXvue"
+    srs_query: "type:srs"
+    # 새 이슈의 기준. 마지막 성공 실행 이후 updated 된 것만 새 이슈로 본다.
+    issue_query: "type:issue AND (status:verified OR rndReviewResult.KEY:lab_fixed)"
+    verify_ssl: true
+    timeout_seconds: 90
+    page_size: 100
+    request_interval_seconds: 0.15
+  # 메일에 넣을 검토 화면 주소의 앞부분 (예: http://서버주소). 비우면 경로(/daily-qa)만 적는다.
+  review_base_url: ""

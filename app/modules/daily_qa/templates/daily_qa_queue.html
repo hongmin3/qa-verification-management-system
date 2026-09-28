@@ -1,0 +1,15 @@
+{% extends "daily_qa_base.html" %}
+{% block content %}
+<section>
+  <h2>검토 대기열</h2>
+  <form method="get" class="inline-form">
+    <label>Skill <select name="skill"><option value="">전체</option>{% for key, label in skill_labels.items() %}<option value="{{ key }}" {% if filters.skill == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <label>판정 <select name="verdict"><option value="">전체</option>{% for value in verdict_options %}<option value="{{ value }}" {% if filters.verdict == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+    <label>검토 상태 <select name="status"><option value="">전체</option>{% for key, label in review_statuses.items() %}<option value="{{ key }}" {% if filters.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    {% if filters.run_id %}<input type="hidden" name="run_id" value="{{ filters.run_id }}">{% endif %}
+    <button type="submit">보기</button>
+  </form>
+  <p class="hint">{{ findings|length }}건 (최대 300건 표시){% if filters.run_id %} · 실행 {{ filters.run_id }}{% endif %}</p>
+  {% include "_finding_rows.html" %}
+</section>
+{% endblock %}

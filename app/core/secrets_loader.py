@@ -36,6 +36,12 @@ DEFAULTS: dict[str, str] = {
     "notify_email_to": "",
     "smtp_user": "",
     "smtp_password": "",
+    # 일일 QA 점검 (app/modules/daily_qa). 비어 있으면 해당 단계가 건너뜀으로 남는다.
+    # Polarion 주소는 사내 호스트라 공개 저장소의 config.yaml 에 두지 않는다.
+    "polarion_host": "",
+    "polarion_token": "",
+    "claude_code_oauth_token": "",
+    "daily_qa_email_to": "",
 }
 
 # 정규화된 이름(영숫자 소문자만) -> 표준 키
@@ -60,6 +66,12 @@ ALIASES: dict[str, str] = {
     "smtpid": "smtp_user",
     "smtppassword": "smtp_password",
     "smtppw": "smtp_password",
+    "polarionhost": "polarion_host",
+    "polarionurl": "polarion_host",
+    "polariontoken": "polarion_token",
+    "polarionpat": "polarion_token",
+    "claudecodeoauthtoken": "claude_code_oauth_token",
+    "dailyqaemailto": "daily_qa_email_to",
 }
 
 # 예제 파일을 그대로 둔 경우를 미입력으로 취급하기 위한 표시값

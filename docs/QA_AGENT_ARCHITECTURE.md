@@ -278,8 +278,9 @@ chunk_id · document_id · page · heading · text · revision_marks
 
 > **알려진 한계.** SRS ID·Legacy SRS No.·Status·Parent/Child·Linked SRS를 Chunk 메타데이터로
 > 뽑지 않는다. 현재는 `heading`과 본문에서 exact 검색으로 찾는다. Polarion REST API로 SRS
-> 워크아이템을 직접 수집하면 이 필드들을 채울 수 있다 — `alm-issue-export`가 이미 그
-> 접근을 갖고 있어 Issue와 같은 방식으로 확장 가능하다. **미구현.**
+> 워크아이템을 직접 수집하면 이 필드들을 채울 수 있다 — ALM-QA-Automation(통합 전
+> `alm-issue-export`·`vxvue-srs-spec-automation`)이 이미 그 접근을 갖고 있어 Issue와 같은 방식으로
+> 확장 가능하다. **미구현.**
 
 ### 8.3 TC (`TestCase`)
 
@@ -478,7 +479,7 @@ Tag(`(0008,0018)`), `V`로 시작하는 버전(`V1.0.11`).
 | Phase | 내용 | 상태 |
 |---|---|---|
 | 1 | GPTs 실사용 검증 | 사용자 완료 (규칙 Rev1.12) |
-| 2 | Polarion Issue 구조화 | **완료** — `alm-issue-export` 산출물 파싱, 실측 38건 |
+| 2 | Polarion Issue 구조화 | **완료** — issue-export 앱(통합 전 `alm-issue-export`) 산출물 파싱, 실측 38건 |
 | 3 | SRS/TC Parser | **기존** + TC 근거 위치 추가 |
 | 4 | BM25 Retrieval | **기존** + Exact 검색 추가 |
 | 5 | S01 Issue Analysis | **완료** |

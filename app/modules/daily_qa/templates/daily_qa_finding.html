@@ -1,0 +1,33 @@
+{% extends "daily_qa_base.html" %}
+{% block content %}
+<section>
+  <h2>Finding #{{ finding.id }} — {{ finding.subject }} <span class="pill">{{ finding.verdict }}</span></h2>
+  <p class="hint">{{ skill_labels.get(finding.skill, finding.skill) }} · 실행 <a href="/daily-qa/runs/{{ finding.run_id }}">{{ finding.run_id }}</a> · 작업 {{ finding.task_id }} · 신뢰도 {{ finding.confidence or '—' }}{% if finding.issue_type %} · 이슈 유형 {{ finding.issue_type }}{% endif %}</p>
+  {% if finding.subject_title %}<p><b>{{ finding.subject_title }}</b></p>{% endif %}
+  <p>{{ finding.summary }}</p>
+  {% if finding.detail %}<pre class="mono" style="white-space:pre-wrap">{{ finding.detail }}</pre>{% endif %}
+  {% if finding.tc_ref %}<p>대상 TC: {{ finding.tc_ref.workbook }} / {{ finding.tc_ref.sheet }} / {{ finding.tc_ref.row }}행 {{ finding.tc_ref.tc_id }}</p>{% endif %}
+  <h3>근거</h3>
+  <ul>{% for ev in finding.evidence %}<li><span class="pill">{{ ev.source_type }}</span> <b>{{ ev.location }}</b> [{{ ev.validity }}] {{ ev.summary }}</li>{% endfor %}</ul>
+  {% if finding.draft_tcs %}
+  <h3>TC 초안</h3>
+  <div class="table-wrap"><table class="history">
+    <thead><tr><th>구분</th><th>SRS No</th><th>Title</th><th>Precondition</th><th>Test Step</th><th>Expected Result</th><th>Test Data</th></tr></thead>
+    <tbody>{% for tc in finding.draft_tcs %}<tr><td>{{ tc.kind }}</td><td>{{ tc.srs_no }}</td><td>{{ tc.title }}</td><td style="white-space:pre-wrap">{{ tc.precondition }}</td><td style="white-space:pre-wrap">{{ tc.test_step }}</td><td style="white-space:pre-wrap">{{ tc.expected_result }}</td><td>{{ tc.test_data }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% endif %}
+</section>
+<section>
+  <h2>검토 결정</h2>
+  <p>현재: <span class="badge {{ finding.review_status }}">{{ finding.review_label }}</span>{% if finding.reviewer %} — {{ finding.reviewer }} ({{ (finding.reviewed_at or '')[:16] }}){% endif %}{% if finding.review_note %}<br><span class="hint">{{ finding.review_note }}</span>{% endif %}</p>
+  <form method="post" action="/daily-qa/findings/{{ finding.id }}/decision">
+    <label>검토자 <input name="reviewer" value="{{ reviewer }}" required></label>
+    <label>메모 <textarea name="note" rows="3" cols="70" placeholder="거절 이유, 필요한 근거 등"></textarea></label>
+    <input type="hidden" name="next_url" value="/daily-qa/queue">
+    <button name="decision" value="APPROVED">승인</button>
+    <button name="decision" value="REJECTED">거절</button>
+    <button name="decision" value="NEED_EVIDENCE">근거 추가 필요</button>
+  </form>
+  <p class="hint">결정은 이 시스템 안에만 저장됩니다. Polarion·원본 TC 에는 반영되지 않습니다.</p>
+</section>
+{% endblock %}
