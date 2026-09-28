@@ -735,7 +735,10 @@ function status(projectRoot) {
   // 해시 한 줄만 맞추고 본문을 손으로 고친 파일도 낡은 것이다. 다시 만들어 바이트로 비교한다.
   const expected = render(spec, { changelog });
   const cards = (expected.match(/<section class="card /g) || []).length;
-  if (current !== expected) return { status: 'STALE', output: OUTPUT, version: meta.version, reason: 'content', cards };
+  // Line endings are compared normalized: Git for Windows (core.autocrlf=true) checks the committed
+  // LF file out as CRLF, which is not a hand edit.
+  const lf = (t) => t.replace(/\r\n/g, '\n');
+  if (lf(current) !== lf(expected)) return { status: 'STALE', output: OUTPUT, version: meta.version, reason: 'content', cards };
   return { status: 'CURRENT', output: OUTPUT, version: meta.version, cards };
 }
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""docs/REQUIREMENTS_AND_FUNCTIONAL_SPEC.md -> docs/SPEC.html
+"""docs/REQUIREMENTS_AND_FUNCTIONAL_SPEC.md -> docs/REQUIREMENTS_AND_FUNCTIONAL_SPEC.html
 
 사양서 markdown을 사내 SRS 스타일의 정적 HTML로 변환한다 (사이드바 목차, 사양번호
 뱃지, 상태 기호 뱃지, 스크린샷 프레임). 외부 CDN 의존 없이 로컬에서 파일로 열어
-본다. 사양서(.md)를 고친 뒤 다시 실행하면 SPEC.html이 갱신된다.
+본다. 사양서(.md)를 고친 뒤 다시 실행하면 REQUIREMENTS_AND_FUNCTIONAL_SPEC.html이 갱신된다.
 
 사용법:
   .venv/Scripts/python.exe -m pip install markdown   # 최초 1회
@@ -19,7 +19,7 @@ import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "docs" / "REQUIREMENTS_AND_FUNCTIONAL_SPEC.md"
-OUT = ROOT / "docs" / "SPEC.html"
+OUT = ROOT / "docs" / "REQUIREMENTS_AND_FUNCTIONAL_SPEC.html"
 
 text = SRC.read_text(encoding="utf-8")
 
