@@ -72,6 +72,7 @@
 | [REQUIREMENTS_AND_FUNCTIONAL_SPEC.md](REQUIREMENTS_AND_FUNCTIONAL_SPEC.md) | 요구사항·기능사양서 — 화면 단위 사양번호(`01-03` 등), 진입경로·버튼동작·스크린샷 포함 |
 | [REQUIREMENTS_AND_FUNCTIONAL_SPEC.html](REQUIREMENTS_AND_FUNCTIONAL_SPEC.html) | 위 사양서를 사이드바 목차·뱃지·스크린샷 프레임을 입혀 보기 좋게 렌더링한 정적 HTML (브라우저로 직접 열람). `.md`를 고친 뒤 `python scripts/build_spec_html.py`로 재생성 |
 | [SPEC.html](SPEC.html) | 공통 키트 기준 사양(`../SPEC.md`)과 변경 이력을 사람이 읽기 쉽게 만든 페이지. `SPEC.md`나 `CHANGELOG.md`를 고친 뒤 `node .project-check/render-spec-html.js .`로 재생성 |
+| [SPEC_CODE_MISMATCH.md](SPEC_CODE_MISMATCH.md) | `SPEC.md` 와 코드가 다른 곳 목록. 항목마다 코드를 고칠지, 사양을 고칠지, 사용자가 정할지를 적는다 |
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
 | [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 9단계 파이프라인 |
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |

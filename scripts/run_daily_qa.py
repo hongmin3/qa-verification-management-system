@@ -6,7 +6,7 @@
 
     python scripts/run_daily_qa.py                 # 정식 실행
     python scripts/run_daily_qa.py --dry-run       # Claude 를 부르지 않고 입력 묶음과 결정적 계산만
-    python scripts/run_daily_qa.py --weekly        # 오늘이 지정 요일이 아니어도 E·F 까지 돌린다
+    python scripts/run_daily_qa.py --weekly        # 오늘이 지정 요일이 아니어도 주 1회 단계(사양–TC 연결 점검, 매뉴얼 누락 후보 점검)까지 돌린다
     python scripts/run_daily_qa.py --no-email      # 메일을 보내지 않는다
     python scripts/run_daily_qa.py --check         # 설정·자격증명·작업 폴더만 확인하고 끝낸다
 

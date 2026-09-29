@@ -7,7 +7,7 @@
     python scripts/sync_product_knowledge.py                       # 설정된 모든 제품 (로컬 DB)
     python scripts/sync_product_knowledge.py --product VXvue
     python scripts/sync_product_knowledge.py --dry-run             # 무엇이 바뀌는지만 확인
-    python scripts/sync_product_knowledge.py --upload-to http://10.13.0.222:24357
+    python scripts/sync_product_knowledge.py --upload-to http://<서버 주소>:24357
 
 **운영 서버에 반영하려면 `--upload-to` 를 쓴다.** 서버는 이 폴더를 볼 수 없으므로(담당자 PC
 는 Wi-Fi DHCP 이고 사내 DNS 에 이름이 없다), 폴더를 볼 수 있는 이 PC 가 수집한 뒤 바뀐
@@ -17,7 +17,7 @@
 (`--upload-to` 를 쓰면 서버가 스스로 남기므로 함께 쓰지 않는다).
 
 담당자 PC 에는 작업 스케줄러 `QA_ProductKnowledge_Sync` 로 등록돼 있다 (2026-09-28, 평일 10:00,
-S4U, 인자 `--product VXvue --upload-to http://10.13.0.222:24357`). 사양서 동기화(평일 09:40) 뒤에
+S4U, 인자 `--product VXvue --upload-to http://<서버 주소>:24357`). 사양서 동기화(평일 09:40) 뒤에
 돌아야 같은 사양서 PDF 의 이중 등록이 바로 정리된다 — 이유는 `docs/AUTOMATION.md` §7.1.
 """
 

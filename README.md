@@ -261,10 +261,10 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 
 | 단계 | 하는 일 | AI |
 |---|---|---|
-| B 사양 변경 → TC 영향 | 바뀐 SRS 를 가리키는 TC 마다 유지·수정 필수·신규 TC 필요 등 판정 | Claude Skill |
-| C 이슈 → 수정확인 초안 | 이슈 유형 분류, Program Fixed 만 영향성평가 Checklist 형식 TC 초안 | Claude Skill |
-| E 추적 공백 (주 1회) | TC 없는 SRS, 삭제된 SRS 를 가리키는 TC | 없음(코드 계산) |
-| F 매뉴얼 누락 후보 (주 1회) | 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 후보 | Claude Skill |
+| 사양 변경 영향 검토 | 바뀐 SRS 를 가리키는 TC 마다 유지·수정 필수·신규 TC 필요 등 판정 | Claude Skill |
+| 이슈 수정확인 초안 | 이슈 유형 분류, Program Fixed 만 영향성평가 Checklist 형식 TC 초안 | Claude Skill |
+| 사양–TC 연결 점검 (주 1회) | TC 없는 SRS, 삭제된 SRS 를 가리키는 TC | 없음(코드 계산) |
+| 매뉴얼 누락 후보 점검 (주 1회) | 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 후보 | Claude Skill |
 
 - 회사 Claude **Team 계정** 토큰으로 서버에서 `claude -p` 를 돌립니다. Claude 에게는 읽기·검색과
   결과 파일 쓰기만 허용하고 명령 실행·웹·MCP 는 막습니다. 보내는 입력은 마스킹 후 그대로 보관합니다.

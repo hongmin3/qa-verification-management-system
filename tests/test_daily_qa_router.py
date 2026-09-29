@@ -90,3 +90,26 @@ def test_answer_is_saved_and_feeds_next_run(client):
 def test_guide_page_renders(client):
     http, _ = client
     assert http.get("/daily-qa/guide").status_code == 200
+
+
+# 사람이 보는 이름에 알파벳 약칭(B·C·E·F)을 붙이지 않는다. 내부 단계 키는 그대로 둔다.
+VISIBLE_NAMES = ("사양 변경 영향 검토", "이슈 수정확인 초안", "사양–TC 연결 점검", "매뉴얼 누락 후보 점검")
+OLD_LETTER_LABELS = ("B 사양", "C 이슈", "E 추적", "E 사양", "F 매뉴얼")
+
+
+def test_screens_and_mail_use_feature_names_not_letter_codes(client):
+    """Validates: REQ-DAILY-008, REQ-DAILY-009 (TEST-DAILY-005)."""
+    from app.modules.daily_qa.report import STAGE_LABELS
+    from app.modules.daily_qa.schema import SKILL_LABELS
+
+    for key, name in zip(("B", "C", "E", "F"), VISIBLE_NAMES):
+        assert STAGE_LABELS[key] == name
+    assert sorted(SKILL_LABELS.values()) == sorted(VISIBLE_NAMES)
+    http, _ = client
+    pages = {path: http.get(path).text for path in ("/daily-qa/guide", "/daily-qa/queue", "/daily-qa/runs/20260928-090000")}
+    for path, page in pages.items():
+        for old in OLD_LETTER_LABELS:
+            assert old not in page, (path, old)
+    for name in VISIBLE_NAMES:
+        assert name in pages["/daily-qa/guide"], name
+    assert "사양 변경 영향 검토" in pages["/daily-qa/queue"]

@@ -10,8 +10,8 @@
 
 ```flow
 앱 내장 스케줄러(평일 07:30) -> 분리 프로세스 scripts/run_daily_qa.py -> Polarion 읽기(GET) -> SRS 스냅샷·비교
-SRS 스냅샷·비교 -> 작업 묶음(B·C·F) -> Claude CLI(격리 작업 폴더, Skill) -> 결과 JSON 검증 -> SQLite(daily_qa_*)
-SRS 스냅샷·비교 -> 추적 공백 계산(E, AI 없음) -> SQLite(daily_qa_*)
+SRS 스냅샷·비교 -> 작업 묶음(사양 변경 영향 검토·이슈 수정확인 초안·매뉴얼 누락 후보 점검) -> Claude CLI(격리 작업 폴더, Skill) -> 결과 JSON 검증 -> SQLite(daily_qa_*)
+SRS 스냅샷·비교 -> 사양–TC 연결 점검(AI 없음) -> SQLite(daily_qa_*)
 SQLite(daily_qa_*) -> 요약 메일
 SQLite(daily_qa_*) -> /daily-qa 검토 화면 -> 사람의 승인·거절
 ```
@@ -22,7 +22,7 @@ SQLite(daily_qa_*) -> /daily-qa 검토 화면 -> 사람의 승인·거절
 | `app/modules/daily_qa/polarion.py` | 읽기 전용 Polarion 클라이언트 — GET 만 있다 |
 | `app/modules/daily_qa/srs_snapshot.py` | 스냅샷 저장·비교 (`data/daily_qa/snapshots/`) |
 | `app/modules/daily_qa/tc_index.py` | TC Excel 의 SRS 번호 열 색인 |
-| `app/modules/daily_qa/packages.py` | B·C·F 작업 묶음, 삭제 SRS 참조, 추적 공백(E) |
+| `app/modules/daily_qa/packages.py` | AI 작업 묶음 만들기, 삭제된 SRS 를 가리키는 TC 찾기, 사양–TC 연결 점검 |
 | `app/modules/daily_qa/workspace.py` | 격리 작업 폴더 준비, 입력 마스킹 |
 | `app/modules/daily_qa/agent_runner.py` | `claude -p` 실행 (도구·설정 제한) |
 | `app/modules/daily_qa/schema.py` | 결과 JSON 검증 (근거 위치 필수, 금지 조치 차단) |
@@ -50,10 +50,10 @@ Claude 가 실제로 읽은 부분이 Anthropic 으로 전송된다. 무엇을 �
 | Skill | 단계 | 무인 실행 |
 |---|---|---|
 | `vxvue-qa-rules` | 공통 규칙·Gate(§76 기준 G1~G7)·결과 형식 | 다른 Skill 이 먼저 읽는다 |
-| `vxvue-spec-change-impact` | B 사양 변경 → TC 영향 | O |
-| `vxvue-issue-verification` | C 이슈 → 수정확인·Regression 초안 | O |
-| `vxvue-manual-completeness` | F 매뉴얼 누락 후보 | O |
-| `vxvue-trace-gap` | E 후속 확인 (Legacy 번호가 달라 못 찾은 TC) | X (대화형) |
+| `vxvue-spec-change-impact` | 사양 변경 영향 검토 | O |
+| `vxvue-issue-verification` | 이슈 수정확인 초안 | O |
+| `vxvue-manual-completeness` | 매뉴얼 누락 후보 점검 | O |
+| `vxvue-trace-gap` | 사양–TC 연결 점검의 후속 확인 (옛 SRS 번호가 달라 못 찾은 TC) | X (대화형) |
 
 QA 규칙 원문은 저장소에 넣지 않는다. 지식 폴더에서 수집된 사본(`data/product_knowledge/vxvue/`)을
 실행마다 작업 폴더 `rules/` 로 복사한다. Skill 은 원문의 절 번호만 가리킨다.
@@ -96,7 +96,7 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 .venv/bin/python scripts/run_daily_qa.py --weekly --no-email
 ```
 
-첫 실행은 SRS 기준 스냅샷만 저장하므로 B 가 `건너뜀` 인 것이 정상이다. `/daily-qa` 에서 결과를 본다.
+첫 실행은 SRS 기준 스냅샷만 저장하므로 사양 변경 영향 검토가 `건너뜀` 인 것이 정상이다. `/daily-qa` 에서 결과를 본다.
 
 9. **예약** — 따로 등록할 것이 없다. 앱(`qa-verification.service`)을 재시작하면 내장 스케줄러가
    평일 07:30(한국 시간)에 점검을 분리된 프로세스로 띄운다. 요일·시각은 `config.yaml` 의
@@ -125,11 +125,11 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 ## 알려진 제한
 
 - TC 의 옛 Legacy SRS 번호와 현재 `oldId` 가 대부분 맞지 않아(2026-09-28 기준 317종 중 239종),
-  E 의 `TC 없음` 에 실제로는 TC 가 있는 SRS 가 섞인다. `vxvue-trace-gap` 으로 대화형 확인한다.
+  사양–TC 연결 점검의 `TC 없음` 에 실제로는 TC 가 있는 SRS 가 섞인다. `vxvue-trace-gap` 으로 대화형 확인한다.
 - 새 이슈 조회식(`daily_qa.polarion.issue_query`)은 잠정값이다 (SPEC §13).
 - 도구 호출 기록(`claude_logs/`)은 CLI 의 stream-json 출력을 읽어 만든다. 형식은 합성 출력으로 검증했고,
   실제 CLI 로는 2026-09-28 에 계정 사용량 한도 때문에 확인하지 못했다. 서버 첫 정식 실행 뒤
   `claude_logs/` 에 `Read`·`Grep` 기록이 찍혔는지 본다. 비어 있으면 출력 형식이 달라진 것이다.
 - Claude 가 작업 폴더의 SRS·TC 전체 색인을 검색할 수 있으므로, 외부로 나가는 양은 작업마다 다르다.
-  범위를 후보만으로 좁힐지는 결정 대기다 (좁히면 B 의 "후보 밖 TC 찾기"가 약해진다).
-- Codex 교차 검증(G7)은 이후 고도화 범위다.
+  범위를 후보만으로 좁힐지는 결정 대기다 (좁히면 사양 변경 영향 검토의 "후보 밖 TC 찾기"가 약해진다).
+- Codex 로 결과를 한 번 더 확인하는 교차 검증(QA 규칙의 검증 관문 7번, G7)은 이후 고도화 범위다.

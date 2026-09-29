@@ -9,17 +9,17 @@ from __future__ import annotations
 import html
 from collections import Counter
 
-from app.modules.daily_qa.schema import SKILL_LABELS
+from app.modules.daily_qa.schema import SKILL_B, SKILL_C, SKILL_E, SKILL_F, SKILL_LABELS
 
 STAGE_LABELS = {
     "preflight": "사전 점검",
     "collect_srs": "SRS 수집",
     "collect_issues": "이슈 수집",
     "tc_index": "TC 색인",
-    "B": "B 사양 변경 → TC 영향",
-    "C": "C 이슈 → 수정확인 초안",
-    "E": "E 추적 공백",
-    "F": "F 매뉴얼 누락 후보",
+    "B": SKILL_LABELS[SKILL_B],
+    "C": SKILL_LABELS[SKILL_C],
+    "E": SKILL_LABELS[SKILL_E],
+    "F": SKILL_LABELS[SKILL_F],
 }
 
 STATUS_LABELS = {

@@ -25,10 +25,10 @@ SKILL_E = "vxvue-trace-gap"
 SKILL_F = "vxvue-manual-completeness"
 
 SKILL_LABELS = {
-    SKILL_B: "B 사양 변경 → TC 영향",
-    SKILL_C: "C 이슈 → 수정확인·Regression 초안",
-    SKILL_E: "E 사양–TC 추적 공백",
-    SKILL_F: "F 매뉴얼 누락 후보",
+    SKILL_B: "사양 변경 영향 검토",
+    SKILL_C: "이슈 수정확인 초안",
+    SKILL_E: "사양–TC 연결 점검",
+    SKILL_F: "매뉴얼 누락 후보 점검",
 }
 
 VERDICTS: dict[str, tuple[str, ...]] = {
