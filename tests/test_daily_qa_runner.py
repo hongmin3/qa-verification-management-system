@@ -43,7 +43,7 @@ def test_command_restricts_tools_settings_and_mcp():
     denied = _option_values(command, "--disallowedTools")
     assert "Bash" not in " ".join(allowed) and not any(tool.startswith("Web") for tool in allowed)
     assert {"Bash", "WebFetch", "WebSearch"} <= set(denied)
-    assert all(tool in ("Read", "Glob", "Grep", "Skill") or "runs/**/out/**" in tool for tool in allowed)
+    assert all(tool in ("Read(./**)", "Glob(./**)", "Grep(./**)", "Skill") or "runs/**/out/**" in tool for tool in allowed)
 
 
 def test_env_passes_only_token_and_quiet_flags():

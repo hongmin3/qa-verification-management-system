@@ -33,8 +33,10 @@ _UNSAFE_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|]')
 
 
 def output_filename(manual_name: str, revision_label: str) -> str:
-    """스펙 §25 예시(예: 'VXvue Service Manual.V1.1.0W2_KO_AI검토.docx')와 같은 형태로 만든다."""
-    label = revision_label.replace(" ", "")
+    """스펙 §25 예시(예: 'VXvue Service Manual.V1.1.0W2_KO_AI검토.docx')와 같은 형태로 만든다.
+
+    화면이 만드는 리비전 표기는 "V1.1.0 · W2"이므로 공백과 가운뎃점을 함께 지운다 (REQ-MANUAL-016)."""
+    label = revision_label.replace(" ", "").replace("·", "")
     name = f"{manual_name}.{label}_KO_AI검토.docx"
     return _UNSAFE_FILENAME_CHARS.sub("_", name)
 
@@ -81,16 +83,22 @@ def comment_text_for(change: dict) -> str | None:
 
 
 def insert_comments(revision_path: Path, changes: list[dict], output_path: Path, author: str = DEFAULT_AUTHOR) -> int:
+    """문제로 판정된 변경마다 Comment를 넣은 사본을 만들고 넣은 개수를 돌려준다."""
+    return len(insert_comments_detailed(revision_path, changes, output_path, author=author))
+
+
+def insert_comments_detailed(revision_path: Path, changes: list[dict], output_path: Path, author: str = DEFAULT_AUTHOR) -> list[dict]:
     """문제로 판정된 변경마다 원본 위치(문단 단위)에 Comment를 삽입해 output_path에 저장한다.
 
-    반환값은 실제로 삽입한 Comment 개수. 해당 문단을 찾지 못하거나(예: 문서가 바뀌어
+    반환값은 실제로 넣은 Comment 목록(`{"change": 변경, "text": 문구}`). 이전 회차 지적사항으로
+    저장할 때 쓴다 (REQ-MANUAL-015). 해당 문단을 찾지 못하거나(예: 문서가 바뀌어
     paragraph_index가 더 이상 유효하지 않음) 문단에 run이 전혀 없으면 그 변경은 조용히
     건너뛴다 — 전체 삽입을 실패시키지 않는다 (스펙 §38 부분 실패 허용 원칙과 동일).
     """
     document = Document(str(revision_path))
     paragraph_elements = list(document.element.body.iter(f"{W_NS}p"))
 
-    inserted = 0
+    inserted: list[dict] = []
     for change in changes:
         if not change.get("functional"):
             continue
@@ -112,7 +120,7 @@ def insert_comments(revision_path: Path, changes: list[dict], output_path: Path,
         paragraph = Paragraph(paragraph_element, document)
         anchor_runs = [Run(run_elements[0], paragraph), Run(run_elements[-1], paragraph)]
         document.add_comment(anchor_runs, text=text, author=author, initials="QA")
-        inserted += 1
+        inserted.append({"change": change, "text": text})
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(str(output_path))

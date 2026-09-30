@@ -42,12 +42,24 @@ HTML 보고서 + XLSX + 신규 TC 초안(md)
 변경으로 오인해 불필요한 AI 판정을 만든다. 등록된 기준 사양서와 실제로 diff해서 바뀐 줄만
 분석 대상으로 삼는다 (`regression_analyzer.py`).
 
-**모델이 만든 ID를 그대로 믿지 않는다.** 응답의 TC ID와 근거 Chunk ID가 실제 데이터에
-존재하는지 교차검증한다. 존재하지 않으면 결과에서 제외된다 (`validation.py`).
+**모델이 만든 ID를 그대로 믿지 않는다.** 응답의 TC ID는 AI에게 보낸 TC 후보와, 근거 Chunk ID는
+보낸 사양 조각과 대조한다. 보내지 않은 TC의 판정은 버리고, 보내지 않은 조각 번호는 지운다 (`validation.py`).
 
-**Confidence로 사람의 개입 지점을 나눈다.** `analysis.recommended_confidence`(기본 0.80)
-이상은 추천, `review_confidence`(기본 0.60) 이상은 Manual Review 대상으로 분류한다. 낮은
-확신을 조용히 추천으로 올리지 않는다.
+**읽지 못한 Knowledge 문서는 따로 보인다.** 파일이 없거나 읽다가 실패한 문서는 "사용한 문서"에 넣지
+않는다. 분석 결과의 `knowledge_failures`, 보고서 1절, 분석 상세 화면에 "읽지 못한 문서"로 보인다.
+
+**추천 여부는 AI가 정하고, Confidence는 사람이 볼 곳을 표시한다.** 추천(`recommended`)은 AI 응답
+값을 그대로 쓴다. Confidence는 검토 상태만 정한다.
+
+| Confidence | 검토 상태 | 사람 확인 필요 표시 |
+|---|---|---|
+| `analysis.recommended_confidence`(기본 0.80) 이상 | AI 추천 채택 (`AI_RECOMMENDATION_ACCEPTED`) | 끔 |
+| `analysis.review_confidence`(기본 0.60) 이상 | 검토 권장 (`REVIEW_RECOMMENDED`) | 끔 |
+| 그 미만 | 사람 확인 필요 (`MANUAL_REVIEW_REQUIRED`) | 켬 |
+
+근거 조각이 하나도 남지 않은 판정은 Confidence를 0.59 이하로 낮춘다. 근거가 취소선(삭제된 사양)이면
+검토 상태를 사람 확인 필요로 바꾼다. 신뢰도가 낮아도 AI가 추천한 판정은 추천 목록에 남고, 보고서에서
+"확인 요청"으로 표시된다.
 
 **커버되지 않는 변경은 신규 TC 초안으로 남긴다.** 기존 TC 어느 것으로도 검증되지 않는
 변경이 발견되면 "해당 없음"으로 끝내지 않고 신규 TC 초안(md)을 생성한다.
@@ -60,7 +72,7 @@ HTML 보고서 + XLSX + 신규 TC 초안(md)
 | 산출물 | 내용 |
 |---|---|
 | HTML 보고서 | 의미 단위 Change Summary, 단순화된 TC 표, 사람이 읽는 사양 근거 |
-| XLSX | 추천 TC 목록 (검증 계획에 그대로 붙여 쓸 수 있는 형태) |
+| XLSX | 검증을 통과한 판정 전체 (추천 아닌 것 포함, `Recommended` 열로 구분). 검증 계획에 그대로 붙여 쓸 수 있는 형태 |
 | 신규 TC 초안 (md) | 기존 TC로 커버되지 않는 변경에 대한 초안 |
 | 분석 상세 화면 | 요청 문서, Knowledge 근거, System Instruction, Gemini에 실제로 전달된 입력 JSON과 원본 응답, 모델·캐시·생성 설정, BM25 후보 순위와 점수, QA 확정 정답과 정확도 |
 
@@ -74,10 +86,10 @@ HTML 보고서 + XLSX + 신규 TC 초안(md)
 | `retrieval.specification_top_k` | 8 | LLM에 넣을 사양서 근거 개수 |
 | `retrieval.candidate_limit` | 150 | TC 후보 상한 |
 | `retrieval.change_text_top_lines` | 60 | 요청 관련 변경 문서 줄 수 상한 |
-| `analysis.recommended_confidence` | 0.80 | 추천 분류 기준 |
-| `analysis.review_confidence` | 0.60 | Manual Review 분류 기준 |
+| `analysis.recommended_confidence` | 0.80 | 검토 상태 "AI 추천 채택" 기준 (추천 여부는 바꾸지 않음) |
+| `analysis.review_confidence` | 0.60 | 이 값 미만이면 "사람 확인 필요" |
 | `analysis.cache_enabled` | true | 동일 입력 응답 캐시 |
-| `analysis.daily_token_limit` | 0 (비활성) | 일일 토큰 한도 |
+| `analysis.daily_token_limit` | 0 (비활성) | 하루(한국 시간 0시부터) 토큰 한도. 새 분석과 재실행 모두 검사한다. 실패한 분석이 쓴 토큰도 센다 |
 | `analysis.max_concurrent_jobs` | 2 | 동시 분석 실행 수 |
 
 ## 정확도 평가

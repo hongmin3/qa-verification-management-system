@@ -110,6 +110,8 @@ class ManualChangeJudgment(BaseModel):
     evidence: list[Evidence] = Field(default_factory=list)
     needs_human_review: bool = False
     prompt_version: int = 0
+    # 그림 변경의 문제없음 판정을 판정 불가로 바꿨을 때 AI가 낸 원래 판정 (REQ-MANUAL-012).
+    ai_original_decision: ManualJudgment | None = None
 
 
 class ManualRevision(BaseModel):

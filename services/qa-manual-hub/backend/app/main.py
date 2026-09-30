@@ -10,12 +10,15 @@ import logging
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from .config import settings
+from .deps import REFRESHED_TOKEN_STATE, get_current_user, set_session_cookie
+from .models import User
 from .routers import auth, catalog, dashboard, documents, search, users
 
 logging.basicConfig(
@@ -42,12 +45,14 @@ async def lifespan(_: FastAPI):
     yield
 
 
+# The built-in docs routes are public, so they are switched off here and
+# re-declared below behind the login check (README: "로그인 후 접근 가능").
 app = FastAPI(
     title=settings.app_name,
     version=dashboard.APP_VERSION,
-    docs_url="/api/docs",
+    docs_url=None,
     redoc_url=None,
-    openapi_url="/api/openapi.json",
+    openapi_url=None,
     lifespan=lifespan,
 )
 
@@ -67,6 +72,17 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("Referrer-Policy", "same-origin")
+    return response
+
+
+@app.middleware("http")
+async def refresh_session_cookie(request: Request, call_next):
+    """Re-send the session cookie whenever ``get_current_user`` extended the
+    session, so the browser's copy lives as long as the server's."""
+    response = await call_next(request)
+    token = getattr(request.state, REFRESHED_TOKEN_STATE, None)
+    if token:
+        set_session_cookie(response, token)
     return response
 
 
@@ -93,6 +109,18 @@ app.include_router(catalog.categories_router)
 app.include_router(documents.router)
 app.include_router(search.router)
 app.include_router(dashboard.router)
+
+
+@app.get("/api/openapi.json", include_in_schema=False)
+def openapi_schema(_: User = Depends(get_current_user)) -> JSONResponse:
+    return JSONResponse(app.openapi())
+
+
+@app.get("/api/docs", include_in_schema=False)
+def api_docs(_: User = Depends(get_current_user)) -> HTMLResponse:
+    # Relative URL: resolves to /api/openapi.json on a standalone install and to
+    # /manual-hub/api/openapi.json under the platform nginx prefix.
+    return get_swagger_ui_html(openapi_url="openapi.json", title=f"{app.title} - API")
 
 
 @app.get("/api/health", tags=["health"])

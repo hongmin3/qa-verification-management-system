@@ -7,7 +7,7 @@ from collections.abc import Callable
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
 from app.core.notifier import notify_for_error
@@ -62,8 +62,23 @@ class GeminiClient:
         #: thinking 을 끌 수 없는 모델이라 켜서 호출한 경우의 기록 (토큰이 늘어난다).
         self.thinking_override: dict | None = None
 
-    @retry(retry=retry_if_exception_type((TimeoutError, ConnectionError)), stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10), reraise=True)
-    def _request(self, prompt: str, *, system_instruction: str, response_schema: type[BaseModel], temperature: float, max_output_tokens: int, thinking_budget: int | None, model: str) -> dict:
+    def _retry_policy(self) -> Retrying:
+        """네트워크 오류(시간 초과·연결 끊김) 재시도 규칙. `config.yaml` 의 `analysis.max_retries`·
+        `retry_min_seconds`·`retry_max_seconds` 를 호출할 때마다 읽는다 (값이 없으면 3회, 1~10초)."""
+        attempts = max(1, int(self.settings.get("analysis.max_retries", 3) or 1))
+        wait_min = max(0.0, float(self.settings.get("analysis.retry_min_seconds", 1) or 0))
+        wait_max = max(wait_min, float(self.settings.get("analysis.retry_max_seconds", 10) or 0))
+        return Retrying(
+            retry=retry_if_exception_type((TimeoutError, ConnectionError)),
+            stop=stop_after_attempt(attempts),
+            wait=wait_exponential(min=wait_min, max=wait_max),
+            reraise=True,
+        )
+
+    def _request(self, prompt: str, **kwargs) -> dict:
+        return self._retry_policy()(self._request_once, prompt, **kwargs)
+
+    def _request_once(self, prompt: str, *, system_instruction: str, response_schema: type[BaseModel], temperature: float, max_output_tokens: int, thinking_budget: int | None, model: str) -> dict:
         self.request_count += 1
         if self.responder:
             return self.responder(prompt)
@@ -139,7 +154,7 @@ class GeminiClient:
         self.last_cache_hit = cached is not None
         if self.last_cache_hit:
             self.cache_hit_count += 1
-            return cached
+            return self._restore_served(cached)
         try:
             raw = self._request(
                 prompt,
@@ -176,7 +191,7 @@ class GeminiClient:
                     thinking_budget=None,
                     model=self.last_model,
                 )
-                self.storage.cache_set(cache_key, raw)
+                self._cache_with_served(cache_key, raw, thinking_override=self.thinking_override)
                 for key, value in raw.get("token_usage", {}).items():
                     self.token_usage[key] = self.token_usage.get(key, 0) + int(value)
                 return raw
@@ -205,7 +220,36 @@ class GeminiClient:
                 thinking_budget=prompt_cfg.thinking_budget,
                 model=fallback,
             )
-        self.storage.cache_set(cache_key, raw)
+            self._cache_with_served(cache_key, raw, model_fallback=self.model_fallback)
+        else:
+            self.storage.cache_set(cache_key, raw)
         for key, value in raw.get("token_usage", {}).items():
             self.token_usage[key] = self.token_usage.get(key, 0) + int(value)
         return raw
+
+    #: 저장본(ai_cache)에 "실제로 답한 모델" 기록을 함께 담는 키. 호출자에게는 돌려주지 않는다.
+    _SERVED_KEY = "_served"
+
+    def _cache_with_served(self, cache_key: str, raw: dict, *, model_fallback: dict | None = None, thinking_override: dict | None = None) -> None:
+        """대신 쓴 모델이나 켠 추론 기록을 응답과 함께 저장한다.
+
+        저장본 키는 처음 요청한 모델 이름으로 만든다. 기록 없이 저장하면 다음 같은 요청이
+        저장본에서 끝나면서 "요청한 모델로 답했다"고 보이게 된다 (docs/SPEC_CODE_MISMATCH.md 5절 8번).
+        """
+        served = {"model": self.last_model}
+        if model_fallback:
+            served["model_fallback"] = dict(model_fallback)
+        if thinking_override:
+            served["thinking_override"] = dict(thinking_override)
+        self.storage.cache_set(cache_key, {**raw, self._SERVED_KEY: served})
+
+    def _restore_served(self, cached: dict) -> dict:
+        served = cached.pop(self._SERVED_KEY, None)
+        if isinstance(served, dict):
+            if served.get("model"):
+                self.last_model = str(served["model"])
+            if served.get("model_fallback"):
+                self.model_fallback = dict(served["model_fallback"])
+            if served.get("thinking_override"):
+                self.thinking_override = dict(served["thinking_override"])
+        return cached

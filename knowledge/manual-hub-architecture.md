@@ -31,7 +31,7 @@ nginx :80
 
 위 다이어그램은 이 서비스를 **단독으로** 배포할 때(`nginx :80`을 이 서비스가 전부 차지)
 기준이다. `qa-verification-management-system` 운영 서버는 통합 배포를 쓴다 — nginx
-하나(`deploy/nginx/qa-platform.conf`, 핵심 앱 저장소 소유)가 `/`는 핵심 앱(:12000)으로,
+하나(`deploy/nginx/qa-platform.conf`, 핵심 앱 저장소 소유)가 `/`는 핵심 앱(:24357)으로,
 `/manual-hub/`는 이 서비스의 SPA/API로 나눠 보낸다. 이 경우 프론트엔드는
 `npm run build:platform`(base `/manual-hub/`)으로 빌드해야 하고, 백엔드 `.env`에
 `SESSION_COOKIE_PATH=/manual-hub/`를 넣어 세션 쿠키가 핵심 앱 요청까지 따라가지 않게

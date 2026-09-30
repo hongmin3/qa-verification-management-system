@@ -14,12 +14,14 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import get_settings
 from app.core.product_config import list_product_configs
 from app.core.storage import Storage
-from app.modules.manual_review.comment_writer import insert_comments, output_filename
+from app.core.usage import daily_token_status
+from app.modules.manual_review.comment_writer import insert_comments_detailed, output_filename
 from app.modules.manual_review.comment_resolution import suggest_prior_comments
 from app.modules.manual_review.reviewer import MANUAL_REVIEW_STAGES, ManualRevisionReviewer
 from app.modules.manual_review.schemas import JUDGMENT_LABELS_KO, ManualJudgment
 
 JUDGMENT_OPTIONS = [(item.value, JUDGMENT_LABELS_KO[item]) for item in ManualJudgment]
+ALLOWED_QA_DECISIONS = {item.value for item in ManualJudgment}
 
 router = APIRouter()
 templates = Jinja2Templates(directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"])
@@ -48,6 +50,19 @@ def _manual_types_by_product(products: list[str], revisions: list[dict]) -> dict
 
 def _normalize_target_version(value: str) -> str:
     return value.strip().removeprefix("V").removeprefix("v").strip()
+
+
+def _daily_token_status() -> dict:
+    """오늘 쓴 토큰과 하루 한도. 다른 기능과 같은 공용 계산(`app/core/usage.py`)을 불러 쓴다 (REQ-USAGE)."""
+    return daily_token_status(storage)
+
+
+def _manual_revision_dir() -> Path:
+    return get_settings().path("storage.manual_revision_dir")
+
+
+def _comment_output_dir() -> Path:
+    return get_settings().path("storage.manual_review_comment_dir")
 
 
 def _revision_label(target_version: str, parent_round: int | None, pdf_baseline: bool = False) -> str:
@@ -121,19 +136,28 @@ def resume_queued_jobs() -> int:
     return resumed
 
 
-def _register_or_reuse_reference_doc(kind: str, product: str, revision_label: str, upload: UploadFile | None) -> Path | None:
-    """Release Note/설계검토보고서가 이번에 업로드됐으면 등록하고, 아니면 이 제품에 이미
-    등록된 가장 최근 문서를 자동으로 사용한다 (스펙 §45 "사용자 개입 최소화")."""
+def _same_product_version(document_version: str, target_version: str) -> bool:
+    """문서 버전 칸이 이번 제품 버전과 같은지 본다. 예전에는 버전 칸에 리비전 표기
+    ("V1.1.0 · W1")를 넣었으므로 그 형태도 같은 버전으로 본다."""
+    value = (document_version or "").strip()
+    return value == target_version or value.startswith(f"V{target_version} ·")
+
+
+def _register_or_reuse_reference_doc(kind: str, product: str, target_version: str, revision_label: str, upload: UploadFile | None) -> Path | None:
+    """Release Note/설계검토보고서가 이번에 업로드됐으면 등록하고, 아니면 같은 제품 버전으로
+    등록된 가장 최근 문서를 쓴다. 같은 버전 문서가 없으면 대조하지 않는다 (OPEN_QUESTIONS 8-4).
+
+    다른 버전의 Release Note로 대조하면 누락 의심이 대량으로 틀리기 때문이다."""
     if upload and upload.filename:
         suffix = Path(upload.filename).suffix.lower()
         if suffix not in (".pdf", ".docx"):
             raise HTTPException(400, f"지원하지 않는 파일 형식입니다: {suffix}")
-        path = get_settings().path("storage.manual_revision_dir") / f"{uuid.uuid4().hex}{suffix}"
+        path = _manual_revision_dir() / f"{uuid.uuid4().hex}{suffix}"
         with path.open("wb") as target:
             shutil.copyfileobj(upload.file, target)
-        storage.add_document(kind, product, revision_label, "", upload.filename, path)
+        storage.add_document(kind, product, target_version, revision_label, upload.filename, path)
         return path
-    existing = storage.active_documents(kind, product)
+    existing = [doc for doc in storage.active_documents(kind, product) if _same_product_version(doc["version"], target_version)]
     return Path(existing[-1]["path"]) if existing else None
 
 
@@ -161,7 +185,13 @@ def start_revision(
     limit = int(get_settings().get("analysis.max_concurrent_jobs", 2) or 2)
     if storage.active_analysis_count() >= limit:
         raise HTTPException(429, f"동시에 실행할 수 있는 분석은 최대 {limit}건입니다. 실행 중인 작업이 끝난 뒤 다시 시도하세요.")
-    storage.ensure_version(product, target_version)
+    token_status = _daily_token_status()
+    if token_status["exceeded"]:
+        raise HTTPException(
+            429,
+            f"오늘 Gemini 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 검증을 시작할 수 없습니다. "
+            "config.yaml의 analysis.daily_token_limit을 조정하세요.",
+        )
     try:
         parent_id = int(parent_revision_id) if parent_revision_id.strip() else None
     except ValueError as exc:
@@ -173,13 +203,13 @@ def start_revision(
         raise HTTPException(400, "이전 Round는 같은 제품과 Manual 종류에서만 선택할 수 있습니다.")
     if parent and parent["target_version"] and parent["target_version"] != target_version:
         raise HTTPException(400, "같은 검증 계보에서는 제품 버전을 변경할 수 없습니다. 새 제품 버전은 이전 Round를 선택하지 않고 시작하세요.")
-    next_round = int(parent["round_number"]) + 1 if parent else 0
+    storage.ensure_version(product, target_version)  # 요청 검사가 모두 끝난 뒤에만 남긴다 (REQ-MANUAL-002 7번)
     revision_label = _revision_label(target_version, int(parent["round_number"]) if parent else None, suffix == ".pdf" and not parent)
-    path = get_settings().path("storage.manual_revision_dir") / f"{uuid.uuid4().hex}{suffix}"
+    path = _manual_revision_dir() / f"{uuid.uuid4().hex}{suffix}"
     with path.open("wb") as target:
         shutil.copyfileobj(file.file, target)
-    release_note_path = _register_or_reuse_reference_doc("release_note", product, revision_label, release_note_file)
-    design_review_path = _register_or_reuse_reference_doc("design_review", product, revision_label, design_review_file)
+    release_note_path = _register_or_reuse_reference_doc("release_note", product, target_version, revision_label, release_note_file)
+    design_review_path = _register_or_reuse_reference_doc("design_review", product, target_version, revision_label, design_review_file)
     job_id = uuid.uuid4().hex[:12]
     storage.create_analysis(job_id, stage_total=len(MANUAL_REVIEW_STAGES), module="manual_review", request={
         "product": product, "manual_name": manual_name, "target_version": target_version,
@@ -272,6 +302,10 @@ def set_qa_decision(revision_id: int, change_id: int, qa_decision: str = Form(..
     change = storage.get_manual_change(change_id)
     if not change or change["revision_id"] != revision_id:
         raise HTTPException(404, "변경 항목을 찾을 수 없습니다.")
+    qa_decision = qa_decision.strip()
+    # 빈 값은 QA 재판정을 지운다(지금 동작 유지). 그 밖에는 판정 값 8개만 받는다.
+    if qa_decision and qa_decision not in ALLOWED_QA_DECISIONS:
+        raise HTTPException(400, "지원하지 않는 판정 값입니다.")
     storage.update_manual_change_qa_decision(change_id, qa_decision, qa_note)
     return RedirectResponse(f"/manual-review/revisions/{revision_id}/view", status_code=303)
 
@@ -307,8 +341,35 @@ def download_comment_docx(revision_id: int):
         raise HTTPException(400, "Word Comment 삽입은 DOCX 리비전에서만 사용할 수 있습니다.")
     changes = storage.list_manual_changes(revision_id)
     filename = output_filename(revision["manual_name"], revision["revision_label"])
-    output_path = get_settings().path("storage.manual_review_comment_dir") / f"{revision_id}-{filename}"
-    inserted = insert_comments(source_path, changes, output_path, author=f"{revision['product']} QA AI")
-    if inserted == 0:
+    output_path = _comment_output_dir() / f"{revision_id}-{filename}"
+    inserted = insert_comments_detailed(source_path, changes, output_path, author=f"{revision['product']} QA AI")
+    if not inserted:
         raise HTTPException(400, "Comment를 삽입할 문제 항목이 없습니다 (모든 변경이 문제없음이거나 분석 대상이 아닙니다).")
+    _save_inserted_comments(revision, inserted)
     return FileResponse(output_path, filename=filename)
+
+
+def _commented_change_ids(revision_id: int) -> set[int]:
+    """이 리비전의 변경 가운데 이미 지적사항이 저장된 변경 번호. 상태와 관계없이 센다."""
+    with storage.connect() as db:
+        rows = db.execute(
+            "SELECT DISTINCT manual_comments.change_id FROM manual_comments "
+            "JOIN manual_changes ON manual_changes.id = manual_comments.change_id "
+            "WHERE manual_changes.revision_id=?",
+            (revision_id,),
+        ).fetchall()
+    return {int(row[0]) for row in rows}
+
+
+def _save_inserted_comments(revision: dict, inserted: list[dict]) -> None:
+    """Word Comment 파일에 넣은 Comment를 이전 회차 지적사항으로 저장한다 (OPEN_QUESTIONS 8-2).
+
+    같은 리비전으로 파일을 다시 만들면 이미 저장한 변경은 건너뛴다. 같은 지적인지 가리는
+    기준은 변경 번호다."""
+    saved = _commented_change_ids(int(revision["id"]))
+    for item in inserted:
+        change_id = int(item["change"]["id"])
+        if change_id in saved:
+            continue
+        storage.add_manual_comment(change_id, int(revision["round_number"] or 0), item["text"])
+        saved.add(change_id)

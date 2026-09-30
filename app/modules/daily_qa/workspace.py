@@ -31,10 +31,13 @@ PROMPT_NAME = "instruction-prompt.txt"
 AGENT_DOC_NAMES = ("CLAUDE.md", "AGENTS.md", "CLAUDE.local.md")
 
 #: Claude 에게 허용하는 도구. 명령 실행·웹·MCP 는 없다.
+#: 읽기·검색 도구는 작업 폴더(`./**`, CLI 를 실행하는 폴더) 안으로만 허용한다. 경로 없는 `Read`
+#: 는 서버의 다른 파일(예: 비밀 설정)까지 읽을 수 있다. `dontAsk` 에서는 허용 목록에 맞지 않는
+#: 도구 호출이 묻지 않고 거부되므로 작업 폴더 밖 읽기·검색은 거부된다.
 ALLOWED_TOOLS = (
-    "Read",
-    "Glob",
-    "Grep",
+    "Read(./**)",
+    "Glob(./**)",
+    "Grep(./**)",
     "Skill",
     "Write(runs/**/out/**)",
     "Edit(runs/**/out/**)",
@@ -54,6 +57,7 @@ CLAUDE_MD = """# 무인 실행 규칙 (VXvue 일일 QA 점검)
 
 - 요청받은 Skill 하나만 수행하고, 결과는 지정된 `runs/<실행ID>/out/<작업ID>.json` 한 파일에만 쓴다.
 - 입력 파일, `context/`, `rules/` 밖의 자료를 찾지 않는다. 인터넷·명령 실행은 쓰지 않는다.
+- 작업 폴더 밖의 파일은 읽기·검색이 거부된다. 거부되면 다시 시도하지 말고 가진 자료로 판정한다.
 - 사람에게 물어야 할 것은 결과 JSON 의 `open_questions` 에 적고, 판정은 `사양 확인 필요` 로 둔다.
 - 이슈 종료, TC 원본 수정, TC 결과·이력 삭제를 제안하지 않는다 (QA 규칙 §55).
 """

@@ -64,7 +64,9 @@ log "3/6 프론트엔드 전송  ->  $TARGET:$APP_ROOT/app/frontend"
 rsync -az --delete "$REPO_ROOT/frontend/dist/" "$TARGET:$APP_ROOT/app/frontend/"
 
 log "4/6 운영 스크립트 전송"
+# backup.sh and restore.sh source common.sh from their own folder.
 rsync -az "$REPO_ROOT/deploy/scripts/backup.sh" "$REPO_ROOT/deploy/scripts/restore.sh" \
+    "$REPO_ROOT/deploy/scripts/common.sh" \
     "$REPO_ROOT/deploy/scripts/qamh" "$TARGET:$APP_ROOT/scripts/"
 
 # Record which commit is live, for the backup manifest and for triage.

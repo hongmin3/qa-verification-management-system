@@ -8,13 +8,13 @@ from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.core.storage import Storage
-from app.modules.impact_analyzer.router import daily_token_status
+from app.core.usage import daily_token_status
 
 router = APIRouter()
 templates = Jinja2Templates(directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"])
 storage = Storage()
 
-MODULE_LABELS = {"impact_analyzer": "Regression 영향 분석", "manual_review": "매뉴얼 개정 검증"}
+MODULE_LABELS = {"impact_analyzer": "Regression 영향 분석", "manual_review": "매뉴얼 개정 검증", "qa_agent": "QA Agent"}
 
 
 @router.get("/cost-dashboard/guide", response_class=HTMLResponse)
@@ -33,7 +33,7 @@ def cost_dashboard(request: Request, days: int = 30):
             "stats": stats,
             "days": days,
             "module_labels": MODULE_LABELS,
-            "daily_token_status": daily_token_status(),
+            "daily_token_status": daily_token_status(storage),
             "max_daily_tokens": max_daily_tokens,
         },
     )

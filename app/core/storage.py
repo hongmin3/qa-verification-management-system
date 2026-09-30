@@ -353,10 +353,13 @@ class Storage(DailyQaStorageMixin):
         return values, total
 
     def tokens_used_since(self, since_iso: str) -> int:
-        """지정 시각 이후 완료된 분석의 total_tokens 합계. 한도 체크용이라 대략치면 충분하다."""
+        """지정 시각 이후 끝난 분석의 total_tokens 합계. 한도 체크용이라 대략치면 충분하다.
+
+        실패한 분석(FAILED)도 결과에 토큰 기록이 있으면 넣는다. AI 판정 도중 실패해도 이미 쓴 토큰은
+        과금된다 (OPEN_QUESTIONS 8-10)."""
         with self.connect() as db:
             rows = db.execute(
-                "SELECT result_json FROM analyses WHERE status='DONE' AND created_at>=? AND result_json IS NOT NULL",
+                "SELECT result_json FROM analyses WHERE status IN ('DONE','FAILED') AND created_at>=? AND result_json IS NOT NULL",
                 (since_iso,),
             ).fetchall()
         total = 0
@@ -388,12 +391,17 @@ class Storage(DailyQaStorageMixin):
 
         module 컬럼이 없는 과거 행(이 기능 도입 이전 분석)은 result_json에 manual_review 전용
         키(revision_id)가 있는지로 모듈을 추정한다.
+
+        날짜 묶음은 한국 시간 기준이다 (하루 토큰 한도와 같은 기준, app/core/usage.py).
+        실패한 분석도 토큰 기록이 있으면 합산하고 기능별 `failed` 로 센다.
         """
+        from app.core.usage import kst_date, kst_text
+
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         with self.connect() as db:
             rows = db.execute(
-                "SELECT id, module, request_json, result_json, created_at FROM analyses "
-                "WHERE status='DONE' AND created_at>=? AND result_json IS NOT NULL ORDER BY created_at",
+                "SELECT id, status, module, request_json, result_json, created_at FROM analyses "
+                "WHERE status IN ('DONE','FAILED') AND created_at>=? AND result_json IS NOT NULL ORDER BY created_at",
                 (cutoff,),
             ).fetchall()
         daily: dict[str, dict] = {}
@@ -406,15 +414,22 @@ class Storage(DailyQaStorageMixin):
                 result = json.loads(row["result_json"])
             except (TypeError, json.JSONDecodeError):
                 continue
+            if not isinstance(result, dict):
+                continue
+            failed = row["status"] == "FAILED"
+            if failed and not result.get("token_usage"):
+                continue
             module = row["module"] or ("manual_review" if "revision_id" in result else "impact_analyzer")
             tokens = int((result.get("token_usage") or {}).get("total_tokens", 0) or 0)
-            day = row["created_at"][:10]
+            day = kst_date(row["created_at"])
             day_bucket = daily.setdefault(day, {"date": day, "tokens": 0, "count": 0})
             day_bucket["tokens"] += tokens
             day_bucket["count"] += 1
             module_bucket = modules.setdefault(module, {"tokens": 0, "count": 0})
             module_bucket["tokens"] += tokens
             module_bucket["count"] += 1
+            if failed:
+                module_bucket["failed"] = module_bucket.get("failed", 0) + 1
             cache_calls = self._cache_calls_from_audit(result.get("ai_audit") or {})
             if cache_calls is not None:
                 hits, total = cache_calls
@@ -426,7 +441,8 @@ class Storage(DailyQaStorageMixin):
                 revision = self.get_manual_revision(int(result["revision_id"]))
                 product = revision["product"] if revision else None
             recent.append({
-                "id": row["id"], "module": module, "product": product, "created_at": row["created_at"],
+                "id": row["id"], "status": row["status"], "module": module, "product": product,
+                "created_at": row["created_at"], "created_at_kst": kst_text(row["created_at"]),
                 "tokens": tokens, "cache_hits": cache_calls[0] if cache_calls else None,
                 "cache_calls": cache_calls[1] if cache_calls else None,
             })
@@ -473,6 +489,11 @@ class Storage(DailyQaStorageMixin):
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO ai_cache VALUES(?,?,?)", (key, json.dumps(value, ensure_ascii=False), datetime.now(timezone.utc).isoformat()))
 
+    def delete_ai_cache_before(self, cutoff_iso: str) -> int:
+        """`cutoff_iso`(UTC ISO 시각)보다 먼저 저장한 AI 응답 저장본을 지우고 지운 줄 수를 돌려준다."""
+        with self.connect() as db:
+            return db.execute("DELETE FROM ai_cache WHERE created_at < ?", (cutoff_iso,)).rowcount
+
     def sync_start(self, product: str, kind: str, source: str) -> int:
         with self.connect() as db:
             cursor = db.execute(
@@ -487,6 +508,18 @@ class Storage(DailyQaStorageMixin):
                 "UPDATE sync_log SET status=?, detail=?, synced_at=? WHERE id=?",
                 (status, detail, datetime.now(timezone.utc).isoformat(), sync_id),
             )
+
+    def fail_running_syncs(self, detail: str = "서버 재시작으로 동기화가 중단되었습니다. 다시 실행하세요.") -> int:
+        """앱 시작 때 남아 있는 RUNNING 동기화 기록을 FAILED 로 닫는다.
+
+        RUNNING 기록은 모두 이 프로세스 안에서 만든다(`/knowledge/sync-log` 는 끝난 결과만 받는다).
+        남겨 두면 `is_sync_running` 이 참이 되어 그 제품·종류의 수집·업로드 확정이 매번 409 로 끝난다.
+        """
+        with self.connect() as db:
+            return db.execute(
+                "UPDATE sync_log SET status='FAILED', detail=?, synced_at=? WHERE status='RUNNING'",
+                (detail, datetime.now(timezone.utc).isoformat()),
+            ).rowcount
 
     def is_sync_running(self, product: str, kind: str) -> bool:
         with self.connect() as db:

@@ -54,8 +54,20 @@ LOCATION_RE = re.compile(
     re.IGNORECASE,
 )
 
-#: QA 규칙 §55 가 금지하는 조치.
-FORBIDDEN_ACTION_RE = re.compile(r"(close|닫|종료\s*처리|덮어\s*쓰|overwrite|결과\s*삭제|이력\s*삭제)", re.IGNORECASE)
+#: QA 규칙 §55 가 금지하는 조치. 이슈를 닫거나 종료하라는 말, TC 를 덮어쓰라는 말, 결과·이력을
+#: 지우라는 말만 잡는다. "닫기 버튼", "Closed 상태", "앱 종료 시" 같은 화면·기능 이름은 잡지 않는다.
+FORBIDDEN_ACTION_RE = re.compile(
+    r"(?:"
+    r"(?:이슈|issue|티켓|ticket|work\s*item|[A-Z]{2,}-\d+)\s*(?:을|를|은|는)?\s*(?:닫|종료|close\b|resolve\b)"
+    r"|\bclose\s+(?:the\s+|this\s+|that\s+)?(?:issue|ticket|bug|work\s*item|[A-Z]{2,}-\d+)"
+    r"|닫(?:는다|습니다|으세요|으십시오|아\s*주|아야|을\s*것|자\b)"
+    r"|종료\s*처리\s*(?:한다|합니다|하세요|하십시오|할\s*것)"
+    r"|덮어\s*(?:쓰|쓴|씀|써)"
+    r"|overwrit"
+    r"|(?:결과|이력|기록)\s*(?:을|를)?\s*(?:삭제|지운|지우)"
+    r")",
+    re.IGNORECASE,
+)
 
 
 class Evidence(BaseModel):

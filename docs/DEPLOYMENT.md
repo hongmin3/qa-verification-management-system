@@ -191,7 +191,7 @@ curl -fsS http://127.0.0.1:24357/health
 1. `config/products/vxvue.yaml`의 `specification.crawler_output_dir`를 실제 크롤러 output 경로로
    맞춘다.
 2. 크롤러가 있는 Windows PC에서 `scripts/sync_vxvue_spec.py --target-url http://<서버>:24357`을
-   Windows 작업 스케줄러에 매일 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
+   Windows 작업 스케줄러에 평일 09:40 으로 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
    서버에서 실행할 수 없다).
 3. 앱 내부 스케줄러(`app/core/scheduler.py`)는 신규 systemd 없이 이미 함께 뜨며, `/knowledge`
    화면의 "지금 동기화" 버튼으로 수동 실행도 가능하다.

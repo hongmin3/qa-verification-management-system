@@ -76,6 +76,11 @@ Polarion의 `rndReviewResult`(연구소 검토 결과)가 규칙 §6 Issue 산�
 `lab_noact`는 사양대로(B)인지 재현 불가(G)인지 코드만으로 갈리지 않는다. 규칙 §37이 근거
 없는 확정을 금지하므로 **후보만 남기고 QA가 고른다** — G1이 `NEED_INPUT`으로 세운다.
 
+QA는 분석 양식의 **이슈 유형**(`qa_issue_type`)에서 유형을 고른다. 고르면 그 유형으로 분석하고
+G1은 `issue_type_unconfirmed` 대신 `issue_type_by_qa`(note)를 남긴다. 결과의 `issue.type_source`가
+`qa`가 되고, 연구소 검토 결과로 정한 원래 유형은 `issue.lab_type`에 남는다. 비워 두면 지금처럼
+연구소 검토 결과를 쓴다.
+
 ### 3.2 Issue 본문도 코드로 구조화된다
 
 `reproductionStep` 본문이 규칙 §29 표준 형식을 그대로 쓴다. 실측 38건 중 31건.
@@ -210,6 +215,17 @@ VXvue Issue 1건 분석 실측.
 
 판정은 `PASS` / `PASS_WITH_NOTE` / `NEED_INPUT` / `BLOCK` / `PENDING`.
 
+B·C·D 유형 이슈에 AI가 `NEW_TC`(신규 TC 필요)를 내면 G5가 `new_tc_for_spec_issue`(note)를 남긴다.
+규칙 §6은 "요구받지 않으면" 만들지 않는다고 정하므로 막지 않고 QA가 보게 한다.
+
+읽지 못한 사양서·TC는 G2가 `documents_unreadable`(note)로 이름을 남기고, 결과 화면 위에도
+"읽지 못한 문서" 목록이 나온다. G1·G2가 세는 문서 수는 읽을 수 있었던 문서만이다. 등록 문서를
+모두 읽지 못했으면 G1이 "등록된 사양서 N건을 모두 읽지 못했습니다"로 막는다.
+
+`split_spec_partial`은 "근거가 사양서 N건 중 M건에서만 나왔습니다"라고 적는다. 검색은 사양서
+전체를 대상으로 하지만 후보 상한(`retrieval.specification_top_k`) 때문에 근거가 일부 문서에서만
+나올 수 있다.
+
 `NEED_INPUT`은 QA가 초안을 허용하면(`draft_allowed`) 넘어간다 — 규칙 §53의 예외 조항이다.
 **`BLOCK`은 초안 허용으로도 넘기지 않는다.**
 
@@ -235,6 +251,12 @@ BM25는 소표본에서 관련도와 무관하게 후보를 채운다(기존 구
 | 실제 X-ray Exposure 가능 | §28 | 해당 없음. `불가`면 실제 촬영 결과를 Expected로 만들지 않음 |
 | Dose Table 제공 | §27 | 해당 없음. `미제공`이면 공식 촬영 가능 조합·출력 정확도 확정 금지 |
 | 필수 관찰 수단 | §55 | 제약 없음. 지정 후 미확보면 G4 `BLOCK` |
+| 이슈 유형 | §6 | 연구소 검토 결과로 정한 유형을 쓴다 (3.1절) |
+
+Test Data는 `모름`이면 `test_data_unknown`, `없음`이면 `test_data_missing`을 세운다. 둘 다 `input`이다.
+
+조사 범위 제한(`scope_note`)은 AI 입력과 결과 화면 표시에만 쓴다. 검색 대상(사양 조각·TC)은
+줄이지 않는다. 시트·버전 이름을 알아듣고 검색 대상을 줄이는 기능은 아직 없다.
 
 ---
 
@@ -256,6 +278,11 @@ BM25는 소표본에서 관련도와 무관하게 후보를 채운다(기존 구
 QA 결정은 AI 판정을 **덮어쓰지 않고** `qa_agent_approvals`에 따로 쌓인다. 규칙 §20이
 "AI 결과 / QA 수정 결과 / QA 승인·거절"을 각각 저장해 Rule·Prompt 개선에 쓰라고 정하고 있다.
 
+`qa_agent_approvals`는 판정마다 최신 결정 한 줄이다. 결정을 적을 때마다
+`qa_agent_approval_events`(`approval_history.py`)에 새 줄을 더하므로 결정을 다시 적어도 이전
+결정이 남는다. 화면은 최신 결정을 보이고 이전 결정은 "결정 기록 N건"을 펼쳐 본다. 기록한 뒤에는
+폼이 있던 탭(`?tab=`)으로 돌아간다.
+
 ---
 
 ## 8. 파일 구성
@@ -271,6 +298,7 @@ app/modules/qa_agent/
   validation.py          ID 교차검증 · Step–Expected 번호
   rule_capability.py     규칙 절별(Rev1.17 기준 79개) 구현 방식 표
   scheduled_jobs.py      제품 지식 폴더 수집 cron
+  approval_history.py    QA 결정 기록 (결정마다 새 줄)
   router.py              화면·API
   templates/             index · analysis(6탭) · guide · rules · history
 
@@ -298,9 +326,10 @@ app/prompts/qa_agent_issue_impact.yaml
 | `qa_agent.force_model_tier` | `""` | `light`/`standard`/`complex` 고정. 빈 값이면 자동 |
 | `retrieval.specification_top_k` | 8 | 사양 Chunk 후보 상한 |
 | `security.mask_outbound` | `true` | 외부 전송 마스킹 |
-| `models.standard` | `gemini-2.5-flash` | 기본 모델 |
-| `models.complex` | `gemini-2.5-flash` | 상위 등급. `gemini-2.5-pro`는 신규 계정 미제공(실측) |
-| `analysis.daily_token_limit` | 0 | 0=비활성 |
+| `models.light` | `gemini-3.1-flash-lite` | 가벼운 등급 |
+| `models.standard` | `gemini-3.5-flash` | 기본 모델 |
+| `models.complex` | `gemini-3.5-flash` | 상위 등급. 지금은 기본 모델과 같다 |
+| `analysis.daily_token_limit` | 0 | 0=비활성. "오늘"은 한국 시간 0시부터이고 실패한 분석이 쓴 토큰도 센다 |
 | `analysis.max_concurrent_jobs` | 2 | 초과 요청은 429 |
 
 `config/products/<slug>.yaml`의 `issue_source.export_dir`에 Polarion Export 폴더를 넣으면

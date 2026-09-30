@@ -42,18 +42,25 @@ class RegressionAnalyzer:
         추가돼도 이전 문서를 제외하지 않고 전부 합쳐서 검색한다 (Storage.active_documents).
         """
         knowledge = load_for_product(product, storage=self.storage, with_text=True)
+        # 읽지 못한 문서는 "사용한 문서"로 적지 않고 따로 남긴다 (REQ-IMPACT-005).
+        failed = {(item.get("kind"), item.get("id")) for item in knowledge.failures}
+
+        def readable(documents: list[dict]) -> list[dict]:
+            return [doc for doc in documents if (doc.get("kind"), doc.get("id")) not in failed]
+
         return self._execute(
             change_paths,
             knowledge.chunks,
             knowledge.cases,
             "\n".join(knowledge.baseline_texts),
-            knowledge.specification_label,
-            knowledge.testcase_label,
+            ", ".join(doc["name"] for doc in readable(knowledge.specification_documents)),
+            ", ".join(doc["name"] for doc in readable(knowledge.testcase_documents)),
             analysis_id,
             user_notes,
             knowledge.document_labels,
             product,
-            knowledge.knowledge_documents(),
+            readable(knowledge.knowledge_documents()),
+            list(knowledge.failures),
         )
 
     def _execute(
@@ -69,6 +76,7 @@ class RegressionAnalyzer:
         doc_labels: dict[str, str] | None = None,
         product: str | None = None,
         knowledge_documents: list[dict] | None = None,
+        knowledge_failures: list[dict] | None = None,
     ) -> AnalysisResult:
         started = time.monotonic()
         analysis_id = analysis_id or uuid.uuid4().hex[:12]
@@ -103,7 +111,8 @@ class RegressionAnalyzer:
             change.change_items = self.ai_client.change_items
 
             stage(6)  # Regression TC 선정
-            decisions = validate_decisions(decisions, cases, relevant_chunks, float(self.settings.get("analysis.recommended_confidence", .8)), float(self.settings.get("analysis.review_confidence", .6)))
+            # AI에게 보낸 후보 TC 판정만 받는다. 보내지 않은 TC 판정은 지어낸 값으로 본다 (REQ-IMPACT-010).
+            decisions = validate_decisions(decisions, candidates, relevant_chunks, float(self.settings.get("analysis.recommended_confidence", .8)), float(self.settings.get("analysis.review_confidence", .6)))
             decisions = attach_specification_references(decisions, relevant_chunks, doc_labels)
 
             stage(7)  # 신규 TC 초안 검증
@@ -112,6 +121,7 @@ class RegressionAnalyzer:
             stage(8)  # HTML 결과 생성
             result = AnalysisResult(analysis_id=analysis_id, created_at=datetime.now(timezone.utc), change_file=change_file_name, specification_file=specification_label, testcase_file=testcase_label, change=change, total_tc=len(cases), candidate_tc=len(candidates), decisions=decisions, draft_test_cases=drafts, token_usage=self.ai_client.token_usage, prompt_version=self.ai_client.prompt_version)
             result.knowledge_documents = knowledge_documents or []
+            result.knowledge_failures = knowledge_failures or []
             result.ai_audit = self.ai_client.audit_snapshot
             result.candidate_ranking = [
                 {"rank": rank, "tc_id": case.tc_id, "bm25_score": round(score, 6)}

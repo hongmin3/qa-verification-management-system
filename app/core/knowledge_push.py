@@ -67,14 +67,16 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
         return {"status": collected.status, "detail": collected.detail}
 
     manifest = load_manifest(config.product)
-    assets = [asset for asset in manifest.get("assets", []) if not asset.get("error")]
+    # PC 가 읽지 못한(error) 파일도 보낸다. 빼고 보내면 서버는 그 문서의 새 판도 옛 판도 목록에 없다고 보고
+    # 옛 판까지 지운다(SPEC_CODE_MISMATCH 5절 3번). 서버는 받은 파일을 스스로 다시 읽고, 못 읽으면 옛 판을 지킨다.
+    assets = list(manifest.get("assets", []))
     manifest_payload = {
         "source_dir": manifest.get("source_dir", ""),
         "counts": manifest.get("counts", {}),
         "uploaded_from": socket.gethostname(),
         # 서버는 자기 파일 경로를 스스로 만든다. PC 경로(`source_path`)를 보내면 서버에서
         # 열 수 없는 경로가 `documents` 에 등록될 수 있어 아예 뺀다.
-        "assets": [{key: value for key, value in asset.items() if key not in ("source_path", "normalized_path", "normalized_chars")} for asset in assets],
+        "assets": [{key: value for key, value in asset.items() if key not in ("source_path", "normalized_path", "normalized_chars", "error")} for asset in assets],
         "excluded": manifest.get("excluded", []),
     }
 
@@ -135,14 +137,21 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
     )
     if failed:
         detail += f" / 업로드 실패 {len(failed)}건: {', '.join(failed[:5])}"
+    status = result.get("status", "SUCCESS")
+    # PC 수집이 PARTIAL(읽지 못한 파일 있음)이거나 업로드가 하나라도 실패하면 PARTIAL 이다(종료 코드 1).
+    if (failed or collected.status == "PARTIAL") and status == "SUCCESS":
+        status = "PARTIAL"
     return {
-        "status": "PARTIAL" if failed else result.get("status", "SUCCESS"),
+        "status": status,
         "detail": detail,
         "uploaded": sorted(uploaded),
         "skipped": skipped,
         "failed": failed,
         "duplicates": result.get("duplicates", []),
         "removed": result.get("removed", []),
+        # CLI 가 "읽지 못해 이전 판 유지" 줄과 읽지 못한 파일을 한 줄씩 찍는다(SPEC_CODE_MISMATCH 5절 12번).
+        "kept_previous": result.get("kept_previous", []),
+        "unreadable": result.get("failures", []),
     }
 
 

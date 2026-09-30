@@ -448,7 +448,9 @@ def sync_product(config: ProductConfig, root: Path | None = None, dry_run: bool 
         record = asset_record(asset)
         known = previous.get(asset.file_name)
         original_target = target / "original" / asset.kind / asset.file_name
-        if known and known.get("sha256") == asset.sha256 and original_target.is_file():
+        # 지난번에 읽지 못한(error) 파일은 "미변경"으로 넘기지 않고 다시 읽어 본다. 넘기면 error 표시가
+        # 빠져 읽지 못한 판이 읽힌 판으로 둔갑한다(SPEC_CODE_MISMATCH 5절 3번).
+        if known and known.get("sha256") == asset.sha256 and original_target.is_file() and not known.get("error"):
             record["normalized_path"] = known.get("normalized_path", "")
             record["normalized_chars"] = known.get("normalized_chars", 0)
             record["collected_at"] = known.get("collected_at", "")
@@ -494,7 +496,9 @@ def sync_product(config: ProductConfig, root: Path | None = None, dry_run: bool 
         path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if outcome.failed:
-        outcome.status = "PARTIAL" if outcome.copied else "FAILED"
+        # 읽은 파일(새로 수집했거나 그대로인 것)이 하나라도 있으면 PARTIAL 이다. FAILED 로 끝내면 업로드가
+        # 멈춰 서버가 "읽지 못한 새 판" 을 알 수 없다(SPEC_CODE_MISMATCH 5절 3번).
+        outcome.status = "PARTIAL" if (outcome.copied or outcome.unchanged) else "FAILED"
     elif dry_run:
         outcome.status = "DRY_RUN"
     outcome.detail = (
@@ -557,6 +561,8 @@ class RegisterOutcome:
     registered: list[str] = field(default_factory=list)
     unchanged: list[str] = field(default_factory=list)
     replaced: list[str] = field(default_factory=list)
+    #: 같은 경로에 새 내용이 덮어써져 파싱 저장본을 버린 문서 (`unchanged` 에도 들어 있다).
+    refreshed: list[str] = field(default_factory=list)
     #: 다른 경로로 이미 등록돼 있어 이 수집본과 겹칠 수 있는 문서. 지우지 않고 보고만 한다.
     duplicates: list[str] = field(default_factory=list)
     detail: str = ""
@@ -640,6 +646,15 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
             resolved = str(path.resolve()).casefold()
             already = next((document for document in existing_all if str(Path(document["path"]).resolve()).casefold() == resolved), None)
             if already is not None:
+                # 리비전 표시가 없는 이름은 내용이 바뀌어도 같은 경로에 덮어쓴다. 등록 때의 sha256 과
+                # 다르면 파싱 저장본(document_cache)이 옛 내용이므로 버리고 sha256 을 새로 적는다.
+                # 그대로 두면 분석이 옛 TC·사양 목록으로 계속 판정한다(SPEC_CODE_MISMATCH 5절 2번).
+                metadata = json.loads(already.get("metadata_json") or "{}")
+                new_digest = asset.get("sha256", "")
+                if new_digest and metadata.get("sha256") != new_digest:
+                    document_cache.delete(already["id"])
+                    storage.update_document_metadata(already["id"], {**metadata, "sha256": new_digest, "doc_number": asset.get("doc_number", metadata.get("doc_number", ""))})
+                    outcome.refreshed.append(asset["file_name"])
                 outcome.unchanged.append(asset["file_name"])
             else:
                 storage.add_document(
@@ -701,6 +716,8 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
         f"등록 {len(outcome.registered)}건, 미변경 {len(outcome.unchanged)}건, "
         f"이전 리비전 정리 {len(outcome.replaced)}건, 중복 확인 필요 {len(outcome.duplicates)}건"
     )
+    if outcome.refreshed:
+        outcome.detail += f", 내용 변경으로 다시 읽음 {len(outcome.refreshed)}건"
     return outcome
 
 

@@ -141,6 +141,8 @@ class AnalysisResult(BaseModel):
     spec_sync: dict | None = None
     tc_sync: dict | None = None
     knowledge_documents: list[dict] = Field(default_factory=list)
+    #: 읽지 못한 Knowledge 문서 (종류·ID·이름·이유). 분석에 쓰지 못했으므로 knowledge_documents 에 넣지 않는다.
+    knowledge_failures: list[dict] = Field(default_factory=list)
     ai_audit: dict = Field(default_factory=dict)
     candidate_ranking: list[dict] = Field(default_factory=list)
 

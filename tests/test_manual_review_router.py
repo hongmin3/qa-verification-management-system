@@ -290,3 +290,138 @@ def test_qa_can_confirm_prior_comment_as_resolved(monkeypatch, tmp_path):
     comment = storage.get_manual_comment(comment_id)
     assert comment["status"] == "RESOLVED"
     assert comment["resolved_in_revision_id"] == round2
+
+
+# Validates: REQ-MANUAL-002
+def test_start_revision_rejected_when_daily_token_limit_exceeded(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_daily_token_status", lambda: {"used": 1200, "limit": 1000, "exceeded": True})
+
+    response = TestClient(app).post(
+        "/manual-review/revisions",
+        files={"file": ("change.docx", b"not-read", "application/octet-stream")},
+        data={"product": "VXvue", "manual_name": "Service Manual", "target_version": "1.1.0"},
+    )
+
+    assert response.status_code == 429
+    assert "1,200" in response.json()["detail"] and "1,000" in response.json()["detail"]
+    assert storage.list_versions("VXvue") == []
+
+
+# Validates: REQ-MANUAL-002
+def test_rejected_parent_check_leaves_no_product_version(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_daily_token_status", lambda: {"used": 0, "limit": 0, "exceeded": False})
+
+    response = TestClient(app).post(
+        "/manual-review/revisions",
+        files={"file": ("change.docx", b"not-read", "application/octet-stream")},
+        data={"product": "VXvue", "manual_name": "Service Manual", "target_version": "9.9.9", "parent_revision_id": "424242"},
+    )
+
+    assert response.status_code == 400
+    assert "9.9.9" not in storage.list_versions("VXvue")
+
+
+# Validates: REQ-MANUAL-002
+def test_reference_doc_reuse_requires_same_product_version(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    old_path = tmp_path / "rn-1.0.docx"
+    old_path.write_bytes(b"x")
+    storage.add_document("release_note", "VXvue", "1.0.0", "", "RN 1.0.docx", old_path)
+
+    assert manual_review_router._register_or_reuse_reference_doc("release_note", "VXvue", "1.1.0", "V1.1.0 · W1", None) is None
+
+    same_path = tmp_path / "rn-1.1.docx"
+    same_path.write_bytes(b"x")
+    storage.add_document("release_note", "VXvue", "1.1.0", "", "RN 1.1.docx", same_path)
+    storage.add_document("release_note", "VXvue", "1.2.0", "", "RN 1.2.docx", tmp_path / "rn-1.2.docx")
+
+    assert manual_review_router._register_or_reuse_reference_doc("release_note", "VXvue", "1.1.0", "V1.1.0 · W1", None) == same_path
+
+
+# Validates: REQ-MANUAL-002
+def test_uploaded_reference_doc_is_registered_with_product_version(monkeypatch, tmp_path):
+    import io
+
+    from starlette.datastructures import UploadFile as StarletteUploadFile
+
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_manual_revision_dir", lambda: tmp_path)
+    upload = StarletteUploadFile(io.BytesIO(b"doc"), filename="RN.docx")
+
+    path = manual_review_router._register_or_reuse_reference_doc("release_note", "VXvue", "1.1.0", "V1.1.0 · W1", upload)
+
+    assert path is not None and path.parent == tmp_path
+    assert [doc["version"] for doc in storage.active_documents("release_note", "VXvue")] == ["1.1.0"]
+
+
+# Validates: REQ-MANUAL-014
+def test_qa_decision_rejects_unknown_value(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    revision_id = storage.add_manual_revision("VXvue", "Service Manual", "W1", tmp_path / "r.docx")
+    change_id = storage.add_manual_change(revision_id, "insertion", "연구소", "", 0, "문구", functional=True)
+
+    response = TestClient(app).post(
+        f"/manual-review/revisions/{revision_id}/changes/{change_id}/qa-decision",
+        data={"qa_decision": "LOOKS_FINE"}, follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert storage.get_manual_change(change_id)["qa_decision"] is None
+
+
+# Validates: REQ-MANUAL-015
+def test_comment_docx_download_saves_comments_once_per_change(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_comment_output_dir", lambda: tmp_path / "out")
+    revision_path = tmp_path / "r.docx"
+    _write_minimal_docx(revision_path)
+    revision_id = storage.add_manual_revision("VXvue", "Service Manual", "V1.1.0 · W1", revision_path)
+    change_id = storage.add_manual_change(revision_id, "insertion", "연구소", "", 0, "문구", functional=True)
+    storage.update_manual_change_judgment(change_id, "SUPPLEMENT_REQUIRED", 0.6, {"decision": "SUPPLEMENT_REQUIRED", "qa_comment": "조건 추가 필요"})
+    client = TestClient(app)
+
+    first = client.get(f"/manual-review/revisions/{revision_id}/comment-docx")
+    second = client.get(f"/manual-review/revisions/{revision_id}/comment-docx")
+
+    assert first.status_code == 200 and second.status_code == 200
+    saved = storage.list_open_comments_for_revision(revision_id)
+    assert [(item["change_id"], item["comment_text"], item["status"]) for item in saved] == [(change_id, "조건 추가 필요", "OPEN")]
+
+
+# Validates: REQ-MANUAL-017
+def test_guide_describes_current_features_and_claude_route():
+    response = TestClient(app).get("/manual-review/guide")
+
+    assert response.status_code == 200
+    text = response.text
+    assert "Revision 표기를 입력" not in text
+    assert "준비 중: Cross-Manual" not in text
+    assert "제품 버전" in text
+    assert "Claude" in text and "scripts/manual_review_local.py" in text
+
+
+# Validates: REQ-MANUAL-002
+def test_daily_token_status_uses_shared_core_calculation(monkeypatch, tmp_path):
+    """하루 토큰 한도 검사는 공용 계산(app.core.usage)을 이 화면의 저장소로 부른다 (OPEN_QUESTIONS 8-9)."""
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    seen = []
+
+    def fake_status(given_storage=None, now=None):
+        seen.append(given_storage)
+        return {"used": 7, "limit": 5, "exceeded": True}
+
+    monkeypatch.setattr(manual_review_router, "daily_token_status", fake_status)
+
+    assert manual_review_router._daily_token_status() == {"used": 7, "limit": 5, "exceeded": True}
+    assert seen == [storage]

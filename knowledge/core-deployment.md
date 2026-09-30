@@ -36,7 +36,7 @@
 ## 하위 서비스 통합 배포
 <!-- akela: id=platform-nginx scope=deployment tier=should -->
 
-- 같은 호스트의 nginx가 `/`는 핵심 앱(:12000)으로, `/manual-hub/`는 하위 서비스로 라우팅한다 (`deploy/nginx/qa-platform.conf`).
+- 같은 호스트의 nginx가 `/`는 핵심 앱(:24357)으로, `/manual-hub/`는 하위 서비스로 라우팅한다 (`deploy/nginx/qa-platform.conf`).
 - 하위 서비스 프론트엔드를 재배포할 때 **반드시 `BUILD_MODE=platform`**을 준다. 빠뜨리면 단독용(base `/`)으로 빌드돼 화면이 빈 채로 뜬다. `deploy.sh`가 전송 전에 검사해 중단시킨다.
 - 하위 서비스의 `install.sh`를 다시 돌릴 일이 있으면 `SKIP_NGINX=1`을 준다. 안 주면 단독용 nginx 사이트가 다시 설치돼 `/`가 하위 서비스로 돌아간다.
 - 통합 전 주소 호환 리다이렉트 블록은 2026-09-02에 제거했다(core 앱 라우터 전체와 겹치는 경로가 없음을 확인한 뒤). **지금은 평문 HTTP만 쓴다** — 같은 날 self-signed 인증서로 HTTPS 강제 리다이렉트를 적용했다가, 브라우저의 "안전하지 않음" 경고가 실제 사용성 문제라 곧바로 롤백했다. 정식 CA(또는 사내 CA) 인증서를 발급받기 전에는 재적용하지 않는다.

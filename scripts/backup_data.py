@@ -36,6 +36,11 @@ def create_backup(destination: Path) -> Path:
             root = settings.path(dotted)
             if root.exists():
                 entries.extend(path for path in root.rglob("*") if path.is_file())
+        # 일일 QA 스냅샷은 전날·지난주 비교 기준이라 다시 만들 수 없어 넣는다(OPEN_QUESTIONS 8-15).
+        # 서버 지식 사본(data/product_knowledge/)은 넣지 않는다. 원본이 PC 지식 폴더에 있어 다시 올리면 된다.
+        snapshots = settings.root / "data" / "daily_qa" / "snapshots"
+        if snapshots.exists():
+            entries.extend(path for path in snapshots.rglob("*") if path.is_file())
         manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for path in entries:
@@ -64,6 +69,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--destination", type=Path, default=Path("backups"))
     parser.add_argument("--verify", type=Path)
+    parser.add_argument("--no-prune", action="store_true", help="보관 일수를 넘은 백업·실행 폴더·AI 응답 저장본을 지우지 않는다")
     args = parser.parse_args()
     if args.verify:
         print(json.dumps(verify_backup(args.verify), ensure_ascii=False))
@@ -71,6 +77,12 @@ def main() -> int:
         path = create_backup(args.destination)
         print(path)
         print(json.dumps(verify_backup(path), ensure_ascii=False))
+        # 새 백업을 검증한 뒤에만 오래된 것을 지운다. 검증이 실패하면 위에서 예외로 끝나 아무것도 지우지 않는다.
+        if not args.no_prune:
+            from app.core.retention import run_retention
+
+            pruned = run_retention(get_settings(), args.destination)
+            print(json.dumps({"pruned": pruned}, ensure_ascii=False))
     return 0
 
 

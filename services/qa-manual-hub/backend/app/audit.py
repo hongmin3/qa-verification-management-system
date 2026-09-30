@@ -82,10 +82,19 @@ ACTION_LABELS_KO: dict[str, str] = {
 def client_ip(request: Request | None) -> str | None:
     if request is None:
         return None
-    # nginx sets X-Forwarded-For; fall back to the socket peer for direct calls.
+    # Only trust what nginx itself wrote.  Both nginx configs (standalone and
+    # platform) set ``X-Real-IP $remote_addr``, which replaces anything the
+    # browser sent.  ``X-Forwarded-For`` uses ``$proxy_add_x_forwarded_for``,
+    # which APPENDS the real peer to the browser's own header, so only its last
+    # value is trustworthy -- the first one can be anything the user typed.
+    real_ip = (request.headers.get("x-real-ip") or "").strip()
+    if real_ip:
+        return real_ip[:64]
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()[:64]
+        last = forwarded.split(",")[-1].strip()
+        if last:
+            return last[:64]
     if request.client:
         return request.client.host[:64]
     return None

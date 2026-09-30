@@ -5,13 +5,18 @@
 #   1. the PostgreSQL database  (pg_dump, custom format)
 #   2. the document storage tree (tar.gz)
 #
-# Both land in $BACKUP_ROOT/<YYYYmmdd-HHMMSS>/ together with a manifest, so a
-# database dump is never paired with the wrong file set.
+# Both land in $BACKUP_ROOT/<YYYYmmdd-HHMMSS>/ together with a manifest that
+# holds one SHA-256 line per file.  restore.sh refuses a folder whose files do
+# not match those lines, so a database dump is never paired with the wrong file
+# set.
 #
 #   sudo -u ubuntu /opt/qa-manual-hub/scripts/backup.sh
 #
-# Cron (daily 02:30):
-#   30 2 * * * /opt/qa-manual-hub/scripts/backup.sh >> /opt/qa-manual-hub/logs/backup.log 2>&1
+# Cron (daily 02:30): install.sh writes /etc/cron.d/qa-manual-hub-backup with
+#   30 2 * * *  ubuntu  /opt/qa-manual-hub/scripts/backup.sh >> /opt/qa-manual-hub/logs/backup.log 2>&1
+#
+# The document storage is the folder the application uses: STORAGE_ROOT from
+# .env, or $DATA_ROOT/storage when .env does not set it.
 
 set -Eeuo pipefail
 
@@ -28,24 +33,19 @@ KEEP_MONTHLY="${KEEP_MONTHLY:-3}"
 log() { printf '[backup %s] %s\n' "$(date '+%F %T')" "$*"; }
 die() { printf '[backup %s] ERROR: %s\n' "$(date '+%F %T')" "$*" >&2; exit 1; }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -r "$SCRIPT_DIR/common.sh" ]] || die "common.sh 가 없습니다: $SCRIPT_DIR/common.sh (deploy.sh 로 다시 배포하세요)"
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
+
 [[ -r "$ENV_FILE" ]] || die ".env 를 읽을 수 없습니다: $ENV_FILE"
 
 # Parse the connection string without echoing it anywhere.
-DB_URL="$(grep -m1 '^DATABASE_URL=' "$ENV_FILE" | cut -d= -f2-)"
+DB_URL="$(qamh_env_value "$ENV_FILE" DATABASE_URL)"
 [[ -n "$DB_URL" ]] || die "DATABASE_URL 을 찾을 수 없습니다."
+qamh_parse_db_url "$DB_URL"
 
-# postgresql+psycopg://user:pass@host:port/dbname
-proto_stripped="${DB_URL#*://}"
-credentials="${proto_stripped%@*}"
-hostpath="${proto_stripped##*@}"
-DB_USER="${credentials%%:*}"
-DB_PASS="${credentials#*:}"
-hostport="${hostpath%%/*}"
-DB_NAME="${hostpath##*/}"
-DB_NAME="${DB_NAME%%\?*}"
-DB_HOST="${hostport%%:*}"
-DB_PORT="${hostport##*:}"
-[[ "$DB_PORT" == "$DB_HOST" ]] && DB_PORT=5432
+STORAGE_ROOT="$(qamh_storage_root "$ENV_FILE" "$DATA_ROOT")"
 
 STAMP="$(date '+%Y%m%d-%H%M%S')"
 DEST="$BACKUP_ROOT/$STAMP"
@@ -55,36 +55,23 @@ log "대상 디렉터리: $DEST"
 
 # --- 1. database ----------------------------------------------------------- #
 log "PostgreSQL 덤프 시작 ($DB_NAME)"
-PGPASSWORD="$DB_PASS" pg_dump \
-    --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" \
-    --dbname="$DB_NAME" \
-    --format=custom --compress=6 --no-owner --no-privileges \
-    --file="$DEST/database.dump" \
-    || die "pg_dump 실패"
-unset PGPASSWORD
+qamh_pg_dump "$DEST/database.dump" || die "pg_dump 실패"
 log "덤프 완료: $(du -h "$DEST/database.dump" | cut -f1)"
 
 # --- 2. storage ------------------------------------------------------------ #
-if [[ -d "$DATA_ROOT/storage" ]]; then
-    log "문서 저장소 아카이브 시작"
-    tar -czf "$DEST/storage.tar.gz" -C "$DATA_ROOT" storage \
+if [[ -d "$STORAGE_ROOT" ]]; then
+    log "문서 저장소 아카이브 시작 ($STORAGE_ROOT)"
+    qamh_archive_storage "$STORAGE_ROOT" "$DEST/storage.tar.gz" \
         || die "storage 아카이브 실패"
     log "아카이브 완료: $(du -h "$DEST/storage.tar.gz" | cut -f1)"
 else
-    log "경고: $DATA_ROOT/storage 가 없습니다. 저장소 백업을 건너뜁니다."
+    log "경고: $STORAGE_ROOT 가 없습니다. 저장소 백업을 건너뜁니다."
 fi
 
 # --- 3. manifest ----------------------------------------------------------- #
-{
-    echo "backup_at=$(date -Iseconds)"
-    echo "hostname=$(hostname)"
-    echo "database=$DB_NAME"
-    echo "storage_root=$DATA_ROOT/storage"
-    echo "storage_file_count=$(find "$DATA_ROOT/storage" -type f 2>/dev/null | wc -l)"
-    echo "app_commit=$(cat "$APP_ROOT/app/REVISION" 2>/dev/null || echo unknown)"
-    echo "--- sha256 ---"
-    (cd "$DEST" && sha256sum ./* 2>/dev/null | grep -v manifest.txt || true)
-} > "$DEST/manifest.txt"
+qamh_write_manifest "$DEST" "$DB_NAME" "$STORAGE_ROOT" "$APP_ROOT" \
+    || die "manifest 작성 실패"
+qamh_verify_manifest "$DEST" >/dev/null || die "방금 만든 백업의 SHA-256 확인 실패: $DEST"
 
 chmod -R go-rwx "$DEST"
 log "manifest 작성 완료"

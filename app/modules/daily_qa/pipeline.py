@@ -33,6 +33,10 @@ logger = logging.getLogger("regression_analyzer")
 LOCK_STALE_SECONDS = 6 * 3600
 STATE_ISSUES_SINCE = "issues_last_success_at"
 STATE_MANUAL_HASH = "manual_hash"
+#: 상한 때문에 미뤘거나 작업이 실패해 아직 검토하지 못한 SRS 변경 (JSON 목록, MISMATCH 4-3).
+STATE_B_PENDING = "spec_change_pending"
+#: 이슈 기준 시각 뒤에 읽어 처리를 끝낸 이슈 {번호: 수정 시각} (JSON, MISMATCH 4-4).
+STATE_ISSUES_DONE = "issues_processed"
 AI_STAGES = ("B", "C", "F")
 
 
@@ -188,9 +192,14 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
                 raise PolarionError("SRS 조회 결과가 0건입니다. 조회식·권한을 확인하세요.")
             previous = previous_snapshot(cfg.snapshot_dir, run_date)
             diff = diff_snapshots(load_snapshot(previous) if previous else None, srs_items)
-            save_snapshot(cfg.snapshot_dir, run_date, srs_items)
+            if dry_run:
+                # 시험 실행이 스냅샷을 남기면 다음 정식 실행이 오늘 변경을 보지 못한다 (REQ-DAILY-013).
+                srs_note = "dry-run: 스냅샷을 저장하지 않았습니다"
+            else:
+                save_snapshot(cfg.snapshot_dir, run_date, srs_items)
+                srs_note = "기준 스냅샷만 저장(비교 대상 없음)" if diff.baseline_only else ""
             stages["collect_srs"] = _stage(
-                "ok", "기준 스냅샷만 저장(비교 대상 없음)" if diff.baseline_only else "",
+                "ok", srs_note,
                 total=len(srs_items), added=len(diff.added), removed=len(diff.removed), modified=len(diff.modified),
             )
             (out_dir / "srs_diff.json").write_text(json.dumps(diff.as_dict(), ensure_ascii=False, indent=1), encoding="utf-8")
@@ -209,13 +218,16 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
     # 3. 이슈 수집 -----------------------------------------------------------
     new_issues: list[dict] = []
     newest_issue_update = ""
+    since = ""
+    issues_done = _load_json_state(store, STATE_ISSUES_DONE, {})
     if client is not None:
         try:
             since = store.get_state(STATE_ISSUES_SINCE) or (today - timedelta(days=1)).astimezone(timezone.utc).isoformat()
             for raw in client.iter_workitems(cfg.polarion.issue_query):
                 issue = normalize_issue(raw)
                 newest_issue_update = max(newest_issue_update, issue["updated"])
-                if issue["updated"] and _after(issue["updated"], since):
+                # 앞 실행에서 이미 처리한 이슈는 그 뒤로 다시 바뀌지 않았으면 또 보내지 않는다.
+                if issue["updated"] and _after(issue["updated"], since) and issues_done.get(issue["id"]) != issue["updated"]:
                     new_issues.append(issue)
             for issue in new_issues[: cfg.batch_size * cfg.max_tasks_per_run]:
                 issue["comments"] = [
@@ -235,9 +247,10 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
         stages["tc_index"] = _stage("partial" if tc_errors else "ok", "; ".join(tc_errors), files=len(inputs.tc_paths), rows=len(tc_rows))
 
     # 5. 결정적 계산 ---------------------------------------------------------
+    findings_box = _OpenFindings(store, dry_run=dry_run)
     b_deterministic = packages.removed_srs_findings(diff, tc_rows) if tc_rows else []
     for finding in b_deterministic:
-        if _save(store, run_id, SKILL_B, "B-removed", finding.as_dict(), dedupe=True):
+        if findings_box.save(run_id, SKILL_B, "B-removed", finding.as_dict()):
             all_findings.append({"skill": SKILL_B, "verdict": finding.verdict})
     if not weekly:
         stages["E"] = _stage("not_due", f"매주 {cfg.weekly_day} 에만 돕니다.")
@@ -247,11 +260,12 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
         gaps = packages.trace_gaps(srs_items, tc_rows)
         saved = 0
         for finding in gaps.findings:
-            if _save(store, run_id, SKILL_E, "E-weekly", finding.as_dict(), dedupe=True):
+            if findings_box.save(run_id, SKILL_E, "E-weekly", finding.as_dict()):
                 saved += 1
                 all_findings.append({"skill": SKILL_E, "verdict": finding.verdict})
+        e_note = f"구 번호로 확인 불가 {gaps.legacy_unmatched}종" + (" · dry-run: Finding 을 저장하지 않았습니다" if dry_run else "")
         stages["E"] = _stage(
-            "ok", f"구 번호로 확인 불가 {gaps.legacy_unmatched}종",
+            "ok", e_note,
             srs_seen=gaps.srs_seen, srs_examined=gaps.srs_examined, tc_rows=gaps.tc_rows_seen,
             found=len(gaps.findings), new=saved,
         )
@@ -260,8 +274,11 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
     manual_hash = _manual_hash(inputs.manuals) if inputs.manuals else ""
     manual_changed = bool(manual_hash) and manual_hash != store.get_state(STATE_MANUAL_HASH)
     tasks: dict[str, list[packages.Task]] = {"B": [], "C": [], "F": []}
-    if stages["collect_srs"]["status"] == "ok" and not diff.baseline_only:
-        tasks["B"] = packages.build_b_tasks(diff, tc_rows, cfg.batch_size, cfg.tc_candidate_limit, store.answered_questions(SKILL_B))
+    b_carried = _load_json_state(store, STATE_B_PENDING, [])
+    if stages["collect_srs"]["status"] == "ok":
+        tasks["B"] = packages.build_b_tasks(
+            diff, tc_rows, cfg.batch_size, cfg.tc_candidate_limit, store.answered_questions(SKILL_B), carried=b_carried
+        )
     if new_issues:
         tasks["C"] = packages.build_c_tasks(new_issues, srs_by_id, tc_rows, cfg.batch_size, cfg.tc_candidate_limit, store.answered_questions(SKILL_C))
     f_due = weekly or manual_changed
@@ -279,18 +296,30 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
         tasks["F"] = packages.build_f_tasks(changed, sorted(inputs.manuals), cfg.batch_size, store.answered_questions(SKILL_F))
 
     budget = cfg.max_tasks_per_run
+    input_failed = {
+        "B": "SRS 수집이 실패해 검토하지 못했습니다" if stages["collect_srs"]["status"] == "failed" else "",
+        "C": "이슈 수집이 실패해 검토하지 못했습니다" if stages["collect_issues"]["status"] == "failed" else "",
+    }
     for key in AI_STAGES:
         if key == "F" and not f_due:
             stages["F"] = _stage("not_due", f"매주 {cfg.weekly_day} 또는 매뉴얼이 바뀐 날에만 돕니다.")
             continue
+        if not tasks[key] and input_failed.get(key):
+            # 수집 실패를 '바뀐 것 없음' 으로 보이지 않게 한다 (MISMATCH 4-1).
+            stages[key] = _stage("failed", input_failed[key])
+            continue
         if not tasks[key]:
             stages.setdefault(key, _stage("skipped", "입력이 없습니다 (변경·신규 항목 없음)."))
+            if key == "B" and not dry_run and stages["collect_srs"]["status"] == "ok" and b_carried:
+                _save_json_state(store, STATE_B_PENDING, [])
             continue
         if ai_block == "rules":
             stages[key] = _stage("rules", rules_state.reason, tasks=len(tasks[key]))
+            _carry_over(store, key, tasks[key], dry_run)
             continue
         if ai_block:
             stages[key] = _stage("skipped", stages["preflight"]["note"], tasks=len(tasks[key]))
+            _carry_over(store, key, tasks[key], dry_run)
             continue
         selected = tasks[key][:budget]
         budget -= len(selected)
@@ -298,18 +327,27 @@ def _run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, run
         if workspace is not None and not audit.get("context_written"):
             audit["context"] = write_context(workspace, srs_items, [row.as_dict() for row in tc_rows], inputs.manuals)
             audit["context_written"] = True
-        stage_result = _run_tasks(key, selected, workspace, runner, store, run_id, out_dir, audit, all_findings, dry_run)
+        stage_result = _run_tasks(key, selected, workspace, runner, store, run_id, out_dir, audit, all_findings, dry_run, findings_box)
         question_count += stage_result.pop("questions", 0)
+        failed_tasks = stage_result.pop("failed_tasks", [])
         if overflow:
             stage_result["note"] = (stage_result.get("note", "") + f" · 상한 초과로 {overflow}개 묶음 다음 실행으로 미룸").strip(" ·")
+        if key == "B" and failed_tasks:
+            stage_result["note"] = (stage_result["note"] + f" · 실패한 {len(failed_tasks)}개 묶음은 다음 실행에 다시 넣음").strip(" ·")
         stages[key] = stage_result
-        if key == "C" and stage_result["status"] in ("ok", "partial") and not dry_run and newest_issue_update and not overflow:
-            store.set_state(STATE_ISSUES_SINCE, newest_issue_update)
+        not_done = [task for task in selected if task.task_id in failed_tasks] + tasks[key][len(selected):]
+        _carry_over(store, key, not_done, dry_run)
+        if key == "C" and not dry_run:
+            done_tasks = [task for task in selected if task.task_id not in failed_tasks]
+            _advance_issue_cursor(store, stage_result["status"] == "ok" and not overflow, since, newest_issue_update,
+                                  issues_done, done_tasks)
         if key == "F" and stage_result["status"] == "ok" and not dry_run and manual_hash:
             store.set_state(STATE_MANUAL_HASH, manual_hash)
 
     if stages["collect_issues"]["status"] == "ok" and not new_issues and newest_issue_update and not dry_run:
         store.set_state(STATE_ISSUES_SINCE, newest_issue_update)
+        if issues_done:
+            _save_json_state(store, STATE_ISSUES_DONE, {})
 
     # 7. C 초안 Excel -----------------------------------------------------
     c_findings = store.list_findings(run_id=run_id, skill=SKILL_C)
@@ -367,15 +405,112 @@ def _comment_text(comment: dict) -> dict:
     return {"created": str(attrs.get("created") or ""), "text": text.strip()[:2000]}
 
 
-def _save(store: DailyQaStore, run_id: str, skill: str, task_id: str, finding: dict, dedupe: bool) -> bool:
-    if dedupe and store.has_open_finding(skill, finding["subject"], finding["verdict"]):
-        return False
-    store.add_finding(run_id, skill, task_id, finding)
-    return True
+def _load_json_state(store: DailyQaStore, key: str, default):
+    raw = store.get_state(key)
+    if not raw:
+        return default
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        logger.warning("daily_qa_state_unreadable key=%s", key)
+        return default
+    return value if isinstance(value, type(default)) else default
 
 
-def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all_findings, dry_run) -> dict:
+def _save_json_state(store: DailyQaStore, key: str, value) -> None:
+    store.set_state(key, json.dumps(value, ensure_ascii=False))
+
+
+def _carry_over(store: DailyQaStore, key: str, not_done: list[packages.Task], dry_run: bool) -> None:
+    """검토하지 못한 SRS 변경을 다음 실행에 다시 넣도록 남긴다 (MISMATCH 4-3). 이슈는 기준 시각이 맡는다."""
+    if key != "B" or dry_run:
+        return
+    changes = [
+        {name: value for name, value in change.items() if name != "candidates"}
+        for task in not_done for change in task.payload.get("changes", [])
+    ]
+    _save_json_state(store, STATE_B_PENDING, changes)
+
+
+def _advance_issue_cursor(store, all_done: bool, since: str, newest: str, issues_done: dict, done_tasks) -> None:
+    """이슈 기준 시각 옮기기 (MISMATCH 4-4).
+
+    모든 묶음이 성공하고 미룬 묶음이 없을 때만 기준 시각을 가장 늦은 수정 시각으로 옮긴다.
+    아니면 기준 시각은 그대로 두고(첫 실행이면 이번에 쓴 시각을 저장), 처리한 이슈만 기록해
+    다음 실행에서 실패·미룬 이슈만 다시 보낸다.
+    """
+    if all_done and newest:
+        store.set_state(STATE_ISSUES_SINCE, newest)
+        _save_json_state(store, STATE_ISSUES_DONE, {})
+        return
+    if since and not store.get_state(STATE_ISSUES_SINCE):
+        store.set_state(STATE_ISSUES_SINCE, since)
+    done = dict(issues_done)
+    for task in done_tasks:
+        for item in task.payload.get("issues", []):
+            issue = item.get("issue") or {}
+            if issue.get("id"):
+                done[issue["id"]] = issue.get("updated", "")
+    _save_json_state(store, STATE_ISSUES_DONE, done)
+
+
+def _tc_key(tc_ref: dict | None) -> tuple:
+    if not tc_ref:
+        return ()
+    workbook, sheet = tc_ref.get("workbook", ""), tc_ref.get("sheet", "")
+    return (workbook, sheet, tc_ref.get("tc_id")) if tc_ref.get("tc_id") else (workbook, sheet, int(tc_ref.get("row") or 0))
+
+
+class _OpenFindings:
+    """Finding 저장 창구. 같은 기록인지 가리는 기준은 점검·대상·판정·대상 TC 위치다 (REQ-DAILY-018).
+
+    대상 TC 를 기준에 넣어, 같은 SRS 를 가리키는 TC 가 여럿이면 TC 마다 Finding 이 남는다
+    (MISMATCH 4-5). 열린 Finding 목록은 점검마다 한 번만 읽는다. 시험 실행은 저장하지 않는다.
+    """
+
+    OPEN = ("PENDING", "APPROVED", "NEED_EVIDENCE")
+
+    def __init__(self, store: DailyQaStore, dry_run: bool = False) -> None:
+        self.store = store
+        self.dry_run = dry_run
+        self._keys: dict[str, set[tuple]] = {}
+
+    def _open_keys(self, skill: str) -> set[tuple]:
+        if skill not in self._keys:
+            keys: set[tuple] = set()
+            for status in self.OPEN:
+                for item in self.store.list_findings(skill=skill, review_status=status, limit=1_000_000):
+                    keys.add((item["subject"], item["verdict"], _tc_key(item.get("tc_ref"))))
+            self._keys[skill] = keys
+        return self._keys[skill]
+
+    def save(self, run_id: str, skill: str, task_id: str, finding: dict, dedupe: bool = True) -> bool:
+        if self.dry_run:
+            return False
+        if dedupe:
+            key = (finding["subject"], finding["verdict"], _tc_key(finding.get("tc_ref")))
+            keys = self._open_keys(skill)
+            if key in keys:
+                return False
+            keys.add(key)
+        self.store.add_finding(run_id, skill, task_id, finding)
+        return True
+
+
+def _failure_reason(entry: dict) -> str:
+    for attempt in ("attempt2", "attempt1"):
+        info = entry.get(attempt) or {}
+        text = " ".join(str(info.get(name) or "") for name in ("error", "result_error")).strip()
+        if text:
+            return " ".join(text.split())[:120]
+    return ""
+
+
+def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all_findings, dry_run, findings_box=None) -> dict:
+    findings_box = findings_box or _OpenFindings(store, dry_run=dry_run)
     done = failed = accepted = rejected = questions = 0
+    failed_tasks: list[str] = []
+    first_reason = ""
     sent_dir = out_dir / "sent"
     for task in tasks:
         entry = {"task_id": task.task_id, "skill": task.skill}
@@ -403,6 +538,8 @@ def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all
                 entry[f"attempt{attempt}"]["result_error"] = str(exc)
         if checked is None:
             failed += 1
+            failed_tasks.append(task.task_id)
+            first_reason = first_reason or _failure_reason(entry)
             entry["status"] = "failed"
             audit["tasks"].append(entry)
             continue
@@ -410,7 +547,7 @@ def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all
         shutil.copy2(result_path, out_dir / result_path.name)
         for finding in checked.accepted:
             data = finding.model_dump()
-            if _save(store, run_id, task.skill, task.task_id, data, dedupe=(task.skill == SKILL_B)):
+            if findings_box.save(run_id, task.skill, task.task_id, data, dedupe=(task.skill == SKILL_B)):
                 accepted += 1
                 all_findings.append({"skill": task.skill, "verdict": finding.verdict})
         for question in checked.result.open_questions:
@@ -427,6 +564,10 @@ def _run_tasks(key, tasks, workspace, runner, store, run_id, out_dir, audit, all
         status, note = "partial", f"{failed}개 작업 실패"
     else:
         status, note = "ok", ""
+    if failed and first_reason and not dry_run:
+        # 메일만 보는 사람도 사용량 한도 같은 이유를 알 수 있게 첫 실패 이유를 붙인다 (MISMATCH 4-7).
+        note += f" · 첫 실패 이유: {first_reason}"
     if rejected:
         note = (note + f" · 규칙 위반으로 버린 Finding {rejected}건").strip(" ·")
-    return {"status": status, "note": note, "counts": {"tasks": len(tasks), "done": done, "failed": failed, "accepted": accepted, "rejected": rejected}, "questions": questions}
+    return {"status": status, "note": note, "counts": {"tasks": len(tasks), "done": done, "failed": failed, "accepted": accepted, "rejected": rejected},
+            "questions": questions, "failed_tasks": [] if dry_run else failed_tasks}

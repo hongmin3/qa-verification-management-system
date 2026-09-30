@@ -14,6 +14,7 @@ from app.modules.manual_review.change_filter import is_functional_change
 from app.modules.manual_review.cross_manual import find_cross_manual_impacts
 from app.modules.manual_review.docx_track_changes import TrackedChange, extract_track_changes
 from app.modules.manual_review.pdf_revision_diff import extract_pdf_revision_diff
+from app.modules.manual_review.review_signals import apply_human_review_signals
 from app.modules.manual_review.release_scope import extract_design_review_changes, extract_release_note_changes, match_release_changes
 from app.modules.manual_review.srs_evidence import load_srs_chunks, search_candidates
 from app.parsers.document_parser import extract_document_text
@@ -134,16 +135,7 @@ class ManualRevisionReviewer:
                 candidates = search_candidates(chunks, change.text, max_candidates)
                 change_release_context = release_context.get(change_id, [])
                 judgment = self.ai_client.judge(change, candidates, change_release_context)
-                if any(item.get("result_status") == "FAIL" for item in change_release_context):
-                    judgment.needs_human_review = True
-                    if "DESIGN_REVIEW_FAILED" not in judgment.reason_codes:
-                        judgment.reason_codes.append("DESIGN_REVIEW_FAILED")
-                if change.review_required:
-                    judgment.confidence = min(judgment.confidence, 0.6)
-                    judgment.needs_human_review = True
-                    reason = "IMAGE_CHANGE_REVIEW_REQUIRED" if "image" in change.kind else "PDF_DIFF_REVIEW_REQUIRED"
-                    if reason not in judgment.reason_codes:
-                        judgment.reason_codes.append(reason)
+                apply_human_review_signals(judgment, change.kind, change.review_required, change_release_context)
                 self.storage.update_manual_change_judgment(change_id, judgment.decision.value, judgment.confidence, judgment.model_dump(mode="json"))
                 decision_counts[judgment.decision.value] = decision_counts.get(judgment.decision.value, 0) + 1
 

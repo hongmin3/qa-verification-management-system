@@ -4,8 +4,8 @@ import asyncio
 import json
 import uuid
 from threading import Thread
-from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
@@ -15,6 +15,7 @@ from app.core.config import get_settings, reload_settings
 from app.core.evaluation import aggregate_evaluations, evaluate_analysis, parse_tc_ids
 from app.core.storage import Storage
 from app.core.uploads import save_upload
+from app.core.usage import daily_token_status as _core_daily_token_status
 from app.modules.impact_analyzer.regression_analyzer import RegressionAnalyzer
 from app.modules.impact_analyzer.schemas import ANALYSIS_STAGES
 
@@ -23,15 +24,18 @@ templates = Jinja2Templates(directory=[Path(__file__).parent / "templates", get_
 storage = Storage()
 
 
-def _today_start_iso() -> str:
-    now = datetime.now(timezone.utc)
-    return now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-
-
 def daily_token_status() -> dict:
-    limit = int(get_settings().get("analysis.daily_token_limit", 0) or 0)
-    used = storage.tokens_used_since(_today_start_iso())
-    return {"used": used, "limit": limit, "exceeded": limit > 0 and used >= limit}
+    """오늘(한국 시간 0시부터) 누적 토큰과 한도. 계산은 `app.core.usage` 가 맡는다 (NFR-IMPACT-001).
+
+    QA Agent 등 다른 기능도 이 함수를 인자 없이 부르므로 이름과 모양을 유지한다.
+    """
+    return _core_daily_token_status(storage)
+
+
+def _ensure_token_budget() -> None:
+    token_status = daily_token_status()
+    if token_status["exceeded"]:
+        raise HTTPException(429, f"오늘 Gemini 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요.")
 
 
 @router.get("/impact-analyzer", response_class=HTMLResponse)
@@ -42,7 +46,8 @@ def home(request: Request):
 
 @router.get("/impact-analyzer/guide", response_class=HTMLResponse)
 def guide(request: Request):
-    return templates.TemplateResponse(request, "guide.html", {})
+    # 진행 단계 목록은 실제 단계 정의에서 그린다. 단계를 바꿔도 사용법 화면이 어긋나지 않는다.
+    return templates.TemplateResponse(request, "guide.html", {"stages": ANALYSIS_STAGES})
 
 
 @router.get("/guide")
@@ -84,7 +89,7 @@ def analysis_history(request: Request, status: str = "", product: str = "", q: s
 
 
 @router.get("/analyses/{job_id}/view", response_class=HTMLResponse)
-def analysis_detail(request: Request, job_id: str):
+def analysis_detail(request: Request, job_id: str, retry_error: str = ""):
     analysis = storage.get_analysis(job_id)
     if not analysis:
         raise HTTPException(404, "분석 작업을 찾을 수 없습니다.")
@@ -100,7 +105,9 @@ def analysis_detail(request: Request, job_id: str):
         "analysis_detail.html",
         {"analysis": analysis, "result": result, "audit": result.get("ai_audit") or {},
          "evaluation": evaluation, "evaluation_report": evaluation_report,
-         "evaluation_summary": aggregate_evaluations(reports)},
+         "evaluation_summary": aggregate_evaluations(reports),
+         "candidate_limit": int(get_settings().get("retrieval.candidate_limit", 150)),
+         "retry_error": retry_error[:300]},
     )
 
 
@@ -116,12 +123,28 @@ def save_evaluation(job_id: str, expected_tc_ids: str = Form(""), qa_note: str =
 
 
 def _run_job(job_id: str, changes: list[Path], product: str, notes: str) -> None:
+    analyzer = None
     try:
         storage.update_analysis(job_id, "RUNNING")
-        result = RegressionAnalyzer().run_for_product(changes, product, analysis_id=job_id, user_notes=notes)
+        analyzer = RegressionAnalyzer()
+        result = analyzer.run_for_product(changes, product, analysis_id=job_id, user_notes=notes)
         storage.update_analysis(job_id, "DONE", result=result.model_dump(mode="json"))
     except Exception as exc:
-        storage.update_analysis(job_id, "FAILED", error=str(exc))
+        storage.update_analysis(job_id, "FAILED", result=_spent_tokens(analyzer), error=str(exc))
+
+
+def _spent_tokens(analyzer) -> dict | None:
+    """실패한 분석이 이미 쓴 토큰. AI 호출 전에 실패했으면 None (결과를 남기지 않는다).
+
+    AI 호출 뒤에 실패해도 쓴 토큰은 요금에 들어가므로 하루 합계에 넣는다 (SPEC 13.1-3, OPEN_QUESTIONS 8-10).
+    """
+    try:
+        usage = dict(analyzer.ai_client.token_usage or {}) if analyzer is not None else {}
+    except Exception:
+        return None
+    if not int(usage.get("total_tokens", 0) or 0):
+        return None
+    return {"token_usage": usage}
 
 
 def _ensure_job_capacity() -> None:
@@ -155,9 +178,7 @@ def start_analysis(background_tasks: BackgroundTasks, product: str = Form(...), 
     uploads = [f for f in change_files if f and f.filename]
     if not uploads and not notes:
         raise HTTPException(400, "변경문서를 첨부하거나 요청 사항을 입력하세요.")
-    token_status = daily_token_status()
-    if token_status["exceeded"]:
-        raise HTTPException(429, f"오늘 Gemini 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요.")
+    _ensure_token_budget()
     if not storage.active_documents("specification", product) or not storage.active_documents("testcase", product):
         raise HTTPException(404, f"'{product}' 제품에 등록된 사양서 또는 TC가 없습니다. Knowledge 메뉴에서 먼저 등록하세요.")
     _ensure_job_capacity()
@@ -179,7 +200,21 @@ def start_analysis(background_tasks: BackgroundTasks, product: str = Form(...), 
 
 
 @router.post("/analyses/{job_id}/retry")
-def retry_analysis(job_id: str, background_tasks: BackgroundTasks):
+def retry_analysis(job_id: str, background_tasks: BackgroundTasks, from_view: str = Form("")):
+    """같은 입력으로 새 분석을 만든다. 화면 버튼(`from_view`)이면 새 분석 상세로 303 이동하고,
+    막히면 원래 상세 화면에 이유를 보인다. 스크립트 호출은 지금처럼 JSON 을 받는다 (REQ-IMPACT-018)."""
+    try:
+        created = _retry(job_id, background_tasks)
+    except HTTPException as exc:
+        if from_view and exc.status_code != 404:
+            return RedirectResponse(f"/analyses/{job_id}/view?retry_error={quote(str(exc.detail))}", status_code=303)
+        raise
+    if from_view:
+        return RedirectResponse(f"/analyses/{created['job_id']}/view", status_code=303)
+    return created
+
+
+def _retry(job_id: str, background_tasks: BackgroundTasks) -> dict:
     previous = storage.get_analysis(job_id)
     if not previous:
         raise HTTPException(404, "분석 작업을 찾을 수 없습니다.")
@@ -192,6 +227,8 @@ def retry_analysis(job_id: str, background_tasks: BackgroundTasks):
         raise HTTPException(409, "이 분석은 재실행용 원본 경로가 없거나 파일이 삭제됐습니다. 변경 문서를 다시 업로드하세요.")
     if not paths and not str(request.get("user_notes") or "").strip():
         raise HTTPException(409, "재실행 가능한 입력이 저장되지 않았습니다.")
+    # 재실행도 새 AI 호출이므로 새 분석과 같은 하루 토큰 한도를 검사한다 (NFR-IMPACT-001).
+    _ensure_token_budget()
     _ensure_job_capacity()
     new_id = uuid.uuid4().hex[:12]
     request["retry_of"] = job_id

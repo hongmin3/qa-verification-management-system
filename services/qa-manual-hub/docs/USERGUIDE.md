@@ -42,6 +42,7 @@
 
 **비밀번호를 바꾸기 전에는 문서를 등록하거나 수정할 수 없습니다.**
 (조회·검색·다운로드는 됩니다.)
+Admin 도 마찬가지입니다. 비밀번호를 바꾸기 전에는 사용자·제품·분류 관리도 할 수 없습니다.
 
 경고 문구의 "비밀번호를 변경" 링크를 누르거나, 우측 상단 내 이름 → **비밀번호
 변경** 으로 이동해서 바꾸세요.
@@ -257,7 +258,7 @@ Service Manual → QC Manual → …)입니다.
 | **Revision** | 예: `Rev.1.3`, `R2`, `A` |
 | Document Number | 문서 관리번호 |
 | Language | `KO`, `EN` 등 |
-| Revision Date | 문서에 적힌 개정일 |
+| Revision Date | 문서에 적힌 개정일. 파일명에 날짜가 있으면 채워지고, 없으면 빈칸입니다 (업로드 날짜로 채우지 않습니다) |
 | Revision Description | 이번 개정에서 바뀐 내용 (여러 줄 가능) |
 | Comment | 기타 메모 |
 
@@ -661,13 +662,17 @@ ssh user@server 'curl -s http://127.0.0.1/api/health'
    **아무것도 바꾸지 않고 중단**
 2. 없는 패키지만 apt 설치 (nginx, python3-venv, python3-pip, rsync)
 3. `<APP_ROOT>`, `<DATA_ROOT>` 생성
-4. 전용 DB / role 생성. **이미 있으면 그대로 사용** (초기화 안 함)
+4. 전용 DB / role 생성. **이미 있으면 그대로 사용** (초기화 안 함). 이미 있는 role 의
+   비밀번호도 바꾸지 않습니다. role 은 있는데 `.env` 에 비밀번호가 없으면 멈춥니다
+   (그 role 을 이 서비스만 쓴다면 `RESET_DB_PASSWORD=1` 로 다시 실행)
 5. 무작위 DB 비밀번호로 `.env` 생성 (600). **이미 있으면 유지**
 6. virtualenv + 의존성
 7. systemd 유닛 설치 및 enable
 8. nginx 사이트 설치. 새로 설치된 nginx 의 기본 `default` 사이트만 비활성화
    (파일은 보존)
 9. UFW 가 active 면 `80/tcp` 규칙 **1개만** 추가
+10. 자동 백업 `/etc/cron.d/qa-manual-hub-backup` 생성 (매일 02:30). 이미 있으면 그대로 둠
+    (`SKIP_BACKUP_CRON=1` 로 건너뜀)
 
 멱등입니다. 몇 번이든 다시 실행할 수 있습니다.
 
@@ -773,6 +778,7 @@ nginx 를 앱보다 크게 잡는 이유: nginx 가 먼저 거절하면 사용�
 | `reset-password <login_id>` | **모든 Admin 이 잠겼을 때의 복구 경로.** 해당 사용자의 세션도 전부 무효화 |
 | `list-users` | 사용자 목록 (Login ID / 이름 / Role / Active / 마지막 로그인) |
 | `check-storage` | DB에 등록된 모든 버전의 파일 존재·크기 검증. 문제 있으면 종료코드 2 |
+| `check-storage --verify-sha256` | 위 검사에 더해 파일 내용을 다시 읽어 업로드 때 SHA-256 과 비교. 크기는 같은데 내용이 손상된 파일도 찾음 (느림) |
 | `purge-sessions` | 만료된 세션 행 정리 |
 
 비밀번호는 대화형 프롬프트로 받습니다 (셸 히스토리에 남지 않음).
@@ -816,15 +822,17 @@ sudo -u <SERVICE_USER> <APP_ROOT>/scripts/backup.sh
 | 파일 | 내용 |
 |---|---|
 | `database.dump` | `pg_dump --format=custom --compress=6 --no-owner --no-privileges` |
-| `storage.tar.gz` | 문서 저장소 전체 |
+| `storage.tar.gz` | 문서 저장소 전체 (`.env` 의 `STORAGE_ROOT`, 없으면 `<DATA_ROOT>/storage`) |
 | `manifest.txt` | 백업 시각, 호스트, DB명, storage 파일 개수, 배포 커밋, 각 산출물 SHA-256 |
 
-`manifest.txt` 가 있어 **DB 덤프와 파일 세트가 어긋난 조합으로 복구되는 일**을
-막을 수 있습니다. 복구 전에 반드시 확인하세요.
+`restore.sh` 는 복원 전에 `manifest.txt` 의 SHA-256 을 모든 파일과 맞춰 봅니다.
+manifest 가 없거나 값이 다르면 아무것도 바꾸지 않고 멈춥니다. 그래서 **DB 덤프와 파일
+세트가 어긋난 조합으로 복구되는 일**이 없습니다.
 
 ### 자동 실행
 
-`/etc/cron.d/qa-manual-hub-backup`
+`/etc/cron.d/qa-manual-hub-backup` (`install.sh` 가 없을 때만 만듭니다. 시간을 바꿔도
+다시 실행한 `install.sh` 가 덮어쓰지 않습니다.)
 
 ```
 30 2 * * *  <SERVICE_USER>  <APP_ROOT>/scripts/backup.sh >> <APP_ROOT>/logs/backup.log 2>&1
@@ -878,26 +886,29 @@ sudo <APP_ROOT>/scripts/restore.sh <DATA_ROOT>/backup/20260827-023000
 
 **현재 데이터를 대체하는 작업입니다.** 스크립트는 안전 절차를 강제합니다.
 
-1. **무엇을 덮어쓸지 먼저 출력** — 백업 시각, 대상 DB, storage 경로, 현재 파일 수
-2. `RESTORE` 를 타이핑해야 진행 (`--yes` 로 생략 가능, 자동화 전용)
-3. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** ← 되돌릴 수 있음
-4. 서비스 정지
-5. `public` 스키마 DROP → CREATE → `pg_restore`
-6. `storage` 를 `storage.replaced-<timestamp>` 로 이동하고 아카이브 전개
-7. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
-8. 서비스 시작 + `is-active` 확인
-9. `qamh check-storage` 로 DB↔파일 일치 검증
+1. **백업 폴더 확인** — `manifest.txt` 의 SHA-256 이 모든 파일과 맞지 않으면 멈춤
+2. **무엇을 덮어쓸지 먼저 출력** — 백업 시각, 대상 DB, storage 경로(`STORAGE_ROOT`), 현재 파일 수
+3. `RESTORE` 를 타이핑해야 진행 (`--yes` 로 생략 가능, 자동화 전용)
+4. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** ← 되돌릴 수 있음.
+   DB 덤프나 저장소 묶기가 실패하면 서비스와 데이터를 건드리지 않고 멈춤
+5. 서비스 정지
+6. `public` 스키마 DROP → CREATE → `pg_restore`
+7. 저장소를 `<STORAGE_ROOT>.replaced-<timestamp>` 로 이동하고 아카이브 전개
+8. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
+9. 서비스 시작 + `is-active` 확인
+10. `qamh check-storage --verify-sha256` 로 DB↔파일 일치 검증 (내용까지)
 
 정상 출력 예:
 
 ```
 [restore] 데이터베이스 복원 완료
-[restore] 저장소 복원 완료 (기존 폴더는 storage.replaced-* 로 보존)
+[restore] 저장소 복원 완료 (기존 폴더는 <STORAGE_ROOT>.replaced-<timestamp> 로 보존)
 [restore] 서비스 정상 동작
-[restore] 파일 무결성 점검
+[restore] 파일 무결성 점검 (존재·크기·SHA-256)
 검사한 버전: 8
 파일 없음: 0
 크기 불일치: 0
+SHA-256 불일치: 0
 [restore] 복원 완료. 안전 백업 위치: <DATA_ROOT>/backup/pre-restore-...
 ```
 
@@ -914,13 +925,13 @@ sudo -u <SERVICE_USER> <APP_ROOT>/scripts/qamh check-storage
 문제가 없으면 정리:
 
 ```bash
-sudo rm -rf <DATA_ROOT>/storage.replaced-*
+sudo rm -rf <STORAGE_ROOT>.replaced-*     # 기본값이면 <DATA_ROOT>/storage.replaced-*
 sudo rm -rf <DATA_ROOT>/backup/pre-restore-*
 ```
 
 ### 잘못 복구했을 때
 
-3단계에서 만든 `pre-restore-*` 백업으로 다시 복구합니다.
+4단계에서 만든 `pre-restore-*` 백업으로 다시 복구합니다.
 
 ```bash
 sudo <APP_ROOT>/scripts/restore.sh <DATA_ROOT>/backup/pre-restore-<timestamp>
@@ -953,7 +964,7 @@ free -h
 | **502 Bad Gateway** | `systemctl status qa-manual-hub` | 서비스 중단. `journalctl -u qa-manual-hub -n 50` 로 원인 확인 후 재시작. **`.env` 문법 오류가 가장 흔한 원인** (공백 값 미인용 등) |
 | **503 / 연결 거부** | `systemctl status nginx` | nginx 중단. `nginx -t` 로 설정 검증 후 시작 |
 | 시작 즉시 죽음 | `journalctl -u qa-manual-hub -n 50` | DB 접속 실패(비밀번호 불일치), `STORAGE_ROOT` 권한 문제 |
-| DB 인증 실패 | `.env` 의 `DATABASE_URL` | `install.sh` 를 다시 실행하면 role 비밀번호를 `.env` 값에 맞춥니다 |
+| DB 인증 실패 | `.env` 의 `DATABASE_URL` | 그 role 을 이 서비스만 쓴다면 `sudo RESET_DB_PASSWORD=1 ./deploy/scripts/install.sh` 로 role 비밀번호를 `.env` 값에 맞춥니다 (그냥 다시 실행하면 비밀번호를 바꾸지 않습니다) |
 | **업로드 413** | 파일 크기, `MAX_UPLOAD_MB`, `client_max_body_size` | [3.4](#34-설정) 참조. 두 곳 모두 조정 |
 | 업로드 도중 끊김 | `proxy_read_timeout`, 네트워크 | nginx 타임아웃은 기본 600s |
 | **다운로드 410 Gone** | `qamh check-storage` | DB 행은 있는데 파일이 없음. 백업에서 storage 복구 |

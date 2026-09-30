@@ -5,6 +5,15 @@ import re
 from app.modules.impact_analyzer.schemas import ChangeAnalysis
 from app.retrieval.bm25_retriever import BM25Retriever
 
+#: 변경 기능 줄을 고르는 낱말. 영어 변경 문서도 변경 기능이 비지 않게 영어 낱말을 함께 둔다 (SPEC 13.1-1).
+#: 영어는 낱말 단위로만 맞춘다. "Address" 의 "Add", "Prefix" 의 "fix" 는 변경 낱말이 아니다.
+CHANGE_WORDS = re.compile(
+    r"변경|추가|개선|수정|지원"
+    r"|\b(?:chang(?:e|es|ed|ing)|add(?:s|ed|ing)?|improv(?:e|es|ed|ing|ement|ements)"
+    r"|fix(?:es|ed|ing)?|support(?:s|ed|ing)?|updat(?:e|es|ed|ing)|modif(?:y|ies|ied|ying|ication|ications))\b",
+    re.I,
+)
+
 RISK_WORDS = ("저장", "설정", "호환", "마이그레이션", "DICOM", "인터페이스", "삭제", "변환", "workflow", "database", "UI")
 
 
@@ -63,7 +72,7 @@ def analyze_change_rules(text: str, baseline_text: str | None = None, user_notes
     # 사용자가 직접 입력한 요청은 이미 변경사항으로 명시된 것이므로 키워드 필터 없이 그대로 포함한다.
     features = list(note_lines)
     for line in lines:
-        if re.search(r"변경|추가|개선|수정|지원", line, re.I):
+        if CHANGE_WORDS.search(line):
             features.append(line[:200])
     return ChangeAnalysis(
         user_notes=user_notes,

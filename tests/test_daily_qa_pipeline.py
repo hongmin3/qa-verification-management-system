@@ -11,6 +11,7 @@ from app.modules.daily_qa.agent_runner import FakeRunner
 from app.modules.daily_qa.pipeline import Inputs, RunLocked, run_daily
 from app.modules.daily_qa.rules import RulesState
 from app.modules.daily_qa.schema import SKILL_B, SKILL_C, SKILL_E, SKILL_F
+from app.modules.daily_qa.settings import PolarionSettings
 from app.modules.daily_qa.srs_snapshot import save_snapshot
 from app.modules.daily_qa.store import DailyQaStore
 from tests.daily_qa_fixtures import FakePolarion, issue_item, make_settings, make_tc_workbook, rules_ok, srs_item, write_result
@@ -180,7 +181,9 @@ def test_scheduler_launches_detached_process_only_with_credentials(env, monkeypa
             self.pid = 4242
 
     monkeypatch.setattr(scheduled_jobs.subprocess, "Popen", FakePopen)
-    monkeypatch.setattr(scheduled_jobs, "load", lambda: make_settings(env["cfg"].root, env["tmp"] / "ws", claude_token=""))
+    # Polarion 설정이 없으면 띄우지 않는다. Claude 토큰만 없는 경우는 test_daily_qa_fixes 가 본다.
+    no_polarion = PolarionSettings(host="", token="", project_id="VXvue", srs_query="type:srs", issue_query="type:issue")
+    monkeypatch.setattr(scheduled_jobs, "load", lambda: make_settings(env["cfg"].root, env["tmp"] / "ws", polarion=no_polarion))
     assert scheduled_jobs.launch_detached()["status"] == "not_configured" and not launched
 
     monkeypatch.setattr(scheduled_jobs, "load", lambda: env["cfg"])

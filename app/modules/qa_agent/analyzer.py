@@ -46,10 +46,17 @@ from app.modules.qa_agent.schemas import (
     AXIS_LABELS,
     TC_JUDGMENT_LABELS,
     TC_JUDGMENTS_REQUIRING_APPROVAL,
+    TC_NEW_TC,
     QaAgentDecision,
 )
 from app.modules.qa_agent.validation import ValidationReport, validate_decision
-from app.parsers.polarion_issue import IssueRecord, load_exported_issue, load_issue
+from app.parsers.polarion_issue import (
+    ISSUE_TYPE_LABELS,
+    TYPE_UNCLASSIFIED,
+    IssueRecord,
+    load_exported_issue,
+    load_issue,
+)
 from app.retrieval.hybrid import HybridRetriever, RetrievalResult
 
 ANALYSIS_STAGES = (
@@ -118,6 +125,23 @@ def _chunk_search_text(chunk: SpecificationChunk) -> str:
     return f"{chunk.heading}\n{chunk.text}"
 
 
+def valid_qa_issue_type(value: str) -> bool:
+    """QA 가 고를 수 있는 이슈 유형인가. 미분류는 고를 수 없다 (고르지 않은 것과 같다)."""
+    return bool(value) and value in ISSUE_TYPE_LABELS and value != TYPE_UNCLASSIFIED
+
+
+def apply_qa_issue_type(issue: IssueRecord, qa_issue_type: str) -> bool:
+    """QA 가 고른 유형으로 이슈 유형을 정한다. 적용했으면 True.
+
+    연구소 검토 결과가 한 유형으로 정해지지 않을 때 QA 가 고른다 (규칙 §6, REQ-ISSUE-004).
+    """
+    if not valid_qa_issue_type(qa_issue_type):
+        return False
+    issue.issue_type = qa_issue_type
+    issue.issue_type_candidates = (qa_issue_type,)
+    return True
+
+
 class QaAgentAnalyzer:
     def __init__(self, ai_client: QaAgentAIClient | None = None, storage: Storage | None = None) -> None:
         self.settings = get_settings()
@@ -167,6 +191,8 @@ class QaAgentAnalyzer:
                 issue = load_issue(issue_path) if issue_path else self.load_issue_for_product(product, issue_id)
             if issue is None:
                 raise ValueError(f"Issue 를 찾을 수 없습니다: {issue_id or issue_path}")
+            lab_type = issue.issue_type
+            type_chosen_by_qa = apply_qa_issue_type(issue, context.qa_issue_type)
 
             result = QaAgentResult(
                 analysis_id=analysis_id,
@@ -176,6 +202,8 @@ class QaAgentAnalyzer:
                 scope_note=scope_note,
             )
             result.issue = self._issue_summary(issue)
+            result.issue["type_source"] = "qa" if type_chosen_by_qa else "lab_review"
+            result.issue["lab_type"] = lab_type
 
             stage(2)  # 지식 문서 로드
             knowledge = load_for_product(product, storage=self.storage, require_both=False)
@@ -194,17 +222,24 @@ class QaAgentAnalyzer:
             stage(5)  # Gate 판정 (LLM 호출 전)
             spec_chunks = spec_hits.values
             deprecated_hits = sum(_looks_deprecated(chunk) for chunk in spec_chunks)
+            unreadable_specifications = [item for item in knowledge.failures if item.get("kind") == "specification"]
+            unreadable_testcases = [item for item in knowledge.failures if item.get("kind") == "testcase"]
+            readable_specification_count = max(len(knowledge.specification_documents) - len(unreadable_specifications), 0)
             preflight = gates.preflight(
                 issue,
                 context,
-                specification_count=len(knowledge.specification_documents),
-                testcase_count=len(knowledge.testcase_documents),
+                specification_count=readable_specification_count,
+                testcase_count=max(len(knowledge.testcase_documents) - len(unreadable_testcases), 0),
                 rules_available=rule_set.available,
                 evidence_count=len(spec_chunks),
                 exact_evidence_count=spec_hits.exact_count,
                 deprecated_hits=deprecated_hits,
                 searched_document_count=len({chunk.document_id for chunk in spec_chunks}),
-                total_document_count=len(knowledge.specification_documents),
+                total_document_count=readable_specification_count,
+                unreadable_documents=[str(item.get("name") or item.get("id") or "") for item in knowledge.failures],
+                unreadable_specification_count=len(unreadable_specifications),
+                unreadable_testcase_count=len(unreadable_testcases),
+                type_chosen_by_qa=type_chosen_by_qa,
             )
             result.gates = preflight.report.as_dict()
             result.draft_only = preflight.draft_only
@@ -261,7 +296,8 @@ class QaAgentAnalyzer:
             covering, link_only = self._coverage_split(validated)
             report = preflight.report
             report.set(gates.evaluate_g3(issue, candidate_count=len(tc_hits.values), covering_tc_ids=covering, link_only_tc_ids=link_only))
-            report.set(gates.evaluate_g5(issue, claims))
+            new_tc_ids = [entry.tc_id for entry in validated.tc_coverage if entry.judgment == TC_NEW_TC]
+            report.set(gates.evaluate_g5(issue, claims, new_tc_ids=new_tc_ids))
             result.gates = report.as_dict()
 
             result.token_usage = dict(self.ai_client.token_usage)

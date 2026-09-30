@@ -152,3 +152,35 @@ def test_insert_comments_skips_out_of_range_paragraph_index(tmp_path):
     inserted = insert_comments(revision_path, changes, output_path)
 
     assert inserted == 0
+
+
+# Validates: REQ-MANUAL-016
+def test_output_filename_uses_real_revision_label_without_middle_dot():
+    """화면이 만드는 실제 리비전 표기("V1.1.0 · W2")로 확인한다. 가운뎃점이 남으면 안 된다."""
+    from app.modules.manual_review.router import _revision_label
+
+    label = _revision_label("1.1.0", 0)
+    assert label == "V1.1.0 · W2"
+    assert output_filename("VXvue Service Manual", label) == "VXvue Service Manual.V1.1.0W2_KO_AI검토.docx"
+
+
+# Validates: REQ-MANUAL-015
+def test_insert_comments_detailed_reports_which_changes_got_comments(tmp_path):
+    from app.modules.manual_review.comment_writer import insert_comments_detailed
+
+    body = (
+        '<w:p><w:ins w:author="연구소" w:date="2026-08-01T00:00:00Z">'
+        "<w:r><w:t>Trial License는 재발급할 수 있다.</w:t></w:r></w:ins></w:p>"
+        "<w:p><w:r><w:t>변경 없는 문단.</w:t></w:r></w:p>"
+    )
+    revision_path = tmp_path / "revision.docx"
+    _write_minimal_docx(revision_path, body)
+    changes = [
+        {"id": 7, "paragraph_index": 0, "functional": True, "decision": "MODIFICATION_REQUIRED", "ai_judgment": {"qa_comment": "SRS와 다릅니다."}},
+        {"id": 8, "paragraph_index": 9, "functional": True, "decision": "SUPPLEMENT_REQUIRED"},
+        {"id": 9, "paragraph_index": 1, "functional": True, "decision": "PASS"},
+    ]
+
+    inserted = insert_comments_detailed(revision_path, changes, tmp_path / "out.docx")
+
+    assert [(item["change"]["id"], item["text"]) for item in inserted] == [(7, "SRS와 다릅니다.")]

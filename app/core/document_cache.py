@@ -8,10 +8,11 @@ document_id 기준으로 파싱 결과(Chunk/TestCase)를 `storage.index_dir`에
 BM25Okapi 객체 자체를 직렬화하는 대신, 훨씬 단순하고 버전 호환 문제가 없는 방식으로
 파싱 결과만 캐시하고 BM25 인덱스는 매번 그 결과로부터 가볍게 재구성한다.
 
-같은 document_id의 원본 파일 내용은 재업로드 없이 바뀌지 않는다(새 리비전은 항상 새
-document_id로 등록되는 기존 설계, `active_documents`가 이전 문서를 대체하지 않고 모두
-보존하는 정책과 동일한 전제) — 그래서 캐시 무효화 로직이 따로 필요 없고, 있으면 쓰고
-없으면 파싱 후 만들어 두면 된다."""
+새 리비전은 보통 새 document_id로 등록되지만, 리비전 표시가 없는 이름의 지식 폴더 파일은
+같은 경로·같은 document_id에서 내용만 바뀔 수 있다. 그래서 이 모듈은 캐시를 스스로
+무효화하지 않고, 등록 쪽(`app/core/product_knowledge.py::register_collected`)이 부가 정보의
+sha256이 달라진 것을 보면 `delete`로 이 캐시를 지운다(REQ-KNOW-007). 있으면 쓰고 없으면
+파싱 후 만들어 두면 된다."""
 
 from __future__ import annotations
 

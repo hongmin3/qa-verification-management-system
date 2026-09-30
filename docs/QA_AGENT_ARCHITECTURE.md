@@ -1,7 +1,7 @@
 # QA Agentic Workflow — 구조 분석과 목표 아키텍처
 
 > 상위: [문서 지도](README.md) · 기능 상세: [qa-agent.md](modules/qa-agent.md)
-> 기준: QA 규칙 Rev1.12 · 로드맵 Rev1.0 · 2026-09-08 구현 완료분
+> 기준: QA 규칙 Rev1.17(구현 현황표 79개 절, `app/modules/qa_agent/rule_capability.py`) · 로드맵 Rev1.0 · 2026-09-08 구현 완료분
 
 이 문서는 **"기존 시스템을 분석하고, 재사용할 것과 보완할 것을 나눈 뒤, 최소 변경으로
 목표 구조를 얹는다"**는 요구에 대한 답이다. 아래 판단은 전부 실제 코드와 실측값에 근거한다.

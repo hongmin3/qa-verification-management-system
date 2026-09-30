@@ -79,7 +79,9 @@ QA Manual Hub 는 모든 대상 문서를 **중앙 서버에 실제 복사해 �
 - 로그인하지 않으면 어떤 화면도 볼 수 없습니다
 - Argon2id 비밀번호 해시, 서버 세션 + HttpOnly 쿠키
 - Admin 은 사용자 생성 / 비밀번호 초기화 / 활성·비활성 / 권한 변경
-- 일반 User 는 문서 관련 기능 전체 사용 가능, **사용자 계정 관리만 Admin 제한**
+- 일반 User 는 문서·버전 관련 기능 전체 사용 가능. **사용자 계정과 제품·분류 관리는 Admin 전용**
+- 임시 비밀번호 상태에서는 Admin 도 비밀번호를 바꾸기 전까지 문서·버전 변경과 사용자·제품·분류 관리를 할 수 없음
+- 브라우저를 계속 쓰고 있으면 세션과 쿠키가 함께 자동 연장됨
 - 자기 계정 잠금, 마지막 Admin 강등 등은 구조적으로 차단
 
 **목록 / 정렬 / 검색**
@@ -251,7 +253,7 @@ users ─────┬──< sessions
   팩토리 한 줄만 바꾸면 됩니다.
 - **업로드마다 물리 파일을 새로 씁니다.** 내용이 같아도 중복 제거하지 않습니다.
   각 버전이 자기 파일을 소유하므로 한 버전의 보관/복원이 다른 버전에 영향을 주지
-  않습니다. SHA-256 은 경고와 무결성 검증에만 씁니다.
+  않습니다. SHA-256 은 같은 내용 경고와 무결성 검증(`qamh check-storage --verify-sha256`)에만 씁니다.
 - **`audit_logs` 는 append-only.** 애플리케이션에 UPDATE / DELETE 경로가 아예
   없습니다.
 
@@ -279,12 +281,16 @@ sudo ./deploy/scripts/install.sh
 - nginx / python3-venv / rsync 중 없는 것만 apt 설치
 - `<APP_ROOT>`, `<DATA_ROOT>` 디렉터리 생성
 - 전용 DB(`qa_manual_hub`)와 전용 role(`qamanual`) 생성.
-  **이미 있으면 그대로 사용하고 절대 초기화하지 않습니다**
+  **이미 있으면 그대로 사용하고 절대 초기화하지 않습니다.** 이미 있는 role 의
+  비밀번호도 바꾸지 않습니다. role 은 있는데 `.env` 에 비밀번호가 없으면 멈추고,
+  그 role 을 이 서비스만 쓴다면 `RESET_DB_PASSWORD=1` 을 붙여 다시 실행합니다
 - 무작위 DB 비밀번호로 `.env` 생성 (600)
 - virtualenv 생성 + 의존성 설치
 - systemd 유닛 설치 및 enable
 - nginx 사이트 설치
 - UFW 가 active 면 `80/tcp` 규칙 **1개만** 추가
+- 자동 백업 `/etc/cron.d/qa-manual-hub-backup` 생성 (매일 02:30). 이미 있으면 그대로 둡니다
+  (`SKIP_BACKUP_CRON=1` 로 건너뜀)
 
 멱등이므로 몇 번이든 다시 실행할 수 있습니다. 실행 전 사전 점검에서
 백엔드 포트 충돌이나 PostgreSQL 접속 실패를 발견하면 **아무것도 바꾸지 않고
@@ -380,12 +386,18 @@ DNS 등록 전에는 **서버 IP 로 바로 접속**할 수 있습니다. nginx 
 
 ```bash
 cd deploy
-cp ../deploy/.env.example .env      # POSTGRES_PASSWORD 등을 채운다
+printf 'POSTGRES_PASSWORD=%s\n' '<강한 비밀번호>' > .env   # compose 가 읽는 deploy/.env
 docker compose up -d --build
+docker compose exec backend python -m app.cli bootstrap-admin
 ```
 
-프론트엔드 빌드 산출물을 `frontend` 볼륨에 넣어야 합니다. 로컬 개발에서는
-Vite dev server 를 쓰는 편이 빠릅니다.
+이미지는 `deploy/Dockerfile` 하나에서 만듭니다. `backend` 는 시작할 때
+`alembic upgrade head` 를 실행하고, `web` 은 빌드한 화면 파일과
+`deploy/nginx/docker.conf` 로 `http://<host>:8080/` 에서 응답합니다.
+LibreOffice 는 넣지 않았으므로 doc/xls/ppt 미리보기는 다운로드로만 확인합니다.
+
+> **참고** 이 경로는 Docker 가 없는 이 저장소의 개발 PC에서 실제로 띄워 보지 않았습니다.
+> 파일 경로와 기본값은 `tests/test_deploy_scripts.py` 가 확인합니다.
 
 ---
 
@@ -396,7 +408,7 @@ Vite dev server 를 쓰는 편이 빠릅니다.
 | 키 | 기본값 | 설명 |
 |---|---|---|
 | `DATABASE_URL` | — | `postgresql+psycopg://user:pass@host:5432/db` |
-| `STORAGE_ROOT` | `/srv/qa-manual-hub/storage` | 문서 파일 저장 루트 |
+| `STORAGE_ROOT` | `/srv/qa-manual-hub/storage` | 문서 파일 저장 루트. `backup.sh`·`restore.sh` 도 이 값을 읽어 묶고 풉니다 |
 | `MAX_UPLOAD_MB` | `500` | 최대 업로드 크기 |
 | `ALLOWED_EXTENSIONS` | `pdf,doc,docx,xls,xlsx,ppt,pptx,txt,md,png,jpg,jpeg` | 허용 확장자 |
 | `SESSION_LIFETIME_HOURS` | `8` | 세션 유효 시간 |
@@ -426,6 +438,7 @@ Vite dev server 를 쓰는 편이 빠릅니다.
 | `reset-password <login_id>` | 비밀번호 강제 변경 — **관리자 잠김 복구용** |
 | `list-users` | 사용자 목록 |
 | `check-storage` | DB에 등록된 모든 버전의 파일 존재·크기 검증 |
+| `check-storage --verify-sha256` | 위 검사에 더해 파일 내용을 다시 읽어 업로드 때 저장한 SHA-256 과 비교 (느림) |
 | `purge-sessions` | 만료 세션 정리 |
 
 래퍼가 `.env` 를 자동으로 로드하므로 어느 경로에서 실행해도 됩니다.
@@ -446,13 +459,14 @@ Vite dev server 를 쓰는 편이 빠릅니다.
 | 파일 | 내용 |
 |---|---|
 | `database.dump` | `pg_dump --format=custom --compress=6` |
-| `storage.tar.gz` | 문서 저장소 전체 |
+| `storage.tar.gz` | 문서 저장소 전체 (`.env` 의 `STORAGE_ROOT`, 없으면 `<DATA_ROOT>/storage`) |
 | `manifest.txt` | 백업 시각, 호스트, DB명, 파일 개수, 배포 커밋, 각 산출물 SHA-256 |
 
-manifest 가 있어 **DB 덤프와 파일 세트가 어긋난 조합으로 복구되는 일**을
-방지합니다.
+`restore.sh` 는 복원 전에 manifest 의 SHA-256 을 모든 파일과 맞춰 봅니다.
+manifest 가 없거나, 값이 다르거나, `storage.tar.gz` 가 manifest 에 없으면 아무것도
+바꾸지 않고 멈춥니다. 그래서 **DB 덤프와 파일 세트가 어긋난 조합으로 복구되는 일**이 없습니다.
 
-자동 실행 (`/etc/cron.d/qa-manual-hub-backup`):
+자동 실행 (`/etc/cron.d/qa-manual-hub-backup`, `install.sh` 가 없을 때만 만듭니다):
 
 ```
 30 2 * * *  <SERVICE_USER>  <APP_ROOT>/scripts/backup.sh >> <APP_ROOT>/logs/backup.log 2>&1
@@ -472,16 +486,18 @@ sudo <APP_ROOT>/scripts/restore.sh <DATA_ROOT>/backup/20260827-023000
 
 **현재 데이터를 대체하는 작업입니다.** 스크립트는 다음 순서로 동작합니다.
 
-1. 무엇을 덮어쓸지 출력하고 `RESTORE` 타이핑을 요구 (`--yes` 로 생략 가능)
-2. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** — 되돌릴 수 있음
-3. 서비스 정지
-4. `public` 스키마 DROP → CREATE → `pg_restore`
-5. `storage` 를 `storage.replaced-<timestamp>` 로 옮기고 아카이브 전개
-6. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
-7. 서비스 시작 및 `is-active` 확인
-8. `qamh check-storage` 로 DB↔파일 일치 검증
+1. 백업 폴더의 `manifest.txt` SHA-256 확인. 맞지 않으면 멈춤
+2. 무엇을 덮어쓸지 출력하고 `RESTORE` 타이핑을 요구 (`--yes` 로 생략 가능)
+3. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** — 되돌릴 수 있음.
+   DB 덤프나 저장소 묶기가 하나라도 실패하면 서비스와 데이터를 건드리지 않고 멈춤
+4. 서비스 정지
+5. `public` 스키마 DROP → CREATE → `pg_restore`
+6. 저장소(`STORAGE_ROOT`)를 `<STORAGE_ROOT>.replaced-<timestamp>` 로 옮기고 아카이브 전개
+7. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
+8. 서비스 시작 및 `is-active` 확인
+9. `qamh check-storage --verify-sha256` 로 DB↔파일 일치 검증
 
-문제가 없으면 `storage.replaced-*` 와 `pre-restore-*` 를 정리합니다.
+문제가 없으면 `<STORAGE_ROOT>.replaced-*` 와 `pre-restore-*` 를 정리합니다.
 
 ---
 
@@ -527,7 +543,9 @@ export TEST_DATABASE_URL="postgresql+psycopg://user:pass@127.0.0.1:5432/qa_manua
 pytest tests -q
 ```
 
-`56 passed` 가 나와야 합니다.
+모든 테스트가 통과해야 합니다(2026-09-30 기준 114개). PostgreSQL 없이도
+`pytest tests/test_security_unit.py tests/test_cli_unit.py tests/test_deploy_scripts.py tests/test_frontend_upload_defaults.py`
+는 돌릴 수 있습니다(배포 스크립트 검사는 `bash` 가 필요합니다).
 
 | 파일 | 검증 범위 |
 |---|---|
@@ -535,6 +553,10 @@ pytest tests -q
 | `test_users.py` | 사용자 생성→로그인, 중복 ID, 짧은 비밀번호, 일반 User 의 관리 API 403, 활성/비활성, 라이브 세션 즉시 종료, 비밀번호 초기화, 본인·마지막 Admin 보호 |
 | `test_documents.py` | 문서 생성, 이름 중복 규칙, 업로더 자동 기록(위조 무시), SHA-256, 확장자·매직넘버 검증, 중복 해시 경고, 자동 Current + 이력 보존, Legacy 업로드 후 Set as Current, 다운로드 바이트·한글 파일명, PDF inline preview, Archive/Restore, 검색 10종 |
 | `test_audit.py` | 필수 이벤트 전수 기록, Current 변경 before/after, Audit 변경 API 부재, 필터, Dashboard 집계, Settings |
+| `test_security_unit.py` | 감사 기록 IP(nginx 가 넣은 값만 믿음), 세션 쿠키 자동 연장, 임시 비밀번호 Admin 의 관리 API 차단, `/api/docs` 로그인 필수 (DB 없음) |
+| `test_cli_unit.py`, `test_cli.py` | `seed-catalog` 감사 기록, `check-storage --verify-sha256` |
+| `test_deploy_scripts.py` | 백업 manifest SHA-256, 안전 백업 실패 시 중단, `STORAGE_ROOT` 백업·복구, cron 생성, 기존 DB role 비밀번호 보존, Compose 파일 경로 (DB 없음, `bash` 필요) |
+| `test_frontend_upload_defaults.py` | 업로드 창 Revision Date 기본값 빈칸 (DB 없음) |
 
 ### 코드 구조
 
@@ -577,14 +599,16 @@ frontend/src/
 | 항목 | 구현 |
 |---|---|
 | 비밀번호 | Argon2id. 평문 저장·로깅 없음. 파라미터 상향 시 로그인할 때 자동 재해싱. **길이 정책은 `PASSWORD_MIN_LENGTH` 하나로 결정되며 기본값은 1(제한 없음)** |
-| 세션 | 서버 세션 테이블 + HttpOnly 쿠키. 쿠키에는 256bit 불투명 토큰, DB에는 SHA-256 만 |
+| 세션 | 서버 세션 테이블 + HttpOnly 쿠키. 쿠키에는 256bit 불투명 토큰, DB에는 SHA-256 만. 사용 중이면 DB 만료 시각과 쿠키 수명을 함께 연장 |
+| 임시 비밀번호 | 비밀번호를 바꾸기 전에는 문서·버전 변경과 사용자·제품·분류 관리 API 를 모두 거절 (Admin 포함) |
 | 로그인 실패 | 없는 ID / 틀린 비밀번호 / 비활성 계정 **모두 동일 메시지**. 사유는 서버 로그에만 |
 | 세션 무효화 | 비활성화·비밀번호 초기화 시 해당 사용자 세션 전부 즉시 revoke |
 | 권한 | 라우터 의존성으로 검사. 프론트엔드 라우팅과 별개로 API 가 독립 강제 |
 | 업로드 | 확장자 허용목록 + 정규식 + 매직 넘버 + 크기 제한. 저장 파일명은 UUID, 권한 0640 |
 | Path traversal | 원본 파일명을 파일시스템에 쓰지 않음. 저장 경로는 UUID 만 조합하고 루트 이탈 검사 |
 | 다운로드 | `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox` |
-| 감사 | append-only. UPDATE / DELETE 엔드포인트 없음 |
+| 감사 | append-only. UPDATE / DELETE 엔드포인트 없음. IP 는 nginx 가 넣은 `X-Real-IP`(없으면 `X-Forwarded-For` 의 마지막 값)만 씀 |
+| 로그인 실패 제한 | 두지 않음. 감사 기록의 `로그인 실패` 를 정기 점검하는 운영 규칙으로 대신함 |
 | 비밀정보 | `.env` 는 600 이며 `.gitignore` 처리. 저장소에 비밀값 없음 |
 
 HTTPS 는 nginx 에 `listen 443 ssl` 블록을 추가하고 `.env` 의
@@ -640,7 +664,7 @@ UTF-8 페이지에서 항상 UTF-8 로 보냅니다. 자동화가 필요하면 P
 | 문서 Workflow (Draft / Review / Approved / Published) | `document_versions.status` 가 varchar |
 | Storage 전환 (NAS / S3 / MinIO / Index only) | `StorageBackend` 프로토콜 + `storage_backend` / `storage_key` 컬럼 |
 | 공유폴더 자동 스캔 / 신규 문서 탐지 | SHA-256 인덱스로 중복 탐지 즉시 가능 |
-| Revision 자동 추출 / 추천 | 미구현. 추천값을 확정값으로 쓰지 않는다는 원칙 유지 |
+| Revision 자동 추출 / 추천 | 업로드 창이 파일명에서 Version·Revision·개정일 등을 짐작해 칸을 채움(사용자가 확인 후 저장). 문서 내용에서 뽑는 기능은 미구현 |
 | PDF / DOCX 본문 diff | 미구현 |
 | 본문 Full-text Search / OCR | 현재 PostgreSQL ILIKE. 다음 단계는 `tsvector` 컬럼 |
 | 알림 (Email / Teams) | 미구현. 감사 로그가 이벤트 소스 역할 가능 |

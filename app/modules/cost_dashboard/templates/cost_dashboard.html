@@ -5,7 +5,7 @@
 {% block header_nav %}<nav><a href="/">QA 홈</a><a href="/qa-agent">QA Agent</a><a href="/impact-analyzer">Regression 분석</a><a href="/manual-review">매뉴얼 검증</a><a href="/knowledge">Knowledge</a><a href="/cost-dashboard/guide">사용법</a></nav>{% endblock %}
 {% block content %}
 <section>
-  <h2>오늘 토큰 사용량</h2>
+  <h2>오늘 토큰 사용량 (한국 시간 0시부터)</h2>
   {% if daily_token_status.limit %}
   <p>
     {{ daily_token_status.used }} / {{ daily_token_status.limit }} tokens
@@ -14,7 +14,7 @@
   {% else %}
   <p>{{ daily_token_status.used }} tokens 사용 (config.yaml의 <code>analysis.daily_token_limit</code>이 0이라 한도 없음)</p>
   {% endif %}
-  <p class="hint">Regression 영향 분석과 매뉴얼 개정 검증이 같은 <code>analyses</code> 테이블에 기록되므로 두 기능의 사용량을 합산합니다.</p>
+  <p class="hint">Regression 영향 분석, QA Agent, 매뉴얼 개정 검증이 같은 <code>analyses</code> 테이블에 기록되므로 세 기능의 사용량을 합산합니다. 도중에 실패한 분석이 이미 쓴 토큰도 들어갑니다.</p>
 </section>
 
 <section>
@@ -32,7 +32,7 @@
     {% if stats.modules %}
     <ul>
       {% for module, values in stats.modules.items() %}
-      <li><b>{{ module_labels.get(module, module) }}</b> — 분석 {{ values.count }}건 · 총 {{ "{:,}".format(values.tokens) }} tokens
+      <li><b>{{ module_labels.get(module, module) }}</b> — 분석 {{ values.count }}건{% if values.failed %}(실패 {{ values.failed }}건 포함){% endif %} · 총 {{ "{:,}".format(values.tokens) }} tokens
         · 건당 평균 {{ "{:,}".format((values.tokens / values.count) | round | int) if values.count else 0 }} tokens</li>
       {% endfor %}
     </ul>
@@ -57,7 +57,7 @@
   {% if stats.daily %}
   <div class="table-wrap">
     <table class="history">
-      <thead><tr><th>날짜</th><th>분석 건수</th><th>총 tokens</th><th></th></tr></thead>
+      <thead><tr><th>날짜(한국 시간)</th><th>분석 건수</th><th>총 tokens</th><th></th></tr></thead>
       <tbody>
         {% for day in stats.daily %}
         <tr>
@@ -80,11 +80,11 @@
   {% if stats.recent %}
   <div class="table-wrap">
     <table class="history">
-      <thead><tr><th>완료 시각(UTC)</th><th>기능</th><th>제품</th><th>tokens</th><th>캐시 Hit/호출</th><th>ID</th></tr></thead>
+      <thead><tr><th>시작 시각(한국 시간)</th><th>기능</th><th>제품</th><th>tokens</th><th>캐시 Hit/호출</th><th>ID</th></tr></thead>
       <tbody>
         {% for item in stats.recent %}
         <tr>
-          <td>{{ item.created_at[:19].replace('T', ' ') }}</td>
+          <td>{{ item.created_at_kst }}{% if item.status == 'FAILED' %} <span class="badge FAILED">실패</span>{% endif %}</td>
           <td>{{ module_labels.get(item.module, item.module) }}</td>
           <td>{{ item.product or '-' }}</td>
           <td>{{ "{:,}".format(item.tokens) }}</td>

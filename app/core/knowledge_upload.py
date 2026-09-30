@@ -200,21 +200,50 @@ def _prune_orphans(base: Path, keep: set[tuple[str, str]]) -> list[str]:
     return removed
 
 
+def _forget_pruned_documents(base: Path, removed: list[str], storage=None) -> list[str]:
+    """`_prune_orphans` 가 지운 파일을 가리키는 문서 등록과 파싱 저장본을 지운다.
+
+    문서가 지식 폴더에서 통째로 빠지면 같은 이름의 수집본이 없어 `register_collected` 가 그 등록을
+    보지 않는다. 남기면 분석마다 "읽지 못한 문서"에 뜬다(SPEC_CODE_MISMATCH 5절 9번).
+    """
+    if not removed:
+        return []
+    from app.core import document_cache
+    from app.core.product_knowledge import REGISTERABLE_KINDS
+    from app.core.storage import Storage
+
+    storage = storage or Storage()
+    gone = {str((base / "original" / item).resolve()).casefold(): item for item in removed}
+    forgotten: list[str] = []
+    for kind in REGISTERABLE_KINDS:
+        for document in storage.list_documents(kind):
+            key = str(Path(document["path"]).resolve()).casefold()
+            if key in gone:
+                storage.delete_document(document["id"])
+                document_cache.delete(document["id"])
+                forgotten.append(gone[key])
+    return forgotten
+
+
 def _logical_key(asset: dict) -> tuple[str, str]:
     base_name = asset.get("base_name") or parse_asset_name(asset.get("file_name", ""))["base_name"]
     return asset.get("kind", ""), str(base_name).casefold()
 
 
-def _keep_previous_readable(base: Path, kept: list[dict], previous_assets: list[dict]) -> list[str]:
+def _keep_previous_readable(base: Path, kept: list[dict], previous_assets: list[dict], unreadable: list[dict] | None = None) -> list[str]:
     """읽지 못한 새 판이 있으면, 같은 문서의 이전 판 가운데 읽을 수 있던 것을 `kept` 에 되살린다 (REQ-SYNC-002).
 
     그대로 두면 `_prune_orphans` 가 옛 판을 지우고, 새 판은 텍스트가 없어 등록되지 않아
     문서가 통째로 사라진다 — "사양 없음" 오판으로 바로 이어진다(2026-09-29 재현).
     낡은 판을 쓰는 편이 낫다. 낡았다는 사실은 결과(`kept_previous`)와 PARTIAL 상태로 드러난다.
+
+    `unreadable` 은 manifest 에는 있지만 서버에 파일이 오지 않은 새 판이다(PC 의 업로드 실패 등).
+    이 경우도 새 판을 쓸 수 없으므로 같은 규칙으로 이전 판을 지킨다.
     """
     notes: list[str] = []
     kept_keys = {(record["kind"], record["file_name"]) for record in kept}
-    for record in [item for item in kept if item.get("error")]:
+    not_received = list(unreadable or [])
+    for record in [item for item in kept if item.get("error")] + not_received:
         logical = _logical_key(record)
         for old in previous_assets:
             key = (old.get("kind", ""), old.get("file_name", ""))
@@ -222,9 +251,10 @@ def _keep_previous_readable(base: Path, kept: list[dict], previous_assets: list[
                 continue
             if not (base / "original" / key[0] / key[1]).is_file():
                 continue
-            kept.append({**old, "kept_because": f"새 판 {record['file_name']} 을 읽지 못함"})
+            reason = "받지 못함" if record in not_received else "읽지 못함"
+            kept.append({**old, "kept_because": f"새 판 {record['file_name']} 을 {reason}"})
             kept_keys.add(key)
-            notes.append(f"{key[0]}/{key[1]} (새 판 {record['file_name']} 을 읽지 못함)")
+            notes.append(f"{key[0]}/{key[1]} (새 판 {record['file_name']} 을 {reason})")
     return notes
 
 
@@ -242,6 +272,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
 
     kept: list[dict] = []
     missing: list[str] = []
+    missing_records: list[dict] = []
     for entry in manifest.get("assets", []) or []:
         kind, raw_name = entry.get("kind", ""), entry.get("file_name", "")
         if kind not in ALLOWED_KINDS or not raw_name:
@@ -252,6 +283,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
             continue
         if not (base / "original" / kind / file_name).is_file():
             missing.append(file_name)
+            missing_records.append({"kind": kind, "file_name": file_name, "base_name": entry.get("base_name", "")})
             continue
         record = {key: value for key, value in entry.items() if key not in ("normalized_path", "normalized_chars", "source_path", "collected_at", "error")}
         record["file_name"] = file_name
@@ -269,9 +301,10 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
                 record["error"] = previous["error"]
         kept.append(record)
 
-    kept_previous = _keep_previous_readable(base, kept, previous_assets)
+    kept_previous = _keep_previous_readable(base, kept, previous_assets, missing_records)
     keep_keys = {(record["kind"], record["file_name"]) for record in kept}
     removed = _prune_orphans(base, keep_keys)
+    unregistered = _forget_pruned_documents(base, removed, storage)
 
     payload = {
         "product": config.product,
@@ -294,6 +327,8 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         detail += f" / 업로드 누락 {len(missing)}건: {', '.join(missing[:5])}"
     if failures:
         detail += f" / 정규화 실패 {len(failures)}건"
+    if unregistered:
+        detail += f" / 지운 파일의 등록 정리 {len(unregistered)}건"
     if kept_previous:
         detail += f" / 읽지 못한 새 판 대신 이전 판 유지 {len(kept_previous)}건: {', '.join(kept_previous[:3])}"
     return {
@@ -304,6 +339,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         "missing": missing,
         "failures": failures,
         "kept_previous": kept_previous,
+        "unregistered": unregistered,
         "registered": registered.detail,
         "duplicates": registered.duplicates,
     }

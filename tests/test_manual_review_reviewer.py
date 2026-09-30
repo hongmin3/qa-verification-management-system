@@ -196,3 +196,46 @@ def test_reviewer_records_stage_progress_when_analysis_id_given(tmp_path):
     job = storage.get_analysis("job-1")
     assert job["stage_index"] == 6
     assert job["stage"] == "결과 저장"
+
+
+def _write_image_change_docx(path) -> None:
+    body = (
+        "<w:p>"
+        '<w:ins w:author="연구소" w:date="2026-08-01T00:00:00Z">'
+        '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+        '<wp:docPr id="1" name="그림 1" descr="로그인 화면"/></wp:inline></w:drawing></w:r></w:ins>'
+        "</w:p>"
+    )
+    document = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f"<w:document {W_NS_DECL}><w:body>{body}</w:body></w:document>"
+    ).encode("utf-8")
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("word/document.xml", document)
+
+
+# Validates: REQ-MANUAL-012
+def test_image_change_judged_pass_becomes_unable_to_determine(tmp_path):
+    """이미지 변경을 AI가 문제없음으로 판정해도 판정 불가로 바꾸고 Word Comment에도 들어가야 한다."""
+    from app.modules.manual_review.comment_writer import comment_text_for
+
+    storage = Storage(tmp_path / "app.db")
+    revision_path = tmp_path / "image.docx"
+    _write_image_change_docx(revision_path)
+
+    def responder(prompt: str) -> dict:
+        return {"decision": "PASS", "confidence": 0.95, "reason_codes": [], "requires_detail_generation": False}
+
+    reviewer = ManualRevisionReviewer(ai_client=ManualReviewAIClient(storage, responder=responder), storage=storage)
+    result = reviewer.run(revision_path, "VXvue", "Service Manual", "V1.1.0 · W1")
+
+    change = storage.list_manual_changes(result["revision_id"])[0]
+    assert change["kind"] == "image_insertion"
+    assert change["decision"] == "UNABLE_TO_DETERMINE"
+    assert change["ai_judgment"]["decision"] == "UNABLE_TO_DETERMINE"
+    assert change["ai_judgment"]["ai_original_decision"] == "PASS"
+    assert change["ai_judgment"]["confidence"] <= 0.6
+    assert change["ai_judgment"]["needs_human_review"] is True
+    assert "IMAGE_CHANGE_REVIEW_REQUIRED" in change["ai_judgment"]["reason_codes"]
+    assert result["decision_counts"] == {"UNABLE_TO_DETERMINE": 1}
+    assert comment_text_for(change)

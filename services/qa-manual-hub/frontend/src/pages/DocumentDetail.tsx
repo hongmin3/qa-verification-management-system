@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { DragEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, parseFileName, sha256Hex, todayIso } from '../api'
+import { api, parseFileName, sha256Hex } from '../api'
 import {
   Alert,
   Card,
@@ -541,7 +541,9 @@ function UploadForm({
   const [version, setVersion] = useState('')
   const [documentNumber, setDocumentNumber] = useState('')
   const [language, setLanguage] = useState('')
-  const [revisionDate, setRevisionDate] = useState(todayIso())
+  // Revision Date is the date printed in the document, not the upload date, so
+  // it stays blank unless the file name carries one (SPEC 13.6 #3).
+  const [revisionDate, setRevisionDate] = useState('')
   const [revisionDescription, setRevisionDescription] = useState('')
   const [comment, setComment] = useState('')
   const [setAsCurrent, setSetAsCurrent] = useState(true)
@@ -574,13 +576,13 @@ function UploadForm({
 
     // Best-effort guess from the file name. Formats are never enforced (see the
     // hint text below), so anything not found is simply left blank for the user
-    // to fill in -- except the Revision Date, which defaults to today.
+    // to fill in, including the Revision Date.
     const guess = parseFileName(selected.name)
     setVersion(guess.version ?? '')
     setRevision(guess.revision ?? '')
     setDocumentNumber(guess.documentNumber ?? '')
     setLanguage(guess.language ?? '')
-    setRevisionDate(guess.revisionDate ?? todayIso())
+    setRevisionDate(guess.revisionDate ?? '')
 
     // Hash locally so the duplicate warning appears before the bytes are sent.
     setHashing(true)

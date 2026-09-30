@@ -163,6 +163,8 @@ class ExecutionContext:
     environment_note: str = ""
     #: QA 가 초안 작성을 허용했는가 (§53 예외).
     draft_allowed: bool = False
+    #: QA 가 분석 양식에서 고른 이슈 유형 (규칙 §6). 빈 값이면 연구소 검토 결과로 정한 유형을 쓴다.
+    qa_issue_type: str = ""
 
     @property
     def missing_means(self) -> tuple[str, ...]:
@@ -172,8 +174,20 @@ class ExecutionContext:
 # --- G1 Source Completeness ---------------------------------------------------
 
 
-def evaluate_g1(issue: IssueRecord, specification_count: int, testcase_count: int, rules_available: bool) -> GateResult:
-    """Issue·문서·TC·버전이 갖춰졌는지. LLM 호출 전에 판정한다."""
+def evaluate_g1(
+    issue: IssueRecord,
+    specification_count: int,
+    testcase_count: int,
+    rules_available: bool,
+    unreadable_specification_count: int = 0,
+    unreadable_testcase_count: int = 0,
+    type_chosen_by_qa: bool = False,
+) -> GateResult:
+    """Issue·문서·TC·버전이 갖춰졌는지. LLM 호출 전에 판정한다.
+
+    `specification_count`·`testcase_count` 는 **읽을 수 있었던** 문서 수다. 등록은 됐지만 읽지 못한
+    문서만 있으면 "등록된 문서가 없다"가 아니라 "읽지 못했다"고 적는다.
+    """
     result = GateResult(gate="G1")
 
     if not issue.issue_id:
@@ -192,7 +206,9 @@ def evaluate_g1(issue: IssueRecord, specification_count: int, testcase_count: in
         )
     if not issue.occurred_versions and not issue.target_versions:
         result.add("version_unclear", STOP_CONDITION_LABELS["version_or_env_unclear"], "input", "규칙 §53")
-    if issue.needs_type_confirmation:
+    if type_chosen_by_qa:
+        result.add("issue_type_by_qa", f"Issue 유형을 QA 가 골랐습니다: {issue.type_label}", "note", "규칙 §6")
+    elif issue.needs_type_confirmation:
         candidates = ", ".join(issue.issue_type_candidates) or "후보 없음"
         result.add(
             "issue_type_unconfirmed",
@@ -201,9 +217,11 @@ def evaluate_g1(issue: IssueRecord, specification_count: int, testcase_count: in
             "규칙 §6",
         )
     if not specification_count:
-        result.add("no_specification", f"{Finding.NOT_IN_DOCUMENT} — 등록된 사양서가 없습니다", "block", "규칙 §5.1")
+        detail = f"등록된 사양서 {unreadable_specification_count}건을 모두 읽지 못했습니다" if unreadable_specification_count else "등록된 사양서가 없습니다"
+        result.add("no_specification", f"{Finding.NOT_IN_DOCUMENT} — {detail}", "block", "규칙 §5.1")
     if not testcase_count:
-        result.add("no_testcase", f"{Finding.NOT_IN_EXISTING_TC} — 등록된 TC 가 없습니다", "block", "규칙 §5.1")
+        detail = f"등록된 TC 문서 {unreadable_testcase_count}건을 모두 읽지 못했습니다" if unreadable_testcase_count else "등록된 TC 가 없습니다"
+        result.add("no_testcase", f"{Finding.NOT_IN_EXISTING_TC} — {detail}", "block", "규칙 §5.1")
     if not rules_available:
         result.add("no_rules", "이 제품의 QA 규칙 문서가 수집되지 않았습니다 (규칙 없이 판정하지 않습니다)", "block", "규칙 §1")
 
@@ -220,8 +238,13 @@ def evaluate_g2(
     deprecated_hits: int = 0,
     searched_document_count: int = 0,
     total_document_count: int = 0,
+    unreadable_documents: list[str] | tuple[str, ...] = (),
 ) -> GateResult:
-    """공식 사양 근거를 찾았는지. 근거가 없으면 사양을 만들지 않는다 (규칙 §44 G2)."""
+    """공식 사양 근거를 찾았는지. 근거가 없으면 사양을 만들지 않는다 (규칙 §44 G2).
+
+    `total_document_count` 는 읽을 수 있었던 사양서 수다. 읽지 못한 문서(`unreadable_documents`)는
+    따로 적는다. 조용히 빠지면 "사양 없음" 오판이 된다 (규칙 §55).
+    """
     result = GateResult(gate="G2")
 
     if not evidence_count:
@@ -239,11 +262,20 @@ def evaluate_g2(
     if deprecated_hits:
         result.add("deprecated_spec", f"{Finding.DEPRECATED_SPEC_UNCERTAIN} — 취소선/삭제 표시가 있는 근거 {deprecated_hits}건", "note", "규칙 §11")
     if total_document_count and searched_document_count < total_document_count:
+        # 검색은 모든 사양서의 조각을 대상으로 한다. 후보 상한 때문에 근거가 일부 문서에서만 나올 수 있다.
         result.add(
             "split_spec_partial",
-            f"{Finding.SPLIT_SPEC_SEARCH_INCOMPLETE} — 사양서 {total_document_count}건 중 {searched_document_count}건만 조사했습니다",
+            f"근거가 사양서 {total_document_count}건 중 {searched_document_count}건에서만 나왔습니다 (검색은 사양서 전체를 대상으로 했습니다)",
             "note",
             "규칙 §10",
+        )
+    if unreadable_documents:
+        names = ", ".join(unreadable_documents)
+        result.add(
+            "documents_unreadable",
+            f"{Finding.NOT_IN_DOCUMENT} — 읽지 못한 문서 {len(unreadable_documents)}건은 검색에 들어가지 않았습니다: {names}",
+            "note",
+            "규칙 §55",
         )
 
     return result.settle()
@@ -270,7 +302,9 @@ def evaluate_g4(issue: IssueRecord, context: ExecutionContext) -> GateResult:
             "규칙 §55",
         )
 
-    if context.test_data_ready is False:
+    if context.test_data_ready is None:
+        result.add("test_data_unknown", f"{Finding.NEEDS_EXECUTION} — Test Data 준비 여부가 입력되지 않았습니다", "input", "규칙 §5.2")
+    elif context.test_data_ready is False:
         result.add("test_data_missing", f"{Finding.NEEDS_EXECUTION} — Test Data 가 준비되지 않았습니다", "input", "규칙 §5.2")
 
     if context.can_expose is False:
@@ -318,10 +352,11 @@ def evaluate_g3(issue: IssueRecord, candidate_count: int, covering_tc_ids: list[
 # --- G5 Cross-check -----------------------------------------------------------
 
 
-def evaluate_g5(issue: IssueRecord, claims: list[dict]) -> GateResult:
+def evaluate_g5(issue: IssueRecord, claims: list[dict], new_tc_ids: list[str] | tuple[str, ...] = ()) -> GateResult:
     """판정 결과의 상호 모순과 근거 없는 확정을 검사한다 (규칙 §37, §44 G5).
 
     `claims` 는 `{"text": ..., "evidence": [...], "tc_id": ...}` 형태의 판정 목록이다.
+    `new_tc_ids` 는 AI 가 "신규 TC 필요"(`NEW_TC`)로 판정한 TC 번호다.
     """
     result = GateResult(gate="G5")
 
@@ -357,6 +392,14 @@ def evaluate_g5(issue: IssueRecord, claims: list[dict]) -> GateResult:
             "block",
             "규칙 §6",
         )
+    if issue.blocks_auto_runtime_tc and new_tc_ids:
+        # 규칙 §6 은 "요구받지 않으면" 만들지 않는다고 정한다. QA 가 요구했을 수 있으므로 막지 않고 남긴다.
+        result.add(
+            "new_tc_for_spec_issue",
+            f"{Finding.RUNTIME_TC_UNNECESSARY} — {issue.type_label} 유형인데 신규 TC 를 제안했습니다: {', '.join(new_tc_ids[:5])}. 요구한 것이 아니면 만들지 않습니다",
+            "note",
+            "규칙 §6",
+        )
 
     return result.settle()
 
@@ -388,6 +431,10 @@ def preflight(
     deprecated_hits: int = 0,
     searched_document_count: int = 0,
     total_document_count: int = 0,
+    unreadable_documents: list[str] | tuple[str, ...] = (),
+    unreadable_specification_count: int = 0,
+    unreadable_testcase_count: int = 0,
+    type_chosen_by_qa: bool = False,
 ) -> PreflightResult:
     """G1·G2·G4 를 판정해 LLM 호출 여부를 정한다.
 
@@ -396,7 +443,17 @@ def preflight(
     초안 허용으로도 넘기지 않는다.
     """
     report = GateReport()
-    report.set(evaluate_g1(issue, specification_count, testcase_count, rules_available))
+    report.set(
+        evaluate_g1(
+            issue,
+            specification_count,
+            testcase_count,
+            rules_available,
+            unreadable_specification_count=unreadable_specification_count,
+            unreadable_testcase_count=unreadable_testcase_count,
+            type_chosen_by_qa=type_chosen_by_qa,
+        )
+    )
     report.set(
         evaluate_g2(
             issue,
@@ -405,6 +462,7 @@ def preflight(
             deprecated_hits=deprecated_hits,
             searched_document_count=searched_document_count,
             total_document_count=total_document_count,
+            unreadable_documents=unreadable_documents,
         )
     )
     report.set(evaluate_g4(issue, context))

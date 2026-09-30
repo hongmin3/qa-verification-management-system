@@ -45,6 +45,10 @@ Claude 의 작업 폴더에는 작업 입력(변경분·후보 TC) 밖에도 **�
 Claude 가 실제로 읽은 부분이 Anthropic 으로 전송된다. 무엇을 읽고 검색했는지는 실행 폴더의
 `claude_logs/` 에 남는다 (쓴 내용은 결과 파일에 있으므로 길이만 남긴다).
 
+Claude 의 읽기·검색 도구(`Read`, `Glob`, `Grep`)는 작업 폴더 안(`./**`)으로만 허용한다. 허용 목록에
+맞지 않는 호출은 묻지 않고 거부된다(`--permission-mode dontAsk`). 그래서 서버의 `secrets.txt` 처럼
+작업 폴더 밖에 있는 파일은 읽지 못한다. 거부된 호출은 `claude_logs/` 의 `permission_denials` 에 남는다.
+
 ## Skill
 
 | Skill | 단계 | 무인 실행 |
@@ -96,11 +100,15 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 .venv/bin/python scripts/run_daily_qa.py --weekly --no-email
 ```
 
-첫 실행은 SRS 기준 스냅샷만 저장하므로 사양 변경 영향 검토가 `건너뜀` 인 것이 정상이다. `/daily-qa` 에서 결과를 본다.
+dry-run 은 SRS 스냅샷과 Finding 을 저장하지 않는다. 그래서 dry-run 을 여러 번 해도 다음 정식 실행의
+비교 결과가 달라지지 않는다. 비교 결과는 실행 폴더의 `srs_diff.json` 에서 볼 수 있다.
+
+첫 정식 실행은 SRS 기준 스냅샷만 저장하므로 사양 변경 영향 검토가 `건너뜀` 인 것이 정상이다. `/daily-qa` 에서 결과를 본다.
 
 9. **예약** — 따로 등록할 것이 없다. 앱(`qa-verification.service`)을 재시작하면 내장 스케줄러가
    평일 07:30(한국 시간)에 점검을 분리된 프로세스로 띄운다. 요일·시각은 `config.yaml` 의
-   `daily_qa.schedule`. Polarion·Claude 자격증명이 없으면 그 시각에 건너뛴다. 앱 로그
+   `daily_qa.schedule`. Polarion 설정이 없으면 그 시각에 건너뛴다. Claude 토큰만 없으면 점검은 돌고
+   AI 단계만 `건너뜀` 으로 남으며 이유가 메일에 적힌다. 앱 로그
    `output/logs/app.log` 에 `scheduled_job_registered id=daily_qa_vxvue` 가 보이면 등록된 것이다.
 
 10. (선택) 서버의 Claude 를 이 점검 전용으로만 쓴다면 `deploy/claude/managed-settings.json` 을
@@ -116,7 +124,8 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 | 실행별 상세 | `/daily-qa/runs/<실행ID>` · `output/daily_qa/<실행ID>/audit.json` |
 | AI 에 보낸 입력 | `output/daily_qa/<실행ID>/sent/*.json` (마스킹 후 원본 그대로) |
 | Claude 가 읽고 검색한 것 | `output/daily_qa/<실행ID>/claude_logs/*.claude.json` 의 `tool_call_log` (파일 경로·검색어) |
-| Claude 실패 이유 | 같은 파일의 `error_text` (예: 사용량 한도 초과) · `audit.json` 의 작업별 `error` |
+| Claude 실패 이유 | 메일·실행 상세의 단계 비고 "첫 실패 이유: …" · 같은 파일의 `error_text` (예: 사용량 한도 초과) · `audit.json` 의 작업별 `error` |
+| 다음 실행으로 넘어간 작업 | 상한 때문에 미뤘거나 실패한 사양 변경 묶음은 다음 실행에 다시 들어간다. 실패·미룬 이슈는 이슈 기준 시각을 옮기지 않아 다음 실행에 다시 읽힌다. 이미 처리한 이슈는 다시 보내지 않는다 |
 | 서버 지식 사본의 시각·판 | `/knowledge` 화면의 VXvue "마지막 수집" |
 | 토큰 만료 | 발급일 + 1년. 만료 30일 전에 2단계를 다시 한다 |
 
@@ -130,6 +139,9 @@ Skill 을 새 판에 맞춰 검토·수정한 뒤 `app/modules/daily_qa/rules.py
 - 도구 호출 기록(`claude_logs/`)은 CLI 의 stream-json 출력을 읽어 만든다. 형식은 합성 출력으로 검증했고,
   실제 CLI 로는 2026-09-28 에 계정 사용량 한도 때문에 확인하지 못했다. 서버 첫 정식 실행 뒤
   `claude_logs/` 에 `Read`·`Grep` 기록이 찍혔는지 본다. 비어 있으면 출력 형식이 달라진 것이다.
+- 읽기 도구를 작업 폴더 안으로 좁힌 규칙(`Read(./**)` 등)은 명령 인자와 설정 파일로 확인했다. 실제 CLI 가
+  작업 폴더 밖 읽기를 거부하는지는 서버에서 한 번 확인해야 한다 (작업 폴더에서
+  `claude -p --permission-mode dontAsk --allowedTools "Read(./**)"` 로 밖의 파일을 읽게 해 보고 거부되는지 본다).
 - Claude 가 작업 폴더의 SRS·TC 전체 색인을 검색할 수 있으므로, 외부로 나가는 양은 작업마다 다르다.
   범위를 후보만으로 좁힐지는 결정 대기다 (좁히면 사양 변경 영향 검토의 "후보 밖 TC 찾기"가 약해진다).
 - Codex 로 결과를 한 번 더 확인하는 교차 검증(QA 규칙의 검증 관문 7번, G7)은 이후 고도화 범위다.

@@ -32,7 +32,9 @@ akela compile --activity manual-hub-dev --task <task-id>
 ## 이 서비스를 건드릴 때 유의할 점
 
 - 핵심 앱(루트 `app/`)과 **프로세스도 DB도 공유하지 않는다.** 코드를 직접 import 하거나
-  같은 DB를 읽는 방식으로 결합하지 않는다. 연결은 URL 링크와 nginx 라우팅뿐이다.
+  같은 DB를 읽는 방식으로 결합하지 않는다. 연결은 URL 링크, nginx 라우팅, 그리고 핵심 앱이
+  이 서비스의 HTTP API 를 부르는 방식(REQ-HUB-014)까지다. 루트
+  `docs/SHARED_PLATFORM_ARCHITECTURE.md` 7번 항목이 기준이다.
 - 테스트는 실제 PostgreSQL 이 필요하다. 루트에서 `pytest` 를 돌려도 이 서비스 테스트는
   수집되지 않는다(`pytest.ini` 의 `testpaths`). `services/qa-manual-hub/backend` 에서
   따로 실행한다.

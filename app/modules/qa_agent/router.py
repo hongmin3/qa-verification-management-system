@@ -8,6 +8,7 @@ Specification / TC Coverage / Regression / QA Action 다섯 개 탭.
 
 from __future__ import annotations
 
+import html
 import json
 import uuid
 from pathlib import Path
@@ -17,12 +18,14 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Reque
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.core import usage as usage_module
 from app.core.config import get_settings
 from app.core.product_knowledge import load_manifest, resolve_config
 from app.core.qa_rules import SKILL_TITLES, load_rule_set, rule_coverage
 from app.core.storage import Storage
 from app.core.uploads import save_upload
-from app.modules.qa_agent.analyzer import ANALYSIS_STAGES, QaAgentAnalyzer
+from app.modules.qa_agent import approval_history
+from app.modules.qa_agent.analyzer import ANALYSIS_STAGES, QaAgentAnalyzer, valid_qa_issue_type
 from app.modules.qa_agent.gates import ExecutionContext
 from app.modules.qa_agent.rule_capability import (
     MODE_LABELS,
@@ -31,6 +34,7 @@ from app.modules.qa_agent.rule_capability import (
     summary as capability_summary,
 )
 from app.modules.qa_agent.schemas import AXIS_DESCRIPTIONS, AXIS_LABELS, TC_JUDGMENT_LABELS
+from app.parsers.polarion_issue import ISSUE_TYPE_LABELS, TYPE_UNCLASSIFIED
 
 router = APIRouter()
 templates = Jinja2Templates(
@@ -57,6 +61,12 @@ OBSERVATION_MEANS = {
     "dicom": "DICOM 수신 장비",
 }
 
+#: 결과 화면 탭. QA 결정을 기록한 뒤 이 중 하나로 돌려보낸다.
+RESULT_TABS = ("issue", "spec", "tc", "regression", "gates", "action")
+
+#: QA 가 분석 양식에서 고를 수 있는 이슈 유형 (규칙 §6). 미분류는 고를 수 없다.
+QA_ISSUE_TYPES = {code: label for code, label in ISSUE_TYPE_LABELS.items() if code != TYPE_UNCLASSIFIED}
+
 
 def _bool_or_none(value: str) -> bool | None:
     """라디오 3지 선택(예/아니오/모름)을 bool|None 으로. 미입력을 False 로 바꾸지 않는다."""
@@ -76,6 +86,7 @@ def _context_from_form(
     required_means: list[str],
     draft_allowed: bool,
     environment_note: str,
+    qa_issue_type: str = "",
 ) -> ExecutionContext:
     return ExecutionContext(
         can_execute=_bool_or_none(can_execute),
@@ -86,7 +97,30 @@ def _context_from_form(
         required_means=tuple(required_means),
         draft_allowed=draft_allowed,
         environment_note=environment_note.strip(),
+        qa_issue_type=qa_issue_type.strip(),
     )
+
+
+def _context_snapshot(context: ExecutionContext) -> dict:
+    """요청 기록에 남길 환경 값. 예약 복구가 `ExecutionContext(**snapshot)` 으로 되살린다."""
+    return {
+        "can_execute": context.can_execute,
+        "can_expose": context.can_expose,
+        "has_dose_table": context.has_dose_table,
+        "test_data_ready": context.test_data_ready,
+        "observation_means": list(context.observation_means),
+        "required_means": list(context.required_means),
+        "draft_allowed": context.draft_allowed,
+        "environment_note": context.environment_note,
+        "qa_issue_type": context.qa_issue_type,
+    }
+
+
+def _issue_export_available(product: str) -> bool:
+    """이 호스트에 제품의 Polarion Export 폴더가 있는가. 없으면 Issue ID 만으로는 이슈를 읽을 수 없다."""
+    config = resolve_config(product)
+    export_dir = Path(config.issue_source.export_dir) if config and config.issue_source.export_dir else None
+    return bool(export_dir and export_dir.is_dir())
 
 
 def _product_readiness(product: str) -> dict:
@@ -122,6 +156,7 @@ def home(request: Request, product: str = ""):
             "readiness": _product_readiness(selected) if selected else None,
             "issue_ids": analyzer.available_issue_ids(selected) if selected else [],
             "observation_means": OBSERVATION_MEANS,
+            "issue_types": QA_ISSUE_TYPES,
         },
     )
 
@@ -207,14 +242,26 @@ def analysis_detail(request: Request, job_id: str):
             "judgments": TC_JUDGMENT_LABELS,
             "qa_decisions": QA_DECISIONS,
             "approvals": {f"{kind}|{label}": row for (kind, label), row in approvals.items()},
+            "approval_history": approval_history.history_map(storage, job_id),
             "approval_stats": storage.qa_agent_approval_stats(),
         },
     )
 
 
 @router.post("/analyses/{job_id}/approve")
-def approve(job_id: str, claim_kind: str = Form(...), claim_label: str = Form(...), qa_decision: str = Form(...), qa_note: str = Form("")):
-    """QA 결정을 기록한다. AI 판정을 덮어쓰지 않고 별도 행으로 쌓는다 (규칙 §20)."""
+def approve(
+    job_id: str,
+    claim_kind: str = Form(...),
+    claim_label: str = Form(...),
+    qa_decision: str = Form(...),
+    qa_note: str = Form(""),
+    return_tab: str = Form("action"),
+):
+    """QA 결정을 기록한다. AI 판정을 덮어쓰지 않고 별도 행으로 쌓는다 (규칙 §20).
+
+    결정마다 기록 표에 새 줄을 더하고(이전 결정을 남긴다), 최신 결정 표는 새 값으로 바꾼다.
+    기록한 뒤에는 폼이 있던 탭으로 돌려보낸다.
+    """
     analysis = storage.get_analysis(job_id)
     if not analysis:
         raise HTTPException(404, "분석 작업을 찾을 수 없습니다.")
@@ -222,14 +269,33 @@ def approve(job_id: str, claim_kind: str = Form(...), claim_label: str = Form(..
         raise HTTPException(409, "완료된 분석만 승인할 수 있습니다.")
     if qa_decision not in QA_DECISIONS:
         raise HTTPException(400, f"알 수 없는 결정입니다: {qa_decision}")
-    storage.save_qa_agent_approval(job_id, claim_kind, claim_label, qa_decision, qa_note.strip())
-    return RedirectResponse(f"/qa-agent/analyses/{job_id}#tab-action", status_code=303)
+    note = qa_note.strip()
+    approval_history.record(storage, job_id, claim_kind, claim_label, qa_decision, note)
+    storage.save_qa_agent_approval(job_id, claim_kind, claim_label, qa_decision, note)
+    tab = return_tab if return_tab in RESULT_TABS else "action"
+    return RedirectResponse(f"/qa-agent/analyses/{job_id}?tab={tab}", status_code=303)
+
+
+def _spent_tokens(analyzer) -> dict | None:
+    """실패한 분석이 이미 쓴 토큰. AI 호출 전에 실패했으면 None (결과를 남기지 않는다).
+
+    AI 호출 뒤에 실패해도 쓴 토큰은 요금에 들어가므로 하루 합계에 넣는다 (OPEN_QUESTIONS 8-10).
+    """
+    try:
+        usage = dict(analyzer.ai_client.token_usage or {}) if analyzer is not None else {}
+    except Exception:
+        return None
+    if not int(usage.get("total_tokens", 0) or 0):
+        return None
+    return {"token_usage": usage}
 
 
 def _run_job(job_id: str, product: str, issue_id: str, issue_path: str, context: ExecutionContext, scope_note: str) -> None:
+    analyzer = None
     try:
         storage.update_analysis(job_id, "RUNNING")
-        result = QaAgentAnalyzer(storage=storage).run(
+        analyzer = QaAgentAnalyzer(storage=storage)
+        result = analyzer.run(
             product=product,
             issue_id=issue_id,
             issue_path=Path(issue_path) if issue_path else None,
@@ -239,7 +305,7 @@ def _run_job(job_id: str, product: str, issue_id: str, issue_path: str, context:
         )
         storage.update_analysis(job_id, "DONE", result=result.as_dict())
     except Exception as exc:
-        storage.update_analysis(job_id, "FAILED", error=str(exc))
+        storage.update_analysis(job_id, "FAILED", result=_spent_tokens(analyzer), error=str(exc))
 
 
 def _ensure_job_capacity() -> None:
@@ -289,15 +355,20 @@ def start_analysis(
     required_means: list[str] = Form(default=[]),
     draft_allowed: bool = Form(False),
     environment_note: str = Form(""),
+    qa_issue_type: str = Form(""),
 ):
     issue_id = issue_id.strip()
+    qa_issue_type = qa_issue_type.strip()
     upload = issue_file if issue_file and issue_file.filename else None
     if not issue_id and upload is None:
         raise HTTPException(400, "Issue ID를 고르거나 Polarion Export JSON을 첨부하세요.")
+    if upload is None and not _issue_export_available(product):
+        raise HTTPException(400, "이 서버에는 Polarion Export 폴더가 없어 Issue ID만으로는 이슈를 읽을 수 없습니다. backup.json을 첨부하세요.")
+    if qa_issue_type and not valid_qa_issue_type(qa_issue_type):
+        raise HTTPException(400, f"알 수 없는 이슈 유형입니다: {qa_issue_type}")
 
-    from app.modules.impact_analyzer.router import daily_token_status
-
-    token_status = daily_token_status()
+    # 하루 한도는 한국 시간 0시 기준이다 (app/core/usage.py, OPEN_QUESTIONS 8-8).
+    token_status = usage_module.daily_token_status(storage=storage)
     if token_status["exceeded"]:
         raise HTTPException(
             429,
@@ -311,7 +382,15 @@ def start_analysis(
         issue_path = str(save_upload(upload, get_settings().path("storage.upload_dir"), {".json"}))
 
     context = _context_from_form(
-        can_execute, can_expose, has_dose_table, test_data_ready, observation_means, required_means, draft_allowed, environment_note
+        can_execute,
+        can_expose,
+        has_dose_table,
+        test_data_ready,
+        observation_means,
+        required_means,
+        draft_allowed,
+        environment_note,
+        qa_issue_type,
     )
     job_id = uuid.uuid4().hex[:12]
     request_snapshot = {
@@ -320,16 +399,7 @@ def start_analysis(
         "issue_path": issue_path,
         "issue_file": upload.filename if upload else "",
         "scope_note": scope_note.strip(),
-        "context": {
-            "can_execute": context.can_execute,
-            "can_expose": context.can_expose,
-            "has_dose_table": context.has_dose_table,
-            "test_data_ready": context.test_data_ready,
-            "observation_means": list(context.observation_means),
-            "required_means": list(context.required_means),
-            "draft_allowed": context.draft_allowed,
-            "environment_note": context.environment_note,
-        },
+        "context": _context_snapshot(context),
         "readiness": _product_readiness(product),
     }
     storage.create_analysis(job_id, stage_total=len(ANALYSIS_STAGES), request=request_snapshot, module=MODULE_NAME)
@@ -342,7 +412,9 @@ def issue_list(request: Request, product: str = ""):
     """Export 폴더의 Issue 목록. 화면에서 제품을 바꿀 때 쓰는 조각 응답이다."""
     analyzer = QaAgentAnalyzer(storage=storage)
     issue_ids = analyzer.available_issue_ids(product) if product else []
-    return HTMLResponse("".join(f'<option value="{issue_id}">{issue_id}</option>' for issue_id in issue_ids))
+    return HTMLResponse(
+        "".join(f'<option value="{html.escape(issue_id, quote=True)}">{html.escape(issue_id)}</option>' for issue_id in issue_ids)
+    )
 
 
 @router.get("/readiness")

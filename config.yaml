@@ -7,10 +7,9 @@ app:
   # 따라오지 않는 곳은 nginx 뿐이다 — deploy/nginx/qa-platform.conf 의 upstream 포트는
   # 손으로 맞춰야 하고, 어긋나면 tests/test_serve_bind.py 가 실패시킨다.
   port: 24357
-  locale: "ko_KR"
 
 storage:
-  database_url: "sqlite:///data/app.db"
+  # DB 는 data/app.db 로 고정이다(app/core/storage.py, scripts/backup_data.py).
   upload_dir: "data/uploads"
   specification_dir: "data/specifications"
   testcase_dir: "data/testcases"
@@ -42,6 +41,14 @@ services:
     # 이 주소와 자격증명 둘 다 있어야 연동이 켜지고, 하나라도 없으면 꺼진 채
     # 기존 동작을 그대로 유지한다. secrets.txt는 배포되지 않으므로 서버에서 직접 넣는다.
     api_url: "http://127.0.0.1/manual-hub/api"
+
+# 오래된 파일 자동 정리 (app/core/retention.py). scripts/backup_data.py 가 새 백업을 검증한 뒤 실행한다.
+# 값은 보관 일수이고 0 이면 그 종류는 지우지 않는다. 일일 QA 스냅샷(data/daily_qa/snapshots/)은 지우지 않는다.
+retention:
+  backup_days: 30                   # 백업 ZIP. 가장 새 백업 하나는 날짜와 관계없이 남긴다.
+  ai_cache_days: 180                # AI 응답 저장본(ai_cache). 지워도 같은 요청이 오면 다시 부른다.
+  daily_qa_run_days: 365            # 일일 QA 실행 폴더(output/daily_qa/<실행 번호>/)
+  daily_qa_workspace_run_days: 30   # 일일 QA 작업 폴더의 실행 입력(<작업 폴더>/runs/<실행 번호>/)
 
 manual_review:
   # 근거 SRS 후보 개수 상한 (토큰 절약, 스펙 §28-G)

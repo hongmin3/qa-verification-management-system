@@ -5,6 +5,7 @@
     python -m app.cli reset-password <login_id>  # rescue path if admin is locked out
     python -m app.cli list-users
     python -m app.cli check-storage              # verify every version's file
+    python -m app.cli check-storage --verify-sha256   # ... and re-hash its bytes
     python -m app.cli warm-preview-cache         # pre-convert office docs to PDF
     python -m app.cli purge-sessions
 
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import hashlib
 import os
 import sys
 from datetime import UTC, datetime
@@ -154,6 +156,17 @@ def cmd_seed_catalog(args: argparse.Namespace) -> int:
                         updated_by=actor.id if actor else None,
                     )
                 )
+                # Same event the Categories screen writes, so a catalogue seeded
+                # from the CLI has a creation trail in Audit Logs too.
+                audit.record(
+                    db,
+                    action=audit.CATEGORY_CREATE,
+                    actor=None,
+                    actor_login_id="cli",
+                    target_label=name,
+                    after={"name": name, "description": description},
+                    detail="CLI seed-catalog",
+                )
                 created_categories.append(name)
 
         for product_name in args.product or []:
@@ -161,13 +174,22 @@ def cmd_seed_catalog(args: argparse.Namespace) -> int:
                 select(Product).where(func.lower(Product.name) == product_name.lower())
             )
             if hit is None:
-                db.add(
-                    Product(
-                        name=product_name,
-                        sort_order=10 * (len(created_products) + 1),
-                        created_by=actor.id if actor else None,
-                        updated_by=actor.id if actor else None,
-                    )
+                product = Product(
+                    name=product_name,
+                    sort_order=10 * (len(created_products) + 1),
+                    created_by=actor.id if actor else None,
+                    updated_by=actor.id if actor else None,
+                )
+                db.add(product)
+                db.flush()  # assigns product.id for the audit row
+                audit.record(
+                    db,
+                    action=audit.PRODUCT_CREATE,
+                    actor=None,
+                    actor_login_id="cli",
+                    product=product,
+                    after={"name": product_name},
+                    detail="CLI seed-catalog",
                 )
                 created_products.append(product_name)
         db.commit()
@@ -227,10 +249,20 @@ def cmd_list_users(_: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_check_storage(_: argparse.Namespace) -> int:
+def _file_sha256(storage, storage_key: str) -> str:
+    digest = hashlib.sha256()
+    with storage.open(storage_key) as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def cmd_check_storage(args: argparse.Namespace) -> int:
+    verify_sha256 = bool(getattr(args, "verify_sha256", False))
     storage = get_storage()
     missing: list[str] = []
     mismatched: list[str] = []
+    corrupted: list[str] = []
     total = 0
     with SessionLocal() as db:
         for version in db.scalars(select(DocumentVersion)).unique():
@@ -241,6 +273,10 @@ def cmd_check_storage(_: argparse.Namespace) -> int:
                 continue
             if storage.size(stored.storage_key) != stored.byte_size:
                 mismatched.append(f"{stored.storage_key} ({version.label})")
+                continue
+            # Same size but different bytes is only visible by re-hashing.
+            if verify_sha256 and _file_sha256(storage, stored.storage_key) != stored.sha256:
+                corrupted.append(f"{stored.storage_key} ({version.label})")
     print(f"검사한 버전: {total}")
     print(f"파일 없음: {len(missing)}")
     for item in missing:
@@ -248,7 +284,11 @@ def cmd_check_storage(_: argparse.Namespace) -> int:
     print(f"크기 불일치: {len(mismatched)}")
     for item in mismatched:
         print(f"  - {item}")
-    return 0 if not missing and not mismatched else 2
+    if verify_sha256:
+        print(f"SHA-256 불일치: {len(corrupted)}")
+        for item in corrupted:
+            print(f"  - {item}")
+    return 0 if not missing and not mismatched and not corrupted else 2
 
 
 def cmd_warm_preview_cache(_: argparse.Namespace) -> int:
@@ -339,9 +379,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_reset_password, must_change_password=True)
 
     sub.add_parser("list-users", help="사용자 목록").set_defaults(func=cmd_list_users)
-    sub.add_parser(
+    p = sub.add_parser(
         "check-storage", help="DB에 등록된 모든 버전 파일의 존재/크기 검증"
-    ).set_defaults(func=cmd_check_storage)
+    )
+    p.add_argument(
+        "--verify-sha256",
+        action="store_true",
+        help="파일 내용을 다시 읽어 업로드 때 저장한 SHA-256 값과 비교 (느림)",
+    )
+    p.set_defaults(func=cmd_check_storage)
     sub.add_parser(
         "warm-preview-cache",
         help="오피스 문서(doc/docx/xls/xlsx/ppt/pptx) 버전을 미리 PDF로 변환해 캐시",

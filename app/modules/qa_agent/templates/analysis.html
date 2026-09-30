@@ -14,11 +14,23 @@
   <p class="no-evidence">근거 없음 — 규칙 §55에 따라 이 판정만으로 확정하지 않습니다.</p>
   {% endif %}
 {% endmacro %}
-{% macro qa_action(job_id, kind, label, approvals, qa_decisions) %}
+{% macro decision_history(rows, qa_decisions) %}
+  {# 이전 결정을 지우지 않는다. 최신 결정이 맨 위다 (REQ-QAAGENT-012). #}
+  {% if rows and rows|length > 1 %}
+  <details class="hint" style="margin-top:4px">
+    <summary>결정 기록 {{ rows|length }}건</summary>
+    <ul style="margin:4px 0 0;padding-left:18px">
+      {% for row in rows %}<li>{{ row.created_at[:16] }} · {{ qa_decisions.get(row.qa_decision, row.qa_decision) }}{% if row.qa_note %} — {{ row.qa_note }}{% endif %}</li>{% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+{% endmacro %}
+{% macro qa_action(job_id, kind, label, approvals, qa_decisions, return_tab, history) %}
   {% set current = approvals.get(kind ~ '|' ~ label) %}
   <form method="post" action="/qa-agent/analyses/{{ job_id }}/approve" style="display:flex;gap:8px;align-items:center;margin-top:10px">
     <input type="hidden" name="claim_kind" value="{{ kind }}">
     <input type="hidden" name="claim_label" value="{{ label }}">
+    <input type="hidden" name="return_tab" value="{{ return_tab }}">
     <select name="qa_decision" style="padding:6px">
       {% for key, text in qa_decisions.items() %}<option value="{{ key }}" {% if current and current.qa_decision == key %}selected{% endif %}>{{ text }}</option>{% endfor %}
     </select>
@@ -26,6 +38,7 @@
     <button type="submit" style="padding:7px 12px;font-size:13px">기록</button>
     {% if current %}<span class="pill">{{ qa_decisions.get(current.qa_decision, current.qa_decision) }} · {{ current.updated_at[:16] }}</span>{% endif %}
   </form>
+  {{ decision_history(history.get(kind ~ '|' ~ label), qa_decisions) }}
 {% endmacro %}
 {% block content %}
 {% set tab = request.query_params.get('tab', 'issue') %}
@@ -46,7 +59,13 @@
     </span>
   </div>
   {% if issue.title %}<p class="hint" style="margin-top:6px">{{ issue.title }}{% if issue.portal_url %} · <a href="{{ issue.portal_url }}" target="_blank" rel="noopener">Polarion에서 열기</a>{% endif %}</p>{% endif %}
-  {% if result.scope_note %}<p class="status">제한된 범위 기준: <b>{{ result.scope_note }}</b> (규칙 §4)</p>{% endif %}
+  {% if result.scope_note %}<p class="status">제한된 범위 기준: <b>{{ result.scope_note }}</b> (규칙 §4) <span class="hint">검색 대상은 줄이지 않았습니다. 범위 글은 AI에 참고로만 전했습니다.</span></p>{% endif %}
+  {% if result.knowledge_failures %}
+  <div class="status">
+    <b>읽지 못한 문서 {{ result.knowledge_failures|length }}건</b> <span class="hint">이 문서의 내용은 근거 검색에 들어가지 않았습니다. 여기에만 있는 사양은 “없음”으로 보일 수 있습니다 (규칙 §55).</span>
+    <ul>{% for item in result.knowledge_failures %}<li>{{ '사양서' if item.kind == 'specification' else 'TC' }} · {{ item.name or item.id }}{% if item.reason %} <span class="hint">({{ item.reason }})</span>{% endif %}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
 
   <div class="gatebar">
     {% for code in ['G1','G2','G3','G4','G5'] %}
@@ -75,7 +94,7 @@
   {% if tab == 'issue' %}
   <h3>Issue 구조화 결과</h3>
   <dl class="kv">
-    <dt>유형</dt><dd>{{ issue.type_label }}{% if issue.needs_type_confirmation %} <span class="pill MEDIUM">QA 확정 필요</span>{% endif %} <span class="hint">(연구소 검토 결과: <code>{{ issue.lab_review_result or '없음' }}</code>)</span></dd>
+    <dt>유형</dt><dd>{{ issue.type_label }}{% if issue.type_source == 'qa' %} <span class="pill">QA 선택</span>{% endif %}{% if issue.needs_type_confirmation %} <span class="pill MEDIUM">QA 확정 필요</span> <span class="hint">새 분석 양식의 “이슈 유형”에서 골라 다시 실행하세요.</span>{% endif %} <span class="hint">(연구소 검토 결과: <code>{{ issue.lab_review_result or '없음' }}</code>)</span></dd>
     {% if issue.type_candidates and issue.type_candidates|length > 1 %}<dt>유형 후보</dt><dd>{{ issue.type_candidates|join(' 또는 ') }}</dd>{% endif %}
     <dt>발생 버전</dt><dd>{{ issue.occurred_versions|join(', ') or '—' }}</dd>
     <dt>목표 버전</dt><dd>{{ issue.target_versions|join(', ') or '—' }}</dd>
@@ -136,7 +155,7 @@
     <div class="claim-head"><b>{{ claim.label }}</b><span class="pill">{{ claim.text.split(' — ')[0] }}</span></div>
     <p>{{ claim.text }}</p>
     {{ evidence_list(claim.evidence) }}
-    {{ qa_action(analysis.id, 'spec_trace', claim.label, approvals, qa_decisions) }}
+    {{ qa_action(analysis.id, 'spec_trace', claim.label, approvals, qa_decisions, 'spec', approval_history) }}
   </div>
   {% endfor %}
   {% else %}
@@ -161,7 +180,7 @@
     <p>{{ entry.reason or '판정 근거가 비어 있습니다.' }}</p>
     {{ evidence_list(claim.evidence if claim else []) }}
     {% if entry.judgment != 'KEEP' %}<p class="hint">규칙 §55에 따라 실제 TC는 자동으로 바꾸지 않습니다. QA 승인 후 반영하세요.</p>{% endif %}
-    {{ qa_action(analysis.id, 'tc_coverage', entry.tc_id, approvals, qa_decisions) }}
+    {{ qa_action(analysis.id, 'tc_coverage', entry.tc_id, approvals, qa_decisions, 'tc', approval_history) }}
   </div>
   {% endfor %}
   {% if not decision.tc_coverage %}<p class="hint">TC 판정이 없습니다.</p>{% endif %}
@@ -188,7 +207,7 @@
     </dl>
     {% endif %}
     <p>{{ entry.reason or '' }}</p>
-    {% if entry.applicable %}{{ evidence_list(claim.evidence if claim else []) }}{{ qa_action(analysis.id, 'regression', label, approvals, qa_decisions) }}{% endif %}
+    {% if entry.applicable %}{{ evidence_list(claim.evidence if claim else []) }}{{ qa_action(analysis.id, 'regression', label, approvals, qa_decisions, 'regression', approval_history) }}{% endif %}
   </div>
   {% endfor %}
   {% if not decision.regression_areas %}<p class="hint">Regression 판정이 없습니다.</p>{% endif %}
@@ -251,6 +270,7 @@
           <td>
             {% set current = approvals.get(claim.kind ~ '|' ~ claim.label) %}
             {% if current %}<span class="pill">{{ qa_decisions.get(current.qa_decision, current.qa_decision) }}</span>{% if current.qa_note %}<div class="hint">{{ current.qa_note }}</div>{% endif %}{% else %}<span class="hint">미결정</span>{% endif %}
+            {{ decision_history(approval_history.get(claim.kind ~ '|' ~ claim.label), qa_decisions) }}
           </td>
         </tr>
         {% endfor %}

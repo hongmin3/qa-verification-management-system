@@ -1,5 +1,17 @@
 # 진행 상태
 
+## 2026-09-30 결정 18건 반영 · 사양–코드 불일치 60건 수정
+
+- 완료: `OPEN_QUESTIONS.md` 8-1~8-18 을 추천안대로 구현했다. `docs/SPEC_CODE_MISMATCH.md` 65건 가운데 60건을 고치고 1건을 일부 고쳤다. 영역은 공통 기반, 매뉴얼 개정 검증, Regression 분석, QA Agent, 일일 QA 점검, QA Manual Hub 다. SPEC·12절 추적성·13절·CHANGELOG 를 같이 고쳤다.
+- 완료: REQ-MANUAL-018 Claude 대화용 매뉴얼 개정 검증(`scripts/manual_review_local.py`, `.claude/skills/vxvue-manual-revision-review/`). 표본 `.docx` 로 extract → finish 를 실제로 돌려 Excel·Word Comment·`comments.json` 이 나오는 것을 확인했다.
+- 검증: 핵심 앱 pytest 841 passed · 1 skipped, QA Manual Hub 의 DB 없이 도는 테스트 46 passed, 배포 셸 스크립트 `bash -n`, 주요 화면 9개 200, 준비 검사 실패 0.
+- 확인 못 한 것:
+  1. QA Manual Hub 의 PostgreSQL 테스트(이 PC 에 PostgreSQL 없음). DB 있는 곳에서 `services/qa-manual-hub/backend` 의 `pytest tests -q` 를 돌린다.
+  2. Docker Compose 실제 실행, 프런트엔드 `npm run build`(`node_modules` 없음).
+  3. 일일 QA 점검에서 Claude 의 작업 폴더 밖 읽기가 서버에서 실제로 거부되는지(`docs/modules/daily-qa.md` 알려진 제한).
+  4. 실제 개정 매뉴얼로 매뉴얼 분석 한 번(사용자에게 파일 경로 요청 중).
+- 남은 일: 서버 배포(구현 완료 뒤 사용자 요청 시). 남은 불일치 4건(1-2, 2-10, 3-9, 5-11)과 SPEC 13절의 확인 필요 항목은 사용자 결정이 필요하다.
+
 ## 2026-09-29 오후 사양서 전체 상세화 · 약칭 제거
 
 - 완료: SPEC 전체 상세화(요구사항 251개, 테스트 137개), `docs/SPEC_CODE_MISMATCH.md`(65건), `OPEN_QUESTIONS.md` 8절(결정 18건), 일일 QA 점검 화면·메일의 약칭 제거.

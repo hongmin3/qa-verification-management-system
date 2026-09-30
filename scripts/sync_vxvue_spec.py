@@ -36,7 +36,9 @@ def main() -> None:
         print(f"{result['status']}: {result['detail']}")
         if not args.dry_run:
             report_sync_log(args.target_url, "VXvue", "specification", "alm_crawler", result["status"], result["detail"])
-        sys.exit(0 if result["status"] in ("SUCCESS", "DRY_RUN", "PARTIAL") else 1)
+        # PARTIAL(일부 파일 등록 실패)도 1 로 끝낸다. 0 이면 작업 스케줄러에 성공으로 보여
+        # 아무도 모른다. 지식 업로드(scripts/sync_product_knowledge.py)와 같은 기준이다.
+        sys.exit(0 if result["status"] in ("SUCCESS", "DRY_RUN") else 1)
     finally:
         release_lock()
 

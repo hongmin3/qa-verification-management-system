@@ -123,6 +123,8 @@ def main() -> int:
             _report_remote(args.report_to, product, result["status"], result["detail"])
         for note in result.get("kept_previous", []):
             print(f"  읽지 못해 이전 판 유지: {note}")
+        for note in result.get("unreadable", []):
+            print(f"  읽지 못함: {note}")
         # PARTIAL(업로드 누락·텍스트 추출 실패)도 1 로 끝낸다. 0 으로 끝나면 작업 스케줄러에
         # 성공으로 보여 아무도 모른다 (REQ-SYNC-002).
         if result["status"] in ("FAILED", "NEEDS_CONFIG", "PARTIAL"):

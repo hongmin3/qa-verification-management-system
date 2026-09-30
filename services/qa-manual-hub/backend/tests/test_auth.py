@@ -221,3 +221,102 @@ def test_must_change_password_blocks_document_work_until_changed(
         },
     )
     assert allowed.status_code == 201
+
+
+# Validates: REQ-HUBAUTH-003
+def test_sliding_refresh_also_extends_the_browser_cookie(client, make_user):
+    """The DB expiry and the cookie lifetime move together; before the fix the
+    cookie kept its login-time Max-Age and the browser dropped it after 8h."""
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import update
+
+    from app.config import settings
+    from app.db import SessionLocal
+    from app.models import Session as SessionModel
+
+    make_user("hong", "홍길동")
+    assert client.post(
+        "/api/auth/login", json={"login_id": "hong", "password": "Passw0rd!"}
+    ).status_code == 200
+
+    quiet = client.get("/api/auth/me")
+    assert quiet.status_code == 200
+    assert "set-cookie" not in quiet.headers
+
+    with SessionLocal() as db:
+        db.execute(
+            update(SessionModel).values(
+                last_seen_at=datetime.now(UTC) - timedelta(minutes=20)
+            )
+        )
+        db.commit()
+
+    refreshed = client.get("/api/auth/me")
+    assert refreshed.status_code == 200
+    cookie = refreshed.headers.get("set-cookie", "")
+    assert cookie.startswith(f"{settings.session_cookie_name}=")
+    assert f"Max-Age={settings.session_lifetime_hours * 3600}" in cookie
+
+
+# Validates: REQ-HUB-016
+def test_api_documentation_opens_after_login(client, make_user, login):
+    assert client.get("/api/openapi.json").status_code == 401
+    make_user("hong", "홍길동")
+    assert login("hong").status_code == 200
+    schema = client.get("/api/openapi.json")
+    assert schema.status_code == 200
+    assert "/api/documents" in schema.json()["paths"]
+    docs = client.get("/api/docs")
+    assert docs.status_code == 200
+    assert "swagger" in docs.text.lower()
+
+
+# Validates: REQ-HUBAUTH-013
+def test_login_history_ip_cannot_be_forged_with_forwarded_for(client, make_user):
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import AuditLog, LoginHistory
+
+    make_user("hong", "홍길동")
+    response = client.post(
+        "/api/auth/login",
+        json={"login_id": "hong", "password": "Passw0rd!"},
+        headers={
+            "X-Forwarded-For": "203.0.113.66, 192.0.2.10",
+            "X-Real-IP": "192.0.2.10",
+        },
+    )
+    assert response.status_code == 200
+    with SessionLocal() as db:
+        history = db.scalars(select(LoginHistory)).all()
+        audits = db.scalars(select(AuditLog).where(AuditLog.action == "LOGIN")).all()
+    assert [h.ip_address for h in history] == ["192.0.2.10"]
+    assert [a.ip_address for a in audits] == ["192.0.2.10"]
+
+
+# Validates: REQ-HUBAUTH-006
+def test_temporary_password_admin_is_blocked_from_management_until_changed(
+    client, make_user, login
+):
+    make_user("boot", "최초 관리자", password="Temp-1234", admin=True, must_change_password=True)
+    assert login("boot", "Temp-1234").status_code == 200
+
+    # Looking is still allowed.
+    assert client.get("/api/users").status_code == 200
+    assert client.get("/api/products").status_code == 200
+
+    for path, body in [
+        ("/api/users", {"login_id": "kim", "display_name": "김", "password": "x"}),
+        ("/api/products", {"name": "Blocked Product"}),
+        ("/api/categories", {"name": "Blocked Category"}),
+    ]:
+        blocked = client.post(path, json=body)
+        assert blocked.status_code == 428, (path, blocked.text)
+
+    assert client.post(
+        "/api/auth/change-password",
+        json={"current_password": "Temp-1234", "new_password": "Chosen-9876"},
+    ).status_code == 200
+    assert client.post("/api/products", json={"name": "Allowed Product"}).status_code == 201

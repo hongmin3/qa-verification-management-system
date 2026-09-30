@@ -37,12 +37,20 @@
         {% for issue_id in issue_ids %}<option value="{{ issue_id }}">{{ issue_id }}</option>{% endfor %}
       </select>
     </label>
+    {% elif readiness and readiness.issue_export_available %}
+    <p class="hint">Export 폴더에서 Issue를 찾지 못했습니다. <code>backup.json</code>을 첨부하세요.</p>
     {% else %}
-    <p class="hint">이 호스트에 Polarion Export 폴더가 없습니다. Issue ID를 직접 입력하거나 <code>backup.json</code>을 첨부하세요.</p>
-    <label>Issue ID<input type="text" name="issue_id" placeholder="VP-1234"></label>
+    {# 폴더가 없으면 번호만으로는 이슈를 읽을 수 없다. 번호 입력칸을 두면 분석이 반드시 실패한다. #}
+    <p class="hint">이 호스트에 Polarion Export 폴더가 없어 Issue ID만으로는 이슈를 읽을 수 없습니다. 아래에 <code>backup.json</code>을 첨부하세요.</p>
     {% endif %}
-    <label>또는 Polarion Export JSON 첨부 <span class="hint">ALM-QA-Automation issue-export 가 만든 <code>&lt;ISSUE-ID&gt;/backup.json</code></span>
+    <label>{% if issue_ids %}또는 {% endif %}Polarion Export JSON 첨부 <span class="hint">ALM-QA-Automation issue-export 가 만든 <code>&lt;ISSUE-ID&gt;/backup.json</code></span>
       <input type="file" name="issue_file" accept=".json">
+    </label>
+    <label>이슈 유형 <span class="hint">비워 두면 연구소 검토 결과로 정합니다. 결과가 “QA 확정 필요”였다면 여기서 골라 다시 실행하세요 (규칙 §6).</span>
+      <select name="qa_issue_type">
+        <option value="">연구소 검토 결과대로</option>
+        {% for code, label in issue_types.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+      </select>
     </label>
 
     <h3>2. 검증 환경 <span class="hint">규칙이 “QA만 아는 사실”로 정한 값입니다. 비워 두면 G4가 확인을 요청합니다.</span></h3>
@@ -76,7 +84,7 @@
     <label>환경 메모<textarea name="environment_note" rows="2" placeholder="모델, 연동 구성, 원격/실장비 여부 등"></textarea></label>
 
     <h3>3. 조사 범위와 초안 허용</h3>
-    <label>조사 범위 제한 <span class="hint">비워 두면 등록된 사양서·TC 전체를 봅니다. 범위를 적으면 결과에 “제한된 범위 기준”으로 표시합니다 (규칙 §4).</span>
+    <label>조사 범위 제한 <span class="hint">검색은 늘 등록된 사양서·TC 전체를 봅니다. 범위를 적으면 AI에 참고로 전하고 결과에 “제한된 범위 기준”으로 표시합니다 (규칙 §4).</span>
       <input type="text" name="scope_note" placeholder="예: V1.1.0 시트만 / Generator 시트만">
     </label>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400">

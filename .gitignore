@@ -27,6 +27,7 @@ output/exports/
 output/generated_tc/
 output/logs/
 output/manual_review_comments/
+output/manual_review_local/
 # 일일 점검(daily_qa) 산출물 — 사내 SRS·이슈 본문과 AI 입력·출력이 들어간다
 data/daily_qa/
 output/daily_qa/

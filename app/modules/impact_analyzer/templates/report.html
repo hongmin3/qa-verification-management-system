@@ -63,6 +63,7 @@ th[data-tip]{cursor:help}
     <div class="overview-item"><b>TC 기준일</b>{% if result.tc_sync %}<span data-utc-time="{{ result.tc_sync.synced_at }}">{{ result.tc_sync.synced_at }}</span> · {{ result.tc_sync.source }}{% else %}수동 등록{% endif %}</div>
     <div class="overview-item"><b>분석된 TC 수</b>{{ result.total_tc }}</div>
     <div class="overview-item"><b>추천 Regression TC 수</b>{{ result.recommended_count }}</div>
+    {% if result.knowledge_failures %}<div class="overview-item"><b>읽지 못한 문서 (분석에 쓰지 않음)</b>{% for item in result.knowledge_failures %}{{ item.name }}{% if item.reason %} ({{ item.reason }}){% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
   </div>
   {% if result.change.user_notes %}<p><b>사용자 요청 사항</b><br>{{ result.change.user_notes }}</p>{% endif %}
 </section>

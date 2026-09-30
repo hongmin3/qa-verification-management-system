@@ -16,7 +16,7 @@ Gemini API로** 실행하므로, 규칙 전문을 매 호출마다 보내지 않
 번에 그것만으로 1만 토큰이 넘고, 규칙 대부분은 그 요청과 무관하다.
 
 규칙 문서는 사내 QA 노하우라 저장소에 커밋하지 않는다. `data/product_knowledge/<slug>/`에
-수집된 사본을 읽고, 없으면 규칙 없이 동작한다 (Gate가 `NEED_RULES`로 보고한다).
+수집된 사본을 읽는다. 없으면 QA Agent의 G1이 `no_rules` 항목으로 BLOCK 하고 AI를 부르지 않는다.
 """
 
 from __future__ import annotations

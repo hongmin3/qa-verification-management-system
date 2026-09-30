@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from .. import audit
 from ..db import get_db
-from ..deps import get_current_user, require_admin
+from ..deps import get_current_user, require_admin_password_current
 from ..models import (
     STATUS_ACTIVE,
     Document,
@@ -110,7 +110,7 @@ def create_product(
     payload: ProductCreate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> ProductOut:
     product = Product(
         name=payload.name,
@@ -166,7 +166,7 @@ def update_product(
     payload: ProductUpdate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> ProductOut:
     product = db.get(Product, product_id)
     if product is None:
@@ -267,7 +267,7 @@ def create_category(
     payload: CategoryCreate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> CategoryOut:
     category = DocumentCategory(
         name=payload.name,
@@ -304,7 +304,7 @@ def update_category(
     payload: CategoryUpdate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> CategoryOut:
     category = db.get(DocumentCategory, category_id)
     if category is None:

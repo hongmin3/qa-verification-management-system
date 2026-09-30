@@ -60,12 +60,13 @@
       · 상태: {{ spec_sync.status if spec_sync else '-' }}
       {% if spec_sync and spec_sync.detail %}<br><small>{{ spec_sync.detail }}</small>{% endif %}
     </div>
-    <p class="hint">Windows PC의 작업 스케줄러가 매주 월요일 07:30(KST)에 <code>scripts/sync_vxvue_spec.py</code>를 자동 실행합니다. 지금 바로 실행하려면 그 PC에서 같은 명령을 직접 실행하세요.</p>
+    <p class="hint">담당자 Windows PC의 작업 스케줄러가 평일 09:40(한국 시간)에 <code>scripts/sync_vxvue_spec.py</code>를 자동 실행합니다. 지금 바로 실행하려면 그 PC에서 같은 명령을 직접 실행하세요.</p>
   </div>
 </section>
 <div class="grid">
   <section>
-    <h2>사양서 / Manual 등록</h2>
+    <h2>사양서 등록</h2>
+    <p class="hint">여기서 올린 파일은 사양서로 등록됩니다. 매뉴얼은 지식 폴더 수집으로 등록하세요.</p>
     <form method="post" action="/knowledge/specification" enctype="multipart/form-data">
       <label>제품명<input name="product" list="products-list" placeholder="제품명 선택 또는 새로 입력" required></label>
       <label>Version<input name="version" list="versions-list" placeholder="버전 선택 또는 새로 입력"></label>
@@ -151,9 +152,7 @@ if (cleanupButton) cleanupButton.addEventListener('click', async () => {
   const response = await fetch('/knowledge/cleanup/missing', { method: 'POST' });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) { alert(body.detail || '정리 실패'); return; }
-  alert(body.removed ? `${body.removed}건 정리:
-` + body.documents.map(d => `${d.product} · ${d.name}`).join('
-') : '정리할 등록이 없습니다.');
+  alert(body.removed ? `${body.removed}건 정리:\n` + body.documents.map(d => `${d.product} · ${d.name}`).join('\n') : '정리할 등록이 없습니다.');
   if (body.removed) location.reload();
 });
 
@@ -168,12 +167,8 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) { alert(body.detail || `수집 실패 (HTTP ${response.status})`); return; }
       const notes = [body.detail];
-      if (body.duplicates && body.duplicates.length) notes.push('
-[중복 확인 필요]
-' + body.duplicates.join('
-'));
-      alert(notes.join('
-'));
+      if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 필요]\n' + body.duplicates.join('\n'));
+      alert(notes.join('\n'));
       location.reload();
     } finally {
       button.disabled = false; button.textContent = original;

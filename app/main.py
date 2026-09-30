@@ -22,6 +22,7 @@ storage = Storage()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     storage.fail_running_analyses()
+    storage.fail_running_syncs()
     resume_queued_impact_jobs()
     resume_queued_manual_jobs()
     resume_queued_qa_agent_jobs()

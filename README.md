@@ -101,7 +101,7 @@ Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영�
 
 - Rule Engine이 먼저 걸러내므로 **AI 호출 대상 자체가 줄어듭니다.**
 - 동일 입력은 SHA-256 캐시로 재사용해 **API 호출이 아예 발생하지 않습니다.**
-- 일일 토큰 한도를 넘으면 새 분석 실행 자체를 차단합니다.
+- 일일 토큰 한도를 넘으면 새 분석 실행 자체를 차단합니다. "하루"는 한국 시간 0시부터 셉니다.
 - `/cost-dashboard`에서 호출 수·토큰·캐시 적중을 집계해 봅니다.
 
 자세한 내용: [비용 절감 설계](docs/COST_OPTIMIZATION.md)
@@ -248,9 +248,12 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 
 - Track Changes 구조화 추출 → 비기능 변경 필터 → SRS 근거 BM25 검색 → Release Note·설계검토
   보고서 Scope 대조 → Cross-Manual 영향 추적 → quick / detail 2단계 AI 판정
-- **이미지 변경은 AI가 PASS 처리하지 못하게 막고** 사람이 원본을 확인하도록 강제
+- **이미지 변경은 AI가 PASS로 판정해도 "판정 불가"로 바꾸고** 사람이 원본을 확인하도록 Word Comment에 넣음
 - **PDF diff는 confidence 상한 60%** — 레이아웃 해석 오차를 인정하고 QA가 최종 판정
 - Round 계보 추적. QA가 확정하기 전에는 이전 지적사항 상태를 자동 변경하지 않음
+- 화면 대신 Claude Code 대화로도 돌릴 수 있습니다. 이 저장소에서 Claude에게 "이 경로의 매뉴얼 분석해 줘"라고
+  말하면 작업 설명서(`.claude/skills/vxvue-manual-revision-review/`)를 따라 결과 Excel과 Word Comment 파일을
+  만듭니다. 외부 AI API를 부르지 않고, 결과는 `output/manual_review_local/` 에 남습니다.
 
 → [상세 문서](docs/modules/manual-review.md)
 

@@ -84,7 +84,7 @@
 - 필수 관찰 수단 없이 Pass — G4가 BLOCK.
 - 문서 검색 실패를 숨긴 확정 판정 — Gate 차단 이유와 읽지 못한 문서를 결과에 남긴다.
 - Spec 근거 불충분 상태에서 Expected 자동 생성 — 프롬프트가 빈 문자열을 지시하고 G5가 검사한다.
-- QA 결정은 AI 판정을 **덮어쓰지 않고** `qa_agent_approvals`에 따로 쌓인다 (규칙 §20).
+- QA 결정은 AI 판정을 **덮어쓰지 않고** 결정 기록 표 `qa_agent_approval_events`에 결정마다 따로 쌓인다. 최신 결정만 `qa_agent_approvals`에 있다 (규칙 §20, REQ-QAAGENT-012).
 
 ## QA만 아는 환경 사실은 입력받는다
 <!-- akela: id=execution-context scope=qa-agent-dev tier=should -->
@@ -96,7 +96,7 @@
 ## 규칙 절별 구현현황은 코드가 원천이다
 <!-- akela: id=rule-capability-table scope=qa-agent-dev,documentation tier=should -->
 
-- `app/modules/qa_agent/rule_capability.py`가 규칙 56개 최상위 절의 구현 방식·상태·위치를 담는다.
+- `app/modules/qa_agent/rule_capability.py`가 규칙 최상위 절(Rev1.17 기준 79개)의 구현 방식·상태·위치를 담는다.
 - 규칙 Rev가 올라가 새 절이 생기면 `tests/test_rule_capability.py`가 실패한다 — 재분류를 강제한다.
 - `status=IMPLEMENTED`인데 `where` 파일이 없으면 실패한다 — 구현 주장과 코드가 어긋나지 않게 한다.
 - 문서에 숫자를 손으로 적지 않고 `scripts/rule_capability_report.py`를 인용한다.

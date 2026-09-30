@@ -29,9 +29,9 @@
 
 `app/modules/impact_analyzer/validation.py::validate_decisions`가 강제하는 규칙이다. 새 AI 기능을 붙일 때도 같은 방식으로 검증한다.
 
-- 응답의 `tc_id`가 실제 TC 목록에 없으면 그 판정을 **결과에서 제외**한다.
+- 응답의 `tc_id`가 이번에 AI에게 보낸 TC 후보에 없으면 그 판정을 **결과에서 제외**한다(REQ-IMPACT-010).
 - 근거 `relevant_specifications`는 실제 Chunk ID만 남기고 걸러낸다.
-- 걸러낸 뒤 근거가 하나도 남지 않으면 `confidence`를 **0.59로 낮추고** `manual_review_required`를 세운다. 근거 없는 판정을 추천으로 올리지 않기 위해서다.
+- 걸러낸 뒤 근거가 하나도 남지 않으면 `confidence`를 **0.59로 낮추고** `manual_review_required`를 세운다. 근거 없는 판정이 사람 확인 없이 채택되지 않게 하기 위해서다. 추천 여부(`recommended`)는 AI 값을 그대로 쓴다(REQ-IMPACT-010).
 
 ## Confidence 분류
 <!-- akela: id=confidence-classification scope=core-development tier=should -->

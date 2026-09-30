@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from .. import audit
 from ..db import get_db
-from ..deps import require_admin
+from ..deps import require_admin, require_admin_password_current
 from ..models import ROLE_ADMIN, Session as SessionModel, User
 from ..schemas import (
     Message,
@@ -71,7 +71,7 @@ def create_user(
     payload: UserCreate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> UserOut:
     if err := validate_password_strength(payload.password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err)
@@ -138,7 +138,7 @@ def update_user(
     payload: UserUpdate,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> UserOut:
     user = _get_user(db, user_id)
     before = {
@@ -249,7 +249,7 @@ def reset_password(
     payload: PasswordResetRequest,
     request: Request,
     db: DbSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_password_current),
 ) -> Message:
     if err := validate_password_strength(payload.new_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err)

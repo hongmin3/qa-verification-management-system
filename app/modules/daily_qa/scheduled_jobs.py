@@ -7,8 +7,9 @@
 않고 `scripts/run_daily_qa.py` 를 **분리된 별도 프로세스**로 띄운다. 앱이 재시작돼도 진행 중인
 점검은 끊기지 않고, 중복 실행은 점검 쪽 잠금 파일이 막는다.
 
-Polarion 과 Claude 자격증명이 둘 다 없는 호스트(개발 PC 등)에서는 시각에 깨어나도 조용히
-건너뛴다.
+Polarion 설정이 없는 호스트(개발 PC 등)에서는 시각에 깨어나도 점검을 띄우지 않는다.
+Claude 토큰만 없으면 점검은 띄운다. 그때는 AI 단계만 `건너뜀` 으로 남고, AI 가 필요 없는
+점검(삭제 SRS 참조, 사양–TC 연결 점검)은 돌며, 이유가 실행 기록과 메일에 남는다.
 """
 
 from __future__ import annotations
@@ -34,9 +35,11 @@ def launch_detached() -> dict:
     if not cfg.enabled:
         logger.info("daily_qa_skipped reason=disabled")
         return {"status": "disabled"}
-    if not (cfg.polarion.configured and cfg.claude_token):
-        logger.info("daily_qa_skipped reason=자격증명_없음")
+    if not cfg.polarion.configured:
+        logger.info("daily_qa_skipped reason=polarion_설정_없음")
         return {"status": "not_configured"}
+    if not cfg.claude_token:
+        logger.warning("daily_qa_without_claude_token AI 단계는 건너뜁니다")
     log_dir = cfg.root / "output" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     options: dict = {"cwd": cfg.root, "stdin": subprocess.DEVNULL}

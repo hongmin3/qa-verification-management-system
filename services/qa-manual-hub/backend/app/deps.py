@@ -12,6 +12,7 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
+from .audit import client_ip
 from .config import settings
 from .db import get_db
 from .models import Session as SessionModel
@@ -39,11 +40,21 @@ def create_session(
         created_at=now,
         expires_at=session_expiry(now),
         last_seen_at=now,
-        ip_address=(request.client.host[:64] if request.client else None),
+        ip_address=client_ip(request),
         user_agent=(request.headers.get("user-agent") or "")[:512] or None,
     )
     db.add(record)
     db.flush()
+    set_session_cookie(response, token)
+    return record
+
+
+def set_session_cookie(response: Response, token: str) -> None:
+    """Send the session cookie with a lifetime equal to the session's.
+
+    Called at login and again whenever the sliding expiry moves forward, so the
+    browser keeps the cookie exactly as long as the server keeps the session.
+    """
     response.set_cookie(
         key=settings.session_cookie_name,
         value=token,
@@ -53,7 +64,13 @@ def create_session(
         samesite=settings.session_cookie_samesite,  # type: ignore[arg-type]
         path=settings.session_cookie_path,
     )
-    return record
+
+
+# Name of the ``request.state`` attribute that tells ``main.refresh_session_cookie``
+# to re-send the cookie on the way out.  A middleware does it (rather than a
+# ``Response`` dependency) so the refresh also reaches endpoints that return
+# their own ``Response`` object, such as file downloads.
+REFRESHED_TOKEN_STATE = "refreshed_session_token"
 
 
 def clear_session_cookie(response: Response) -> None:
@@ -116,6 +133,9 @@ def get_current_user(
         record.last_seen_at = now
         record.expires_at = session_expiry(now)
         db.commit()
+        # The DB now says "valid for another N hours"; the browser must be told
+        # the same, or it drops the cookie N hours after login regardless.
+        setattr(request.state, REFRESHED_TOKEN_STATE, token)
 
     request.state.current_user = user
     return user
@@ -130,15 +150,33 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+_PASSWORD_CHANGE_REQUIRED = "비밀번호를 먼저 변경해야 합니다."
+
+
 def require_password_current(user: User = Depends(get_current_user)) -> User:
     """Block normal work while a forced password change is outstanding.
 
-    Applied to mutating document/product endpoints, not to ``/auth/me`` or the
+    Applied to mutating document/version endpoints, not to ``/auth/me`` or the
     change-password endpoint itself, so the user can always get unstuck.
     """
     if user.must_change_password:
         raise HTTPException(
             status_code=status.HTTP_428_PRECONDITION_REQUIRED,
-            detail="비밀번호를 먼저 변경해야 합니다.",
+            detail=_PASSWORD_CHANGE_REQUIRED,
+        )
+    return user
+
+
+def require_admin_password_current(user: User = Depends(require_admin)) -> User:
+    """Admin check plus the temporary-password check, for the management
+    endpoints (users, products, categories) that change something.
+
+    Without it the first admin could create accounts and products while still
+    on the temporary password handed out by ``bootstrap-admin``.
+    """
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail=_PASSWORD_CHANGE_REQUIRED,
         )
     return user

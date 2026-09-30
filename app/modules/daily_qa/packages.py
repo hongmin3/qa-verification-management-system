@@ -104,23 +104,51 @@ def removed_srs_findings(diff: SrsDiff, rows: list[TcRow]) -> list[Deterministic
     return findings
 
 
-def build_b_tasks(diff: SrsDiff, rows: list[TcRow], batch_size: int, candidate_limit: int, answers: list[dict]) -> list[Task]:
-    index = by_srs(rows)
-    changes: list[dict] = []
-    for srs in diff.added:
-        changes.append({"change": "added", "srs": srs, "candidates": [row.as_dict() for row in candidates_for(srs, index, candidate_limit)]})
+def b_changes(diff: SrsDiff, carried: list[dict] | None = None) -> list[dict]:
+    """사양 변경 영향 검토에 넣을 SRS 변경 목록 (후보 TC 없이).
+
+    `carried` 는 앞 실행에서 상한 때문에 미뤘거나 작업이 실패해 검토하지 못한 변경이다
+    (MISMATCH 4-3). 오늘 다시 바뀐 SRS 는 두 변경을 합친다: 바뀐 필드는 합치고, 바뀌기 전 값은
+    처음 것을, 바뀐 뒤 값은 오늘 것을 쓴다. 오늘 삭제된 SRS 는 삭제 계산이 따로 다루므로 뺀다.
+    """
+    today: list[dict] = [{"change": "added", "srs": srs} for srs in diff.added]
     for item in diff.modified:
-        srs = {"id": item["id"], "old_id": item.get("old_id", ""), "title": item.get("title", "")}
-        changes.append(
-            {
-                "change": "modified",
-                "srs": srs,
-                "fields": item["fields"],
-                "before": item["before"],
-                "after": item["after"],
-                "candidates": [row.as_dict() for row in candidates_for(srs, index, candidate_limit)],
-            }
-        )
+        today.append({
+            "change": "modified",
+            "srs": {"id": item["id"], "old_id": item.get("old_id", ""), "title": item.get("title", "")},
+            "fields": list(item["fields"]),
+            "before": dict(item["before"]),
+            "after": dict(item["after"]),
+        })
+    removed = {srs["id"] for srs in diff.removed}
+    by_id = {change["srs"]["id"]: change for change in today}
+    merged: list[dict] = []
+    for old in carried or []:
+        srs_id = (old.get("srs") or {}).get("id", "")
+        if not srs_id or srs_id in removed:
+            continue
+        new = by_id.pop(srs_id, None)
+        if new is None:
+            merged.append(old)
+        elif old.get("change") == "added" or new["change"] == "added":
+            merged.append({**new, "change": "added"} if new["change"] == "added" else {"change": "added", "srs": {**old["srs"], **new["srs"]}})
+        else:
+            fields = list(dict.fromkeys([*old.get("fields", []), *new["fields"]]))
+            before = {**new["before"], **old.get("before", {})}
+            merged.append({**new, "fields": fields, "before": {name: before.get(name, "") for name in fields},
+                           "after": {**old.get("after", {}), **new["after"]}})
+    merged.extend(change for change in today if change["srs"]["id"] in by_id)
+    return merged
+
+
+def build_b_tasks(
+    diff: SrsDiff, rows: list[TcRow], batch_size: int, candidate_limit: int, answers: list[dict], carried: list[dict] | None = None
+) -> list[Task]:
+    index = by_srs(rows)
+    changes = [
+        {**change, "candidates": [row.as_dict() for row in candidates_for(change["srs"], index, candidate_limit)]}
+        for change in b_changes(diff, carried)
+    ]
     return [
         Task(task_id=f"B-{number:03d}", skill=SKILL_B, payload={"changes": chunk, "answered_questions": answers})
         for number, chunk in enumerate(_chunks(changes, batch_size), start=1)

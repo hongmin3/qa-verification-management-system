@@ -122,16 +122,17 @@ sudo <APP_ROOT>/scripts/restore.sh <DATA_ROOT>/backup/20260827-023000
 
 **현재 데이터를 대체하는 작업**이며 아래 순서로 안전 절차를 강제한다.
 
-1. 무엇을 덮어쓸지 출력하고 `RESTORE` 타이핑을 요구 (`--yes` 로 생략 가능, 자동화 전용)
-2. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** — 되돌릴 수 있음
-3. 서비스 정지
-4. `public` 스키마 DROP → CREATE → `pg_restore`
-5. `storage` 를 `storage.replaced-<timestamp>` 로 옮기고 아카이브 전개
-6. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
-7. 서비스 시작 및 `is-active` 확인
-8. `qamh check-storage` 로 DB↔파일 일치 검증
+1. manifest 의 SHA-256 으로 백업 파일을 확인한다. 맞지 않으면 아무것도 바꾸지 않고 멈춘다 (REQ-HUBOPS-010)
+2. 무엇을 덮어쓸지 출력하고 `RESTORE` 타이핑을 요구 (`--yes` 로 생략 가능, 자동화 전용)
+3. **현재 상태를 `backup/pre-restore-<timestamp>/` 에 먼저 백업** — 되돌릴 수 있음. 실패하면 서비스를 멈추기 전에 끝낸다
+4. 서비스 정지
+5. `public` 스키마 DROP → CREATE → `pg_restore`
+6. 저장소(`.env` 의 `STORAGE_ROOT`)를 `<STORAGE_ROOT>.replaced-<timestamp>` 로 옮기고 아카이브 전개
+7. `alembic upgrade head` (덤프가 구버전 스키마일 수 있으므로)
+8. 서비스 시작 및 `is-active` 확인
+9. `qamh check-storage --verify-sha256` 로 DB↔파일 일치 검증
 
-문제가 없으면 `storage.replaced-*` 와 `pre-restore-*` 를 정리한다. 복구를 잘못했을 경우
+문제가 없으면 `<STORAGE_ROOT>.replaced-*` 와 `pre-restore-*` 를 정리한다. 복구를 잘못했을 경우
 `pre-restore-<timestamp>` 백업으로 다시 restore.sh 를 실행해 되돌린다.
 
 ## 설정 변경 시 함께 조정할 값

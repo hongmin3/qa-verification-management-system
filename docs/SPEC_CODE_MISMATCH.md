@@ -10,9 +10,11 @@
 | SPEC 수정 | 사양 문장이 틀렸다. 사양을 고친다 |
 | 사용자 확인 필요 | 어느 쪽이 맞는지 사람이 정해야 한다. [결정 대기 목록](../OPEN_QUESTIONS.md)에 선택지가 있다 |
 
+2026-09-30 에 65건 가운데 60건을 고치고 1건을 일부 고쳤다. 고친 항목 바로 아래에 `해결 2026-09-30:` 줄이 있다. 그 줄이 없는 4건과 일부 해결 1건이 남은 것이다.
+
 요구사항 카드의 "(MISMATCH 3)" 같은 표시는 그 카드가 속한 절(아래 같은 제목)의 3번 항목을 가리킨다.
 
-## 1. Regression 영향 분석과 추천 평가 (10건)
+## 1. Regression 영향 분석과 추천 평가 (10건, 해결 9건)
 
 ### 1
 
@@ -24,6 +26,8 @@ Current Implementation: 추천 여부(recommended)는 AI 응답 값을 그대로
 Difference: 추천을 신뢰도로 정한다는 문서 약속이 구현되지 않았다. 근거 없는 판정도 추천 수와 평가에 포함된다.
 Action: 사용자 확인 필요 (결정 필요 1)
 ```
+
+해결 2026-09-30: 추천 여부는 AI 값을 그대로 쓰기로 정했다(OPEN_QUESTIONS 8-1). `docs/modules/impact-analyzer.md` 의 "0.80 이상은 추천" 문장을 고치고 신뢰도는 검토 상태만 정한다고 적었다(REQ-IMPACT-010).
 
 ### 2
 
@@ -47,6 +51,8 @@ Difference: 읽지 못한 문서가 분석 결과·보고서·상세 화면 어�
 Action: CODE 수정 (결과에 읽지 못한 문서 목록을 넣고 보고서 1절과 분석 상세에 보인다)
 ```
 
+해결 2026-09-30: 결과(`knowledge_failures`), 보고서 1절, 분석 상세 화면에 "읽지 못한 문서"를 보이고 사용한 문서 목록에서 뺐다(REQ-IMPACT-005).
+
 ### 4
 
 ```text
@@ -57,6 +63,8 @@ Current Implementation: analysis_detail.html 의 설명 문장에 "최대 150개
 Difference: 설정을 바꾸면 화면 설명이 틀린다.
 Action: CODE 수정 (설정값을 화면에 넘겨 보인다)
 ```
+
+해결 2026-09-30: 분석 상세 화면이 `retrieval.candidate_limit` 값을 보인다(REQ-IMPACT-017).
 
 ### 5
 
@@ -69,6 +77,8 @@ Difference: 화면 버튼 사용 흐름이 끝나지 않는다.
 Action: CODE 수정 (폼 전송이면 새 분석 상세로 303 이동하거나, 버튼을 스크립트 호출로 바꾼다)
 ```
 
+해결 2026-09-30: 화면 버튼(`from_view=1`)이면 새 분석 상세로 303 이동하고, 409·429 는 원래 상세에 이유를 보인다(REQ-IMPACT-018).
+
 ### 6
 
 ```text
@@ -79,6 +89,8 @@ Current Implementation: GeminiClient._request 의 재시도 횟수·간격은 �
 Difference: 설정을 바꿔도 재시도 동작이 바뀌지 않는다.
 Action: 사용자 확인 필요 (설정을 코드에 연결하거나 config.yaml 에서 키를 지운다)
 ```
+
+해결 2026-09-30: `GeminiClient` 가 세 설정 키를 호출할 때마다 읽는다(REQ-AICALL-003).
 
 ### 7
 
@@ -91,6 +103,8 @@ Difference: 한 판정이 "AI 추천 채택"이면서 "확인 필요"가 될 수
 Action: CODE 수정 (취소선으로 확인 필요가 될 때 검토 상태도 MANUAL_REVIEW_REQUIRED 로 바꾸거나, 근거 붙이기를 분류 전에 한다)
 ```
 
+해결 2026-09-30: 취소선 근거면 검토 상태도 `MANUAL_REVIEW_REQUIRED` 로 바꾼다(REQ-IMPACT-011).
+
 ### 8
 
 ```text
@@ -101,6 +115,8 @@ Current Implementation: validate_decisions 는 tc_id 를 AI에게 보낸 TC 후�
 Difference: AI에게 보내지 않은 TC 에 대한 판정도 통과한다.
 Action: 사용자 확인 필요 (후보 목록과 대조하도록 좁히는 것을 추천)
 ```
+
+해결 2026-09-30: TC 판정은 AI 에게 보낸 후보 목록과만 대조한다(REQ-IMPACT-010).
 
 ### 9
 
@@ -113,6 +129,8 @@ Difference: 한도를 넘은 뒤에도 재실행으로 새 AI 호출을 할 수 
 Action: CODE 수정
 ```
 
+해결 2026-09-30: 재실행도 하루 토큰 한도를 검사해 429 로 막는다(REQ-IMPACT-018, NFR-IMPACT-001).
+
 ### 10
 
 ```text
@@ -124,7 +142,9 @@ Difference: 사용법 화면의 단계 목록에 한 단계가 빠졌다.
 Action: 사용법 화면 수정 (코드 동작은 그대로)
 ```
 
-## 2. QA Agent (이슈 검증 범위 산정) (12건)
+해결 2026-09-30: 사용법 화면이 `ANALYSIS_STAGES` 로 8단계를 모두 그린다(REQ-IMPACT-020).
+
+## 2. QA Agent (이슈 검증 범위 산정) (12건, 해결 11건)
 
 ```text
 SPEC / CODE MISMATCH 1
@@ -135,6 +155,8 @@ Difference: Test Data 를 모름으로 두면 G4 가 통과할 수 있다.
 Action: 사용자 확인 필요 (추천: CODE 수정)
 ```
 
+해결 2026-09-30: Test Data 가 모름이면 G4 가 `test_data_unknown`(input)을 세운다(REQ-QAAGENT-005).
+
 ```text
 SPEC / CODE MISMATCH 2
 Requirement: REQ-QAAGENT-010 (G5 Runtime TC 검사), NFR-QAAGENT-001
@@ -143,6 +165,8 @@ Current Implementation: gates.py::evaluate_g5 는 종류가 "runtime_tc" 인 판
 Difference: 이 검사는 운영 경로에서 한 번도 걸리지 않는다. 테스트는 합성 판정으로만 확인한다.
 Action: 사용자 확인 필요 (추천: CODE 수정)
 ```
+
+해결 2026-09-30: B·C·D 유형 이슈의 `NEW_TC` 판정에 G5 가 `new_tc_for_spec_issue`(note)를 남긴다(REQ-QAAGENT-010).
 
 ```text
 SPEC / CODE MISMATCH 3
@@ -153,6 +177,8 @@ Difference: QA 가 고른 유형을 시스템에 알려 줄 수 없다.
 Action: 사용자 확인 필요
 ```
 
+해결 2026-09-30: 분석 양식에 이슈 유형 선택(`qa_issue_type`)을 더했다(REQ-QAAGENT-001, REQ-ISSUE-004).
+
 ```text
 SPEC / CODE MISMATCH 4
 Requirement: REQ-QAAGENT-001 (scope_note), 규칙 4절
@@ -161,6 +187,8 @@ Current Implementation: analyzer.py 는 scope_note 를 AI 입력과 결과 화�
 Difference: 범위를 적어도 전체를 검색한다. 범위 밖 표시는 AI 가 따를 때만 생긴다.
 Action: 사용자 확인 필요
 ```
+
+해결 2026-09-30: 범위 글은 AI 입력과 화면 표시에만 쓴다고 사양·사용법 화면을 고쳤다(REQ-QAAGENT-001). 검색 대상을 줄이는 기능은 별도 요구로 다룬다.
 
 ```text
 SPEC / CODE MISMATCH 5
@@ -171,6 +199,8 @@ Difference: AI 판정은 보존되지만 QA 결정의 변경 이력은 사라진
 Action: 사용자 확인 필요
 ```
 
+해결 2026-09-30: 결정마다 결정 기록 표(`qa_agent_approval_events`)에 새 줄을 더하고 화면은 최신 결정과 기록을 보인다(REQ-QAAGENT-012).
+
 ```text
 SPEC / CODE MISMATCH 6
 Requirement: REQ-QAAGENT-003, NFR-QAAGENT-001 ("문서 검색 실패를 숨긴 확정 판정" 금지)
@@ -179,6 +209,8 @@ Current Implementation: 읽지 못한 문서는 결과 JSON 의 knowledge_failur
 Difference: 사용자는 결과 화면에서 어떤 사양서가 빠졌는지 알 수 없다.
 Action: CODE 수정 (결과 화면에 표시, 가능하면 G2 주의 항목으로)
 ```
+
+해결 2026-09-30: G2 주의 항목 `documents_unreadable` 과 결과 화면의 읽지 못한 문서 목록을 더하고, 문서 수에서 뺐다(REQ-QAAGENT-003, REQ-QAAGENT-005).
 
 ```text
 SPEC / CODE MISMATCH 7
@@ -189,6 +221,8 @@ Difference: 결정을 기록하면 보던 탭에서 Issue 탭으로 튄다.
 Action: CODE 수정
 ```
 
+해결 2026-09-30: 폼의 `return_tab` 으로 `?tab=<탭>` 에 돌아간다(REQ-QAAGENT-012).
+
 ```text
 SPEC / CODE MISMATCH 8
 Requirement: REQ-QAAGENT-005 (G2 split_spec_partial), 규칙 10절
@@ -198,6 +232,8 @@ Difference: 전체를 조사했는데 문장은 일부만 조사했다고 말한
 Action: 사용자 확인 필요 (추천: 문장을 "근거가 N건 중 M건 문서에서만 나왔습니다"로 고치는 CODE 수정)
 ```
 
+해결 2026-09-30: 문장을 "근거가 사양서 N건 중 M건에서만 나왔습니다"로 고쳤다(REQ-QAAGENT-005).
+
 ```text
 SPEC / CODE MISMATCH 9
 Requirement: REQ-QAAGENT-001
@@ -206,6 +242,8 @@ Current Implementation: index.html 은 Export 폴더가 없을 때 "Issue ID를 
 Difference: 화면이 될 수 없는 방법을 안내한다.
 Action: CODE 수정 (폴더가 없을 때 번호 입력칸을 빼거나 안내를 고친다)
 ```
+
+해결 2026-09-30: Export 폴더가 없으면 번호 입력칸을 빼고, 번호만 오면 400 으로 거절한다(REQ-QAAGENT-001).
 
 ```text
 SPEC / CODE MISMATCH 10
@@ -225,6 +263,8 @@ Difference: 폴더 이름에 `"`·`<` 가 있으면 조각 HTML 이 깨진다.
 Action: CODE 수정 (낮은 우선순위)
 ```
 
+해결 2026-09-30: `issue_list` 가 폴더 이름을 HTML 이스케이프한다(REQ-QAAGENT-001).
+
 ```text
 SPEC / CODE MISMATCH 12
 Requirement: REQ-QAAGENT-007, REQ-RULE-004 (문서 사이 불일치)
@@ -234,7 +274,9 @@ Difference: 문서가 현재 설정·코드보다 뒤처졌다.
 Action: SPEC 수정 (이 초안은 현재 설정·코드 값을 적었다. 해당 문서를 고친다)
 ```
 
-## 3. 매뉴얼 개정 검증과 비용 대시보드 (13건)
+해결 2026-09-30: `docs/modules/qa-agent.md` 모델 기본값, `knowledge/qa-agent-architecture.md` 절 수(79절), `docs/QA_AGENT_ARCHITECTURE.md` 기준 판(Rev1.17), `app/core/qa_rules.py` 머리 주석(`no_rules`·BLOCK)을 고쳤다.
+
+## 3. 매뉴얼 개정 검증과 비용 대시보드 (13건, 해결 11건)
 
 ```text
 SPEC / CODE MISMATCH
@@ -245,6 +287,8 @@ Difference: 운영에서 "이전 Round 미해결 지적사항" 칸이 항상 비
 Action: 사용자 확인 필요 (미확정의 "지적사항은 어디서 생기는가" 결정 뒤 CODE 수정)
 ```
 
+해결 2026-09-30: Word Comment 파일을 만들 때 넣은 Comment마다 지적사항으로 저장한다. 변경 번호로 겹침을 막는다(REQ-MANUAL-015, OPEN_QUESTIONS 8-2).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-MANUAL-002 (REQ-USAGE 일일 토큰 한도)
@@ -253,6 +297,8 @@ Current Implementation: Regression 분석(impact_analyzer/router.py)과 QA Agent
 Difference: 한도를 넘어도 매뉴얼 개정 검증은 계속 시작되고 AI를 부른다. 이 기능은 변경마다 여러 번 부르므로 한도 초과 폭이 가장 크다.
 Action: CODE 수정
 ```
+
+해결 2026-09-30: 매뉴얼 개정 검증도 공용 계산(`app/core/usage.py`)으로 하루 토큰 한도를 검사해 429 로 거절한다(REQ-MANUAL-002, OPEN_QUESTIONS 8-9).
 
 ```text
 SPEC / CODE MISMATCH
@@ -263,6 +309,8 @@ Difference: 이미지 변경이 "문제없음"으로 끝날 수 있다.
 Action: 사용자 확인 필요 (미확정 결정 뒤 SPEC 또는 CODE 수정)
 ```
 
+해결 2026-09-30: AI 가 이미지 변경을 문제없음으로 판정하면 판정 불가로 바꾸고 원래 판정을 남긴다(REQ-MANUAL-012, OPEN_QUESTIONS 8-3).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-MANUAL-017
@@ -271,6 +319,8 @@ Current Implementation: guide.html이 "Revision 표기를 입력"하라고 안�
 Difference: 사용법 화면이 옛 상태를 설명한다.
 Action: CODE 수정 (guide.html 문구)
 ```
+
+해결 2026-09-30: 사용법 화면을 현재 동작에 맞추고 Claude 대화로 돌리는 방법을 더했다(REQ-MANUAL-017).
 
 ```text
 SPEC / CODE MISMATCH
@@ -281,6 +331,8 @@ Difference: 잘못된 값이 Word Comment 기준 판정으로 쓰일 수 있다(
 Action: CODE 수정 (허용 값 검사. 빈 값의 뜻은 사용자 확인 필요)
 ```
 
+해결 2026-09-30: 판정 값 8개만 받고 모르는 값은 400 "지원하지 않는 판정 값입니다."로 거절한다(REQ-MANUAL-014). 빈 값의 뜻은 지금 동작(QA 재판정 지움)을 두고 SPEC 13절에 남겼다.
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-MANUAL-005
@@ -289,6 +341,8 @@ Current Implementation: docx_track_changes.py는 w:ins, w:del, w:moveFrom, w:mov
 Difference: 서식 변경은 목록에 나오지 않는다.
 Action: 사용자 확인 필요 (추천: 문서에서 "서식 변경" 삭제)
 ```
+
+해결 2026-09-30: 서식 변경은 뽑지 않기로 정하고 모듈 문서의 "서식 변경" 표현을 지웠다(REQ-MANUAL-005).
 
 ```text
 SPEC / CODE MISMATCH
@@ -299,6 +353,8 @@ Difference: 파일 이름에 가운뎃점(·)이 남는다.
 Action: CODE 수정 (가운뎃점도 지우고, 테스트는 _revision_label()이 만든 실제 표기로 확인)
 ```
 
+해결 2026-09-30: 파일 이름에서 가운뎃점도 지우고, 테스트는 실제 리비전 표기로 확인한다(REQ-MANUAL-016).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-MANUAL-002
@@ -307,6 +363,8 @@ Current Implementation: start_revision()이 storage.ensure_version(product, targ
 Difference: 400으로 거절된 요청의 제품 버전이 Knowledge 버전 목록에 남는다.
 Action: CODE 수정
 ```
+
+해결 2026-09-30: 버전 목록 추가를 이전 검증 검사가 끝난 뒤로 옮겼다(REQ-MANUAL-002).
 
 ```text
 SPEC / CODE MISMATCH
@@ -326,6 +384,8 @@ Difference: 문서의 기본값 칸이 실제 설정과 다르다.
 Action: SPEC 수정 (모듈 문서의 기본값 칸)
 ```
 
+해결 2026-09-30: 모듈 문서 설정 표의 기본값 칸을 실제 설정에 맞췄다(NFR-MANUAL-001).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-COST-001
@@ -334,6 +394,8 @@ Current Implementation: cost_dashboard/router.py MODULE_LABELS에 impact_analyze
 Difference: 표시 이름과 안내 문구가 기능 목록과 다르다.
 Action: CODE 수정
 ```
+
+해결 2026-09-30: 대시보드에 QA Agent 표시 이름과 세 기능 합산 안내를 넣었다(REQ-COST-001).
 
 ```text
 SPEC / CODE MISMATCH
@@ -344,6 +406,8 @@ Difference: 사용법이 설명하는 지표가 화면에 없고, 호출 원칙 
 Action: 사용자 확인 필요 (대시보드에 기능별 실제 호출 수를 더할지, 사용법 문구를 고칠지)
 ```
 
+해결 2026-09-30: 일부 해결: 사용법의 "분석 1건당 1회가 원칙" 문장을 기능별 호출 횟수에 맞게 고쳤다(REQ-COST-004). 실제 호출 수 지표를 대시보드에 더할지는 남았다(SPEC 13.3).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-COST-001
@@ -353,7 +417,9 @@ Difference: 오래 걸린 분석은 완료 시각과 다른 값이 보인다. �
 Action: 사용자 확인 필요 (열 이름을 "시작 시각(UTC)"으로 고칠지, 완료 시각을 쓸지)
 ```
 
-## 4. VXvue 일일 QA 점검 (7건)
+해결 2026-09-30: 열 이름을 "시작 시각(한국 시간)"으로 고쳤다(REQ-COST-001).
+
+## 4. VXvue 일일 QA 점검 (7건, 해결 7건)
 
 ```text
 SPEC / CODE MISMATCH
@@ -364,6 +430,8 @@ Difference: 수집 실패인데 두 점검이 "건너뜀 / 변경·신규 항목
 Action: CODE 수정 (수집 실패 때 두 점검 단계를 "실패" 또는 "수집 실패로 건너뜀" 으로 남긴다). 초안의 REQ-DAILY-001 예시는 SRS 수집 단계 기준으로 고쳐 적었다. 사용자 확인 필요.
 ```
 
+해결 2026-09-30: Polarion 조회가 실패하면 두 점검이 `실패` 와 수집 실패 문구로 남는다(REQ-DAILY-001).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-DAILY-001 / 기존 SPEC 4절 "어디서 끊기면" 표
@@ -372,6 +440,8 @@ Current Implementation: scheduled_jobs.launch_detached 는 Polarion 설정과 Cl
 Difference: 운영 서버에서 토큰이 만료·누락되면 예약 점검이 아예 돌지 않는다. 실행 기록도 메일도 없고, 사양–TC 연결 점검처럼 AI 가 필요 없는 점검도 멈춘다. 이유는 앱 로그(daily_qa_skipped)에만 남는다. "토큰 없음 → AI 단계 건너뜀" 은 CLI 로 직접 돌릴 때만 성립한다.
 Action: 사용자 확인 필요 (추천: Polarion 설정만 있으면 띄우고 AI 단계만 건너뛰게 CODE 수정. 아니면 SPEC 4절 표를 "예약 실행이 돌지 않는다" 로 수정)
 ```
+
+해결 2026-09-30: Polarion 설정만 있으면 예약 점검을 띄우고, Claude 토큰이 없으면 AI 단계만 건너뛴다(REQ-DAILY-001).
 
 ```text
 SPEC / CODE MISMATCH
@@ -382,6 +452,8 @@ Difference: 상한 때문에 미룬 묶음, 두 번 다 실패한 묶음의 SRS 
 Action: CODE 수정 (미룬·실패한 SRS 변경을 상태 값에 남겨 다음 실행에 다시 넣는다. 또는 비고를 "이번에 검토하지 못함" 으로 바꾸고 사람에게 알린다). 사용자 확인 필요.
 ```
 
+해결 2026-09-30: 미룬·실패한 SRS 변경을 `spec_change_pending` 에 남겨 다음 실행에 다시 넣는다(REQ-DAILY-003, NFR-DAILY-001).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-DAILY-002 (이슈 기준 시각), REQ-DAILY-004
@@ -390,6 +462,8 @@ Current Implementation: 이슈 수정확인 초안 단계가 "일부 실패" 여
 Difference: (1) 실패한 묶음의 이슈는 다음 날 다시 읽히지 않아 검토에서 빠진다. (2) 묶음을 미룬 다음 날에는 이미 처리한 이슈까지 다시 보내 같은 Finding 과 초안이 두 번 생기고 비용도 두 번 든다.
 Action: CODE 수정 (기준 시각을 처리에 성공한 이슈 기준으로 옮기거나, 이슈 번호로 중복을 거른다). 사용자 확인 필요.
 ```
+
+해결 2026-09-30: 일부 실패·미룸이면 기준 시각을 옮기지 않고, 처리한 이슈는 `issues_processed` 로 다시 보내지 않는다(REQ-DAILY-002).
 
 ```text
 SPEC / CODE MISMATCH
@@ -400,6 +474,8 @@ Difference: 예를 들어 VP-10 을 가리키는 TC 세 개가 모두 "수정 �
 Action: 사용자 확인 필요 (추천: 같은 기록인지 가리는 기준에 대상 TC 위치를 넣도록 SPEC 과 CODE 를 함께 수정)
 ```
 
+해결 2026-09-30: 같은 기록인지 가리는 기준에 대상 TC 위치를 넣었다(REQ-DAILY-018).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-DAILY-007
@@ -408,6 +484,8 @@ Current Implementation: FORBIDDEN_ACTION_RE 가 조치 글에서 "close", "닫" 
 Difference: "닫기 버튼 동작을 확인하는 TC 보강 검토", "Closed 상태 이슈 목록 TC 보강" 처럼 화면 이름에 그 글자가 들어간 정상 조치도 버려진다. 버린 이유는 audit.json 에만 남아 사람이 알아채기 어렵다.
 Action: CODE 수정 (종료·덮어쓰기를 "하라는" 표현만 잡도록 좁히고, 걸린 예를 테스트로 남긴다). 사용자 확인 필요.
 ```
+
+해결 2026-09-30: 종료·덮어쓰기를 "하라는" 표현만 잡는다(REQ-DAILY-007).
 
 ```text
 SPEC / CODE MISMATCH
@@ -418,7 +496,9 @@ Difference: 메일만 보는 사람은 실패 이유(사용량 한도)를 알 �
 Action: SPEC 수정 (메일에는 "audit.json 참고" 로 위치만 알린다) 또는 CODE 수정 (첫 실패 이유를 한 줄 요약해 비고에 붙인다). 사용자 확인 필요.
 ```
 
-## 5. 공통 기반: 설정·저장·AI 호출·Knowledge·배포·동기화 (12건)
+해결 2026-09-30: 단계 비고와 메일에 첫 실패 이유를 한 줄로 붙인다(REQ-DAILY-016).
+
+## 5. 공통 기반: 설정·저장·AI 호출·Knowledge·배포·동기화 (12건, 해결 11건)
 
 ```text
 SPEC / CODE MISMATCH
@@ -430,6 +510,8 @@ Difference: 삭제 버튼을 누르면 확인 없이 바로 원본 파일까지 
 Action: CODE 수정 (문자열의 줄바꿈을 `\n` 으로 되돌리고, 화면 스크립트 문법을 검사하는 테스트를 더한다)
 ```
 
+해결 2026-09-30: 화면 스크립트의 문자열 줄바꿈을 `\n` 으로 되돌리고 스크립트 문법 검사 테스트를 더했다(REQ-KNOW-001).
+
 ```text
 SPEC / CODE MISMATCH
 No: 2
@@ -439,6 +521,8 @@ Current Implementation: 리비전 표시가 없는 이름(예: `(TC) RA16-148-00
 Difference: 서버의 TC 파일은 새 내용인데 Regression 분석·QA Agent 는 옛 TC 목록(파싱 저장본)으로 계속 판정한다. 화면의 "마지막 수집" 시각은 새로워서 사람이 알아채기 어렵다. 코드를 읽고 찾은 것이며 실행으로 재현하지 않았다.
 Action: CODE 수정 (등록 때 부가 정보의 sha256 과 파일 sha256 이 다르면 파싱 저장본을 지우고 sha256 을 갱신한다. 재현 테스트를 먼저 더한다)
 ```
+
+해결 2026-09-30: 등록 때 sha256 이 다르면 파싱 저장본을 지우고 부가 정보를 새로 적는다(REQ-KNOW-007, REQ-KNOW-012).
 
 ```text
 SPEC / CODE MISMATCH
@@ -450,6 +534,8 @@ Difference: 2026-09-29 재현과 같은 결과(쓸 수 있는 문서 0건)가 PC
 Action: CODE 수정 (PC 가 error 자산도 목록에 넣어 보내거나, 서버가 "PC 가 읽지 못함" 표시를 받아 이전 판을 유지한다. PC 수집 PARTIAL 을 최종 상태에 반영한다) / 사용자 확인 필요 (REQ-SYNC-002 문장을 "서버 또는 PC 가 읽지 못하면"으로 넓힐지)
 ```
 
+해결 2026-09-30: PC 가 읽지 못한 자산도 보내고, PC 수집 일부 실패를 `PARTIAL` 로 끝내고, 받지 못한 새 판도 이전 판을 지킨다(REQ-SYNC-002). REQ-SYNC-002 문장을 넓힌 것은 SPEC 13.5 에서 사용자가 한 번 본다.
+
 ```text
 SPEC / CODE MISMATCH
 No: 4
@@ -459,6 +545,8 @@ Current Implementation: Regression 분석(app/modules/impact_analyzer/router.py 
 Difference: 한도를 넘어도 매뉴얼 개정 검증은 Gemini 를 계속 부른다(변경 건마다 여러 번 부르는 기능이다).
 Action: 사용자 확인 필요
 ```
+
+해결 2026-09-30: 매뉴얼 개정 검증도 하루 토큰 한도를 확인한다(REQ-USAGE-002, OPEN_QUESTIONS 8-9).
 
 ```text
 SPEC / CODE MISMATCH
@@ -470,6 +558,8 @@ Difference: 한국 시간 09:00 에 사용량이 0 으로 돌아간다. 00:00~09
 Action: 사용자 확인 필요
 ```
 
+해결 2026-09-30: "오늘"을 한국 시간 0시부터 센다. 모든 기능이 `app/core/usage.py` 를 쓴다(REQ-USAGE-002, OPEN_QUESTIONS 8-8).
+
 ```text
 SPEC / CODE MISMATCH
 No: 6
@@ -479,6 +569,8 @@ Current Implementation: app/core/gemini_client.py 의 @retry 가 stop_after_atte
 Difference: 이 키를 바꿔도 동작이 바뀌지 않는다. 운영자는 바뀐 줄로 믿는다.
 Action: 사용자 확인 필요 (미확정의 결정 필요 항목)
 ```
+
+해결 2026-09-30: 재시도 세 키는 코드가 읽고, `storage.database_url`·`app.locale` 은 설정 파일에서 지웠다(REQ-CONF-001, REQ-AICALL-003, OPEN_QUESTIONS 8-18).
 
 ```text
 SPEC / CODE MISMATCH
@@ -495,6 +587,8 @@ Difference: 사용자가 화면을 보고 옛 포트·옛 명령으로 수동 �
 Action: CODE 수정 (두 템플릿) / 문서 수정 (knowledge·docs 세 파일)
 ```
 
+해결 2026-09-30: 두 템플릿과 `knowledge/core-deployment.md`, `docs/PRODUCT_ONBOARDING.md`, `docs/DEPLOYMENT.md` 의 포트·명령·일정을 고쳤다(REQ-SYNC-001, REQ-SYNC-002).
+
 ```text
 SPEC / CODE MISMATCH
 No: 8
@@ -504,6 +598,8 @@ Current Implementation: 대신 쓴 모델로 받은 응답(또는 추론을 켜�
 Difference: 두 번째부터는 감사 화면에 "요청 모델로 답했다"고 보인다. 실제로 답한 모델이 기록에서 사라진다.
 Action: CODE 수정 (저장본에 쓴 모델과 대신 쓴 기록을 함께 저장하고 꺼낼 때 되살린다)
 ```
+
+해결 2026-09-30: 저장본에 실제 모델과 대신 쓴 기록을 함께 저장하고 되살린다(REQ-AICALL-002).
 
 ```text
 SPEC / CODE MISMATCH
@@ -515,6 +611,8 @@ Difference: 죽은 등록이 생겨 분석마다 "읽지 못한 문서"에 뜬�
 Action: CODE 수정 (commit 이 지운 파일을 가리키는 등록도 함께 지운다)
 ```
 
+해결 2026-09-30: 확정이 지운 파일을 가리키는 등록과 파싱 저장본도 지운다(REQ-KNOW-012, REQ-SYNC-002).
+
 ```text
 SPEC / CODE MISMATCH
 No: 10
@@ -524,6 +622,8 @@ Current Implementation: lifespan 은 analyses 의 RUNNING 만 정리한다. sync
 Difference: 업로드 확정 중에 서버가 재시작되면 그 제품의 지식 업로드가 사람이 DB 를 고칠 때까지 매일 409 로 실패한다(작업 스케줄러는 1 로 끝나 드러나기는 한다).
 Action: CODE 수정 (시작 때 sync_log RUNNING 도 FAILED 로 닫는다) / 사용자 확인 필요
 ```
+
+해결 2026-09-30: 앱 시작 때 `sync_log` 의 `RUNNING` 줄을 `FAILED` 로 닫는다(REQ-KNOW-016).
 
 ```text
 SPEC / CODE MISMATCH
@@ -545,7 +645,9 @@ Difference: 작은 차이다. 운영자는 상세 문구를 끝까지 읽어야 
 Action: CODE 수정
 ```
 
-## 6. 하위 서비스 QA Manual Hub (11건)
+해결 2026-09-30: 업로드 결과에 `kept_previous`·`failures` 를 싣고 CLI 가 두 줄을 찍는다(REQ-SYNC-002).
+
+## 6. 하위 서비스 QA Manual Hub (11건, 해결 11건)
 
 ```text
 SPEC / CODE MISMATCH
@@ -556,6 +658,8 @@ Difference: 브라우저가 로그인 8시간 뒤 쿠키를 버리므로, 계속
 Action: CODE 수정 (연장할 때 같은 토큰으로 쿠키를 다시 내려보내거나, max_age 없는 쿠키로 바꾼다)
 ```
 
+해결 2026-09-30: 연장할 때 같은 토큰으로 쿠키를 다시 보낸다(REQ-HUBAUTH-003).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUB-016 API 문서 화면
@@ -564,6 +668,8 @@ Current Implementation: main.py 가 FastAPI(docs_url="/api/docs", openapi_url="/
 Difference: 로그인하지 않은 사람도 전체 API 목록과 입력 형식을 볼 수 있다.
 Action: 사용자 확인 필요 (문서 공개를 허용할지, 로그인 뒤로 옮길지)
 ```
+
+해결 2026-09-30: `/api/docs`, `/api/openapi.json` 을 로그인 뒤로 옮겼다(REQ-HUB-016, OPEN_QUESTIONS 8-13).
 
 ```text
 SPEC / CODE MISMATCH
@@ -574,6 +680,8 @@ Difference: 사용자가 X-Forwarded-For 머리글을 직접 넣으면 감사 �
 Action: CODE 수정 (nginx 가 넣는 X-Real-IP 나 마지막 값을 쓴다)
 ```
 
+해결 2026-09-30: `X-Real-IP` 를 먼저 쓰고, 없으면 `X-Forwarded-For` 의 마지막 값을 쓴다(REQ-HUBAUTH-013, OPEN_QUESTIONS 8-12).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUBAUTH-013 감사 기록 남기기 (제품·분류 생성)
@@ -582,6 +690,8 @@ Current Implementation: cli.cmd_seed_catalog 는 분류 10종과 제품을 만�
 Difference: CLI 로 만든 제품·분류는 Audit Logs 에 생성 기록이 없다.
 Action: 사용자 확인 필요 (CLI 시드도 PRODUCT_CREATE / CATEGORY_CREATE 를 남길지)
 ```
+
+해결 2026-09-30: `seed-catalog` 가 `CATEGORY_CREATE`·`PRODUCT_CREATE` 를 행위자 `cli` 로 남긴다(REQ-HUBAUTH-013, REQ-HUBOPS-004).
 
 ```text
 SPEC / CODE MISMATCH
@@ -592,6 +702,8 @@ Difference: 안전 백업이 없는 채로 지금 데이터를 지울 수 있다
 Action: CODE 수정 (안전 백업 실패 시 멈춘다)
 ```
 
+해결 2026-09-30: 안전 백업이 실패하면 데이터를 건드리기 전에 멈춘다(REQ-HUBOPS-010).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUBOPS-010 복구 (manifest 확인)
@@ -600,6 +712,8 @@ Current Implementation: restore.sh 는 manifest 의 backup_at, storage_file_coun
 Difference: 다른 백업의 storage.tar.gz 가 섞였거나 파일이 손상돼도 알아채지 못한다. 방지는 사람이 눈으로 보는 것에 달려 있다.
 Action: 사용자 확인 필요 (restore.sh 에서 sha256sum -c 로 확인할지, 문구를 "사람이 확인한다"로 고칠지)
 ```
+
+해결 2026-09-30: `restore.sh` 가 처음에 manifest 의 SHA-256 을 확인한다(REQ-HUBOPS-010).
 
 ```text
 SPEC / CODE MISMATCH
@@ -610,6 +724,8 @@ Difference: 설치 절차를 그대로 따르면 자동 백업이 켜지지 않�
 Action: 사용자 확인 필요 (install.sh 가 cron 파일을 만들지, 문서에 수동 설치 단계를 넣을지)
 ```
 
+해결 2026-09-30: `install.sh` 가 cron 파일을 없을 때만 만든다(REQ-HUBOPS-001, REQ-HUBOPS-009).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUBOPS-012 Docker Compose 로 실행
@@ -618,6 +734,8 @@ Current Implementation: docker-compose.yml 이 deploy/Dockerfile 과 deploy/ngin
 Difference: 문서의 명령이 빌드 단계에서 실패한다.
 Action: 사용자 확인 필요 (빠진 두 파일을 추가할지, Compose 경로를 문서에서 내리고 deprecated 로 둘지)
 ```
+
+해결 2026-09-30: `deploy/Dockerfile`, `deploy/nginx/docker.conf` 를 만들고 비밀번호 최소 길이 기본값을 1 로 맞췄다(REQ-HUBOPS-012).
 
 ```text
 SPEC / CODE MISMATCH
@@ -628,6 +746,8 @@ Difference: 같은 이름의 role 을 다른 곳에서 쓰고 있었거나 .env 
 Action: 사용자 확인 필요 (지금 동작을 사양으로 인정하고 README 를 고칠지, .env 가 없을 때는 기존 role 비밀번호를 건드리지 않게 할지)
 ```
 
+해결 2026-09-30: 이미 있는 DB 계정의 비밀번호는 `RESET_DB_PASSWORD=1` 일 때만 바꾼다(REQ-HUBOPS-001).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUBOPS-006 저장소 점검
@@ -637,6 +757,8 @@ Difference: 크기가 같은 채 내용이 손상된 파일은 찾지 못한다.
 Action: 사용자 확인 필요 (check-storage 에 SHA-256 비교 옵션을 넣을지, 문구에서 "검증"을 뺄지)
 ```
 
+해결 2026-09-30: `check-storage --verify-sha256` 옵션을 더했다(REQ-HUBOPS-006).
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-HUBOPS-009 백업 (저장소 위치)
@@ -645,3 +767,5 @@ Current Implementation: backup.sh 와 restore.sh 는 저장소를 $DATA_ROOT/sto
 Difference: STORAGE_ROOT 를 다른 곳으로 바꾸면 백업에 문서 파일이 빠지고, 복구가 엉뚱한 폴더에 푼다.
 Action: 사용자 확인 필요 (스크립트가 STORAGE_ROOT 를 읽게 할지, "STORAGE_ROOT 는 <DATA_ROOT>/storage 여야 한다"를 제약으로 둘지)
 ```
+
+해결 2026-09-30: 백업·복구가 `.env` 의 `STORAGE_ROOT` 를 따른다(REQ-HUBOPS-009, REQ-HUBOPS-010).

@@ -20,6 +20,11 @@
 #   SKIP_NGINX=1   do not install/configure nginx
 #   SKIP_OFFICE_PREVIEW=1  do not install LibreOffice (doc/xls/ppt preview
 #                          then falls back to download-only, same as today)
+#   SKIP_BACKUP_CRON=1     do not create /etc/cron.d/qa-manual-hub-backup
+#   RESET_DB_PASSWORD=1    the DB role already exists: set its password to the
+#                          .env value (or a new random one when .env is gone).
+#                          Without it an existing role's password is never
+#                          changed, and install.sh stops if .env has none.
 
 set -Eeuo pipefail
 
@@ -35,6 +40,9 @@ SERVER_NAME="${SERVER_NAME:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# shellcheck source=common.sh
+source "$SCRIPT_DIR/common.sh"
 
 log()  { printf '\033[1;34m[install]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*" >&2; }
@@ -105,19 +113,38 @@ if [[ -f "$ENV_FILE" ]]; then
     # Re-run: keep the password already in use.
     DB_PASSWORD="$(sed -n 's|^DATABASE_URL=postgresql+psycopg://[^:]*:\([^@]*\)@.*|\1|p' "$ENV_FILE" | head -1)"
 fi
-if [[ -z "$DB_PASSWORD" ]]; then
+env_has_password=0
+[[ -n "$DB_PASSWORD" ]] && env_has_password=1
+
+# An existing role's password is only changed when you ask for it with
+# RESET_DB_PASSWORD=1 (for example after losing .env).  Otherwise install.sh
+# only adds things: it never changes a password something else may be using.
+plan="$(qamh_role_password_plan "${role_exists:-0}" "$env_has_password" "${RESET_DB_PASSWORD:-0}")"
+if [[ "$plan" == "create" && -z "$DB_PASSWORD" ]] || [[ "$plan" == "reset" && -z "$DB_PASSWORD" ]]; then
     DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')"
 fi
 
-if [[ "$role_exists" != "1" ]]; then
-    sudo -u postgres psql -qc \
-        "CREATE ROLE \"$DB_USER\" WITH LOGIN PASSWORD '$DB_PASSWORD'"
-    log "role $DB_USER 생성"
-else
-    warn "role $DB_USER 이 이미 있습니다. 비밀번호를 .env 값으로 맞춥니다."
-    sudo -u postgres psql -qc \
-        "ALTER ROLE \"$DB_USER\" WITH LOGIN PASSWORD '$DB_PASSWORD'"
-fi
+case "$plan" in
+    create)
+        sudo -u postgres psql -qc \
+            "CREATE ROLE \"$DB_USER\" WITH LOGIN PASSWORD '$DB_PASSWORD'"
+        log "role $DB_USER 생성"
+        ;;
+    keep)
+        log "role $DB_USER 이 이미 있습니다. 비밀번호는 바꾸지 않습니다 (.env 값을 그대로 씁니다)."
+        ;;
+    reset)
+        warn "RESET_DB_PASSWORD=1 -- role $DB_USER 의 비밀번호를 .env 값으로 바꿉니다."
+        sudo -u postgres psql -qc \
+            "ALTER ROLE \"$DB_USER\" WITH LOGIN PASSWORD '$DB_PASSWORD'"
+        ;;
+    refuse)
+        die "role $DB_USER 이 이미 있는데 $ENV_FILE 에 비밀번호가 없습니다. 기존 비밀번호를 바꾸지 않으려고 멈춥니다. 그 role 을 이 서비스만 쓴다면 RESET_DB_PASSWORD=1 을 붙여 다시 실행하세요."
+        ;;
+    *)
+        die "알 수 없는 role 처리 방식: $plan"
+        ;;
+esac
 
 if [[ "$db_exists" != "1" ]]; then
     sudo -u postgres createdb -O "$DB_USER" -E UTF8 "$DB_NAME"
@@ -221,6 +248,21 @@ elif command -v ufw >/dev/null && ufw status | head -1 | grep -q active; then
         log "UFW 80/tcp 허용 추가"
         ufw allow 80/tcp comment 'QA Manual Hub Web' >/dev/null
     fi
+fi
+
+# --------------------------------------------------------------------------- #
+# 9. daily backup (cron)
+# --------------------------------------------------------------------------- #
+CRON_FILE=/etc/cron.d/qa-manual-hub-backup
+if [[ "${SKIP_BACKUP_CRON:-0}" == "1" ]]; then
+    warn "SKIP_BACKUP_CRON=1 -- 자동 백업(cron)을 만들지 않습니다."
+elif [[ ! -d /etc/cron.d ]]; then
+    warn "/etc/cron.d 가 없습니다. 자동 백업을 만들지 못했습니다 (cron 설치 필요)."
+else
+    case "$(qamh_write_backup_cron "$CRON_FILE" "$SERVICE_USER" "$APP_ROOT" "$DATA_ROOT")" in
+        created) log "자동 백업 등록: $CRON_FILE (매일 02:30)" ;;
+        exists)  log "자동 백업 파일이 이미 있습니다. 그대로 둡니다: $CRON_FILE" ;;
+    esac
 fi
 
 # --------------------------------------------------------------------------- #

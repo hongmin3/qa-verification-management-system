@@ -59,7 +59,7 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 맞으면 운영 서버로 올린다 (서버는 이 폴더를 볼 수 없다 — §6).
 
 ```bash
-python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to http://10.13.0.222:24357
+python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to http://<서버 주소>:24357
 ```
 
 바뀐 파일만 전송한다 (sha256 비교). VXvue 실측으로 첫 회 106MB, 이후 변경 없으면 0MB다.
@@ -192,11 +192,11 @@ Skill 태깅은 제품 고유 용어가 아니라 **QA 공통 용어**로 매칭
 수집이 통째로 비었을 것이다. 그래서 폴더를 볼 수 있는 쪽이 밀어 올린다 — ALM 크롤러
 동기화와 같은 방향이다. 프로토콜과 근거는 `app/core/knowledge_upload.py` 에 있다.
 
-담당자 PC 에서 주 1회 자동 실행하려면 작업 스케줄러에 등록한다.
+담당자 PC 에서 평일 10:00 에 자동 실행하려면 작업 스케줄러에 등록한다. 사양서 동기화(평일 09:40) 뒤에 돌게 한다.
 
 ```
-schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON /ST 07:45 ^
-  /TR "C:\path\to\.venv\Scripts\python.exe C:\path\to\scripts\sync_product_knowledge.py --upload-to http://10.13.0.222:24357"
+schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON,TUE,WED,THU,FRI /ST 10:00 ^
+  /TR "C:\path\to\.venv\Scripts\python.exe C:\path\to\scripts\sync_product_knowledge.py --upload-to http://<서버 주소>:24357"
 ```
 
 ### 그래도 서버가 폴더를 볼 수 있는 환경이라면
