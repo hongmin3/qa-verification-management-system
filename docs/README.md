@@ -9,6 +9,7 @@
 | 하려는 일 | 볼 문서 |
 |---|---|
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
+| **매일 어떤 자동화가 돌고 어디로 보고되는지** | [SPEC 4절](../SPEC.md#4-전체-자동화-흐름) · 설치·실행 확인 결과는 [progress](../progress.md) |
 | 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |
 | **기능별 사용법을 알기** | [사용 안내](USER_GUIDE.md) → 각 화면의 `사용법` 메뉴 |
 | **써 보기** — 로컬에 띄우고 분석 1건 돌려보기 | [배포 가이드 §2–3](DEPLOYMENT.md) → 앱 안 `/impact-analyzer/guide` |
