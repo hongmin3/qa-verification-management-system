@@ -37,9 +37,8 @@ output-bootstrap.log
 backups/
 akela/.cache/
 
-# 사내 고유 정보가 들어가는 운영 메모 (예제 파일만 공개)
-docs/local/*
-!docs/local/*.example.md
+# 운영 메모(docs/local/)는 2026-09-30 저장소 비공개 전환 뒤 함께 올린다 (SPEC NFR-PRIV-002).
+# 비밀값 자체는 운영 메모에도 적지 않는다.
 
 # 사용자가 직접 편집하는 비밀정보 파일 (예제 파일만 공개)
 secrets.json

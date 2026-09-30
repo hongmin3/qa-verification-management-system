@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="739e178738e0fabf2d04c92edefcf328ab0dc90525a6926324ced15924a52440">
+<meta name="spec-source-sha256" content="24c669d8ed2e4b6650fa582c5c8e3ad2e4e2b022ae90919aeef48b14c1bc6a17">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -285,7 +285,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-nfr"><a href="#NFR-SEC-003">NFR-SEC-003 <span>올라온 파일 이름을 경로로 믿지 않기</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-SEC-004">NFR-SEC-004 <span>접속 범위</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-PRIV-001">NFR-PRIV-001 <span>외부로 나가는 글 가리기</span></a></li>
-<li class="toc-id kind-nfr"><a href="#NFR-PRIV-002">NFR-PRIV-002 <span>사내 문서와 사내 정보를 공개 저장소에 두지 않기</span></a></li>
+<li class="toc-id kind-nfr"><a href="#NFR-PRIV-002">NFR-PRIV-002 <span>사내 문서와 비밀값을 저장소에 두지 않기</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-OPS-001">NFR-OPS-001 <span>콘솔 인코딩 때문에 스크립트가 멈추지 않기</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-OPS-002">NFR-OPS-002 <span>부가 기능 실패가 본 작업을 멈추지 않기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-HUBAUTH-001">REQ-HUBAUTH-001 <span>로그인</span></a></li>
@@ -716,7 +716,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></td><td data-label="이름">지식 폴더 업로드</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR PRIV</span> 개인정보·사내 정보 보호(비기능)</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-PRIV-001">NFR-PRIV-001</a></td><td data-label="이름">외부로 나가는 글 가리기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/security_filter.py</code>, <code>app/core/gemini_client.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-PRIV-001">TEST-PRIV-001</a>: <code>tests/test_security_filter.py</code></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a></td><td data-label="이름">사내 문서와 사내 정보를 공개 저장소에 두지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>.gitignore</code></td><td data-label="테스트"><a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a></td><td data-label="이름">사내 문서와 비밀값을 저장소에 두지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>.gitignore</code></td><td data-label="테스트"><a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR OPS</span> 운영 점검·백업·로그</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a></td><td data-label="이름">콘솔 인코딩 때문에 스크립트가 멈추지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/console.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-OPS-002">NFR-OPS-002</a></td><td data-label="이름">부가 기능 실패가 본 작업을 멈추지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/notifier.py</code>, <code>app/core/document_cache.py</code>, <code>app/core/knowledge_documents.py</code>, <code>scripts/monitor_health.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td></tr>
@@ -8890,13 +8890,22 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <p class="why"><span class="why-label">이유</span> 잘못 잡는 경우가 많다.</p>
 </section>
 <section class="card kind-nfr" id="NFR-PRIV-002">
-<h3><span class="idtag">NFR-PRIV-002</span> 사내 문서와 사내 정보를 공개 저장소에 두지 않기</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>.gitignore</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
-<p><strong>하는 일</strong> 이 저장소는 공개된다. 사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 사본, 서버 주소, 계정, 사내 경로를 커밋하지 않는다.</p>
+<h3><span class="idtag">NFR-PRIV-002</span> 사내 문서와 비밀값을 저장소에 두지 않기</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>.gitignore</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-09-30 · 저장소 비공개 전환 · 운영 메모 포함</span> <a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a>: GitHub 저장소를 비공개로 바꿨다. 운영 서버 주소·경로·재기동 절차를 적은 <code>docs/local/OPERATIONS_LOCAL.md</code> 와 2026-09-09 보안 사고 메모를 저장소에 넣었다. <span class="term" title="secrets.txt, secrets.json, .env. API Key·토큰·메일 계정처럼 공개하면 안 되는 값을 둔다. Git 에 올리지 않는다" tabindex="0">비밀 설정 파일</span>(<code>secrets.txt</code>, <code class="term" title="서버의 설정 파일 &lt;APP_ROOT&gt;/.env 다. DB 접속 정보가 들어 있어 권한 600으로 둔다" tabindex="0">.env</code>, <code>.deploy.env</code>)과 사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 사본·DB 는 계속 Git 에서 뺀다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 이 저장소는 2026-09-30 부터 비공개다. 그래도 비밀값과 사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 사본은 커밋하지 않는다. 서버 주소·계정 이름·사내 경로 같은 운영 정보는 비공개 저장소의 <code>docs/local/</code> 에 둔다.</p>
 <p><strong>결과</strong></p>
 <ul>
+<li><span class="term" title="secrets.txt, secrets.json, .env. API Key·토큰·메일 계정처럼 공개하면 안 되는 값을 둔다. Git 에 올리지 않는다" tabindex="0">비밀 설정 파일</span>(<code>secrets.txt</code>, <code>secrets.json</code>, <code class="term" title="서버의 설정 파일 &lt;APP_ROOT&gt;/.env 다. DB 접속 정보가 들어 있어 권한 600으로 둔다" tabindex="0">.env</code>, <code>.deploy.env</code>)은 <code>.gitignore</code> 대상이다. 운영 메모에도 비밀값은 적지 않고 &quot;어디에 있는지&quot;만 적는다.</li>
 <li><span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 사본·정규화 텍스트·<span class="term" title="무엇을 골랐고 무엇을 왜 뺐는지 적은 수집 결과 파일(manifest.json)이다" tabindex="0">수집 기록</span>(<code>data/product_knowledge/</code>), 업로드·DB·색인·로그·보고서·백업은 <code>.gitignore</code> 대상이다.</li>
-<li>서버 주소·계정·경로 같은 운영 정보는 Git 에서 빠지는 <code>docs/local/OPERATIONS_LOCAL.md</code> 에 둔다.</li>
+<li>서버 주소·계정·경로 같은 운영 정보는 <code>docs/local/OPERATIONS_LOCAL.md</code> 에 두고 저장소에 함께 올린다.</li>
+</ul>
+<p class="why"><span class="why-label">이유</span> 저장소를 비공개로 바꿨지만, GitHub 계정이 뚫리거나 저장소를 다시 공개로 돌리면 비밀값과 사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>가 한꺼번에 나간다.</p>
+<ul>
 <li>테스트 자료는 합성 파일 이름·합성 규칙 글만 쓴다. 실제 폴더로 도는 확인은 <code>real_fixtures.local.env</code> 가 있을 때만 도는 선택 테스트로 둔다.</li>
 <li><span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 주소처럼 사내 호스트인 값은 <code>config.yaml</code> 이 아니라 <span class="term" title="secrets.txt, secrets.json, .env. API Key·토큰·메일 계정처럼 공개하면 안 되는 값을 둔다. Git 에 올리지 않는다" tabindex="0">비밀 설정 파일</span>에 둔다.</li>
 </ul>

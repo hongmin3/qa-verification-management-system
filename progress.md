@@ -15,6 +15,8 @@
   3. 서버 배포. 서버는 아직 Gemini 경로의 옛 코드다. 배포 전에 서버에 Claude CLI 설치와 `CLAUDE_CODE_OAUTH_TOKEN` 이 필요하다(`docs/modules/daily-qa.md` 서버 설치 1~2단계).
 - 참고: 이 PC 의 Claude 계정은 13:50 까지 세션 한도에 걸려 있었다. 한도에 닿으면 세 화면 기능이 모두 실패하므로, 운영에서 자주 닿으면 `ai.claude.models.*` 를 `claude-sonnet-5-5` 로 낮춘다.
 - 다음: 사용자가 이 자동화의 전면 개편을 예고했다. 개편 전 기준점으로 이 상태를 커밋한다.
+- 저장소: 사용자 요청으로 GitHub 저장소를 비공개(PRIVATE)로 바꾸고 `docs/local/` 운영 메모 2개를 넣었다. 비밀값·사내 문서 사본·DB(`data/` 977MB)·실행 결과는 사용자 선택에 따라 올리지 않았다.
+- 지식 반증: `REF-core-documentation#local-only-docs`("이 저장소는 공개된다"), `REF-workflow#execution-flow`, `REF-core-ai-integration#known-issues`. `akela/CURATE.md` 검토가 필요하다.
 
 ## 2026-09-30 HTML 사양서 가로 넘침 개선
 

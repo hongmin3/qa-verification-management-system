@@ -31,6 +31,8 @@
 | **추천 정확도 측정** | [정확도 평가](EVALUATION.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
+| **운영 서버 주소·경로·재기동 절차(사내 정보)** | [운영 로컬 메모](local/OPERATIONS_LOCAL.md) · 2026-09-09 노출 사고 기록은 [보안 사고 메모](local/SECURITY_INCIDENT_2026-09-09.md). 비공개 저장소에만 있다 |
+| **AI 제공자(Claude CLI / Gemini) 바꾸기** | [SPEC REQ-AICALL-005](../SPEC.md) → `config.yaml` 의 `ai.provider` |
 | **일일 QA 점검을 서버에 설치·운영하기** | [일일 QA 점검](modules/daily-qa.md) |
 | **AI 점검의 보안 통제를 설명하기** | [AI 점검 보안 통제](SECURITY_AI_AGENT.md) |
 

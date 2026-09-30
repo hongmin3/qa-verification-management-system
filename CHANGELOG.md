@@ -2,6 +2,10 @@
 
 ## 2026-09-30
 
+### 저장소 비공개 전환 · 운영 메모 포함
+
+- NFR-PRIV-002: GitHub 저장소를 비공개로 바꿨다. 운영 서버 주소·경로·재기동 절차를 적은 `docs/local/OPERATIONS_LOCAL.md` 와 2026-09-09 보안 사고 메모를 저장소에 넣었다. 비밀 설정 파일(`secrets.txt`, `.env`, `.deploy.env`)과 사내 문서 사본·DB 는 계속 Git 에서 뺀다.
+
 ### 화면 기능의 AI 판정을 Claude CLI 로 전환
 
 - REQ-AICALL-005: Regression 영향 분석, QA Agent, 매뉴얼 개정 검증이 기본으로 Claude CLI(`claude -p`)에서 판정을 받는다. 응답 형식은 `--json-schema` 로 고정한다. 도구는 하나도 주지 않고, 저장소 밖 빈 폴더(`~/.qa-ai-workspace`)에서 사용자 설정과 MCP 없이 실행한다. `config.yaml` 의 `ai.provider: gemini` 로 바꾸면 예전처럼 Gemini API 를 쓴다.

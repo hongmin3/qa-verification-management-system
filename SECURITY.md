@@ -1,7 +1,7 @@
 # 비밀정보 및 운영 서버 안전 규칙
 
-이 문서는 공개 저장소에 포함된다. **운영 서버 주소, 계정, 경로 같은 사내 고유 정보는 여기에
-적지 않고** 저장소에 커밋되지 않는 `docs/local/OPERATIONS_LOCAL.md`에 둔다
+이 문서는 저장소에 포함된다(2026-09-30 부터 비공개). **운영 서버 주소, 계정, 경로 같은 사내 고유 정보는 여기에
+적지 않고** 비공개 저장소의 `docs/local/OPERATIONS_LOCAL.md`에 둔다
 (템플릿: `docs/local/OPERATIONS_LOCAL.example.md`).
 
 ## API Key
