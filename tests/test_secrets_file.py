@@ -115,7 +115,7 @@ def test_config_status_endpoint_hides_the_key():
     response = TestClient(app).get("/config/status")
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"gemini_api_key", "gemini_model", "files", "daily_token_usage"}
+    assert set(body) == {"gemini_api_key", "gemini_model", "files", "daily_token_usage", "ai_provider"}
     assert isinstance(body["gemini_api_key"]["configured"], bool)
     assert "value" not in body["gemini_api_key"]
     assert set(body["daily_token_usage"]) == {"used", "limit", "exceeded"}

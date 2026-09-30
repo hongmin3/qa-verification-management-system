@@ -1,4 +1,4 @@
-"""요청 난이도에 따라 Gemini 모델을 고른다 (Rule-based).
+"""요청 난이도에 따라 AI 모델을 고른다 (Rule-based). 모델 이름은 AI 제공자별로 읽는다.
 
 전부 Pro 로 보내면 비싸고, 전부 Flash-Lite 로 보내면 어려운 판단이 부정확하다. 그런데
 "어려운 요청인가"를 판단하려고 또 LLM 을 부르면 그것이 비용이다. 그래서 **입력에서 세어지는
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.core import claude_cli
 from app.core.config import get_settings
 
 TIER_LIGHT = "light"
@@ -32,6 +33,18 @@ DEFAULT_MODELS = {
     TIER_COMPLEX: "gemini-3.5-flash",
 }
 
+#: AI 제공자 (SPEC REQ-AICALL-005). `config.yaml` `ai.provider` 로 고른다.
+PROVIDER_CLAUDE = "claude_cli"
+PROVIDER_GEMINI = "gemini"
+
+#: Claude CLI 를 쓸 때의 등급별 모델. `config.yaml` `ai.claude.models.<tier>` 로 덮어쓴다.
+#: 세 등급 모두 현재 Opus 로 둔다 — 판정 품질이 먼저이고, 한도에 자주 닿으면 설정만 바꾼다.
+DEFAULT_CLAUDE_MODELS = {
+    TIER_LIGHT: "claude-opus-5-5",
+    TIER_STANDARD: "claude-opus-5-5",
+    TIER_COMPLEX: "claude-opus-5-5",
+}
+
 # 1M 토큰당 USD. `config.yaml` `models.pricing.<model>` 로 덮어쓴다.
 DEFAULT_PRICING: dict[str, dict[str, float]] = {
     "gemini-3.1-flash-lite": {"input": 0.10, "output": 0.40},
@@ -40,6 +53,10 @@ DEFAULT_PRICING: dict[str, dict[str, float]] = {
     "gemini-3.5-flash": {"input": 0.30, "output": 2.50},
     "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
     "gemini-3.1-pro-preview": {"input": 1.25, "output": 10.00},
+    # Claude API 1M 토큰당 단가. Team 계정은 토큰 단위로 청구하지 않으므로 비교용 추정이다.
+    "claude-opus-5-5": {"input": 4.00, "output": 20.00},
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00},
+    "claude-haiku-4-5": {"input": 1.00, "output": 5.00},
 }
 
 TIER_LABELS = {TIER_LIGHT: "경량 (요약·분류)", TIER_STANDARD: "기본 QA 판단", TIER_COMPLEX: "복잡한 교차검증"}
@@ -59,8 +76,28 @@ class RoutingDecision:
         return {"tier": self.tier, "model": self.model, "tier_label": self.tier_label, "reasons": list(self.reasons)}
 
 
+def ai_provider(settings=None) -> str:
+    """`ai.provider` 값. 모르는 값이나 빈 값은 Claude CLI 로 본다."""
+    value = str((settings or get_settings()).get("ai.provider", PROVIDER_CLAUDE) or PROVIDER_CLAUDE).strip().lower()
+    return value if value in (PROVIDER_CLAUDE, PROVIDER_GEMINI) else PROVIDER_CLAUDE
+
+
+def ai_status(settings=None) -> dict:
+    """`/config/status` 의 `ai_provider` 항목 (REQ-IMPACT-021). 키·토큰 값은 넣지 않는다."""
+    settings = settings or get_settings()
+    provider = ai_provider(settings)
+    cli = claude_cli.status(settings)
+    ready = cli["claude_command_found"] if provider == PROVIDER_CLAUDE else bool(settings.secrets.gemini_api_key)
+    model = model_for(TIER_STANDARD) if provider == PROVIDER_CLAUDE else str(settings.secrets.gemini_model)
+    return {"provider": provider, "ready": ready, "model": model, **cli}
+
+
 def model_for(tier: str) -> str:
-    configured = get_settings().get(f"models.{tier}", "")
+    settings = get_settings()
+    if ai_provider(settings) == PROVIDER_CLAUDE:
+        configured = settings.get(f"ai.claude.models.{tier}", "")
+        return str(configured or DEFAULT_CLAUDE_MODELS.get(tier, DEFAULT_CLAUDE_MODELS[TIER_STANDARD]))
+    configured = settings.get(f"models.{tier}", "")
     return str(configured or DEFAULT_MODELS.get(tier, DEFAULT_MODELS[TIER_STANDARD]))
 
 
@@ -78,7 +115,7 @@ def pricing_for(model: str) -> dict[str, float]:
 
 
 def estimate_cost_usd(model: str, prompt_tokens: int, output_tokens: int) -> float:
-    """토큰 수 → USD 추정. 실제 청구는 Google 콘솔이 기준이다."""
+    """토큰 수 → USD 추정. 실제 청구는 Google 콘솔(Gemini)·회사 Claude 계정 요금제가 기준이다."""
     price = pricing_for(model)
     return round(prompt_tokens / 1_000_000 * price["input"] + output_tokens / 1_000_000 * price["output"], 6)
 

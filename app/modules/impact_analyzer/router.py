@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Stre
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings, reload_settings
+from app.core.model_router import ai_status
 from app.core.evaluation import aggregate_evaluations, evaluate_analysis, parse_tc_ids
 from app.core.storage import Storage
 from app.core.uploads import save_upload
@@ -35,7 +36,7 @@ def daily_token_status() -> dict:
 def _ensure_token_budget() -> None:
     token_status = daily_token_status()
     if token_status["exceeded"]:
-        raise HTTPException(429, f"오늘 Gemini 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요.")
+        raise HTTPException(429, f"오늘 AI 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요.")
 
 
 @router.get("/impact-analyzer", response_class=HTMLResponse)
@@ -271,8 +272,10 @@ async def job_status_stream(job_id: str):
 
 @router.get("/config/status")
 def config_status():
-    """Gemini Key 설정 여부만 반환한다. Key 값은 포함하지 않는다."""
-    status = get_settings().secret_status()
+    """AI 연결 상태(REQ-IMPACT-021). Key·토큰 값은 포함하지 않는다."""
+    settings = get_settings()
+    status = settings.secret_status()
+    status["ai_provider"] = ai_status(settings)
     status["daily_token_usage"] = daily_token_status()
     return status
 
@@ -280,7 +283,10 @@ def config_status():
 @router.post("/config/reload")
 def config_reload():
     """secrets.txt/secrets.json을 수정한 뒤 재시작 없이 다시 읽는다."""
-    return reload_settings().secret_status()
+    settings = reload_settings()
+    status = settings.secret_status()
+    status["ai_provider"] = ai_status(settings)
+    return status
 
 
 @router.get("/reports/{filename}")

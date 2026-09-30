@@ -189,7 +189,7 @@ def start_revision(
     if token_status["exceeded"]:
         raise HTTPException(
             429,
-            f"오늘 Gemini 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 검증을 시작할 수 없습니다. "
+            f"오늘 AI 누적 토큰 사용량({token_status['used']:,})이 설정한 한도({token_status['limit']:,})를 초과해 검증을 시작할 수 없습니다. "
             "config.yaml의 analysis.daily_token_limit을 조정하세요.",
         )
     try:

@@ -190,6 +190,7 @@ class QaAgentAIClient:
         return {
             "prompt_name": config.name,
             "prompt_version": config.version,
+            "provider": self._client.last_provider,
             "model": self._client.last_model,
             "routing": self.routing.as_dict() if self.routing else None,
             "cost_estimate": estimate_from_usage(self._client.last_model, self._client.token_usage),

@@ -31,7 +31,7 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 ### 한눈에 보기
 
 ```flow
-QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양서·TC·지식 사본과 대조 -> Gemini 판정 -> 판정 검증 -> 보고서·Excel·Word Comment
+QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양서·TC·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
 평일 07:30 예약 실행 -> 일일 QA 점검(5.4절) -> Claude Skill -> 결과 형식 검증 -> 요약 메일 -> 검토 화면 승인·거절
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
@@ -85,8 +85,10 @@ QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양�
 | SRS | 소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 `VP-1234` 모양의 번호를 갖는다 |
 | 사양서 | 제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word `.docx`). Knowledge 메뉴에 제품별로 등록한다 |
 | Polarion | 사양(SRS)과 이슈를 관리하는 회사의 ALM 도구 |
-| Gemini | Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 부르는 Google 의 생성형 AI |
-| Claude | 일일 QA 점검이 부르는 Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다 |
+| Claude | Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. 일일 QA 점검과, 기본 설정에서 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 부른다 |
+| Claude CLI | Claude 를 명령줄에서 부르는 프로그램(`claude`). 이 시스템은 `claude -p` 로 사람 없이 한 번씩 부른다 |
+| Gemini | Google 의 생성형 AI. 설정(`ai.provider: gemini`)으로 고르면 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 Claude 대신 부른다 |
+| AI 제공자 | 세 화면 기능이 판정을 받을 AI(`ai.provider`)다. `claude_cli`(기본) 또는 `gemini` 다(REQ-AICALL-005). 5.1~5.3절 본문의 "Gemini 를 부른다", "Gemini 토큰"은 이 설정으로 고른 AI 를 부른다는 뜻이다 |
 | Skill | Claude Code 가 읽는 작업 설명서 폴더(`SKILL.md`). 일일 QA 점검의 Skill 은 `app/modules/daily_qa/skills/` 에 있다 |
 | 토큰 | AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다 |
 | 확인 요청 | 근거가 부족해 사람이 원본을 보고 정해야 한다는 표시. 화면·보고서·TC 초안에는 "확인"과 "필요"를 이어 쓴 문구로 보인다("사양 확인 요청", "중복 확인 요청"도 같다). 사양서에서는 준비 검사가 그 문구를 미완성 표시로 읽기 때문에 "확인 요청"으로 적는다 |
@@ -407,7 +409,7 @@ AI에게 보내는 양은 단계마다 줄어든다:
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
 | 파일·요청 사항 모두 없음 | 거절(400) | "변경문서를 첨부하거나 요청 사항을 입력하세요." |
-| 하루 토큰 한도 초과 | 거절(429) | "오늘 Gemini 누적 토큰 사용량(N)이 설정한 한도(M)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요." |
+| 하루 토큰 한도 초과 | 거절(429) | "오늘 AI 누적 토큰 사용량(N)이 설정한 한도(M)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요." |
 | 제품에 사양서 또는 TC 없음 | 거절(404) | "'<제품>' 제품에 등록된 사양서 또는 TC가 없습니다. Knowledge 메뉴에서 먼저 등록하세요." |
 | 동시 실행 상한에 걸림 | 거절(429) | "동시에 실행할 수 있는 분석은 최대 N건입니다. 실행 중인 작업이 끝난 뒤 다시 시도하세요." |
 | 지원하지 않는 확장자 | 거절(400) | "지원하지 않는 파일 형식입니다: <확장자>" |
@@ -1109,21 +1111,34 @@ AI에게 보내는 양은 단계마다 줄어든다:
 
 - 기능별 사용법은 문서에 두지 않고 이 화면에 둔다. 매뉴얼 개정 검증 사용법과 섞지 않는다.
 
-### REQ-IMPACT-021 Gemini 키 상태 확인
+### REQ-IMPACT-021 AI 연결 상태 확인
 
-**하는 일** 분석 화면 위쪽에 Gemini 키가 설정돼 있는지, 어디서 읽었는지, 오늘 토큰을 얼마나 썼는지 보인다. 키 값은 보이지 않는다.
+**하는 일** 분석 화면 위쪽에 어느 AI 를 쓰는지, 그 AI 를 부를 준비가 됐는지, 오늘 토큰을 얼마나 썼는지 보인다. 키·토큰 값은 보이지 않는다.
 
 **언제**
 
-- 상태 보기(`GET /config/status`): 키 설정 여부·길이·출처, 모델 이름과 출처, 비밀 파일 상태, 오늘 토큰 사용량(`used`, `limit`, `exceeded`)을 돌려준다.
+- 상태 보기(`GET /config/status`): Gemini 키 설정 여부·길이·출처, 모델 이름과 출처, 비밀 파일 상태, 오늘 토큰 사용량(`used`, `limit`, `exceeded`)을 돌려준다. AI 제공자 상태(`ai_provider`)도 함께 준다.
 - 다시 읽기(`POST /config/reload`): 비밀 파일을 다시 읽고 같은 형식으로 돌려준다. 화면의 "설정 다시 읽기" 버튼이 부른다.
+
+AI 제공자 상태(`ai_provider`) 항목:
+
+| 항목 | 뜻 |
+|---|---|
+| `provider` | `claude_cli` 또는 `gemini` |
+| `ready` | 부를 준비가 됐는가. `claude_cli` 는 실행 파일을 찾았는가, `gemini` 는 키가 있는가 |
+| `claude_command` | 설정한 Claude CLI 명령 |
+| `claude_command_found` | 그 명령을 실행 경로에서 찾았는가 |
+| `claude_token_configured` | `CLAUDE_CODE_OAUTH_TOKEN` 이 있는가. 값은 넣지 않는다 |
+| `model` | 기본 모델 이름 |
 
 **결과**
 
-- 키가 있으면 "Gemini API Key 설정됨 · 출처 … · 길이 N자 · 모델 …" 이 보인다.
+- `claude_cli` 이고 실행 파일이 있으면 "AI: Claude CLI · 명령 … · 인증 …(토큰 설정됨 / 이 PC 로그인 사용) · 모델 …" 이 보인다.
+- `claude_cli` 인데 실행 파일이 없으면 표시줄이 경고 색으로 바뀌고 "Claude CLI 를 찾을 수 없습니다" 와 설정 키 `ai.claude.command` 가 보인다.
+- `gemini` 이고 키가 있으면 "Gemini API Key 설정됨 · 출처 … · 길이 N자 · 모델 …" 이 보인다.
 - 한도가 설정돼 있으면 "· 오늘 토큰 사용 / 한도 (한도 초과)"가 더해진다.
-- 키가 없거나 한도를 넘었으면 표시줄이 경고 색으로 바뀐다.
-- 키가 없으면 `secrets.txt` 에 `GEMINI_API_KEY=` 를 넣으라는 안내가 보인다.
+- 준비가 안 됐거나(`ready` 가 거짓) 한도를 넘었으면 표시줄이 경고 색으로 바뀐다.
+- `gemini` 인데 키가 없으면 `secrets.txt` 에 `GEMINI_API_KEY=` 를 넣으라는 안내가 보인다.
 
 **지킬 것**
 
@@ -1930,7 +1945,7 @@ python scripts/evaluate_analysis.py --result result.json --gold gold.json [--out
 |---|---|---|
 | 번호·파일 둘 다 없음 | 거절(400) | `Issue ID를 고르거나 Polarion Export JSON을 첨부하세요.` |
 | 첨부 확장자가 `.json` 이 아님 | 거절(400) | `지원하지 않는 파일 형식입니다: <확장자>` |
-| 토큰 한도 초과 | 거절(429) | `오늘 Gemini 누적 토큰 사용량(…)이 설정한 한도(…)를 초과해 …` |
+| 토큰 한도 초과 | 거절(429) | `오늘 AI 누적 토큰 사용량(…)이 설정한 한도(…)를 초과해 …` |
 | 동시 실행 상한 | 거절(429) | `동시에 실행할 수 있는 분석은 최대 N건입니다. …` |
 | 등록된 제품 없음 | 폼을 그리지 않는다 | `등록된 제품이 없습니다. Knowledge에서 …` |
 | Export 폴더가 없는데 파일 없이 번호만 줌 | 거절(400) | `이 서버에는 Polarion Export 폴더가 없어 Issue ID만으로는 이슈를 읽을 수 없습니다. backup.json을 첨부하세요.` |
@@ -2233,7 +2248,7 @@ Regression 축(QA 규칙 32절):
 - 결과 JSON 에 `routing`(등급·모델·이유), `token_usage`, `request_count`, `cache_hit`, `cost_estimate`, `ai_audit` 가 남는다.
 - `ai_audit` 에는 가림 처리까지 끝난 실제 전송본이 들어간다. 지시문, 규칙 발췌와 글자 수, 입력 JSON 과 글자 수다.
 - `ai_audit` 에는 받은 응답, 모델, 생성 설정, 가림 보고(건수만), 모델 교체·사고 모드 강제 기록도 들어간다.
-- 결과 화면 아래 `Gemini에 실제로 보낸 것 / 받은 것 (감사)` 에서 원문을 본다.
+- 결과 화면 아래 `AI 에 실제로 보낸 것 / 받은 것 (감사)` 에서 원문을 본다.
 
 **설정**
 
@@ -3757,13 +3772,13 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 **결과** 화면은 위에서부터 이렇게 구성된다.
 
-1. 제목 "비용/캐시 대시보드", 부제 "Gemini 토큰 사용량과 캐시 재사용 현황을 확인합니다."
+1. 제목 "비용/캐시 대시보드", 부제 "AI 토큰 사용량과 캐시 재사용 현황을 확인합니다."
 2. "오늘 토큰 사용량"(REQ-COST-003).
    - 한도가 있으면 "<사용량> / <한도> tokens"와 "정상" 또는 "한도 초과" 배지
    - 한도가 0이면 "<사용량> tokens 사용 (config.yaml의 `analysis.daily_token_limit`이 0이라 한도 없음)"
 3. "조회 기간": 최근 7일, 최근 30일, 최근 90일 링크. 지금 기간은 `[최근 30일]`처럼 굵게 보인다.
 4. "기능별 사용량": 기능 이름, 분석 건수, 총 토큰, 건당 평균 토큰(반올림한 정수). 천 단위 쉼표를 쓴다. 실패한 분석이 있으면 "(실패 N건 포함)"을 붙인다.
-5. "캐시 재사용 현황": "캐시 Hit율 N.N% (Gemini 호출 M건 기준)". 기록이 없으면 "캐시 Hit 여부가 기록된 분석이 없습니다."
+5. "캐시 재사용 현황": "캐시 Hit율 N.N% (AI 호출 M건 기준)". 기록이 없으면 "캐시 Hit 여부가 기록된 분석이 없습니다."
 6. "일별 토큰 사용량" 표: 날짜(한국 시간), 분석 건수, 총 토큰, 막대. 막대 길이는 기간 안에서 가장 많이 쓴 날을 100%로 한 비율이다.
 7. "최근 분석 (최대 50건)" 표: 시작 시각(한국 시간, 작업을 만든 시각), 기능, 제품(없으면 `-`), 토큰, 캐시 Hit/호출(기록이 없으면 `-`), 작업 번호. 최신이 위에 온다. 실패한 분석에는 "실패" 표시를 붙인다.
 
@@ -3828,7 +3843,7 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 - 비용 대시보드 맨 위 칸(REQ-COST-001 2번)
 - `GET /config/status` 응답의 `daily_token_usage`
-- Regression 분석 화면의 Gemini Key 상태 줄. 한도가 있을 때 "오늘 토큰 N / M"을 보이고, 넘으면 "(한도 초과)"를 붙인다.
+- Regression 분석 화면의 AI 연결 상태 줄. 한도가 있을 때 "오늘 토큰 N / M"을 보이고, 넘으면 "(한도 초과)"를 붙인다.
 
 **결과**
 
@@ -5165,7 +5180,7 @@ Skill `vxvue-trace-gap`.
 - 누가 쓰나: Regression 분석, QA Agent, 매뉴얼 개정 검증, 일일 QA 점검이 모두 이 부품 위에서 돈다. QA 담당자는 허브 화면(`/`)과 Knowledge 화면(`/knowledge`)을 직접 쓰고, 운영 담당자는 배포·운영 점검·백업 스크립트를 쓴다.
 - 문서: 제품별 사양서·TC·매뉴얼·QA 규칙을 Knowledge 한 곳에 등록한다. 각 기능의 분석은 여기 등록된 문서를 모두 검색한다. 담당자 PC 가 평일 아침마다 ALM 사양서와 지식 폴더를 서버로 올린다.
 - 설정과 저장: 비밀이 아닌 값은 `config.yaml`, API Key 같은 비밀은 비밀 설정 파일, 제품별 동기화 방법은 제품 설정 파일에서 읽는다. 데이터는 DB 파일 하나와 정해진 폴더에 둔다.
-- AI 호출: 모든 기능의 Gemini 호출이 한 통로를 지난다. 그 통로에서 개인정보 가리기, 같은 입력 응답 다시 쓰기, 재시도, 토큰 합산, 하루 한도, 알림 메일이 한 번에 적용된다.
+- AI 호출: 세 화면 기능의 AI 호출이 한 통로를 지난다. 통로는 설정에 따라 Claude CLI(기본) 또는 Gemini 를 부른다. 그 통로에서 개인정보 가리기, 같은 입력 응답 다시 쓰기, 재시도, 토큰 합산, 하루 한도, 알림 메일이 한 번에 적용된다.
 - 사람이 결정하는 것: 같은 문서로 보이는 등록이 겹쳐도 확실히 오래된 판이 아니면 지우지 않고 "중복 확인 요청"으로 알린다. 운영 데이터를 덮어쓰는 자동 되살리기도 두지 않는다.
 
 요구사항 지도:
@@ -5173,7 +5188,7 @@ Skill `vxvue-trace-gap`.
 - 설정: 설정 파일·비밀 설정·제품 설정을 읽고, 비밀값은 밖으로 내지 않는다. REQ-CONF-001 ~ REQ-CONF-003, NFR-SEC-002
 - 저장: 데이터를 두는 곳, DB 표 만들기, 분석 작업 상태와 재시작 처리. REQ-STORE-001 ~ REQ-STORE-003
 - AI 호출·사용량
-  - 호출 통로, 같은 입력 응답 다시 쓰기, 재시도, 모델 등급 고르기: REQ-AICALL-001 ~ REQ-AICALL-004
+  - 호출 통로, 같은 입력 응답 다시 쓰기, 재시도, 모델 등급 고르기, Claude CLI 로 부르기: REQ-AICALL-001 ~ REQ-AICALL-005
   - 밖으로 보내는 글 가리기: NFR-PRIV-001
   - 토큰 기록, 하루 한도, 할당량 소진 알림, 비용 추정: REQ-USAGE-001 ~ REQ-USAGE-004
 - 메일: 발송 공통, 정기 보고 메일, 설정 확인과 시험 발송. REQ-MAIL-001 ~ REQ-MAIL-003
@@ -5205,8 +5220,10 @@ AI 를 한 번 부를 때 거치는 길:
 
 ```flow
 기능 모듈 -> 하루 토큰 한도 확인 -> 가리기 -> 응답 저장본 확인 -(있음)-> 저장본 반환
-응답 저장본 확인 -(없음)-> Gemini 호출 -> 응답 저장 -> 토큰 합산
-Gemini 호출 -(할당량 소진·모델 없음)-> 알림 메일(재발송 대기 시간 안이면 건너뜀)
+응답 저장본 확인 -(없음)-> AI 제공자 고르기 -> Claude CLI 호출 -> 응답 저장 -> 토큰 합산
+AI 제공자 고르기 -(gemini)-> Gemini 호출 -> 응답 저장
+Claude CLI 호출 -(사용량 한도·인증 실패)-> 알림 메일(재발송 대기 시간 안이면 건너뜀)
+Gemini 호출 -(할당량 소진·모델 없음)-> 알림 메일
 Gemini 호출 -(모델 없음)-> 대신 쓸 모델로 한 번 더
 ```
 
@@ -5233,9 +5250,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 죽은 등록 | 문서 표에는 있는데 원본 파일이 디스크에 없는 등록이다 |
 | sha256 | 파일 내용으로 계산한 64자리 지문으로, 내용이 한 바이트만 달라도 값이 바뀐다 |
 | 가리기(마스킹) | 외부로 보내는 글에서 환자 이름·IP·경로 같은 값을 `[PATIENT_NAME]` 같은 자리표로 바꾸는 일이다 |
-| 응답 저장본(AI 캐시) | 같은 입력에 대한 Gemini 응답을 DB 표(`ai_cache`)에 저장해 두고 다시 쓰는 것이다 |
+| 응답 저장본(AI 캐시) | 같은 입력에 대한 AI 응답을 DB 표(`ai_cache`)에 저장해 두고 다시 쓰는 것이다 |
 | 모델 등급 | `light`(경량), `standard`(기본 QA 판단), `complex`(복잡한 교차검증) 세 가지로, 등급마다 쓸 모델 이름을 설정에 둔다 |
-| 하루 토큰 한도 | 하루 동안 쓸 Gemini 토큰 수 상한(`analysis.daily_token_limit`)으로, 0 이면 끈다 |
+| 하루 토큰 한도 | 하루 동안 쓸 AI 토큰 수 상한(`analysis.daily_token_limit`)으로, 0 이면 끈다 |
 | 재발송 대기 시간 | 같은 종류의 알림 메일을 다시 보내지 않는 시간(`notifications.email.cooldown_minutes`)이다 |
 | 예약 실행기 | 앱 프로세스 안에서 정해진 시각에 작업을 부르는 부품(`app/core/scheduler.py`, APScheduler)이다 |
 | 멈춘 작업(stale) | `RUNNING` 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다 |
@@ -5958,9 +5975,13 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 - 실행 중인 스레드를 강제로 끝내지 않는다. 오래 멈춘 작업은 `/operations/status` 로 알리기만 한다(REQ-WEB-005).
 - 기능별 이력 화면은 기능 이름(`module`)으로 나눠 보인다. `module` 이 비어 있는 옛 줄은 Regression 분석으로 본다.
 
-### REQ-AICALL-001 Gemini 구조화 호출 공통 통로
+### REQ-AICALL-001 AI 구조화 호출 공통 통로
 
-**하는 일** 모든 기능의 Gemini 호출이 지나는 한 통로다. 프롬프트 파일 읽기, 가리기, 응답 저장본, 재시도, 토큰 합산을 여기서 한다. 도메인 판정을 해석하는 일은 부르는 쪽이 한다.
+**하는 일** Regression 영향 분석, QA Agent, 매뉴얼 개정 검증의 AI 호출이 모두 지나는 한 통로다. 프롬프트 파일 읽기, 가리기, 응답 저장본, 재시도, 토큰 합산을 여기서 한다. 도메인 판정을 해석하는 일은 부르는 쪽이 한다.
+
+어느 AI 를 부를지는 `ai.provider` 로 정한다. 기본값 `claude_cli` 는 Claude CLI 를 부르고(REQ-AICALL-005), `gemini` 는 Gemini API 를 부른다. 부르는 쪽 코드는 어느 AI 인지 몰라도 된다.
+
+> **참고** 클래스 이름은 옛 이름 `GeminiClient` 를 그대로 쓴다. 기능 모듈 세 곳과 테스트가 이 이름으로 부르기 때문이다.
 
 **언제** 기능 모듈이 AI 판정을 부를 때(`app/core/gemini_client.py::GeminiClient.generate_structured(prompt, prompt_name, response_schema, system_suffix, model)`).
 
@@ -5970,9 +5991,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|
 | 본문(`prompt`) | 보낼 글(보통 JSON 글자) |
 | 프롬프트 이름(`prompt_name`) | `app/prompts/<이름>.yaml` 의 이름. 지금 `impact_analysis`, `manual_revision_quick`, `manual_revision_detail`, `qa_agent_issue_impact` 가 있다 |
-| 응답 형식(`response_schema`) | Pydantic 모델. Gemini 에 JSON 응답 형식으로 넘긴다 |
+| 응답 형식(`response_schema`) | Pydantic 모델. AI 에 JSON 응답 형식으로 넘긴다 |
 | 추가 지시(`system_suffix`) | 실행 때 정해지는 지시(예: 해당 Skill 의 QA 규칙 발췌). 시스템 지시 뒤에 붙인다 |
-| 모델(`model`) | 쓸 모델 이름. 비면 `GEMINI_MODEL` |
+| 모델(`model`) | 쓸 모델 이름. 비면 기본 모델이다. `claude_cli` 는 `ai.claude.models.standard`, `gemini` 는 `GEMINI_MODEL` 이다 |
 
 프롬프트 파일에 들어가는 항목:
 
@@ -5980,9 +6001,11 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|---|
 | `name`, `version` | (필수) | 이름, 판 번호 |
 | `system_instruction` | (필수) | 시스템 지시 |
-| `generation.temperature` | `0.1` | 생성 온도. 낮을수록 답이 덜 흔들린다 |
-| `generation.max_output_tokens` | `65536` | 응답 JSON 이 잘리지 않게 크게 둔다 |
-| `generation.thinking_budget` | `0` | 내부 추론 토큰을 끈다 |
+| `generation.temperature` | `0.1` | 생성 온도. 낮을수록 답이 덜 흔들린다. Gemini 에만 쓴다 |
+| `generation.max_output_tokens` | `65536` | 응답 JSON 이 잘리지 않게 크게 둔다. Gemini 에만 쓴다 |
+| `generation.thinking_budget` | `0` | 내부 추론 토큰을 끈다. Gemini 에만 쓴다 |
+
+> **참고** Claude CLI 는 생성 온도·출력 상한·추론 예산을 명령 인자로 받지 않는다. 그래서 `claude_cli` 에서는 이 세 값을 쓰지 않는다. 추론 정도는 `ai.claude.effort` 로 정한다(REQ-AICALL-005).
 
 **순서**
 
@@ -5990,12 +6013,12 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 2. `security.mask_outbound` 가 켜져 있으면 본문과 `system_suffix` 를 가린다(NFR-PRIV-001).
 3. 가린 뒤의 본문과 시스템 지시를 "실제로 보낸 값"으로 남긴다(감사 화면용).
 4. 응답 저장본을 확인한다(REQ-AICALL-002).
-5. 저장본이 없으면 호출한다. 응답이 완전한 JSON 이 아니면 오류를 낸다. 응답이 `MAX_TOKENS` 로 끝났으면 그 오류 문구에 "(MAX_TOKENS로 잘렸을 가능성이 높습니다 — retrieval.candidate_limit을 낮춰보세요.)"를 붙인다.
+5. 저장본이 없으면 `ai.provider` 가 고른 AI 를 호출한다. 응답이 완전한 JSON 이 아니면 오류를 낸다. Gemini 응답이 `MAX_TOKENS` 로 끝났으면 그 오류 문구에 "(MAX_TOKENS로 잘렸을 가능성이 높습니다 — retrieval.candidate_limit을 낮춰보세요.)"를 붙인다.
 6. 응답에 토큰 사용량(`prompt_tokens`, `candidate_tokens`, `total_tokens`)을 붙여 저장하고 돌려준다.
 
 **결과** 응답 JSON 전체를 돌려준다. 클라이언트에는 다음 감사 값이 남는다.
 
-- 마지막 모델, 저장본 적중 여부, 가리기 보고
+- 마지막 AI 제공자(`claude_cli`·`gemini`), 마지막 모델, 저장본 적중 여부, 가리기 보고
 - 가린 뒤 보낸 본문·시스템 지시
 - 대신 쓴 모델 기록, 추론 켬 기록
 
@@ -6008,7 +6031,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-002 같은 입력 응답 다시 쓰기
 
-**하는 일** 같은 입력을 다시 보내면 Gemini 를 부르지 않고 저장해 둔 응답을 돌려준다. 비용이 들지 않는다.
+**하는 일** 같은 입력을 다시 보내면 AI 를 부르지 않고 저장해 둔 응답을 돌려준다. 비용이 들지 않는다.
 
 **순서**
 
@@ -6035,6 +6058,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 1. `TimeoutError`·`ConnectionError` 는 `analysis.max_retries`(기본 3)번까지 시도한다. 사이에 `retry_min_seconds`(1)~`retry_max_seconds`(10)초를 늘려 가며 기다린다. 값은 호출할 때마다 설정에서 읽는다. 다른 오류는 다시 시도하지 않는다.
 2. 호출이 실패하면 먼저 알림 대상인지 본다(REQ-USAGE-003).
+   - Claude CLI 의 실패는 여기서 끝나고 오류를 그대로 올린다. 아래 3·4번은 Gemini 에만 한다.
 3. 오류가 400 이고 "budget 0 is invalid", "only works in thinking mode", "thinking_budget" 중 하나를 담으면, 추론 설정을 빼고 한 번 더 부른다. 기록에는 "이 모델은 thinking 을 끌 수 없습니다 (thinking_budget=0 거부)"를 남긴다.
 4. 오류가 모델 없음(404, `not_found`, `no longer available`, `is not found`, `not supported for`, `does not exist`)이면 대신 쓸 모델로 한 번 더 부른다.
    - 후보는 `models.standard`, `GEMINI_MODEL` 순서다. 요청한 모델과 같은 이름은 건너뛴다.
@@ -6053,7 +6077,10 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
 | 503 같은 서버 과부하 | 다시 시도하지 않는다 | 분석이 `FAILED` 가 된다. 사용자가 다시 실행한다 |
-| API Key 없음 | 호출 전에 실패한다 | "GEMINI_API_KEY가 설정되지 않았습니다." |
+| API Key 없음 (`gemini`) | 호출 전에 실패한다 | "GEMINI_API_KEY가 설정되지 않았습니다." |
+| Claude CLI 실패 (`claude_cli`) | 다시 시도하지 않는다. 제한 시간 초과도 같다 | REQ-AICALL-005 "안 될 때" 표의 문구 |
+
+이유: Claude CLI 한 번은 수십 초에서 몇 분이 걸린다. 시간 초과를 세 번 다시 하면 분석 한 건이 30분 넘게 붙잡힌다.
 
 ### REQ-AICALL-004 모델 등급 고르기
 
@@ -6071,13 +6098,80 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 글에 `api`, `websocket`, `dicom`, `command`, `protocol`, `sop`, `generator` 중 하나가 있음 | API/DICOM/WebSocket 연동 의미 판단이 필요합니다 |
 | 연결된 SRS 가 3건 이상인데 사양 본문 정확 일치가 0건 | 연결된 SRS 가 여러 건인데 사양 본문에서 정확 일치를 찾지 못했습니다 |
 
-3. 등급의 모델 이름은 `models.<등급>` 에서 읽고, 없으면 코드 기본값을 쓴다.
+3. 등급의 모델 이름은 AI 제공자에 따라 읽는 곳이 다르다. `claude_cli` 는 `ai.claude.models.<등급>`, `gemini` 는 `models.<등급>` 이다. 없으면 제공자별 코드 기본값을 쓴다.
 
 **결과** 등급, 모델, 등급 이름(경량 (요약·분류) / 기본 QA 판단 / 복잡한 교차검증), 이유 목록이 나온다. 두 등급이 같은 모델이어도 판정과 이유는 결과에 남긴다.
 
 **지킬 것** Pro 계열 모델을 상위 등급에 두지 않는다.
 
 이유: Pro 계열은 추론을 끌 수 없다. 같은 입력으로 비교했을 때 근거 없이 판정을 단정해 결과가 더 나빴다(`config.yaml` 주석의 2026-09-08 비교).
+
+### REQ-AICALL-005 Claude CLI 로 AI 판정 받기
+
+**하는 일** 세 화면 기능(Regression 영향 분석, QA Agent, 매뉴얼 개정 검증)의 AI 판정을 Gemini API 대신 Claude CLI 로 받는다. 회사 Claude Team 계정 하나로 일일 QA 점검과 같은 AI 를 쓴다.
+
+> **예시** QA 가 Regression 분석을 시작하면, 공통 통로가 `claude -p` 를 한 번 실행한다. 시스템 지시와 응답 JSON 형식을 인자로, 분석 입력 JSON 을 표준입력으로 넘긴다. Claude 가 형식에 맞는 JSON 을 돌려주면 기존과 똑같이 검증·보고서 단계로 넘어간다.
+
+이유: Gemini 는 사내 사용 승인과 결제가 따로 필요했다. Claude CLI 로 바꾸면 일일 QA 점검과 같은 계정·같은 승인으로 모든 AI 기능을 쓸 수 있다.
+
+**언제** `ai.provider` 가 `claude_cli` 일 때(기본값). REQ-AICALL-001 의 5번 단계에서 부른다.
+
+**순서**
+
+1. 빈 작업 폴더(`ai.claude.workdir`)를 준비한다. 폴더 위치는 NFR-SEC-001 의 작업 폴더 조건과 같다. 저장소 안이거나 상위 폴더에 `CLAUDE.md`·`AGENTS.md`·`CLAUDE.local.md` 가 있으면 부르지 않고 실패한다.
+2. 그 폴더에서 아래 인자로 `claude -p` 를 실행한다. 분석 입력(가린 뒤의 본문)은 표준입력으로 넘긴다.
+
+| 인자 | 값 | 뜻 |
+|---|---|---|
+| `--output-format` | `json` | 결과를 JSON 한 덩어리로 받는다 |
+| `--json-schema` | 응답 형식(`response_schema`)을 JSON 형식 정의로 바꾼 글자 | Claude 가 이 형식에 맞는 JSON 만 돌려준다 |
+| `--system-prompt` | 프롬프트 파일의 시스템 지시 + 추가 지시 | Claude Code 의 기본 시스템 지시를 이것으로 바꾼다 |
+| `--model` | 모델 이름 | 비면 `ai.claude.models.standard` |
+| `--tools` | 빈 값 | 도구를 하나도 쓰지 못한다. 파일 읽기·명령 실행·웹 조회가 모두 없다 |
+| `--permission-mode` | `dontAsk` | 허용되지 않은 동작은 묻지 않고 거부한다 |
+| `--setting-sources` | 빈 값 | 사용자·프로젝트 설정과 hook 을 읽지 않는다 |
+| `--strict-mcp-config` | (값 없음) | MCP 서버를 붙이지 않는다 |
+| `--no-session-persistence` | (값 없음) | 대화 기록을 디스크에 남기지 않는다 |
+| `--effort` | `ai.claude.effort` | 비어 있으면 넣지 않는다 |
+
+3. 프로세스 환경은 NFR-SEC-001 의 "프로세스 환경"·"인증"·"외부 통신" 칸과 같게 만든다. Gemini 키·SMTP 암호·Polarion 토큰은 넘기지 않는다.
+4. 결과 JSON 의 `structured_output` 을 응답으로 쓴다. 없으면 `result` 글자를 JSON 으로 읽는다. 둘 다 안 되면 오류다.
+5. 결과의 `usage` 를 토큰 사용량으로 바꾼다.
+   - 입력 토큰(`prompt_tokens`) = `input_tokens` + `cache_creation_input_tokens` + `cache_read_input_tokens`
+   - 출력 토큰(`candidate_tokens`) = `output_tokens`
+   - 합계(`total_tokens`) = 둘의 합
+
+**결과** REQ-AICALL-001 이 돌려주는 것과 같은 응답 JSON 이다. 응답에 `token_usage` 가 붙는다. 감사 값의 AI 제공자는 `claude_cli` 다.
+
+**설정**
+
+| 키 | 기본값 | 뜻 |
+|---|---|---|
+| `ai.provider` | `claude_cli` | `claude_cli` 또는 `gemini`. 모르는 값이면 `claude_cli` 로 본다 |
+| `ai.claude.command` | `claude` | Claude CLI 실행 파일 |
+| `ai.claude.timeout_seconds` | `600` | 호출 한 번의 제한 시간(초) |
+| `ai.claude.workdir` | 빈 값 | 빈 작업 폴더. 비면 사용자 홈의 `~/.qa-ai-workspace` |
+| `ai.claude.effort` | 빈 값 | 추론 정도(`low`·`medium`·`high` 등). 비면 CLI 기본값 |
+| `ai.claude.models.light` / `standard` / `complex` | `claude-opus-5-5` | 모델 등급별 모델 이름(REQ-AICALL-004) |
+| `CLAUDE_CODE_OAUTH_TOKEN` (secrets) | 없음 | 서버 인증 토큰. 비면 넣지 않고, 개발 PC 는 기존 로그인을 쓴다 |
+
+**안 될 때**
+
+| 경우 | 동작 | 사용자에게 보이는 것 |
+|---|---|---|
+| CLI 를 찾을 수 없음 | 호출 실패 | "Claude CLI 오류: 실행 파일을 찾을 수 없습니다: <명령>" |
+| 제한 시간 초과 | 프로세스를 멈추고 호출 실패 | "Claude CLI 오류: 제한 시간 <N>초 초과" |
+| 사용량 한도·인증 실패 등 CLI 오류 | 호출 실패. 알림 대상인지 본다(REQ-USAGE-003) | "Claude CLI 오류: <CLI 결과 문장>" |
+| 결과에 응답 JSON 이 없음 | 호출 실패 | "Claude CLI 오류: 응답 JSON 을 읽지 못했습니다" |
+| 작업 폴더 위치가 조건에 맞지 않음 | 부르지 않고 실패 | 작업 폴더 오류 문장 |
+
+**지킬 것**
+
+- 분석 한 건의 호출 수는 Gemini 때와 같다. Regression 분석·QA Agent 는 1회, 매뉴얼 개정 검증은 변경마다 1~2회다.
+- 오류 문장에서 인증 토큰 문자열을 지운다.
+- Claude 에게 도구를 주지 않는다. 판정에 필요한 자료는 모두 표준입력의 분석 입력에 있다.
+
+이유: 이 호출은 이미 골라 둔 근거로 판정만 받는다. 파일을 더 찾아볼 일이 없으므로 도구를 열어 둘 까닭이 없다.
 
 ### REQ-USAGE-001 토큰 사용량 기록
 
@@ -6108,7 +6202,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 하루에 쓴 토큰이 한도를 넘으면 새 분석을 시작하기 전에 막는다. 이미 도는 분석에는 영향이 없다.
 
-> **예시** 한도가 500 이고 오늘 끝난 분석들이 350+200 토큰을 썼다고 하자. 그러면 다음 Regression 분석 요청은 429 "오늘 Gemini 누적 토큰 사용량(550)이 설정한 한도(500)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요."를 받는다.
+> **예시** 한도가 500 이고 오늘 끝난 분석들이 350+200 토큰을 썼다고 하자. 그러면 다음 Regression 분석 요청은 429 "오늘 AI 누적 토큰 사용량(550)이 설정한 한도(500)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요."를 받는다.
 
 **언제** 다음 요청을 받을 때 확인한다.
 
@@ -6138,16 +6232,18 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-USAGE-003 할당량 소진·모델 사용 불가 알림
 
-**하는 일** 앱이 스스로 복구할 수 없어 사람이 조치해야 하는 Gemini 오류가 나면, 운영 담당자에게 메일을 보낸다. 같은 문제로 메일이 쏟아지지 않게 한다.
+**하는 일** 앱이 스스로 복구할 수 없어 사람이 조치해야 하는 AI 오류(Claude CLI 또는 Gemini)가 나면, 운영 담당자에게 메일을 보낸다. 같은 문제로 메일이 쏟아지지 않게 한다.
 
 > **예시** 크레딧이 떨어지면 분석마다 "429 RESOURCE_EXHAUSTED … prepayment credits are depleted" 가 난다. 첫 오류에 메일 한 통이 가고, 180분 동안은 같은 종류의 메일을 더 보내지 않는다.
 
 **순서**
 
-1. 호출 오류 문구를 소문자로 보고 종류를 정한다.
+1. 호출 오류 문구를 소문자로 보고 종류를 정한다. 문구가 `claude cli` 를 담으면 Claude 종류만, 아니면 Gemini 종류만 본다.
 
 | 종류(`kind`) | 제목 이름 | 판정 표현 |
 |---|---|---|
+| `claude_usage_limit` | Claude 사용량 한도 도달 | `claude cli` 와 함께 `session limit`, `usage limit`, `rate limit`, `limit reached`, `429` 중 하나 |
+| `claude_auth_failed` | Claude CLI 인증 실패 | `claude cli` 와 함께 `not logged in`, `invalid api key`, `authentication`, `401`, `oauth token` 중 하나 |
 | `gemini_quota_exhausted` | Gemini API 할당량·크레딧 소진 | `429`, `resource_exhausted`, `prepayment credits are depleted`, `quota`, `billing`, `rate limit` 중 하나 |
 | `gemini_model_unavailable` | Gemini 모델 사용 불가 | `no longer available`, 또는 `404` 와 `model` 이 함께 |
 
@@ -6172,7 +6268,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-USAGE-004 비용 추정
 
-**하는 일** 토큰 수에 모델별 단가를 곱해 USD 비용을 추정한다. 실제 청구 금액은 Google 콘솔을 기준으로 한다.
+**하는 일** 토큰 수에 모델별 단가를 곱해 USD 비용을 추정한다. 실제 청구 금액은 Google 콘솔(Gemini) 또는 회사 Claude 계정 요금제를 기준으로 한다.
+
+> **참고** Claude Team 계정은 토큰 단위로 청구하지 않는다. Claude 모델의 추정 금액은 같은 양을 API 로 썼을 때의 값이다. 비교용으로만 본다.
 
 **순서**
 
@@ -6183,6 +6281,14 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 **설정** `models.pricing.<모델>.input` / `output` (1M 토큰당 USD). 단가가 바뀌면 설정만 고친다.
 
 > **참고** `gemini-3.x` 단가는 `config.yaml` 주석대로 2.5-flash 기준 잠정값이다.
+
+코드 기본 단가(1M 토큰당 USD, 입력 / 출력)에 Claude 모델을 둔다.
+
+| 모델 | 입력 | 출력 |
+|---|---|---|
+| `claude-opus-5-5` | 4.00 | 20.00 |
+| `claude-sonnet-5-5` | 2.00 | 10.00 |
+| `claude-haiku-4-5` | 1.00 | 5.00 |
 
 ### REQ-MAIL-001 메일 발송 공통
 
@@ -8568,7 +8674,7 @@ REQ-IMPACT-006. `tests/test_analysis_rules.py`:
 REQ-IMPACT-007. 자동 테스트 없음. 사람이 확인하는 절차:
 
 1. 사양 조각 10개 이상이 등록된 제품으로 분석을 한 번 돌린다.
-2. 분석 상세의 "Gemini에 전달한 실제 입력 JSON" 에서 `specifications` 개수가 `retrieval.specification_top_k`(8) 이하인지 본다.
+2. 분석 상세의 "AI 에 전달한 실제 입력 JSON" 에서 `specifications` 개수가 `retrieval.specification_top_k`(8) 이하인지 본다.
 3. 들어 있는 조각이 변경 내용과 관련 있는 제목·본문인지 본다.
 
 ### TEST-IMPACT-006
@@ -9361,6 +9467,23 @@ REQ-AICALL-003 의 재시도 설정은 `tests/test_gemini_client_core.py::test_r
 2. 분석이 `GEMINI_MODEL` 로 끝나고, 감사 화면에 요청 모델·쓴 모델·이유가 남는지 본다.
 3. 원래대로 되돌린다.
 
+### TEST-AICALL-004
+
+REQ-AICALL-005 를 `tests/test_claude_cli_provider.py` 로 확인한다. 실제 CLI 대신 가짜 실행기를 넣는다.
+
+- 명령 인자: 도구 없음(`--tools` 빈 값), `--json-schema`, `--system-prompt`, `dontAsk`, `--setting-sources` 빈 값, `--strict-mcp-config`, `--no-session-persistence`, 모델 이름
+- 표준입력으로 가린 뒤의 본문이 넘어간다. 프로세스 환경에 Gemini 키·SMTP 암호가 없고, 토큰이 있을 때만 `CLAUDE_CODE_OAUTH_TOKEN` 이 있다
+- `structured_output` 과 `result` 글자 두 모양의 응답을 읽고, 토큰 사용량을 입력·출력·합계로 바꾼다
+- CLI 오류·제한 시간·실행 파일 없음·응답 JSON 없음이 "Claude CLI 오류:" 로 시작하는 오류가 되고, 토큰 문자열이 지워진다
+- `ai.provider` 로 제공자를 고르고, 저장본 적중이면 CLI 를 부르지 않는다
+- 저장소 안 작업 폴더를 거부한다
+- 모델 등급이 `ai.claude.models.<등급>` 을 읽는다. Claude 사용량 한도·인증 실패 문구를 알림 종류로 나눈다. `/config/status` 에 `ai_provider` 가 있다
+
+실제 CLI 로는 사람이 한 번 확인한다.
+
+1. `ai.provider: claude_cli` 로 앱을 띄우고 Regression 분석·QA Agent·매뉴얼 개정 검증을 한 번씩 돌린다.
+2. 분석이 끝나고, 감사 화면의 AI 제공자가 `claude_cli`, 토큰 사용량이 0 보다 큰지 본다.
+
 ### TEST-USAGE-001
 
 REQ-USAGE-002 를 `tests/test_persistent_analyses.py` 의 `test_tokens_used_since_sums_done_analyses`, `test_start_analysis_blocked_when_daily_token_limit_exceeded` 로 확인한다. REQ-USAGE-001 의 집계 화면은 `tests/test_cost_dashboard.py` 가 본다.
@@ -9770,7 +9893,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-IMPACT-018 | `app/modules/impact_analyzer/router.py`, `app/modules/impact_analyzer/templates/analysis_detail.html` | TEST-IMPACT-014: `tests/test_persistent_analyses.py`, `tests/test_impact_analyzer_fixes.py` | implemented |
 | REQ-IMPACT-019 | `app/main.py`, `app/modules/impact_analyzer/router.py`, `app/core/storage.py` | TEST-IMPACT-015: `tests/test_persistent_analyses.py` | implemented |
 | REQ-IMPACT-020 | `app/modules/impact_analyzer/router.py`, `app/modules/impact_analyzer/templates/guide.html` | TEST-IMPACT-016: `tests/test_web.py`, `tests/test_impact_analyzer_fixes.py` | implemented |
-| REQ-IMPACT-021 | `app/modules/impact_analyzer/router.py`, `app/core/config.py`, `app/modules/impact_analyzer/templates/index.html` | TEST-IMPACT-016: `tests/test_secrets_file.py` | implemented |
+| REQ-IMPACT-021 | `app/modules/impact_analyzer/router.py`, `app/core/config.py`, `app/core/claude_cli.py`, `app/modules/impact_analyzer/templates/index.html` | TEST-IMPACT-016: `tests/test_secrets_file.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | NFR-IMPACT-001 | `app/core/gemini_client.py`, `app/modules/impact_analyzer/router.py`, `app/core/storage.py`, `app/prompts/impact_analysis.yaml`, `app/core/usage.py` | TEST-IMPACT-007: `tests/test_gemini_and_report.py`, `tests/test_impact_analyzer_fixes.py` | implemented |
 | NFR-IMPACT-002 | `app/core/security_filter.py`, `app/core/gemini_client.py` | TEST-IMPACT-018: `tests/test_security_filter.py` | implemented |
 | NFR-IMPACT-003 | `app/core/gemini_client.py`, `app/core/notifier.py` | TEST-IMPACT-019 | implemented |
@@ -9898,13 +10021,14 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-STORE-001 | `app/core/storage.py`, `app/core/config.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
 | REQ-STORE-002 | `app/core/storage.py`, `app/core/daily_qa_storage.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
 | REQ-STORE-003 | `app/core/storage.py`, `app/main.py`, `app/modules/impact_analyzer/router.py`, `app/modules/qa_agent/router.py`, `app/modules/manual_review/router.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
-| REQ-AICALL-001 | `app/core/gemini_client.py`, `app/core/prompt_manager.py` | TEST-AICALL-001: `tests/test_gemini_and_report.py` | implemented |
+| REQ-AICALL-001 | `app/core/gemini_client.py`, `app/core/prompt_manager.py`, `app/core/claude_cli.py` | TEST-AICALL-001: `tests/test_gemini_and_report.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-002 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_and_report.py`, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-003 | `app/core/gemini_client.py` | TEST-AICALL-003, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
+| REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_and_report.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/impact_analyzer/router.py`, `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py`, `tests/test_impact_analyzer_fixes.py` | implemented |
-| REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py` | implemented |
+| REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-USAGE-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
 | REQ-MAIL-001 | `app/core/notifier.py` | TEST-USAGE-002: `tests/test_notifier.py` | implemented |
 | REQ-MAIL-002 | `app/core/notifier.py` | TEST-MAIL-001 | implemented |

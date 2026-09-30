@@ -18,24 +18,15 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.core.claude_cli import PASSED_ENV, QUIET_ENV, build_env  # noqa: F401  (세 화면 기능의 Claude 호출과 같은 환경 규칙)
 from app.modules.daily_qa.packages import Task
 from app.modules.daily_qa.workspace import ALLOWED_TOOLS, DENIED_TOOLS, RunWorkspace
-
-PASSED_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "TZ", "USERPROFILE", "SYSTEMROOT", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP",
-              "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "NODE_EXTRA_CA_CERTS")
-QUIET_ENV = {
-    "DISABLE_TELEMETRY": "1",
-    "DISABLE_ERROR_REPORTING": "1",
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-    "DISABLE_AUTOUPDATER": "1",
-}
 
 
 @dataclass
@@ -76,17 +67,6 @@ def build_command(claude_command: str, model: str = "") -> list[str]:
     if model:
         command += ["--model", model]
     return command
-
-
-def build_env(token: str, base: dict[str, str] | None = None) -> dict[str, str]:
-    source = base if base is not None else os.environ
-    env = {name: source[name] for name in PASSED_ENV if name in source}
-    env.update(QUIET_ENV)
-    # 빈 토큰을 넣으면 CLI 가 그 값으로 인증을 시도하다 실패한다. 없으면 넣지 않는다
-    # (운영에서는 사전 점검이 토큰 없는 실행을 막고, 개발 PC 는 기존 로그인을 쓴다).
-    if token:
-        env["CLAUDE_CODE_OAUTH_TOKEN"] = token
-    return env
 
 
 META_KEYS = ("subtype", "is_error", "num_turns", "duration_ms", "total_cost_usd", "usage", "session_id", "permission_denials")

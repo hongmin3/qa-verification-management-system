@@ -82,7 +82,7 @@ class RegressionAnalyzer:
         analysis_id = analysis_id or uuid.uuid4().hex[:12]
         doc_labels = doc_labels or {}
         change_file_name = ", ".join(path.name for path in change_paths) if change_paths else "(문서 없음, 사용자 요청 텍스트만 사용)"
-        self.logger.info("analysis_started id=%s change=%s spec=%s tc=%s model=%s", analysis_id, change_file_name, specification_label, testcase_label, self.settings.secrets.gemini_model)
+        self.logger.info("analysis_started id=%s change=%s spec=%s tc=%s model=%s", analysis_id, change_file_name, specification_label, testcase_label, (getattr(self.ai_client, "audit_snapshot", None) or {}).get("model", ""))
 
         def stage(index: int) -> None:
             self.storage.update_stage(analysis_id, index, ANALYSIS_STAGES[index - 1], len(ANALYSIS_STAGES))

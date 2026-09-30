@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page_title %}비용/캐시 대시보드{% endblock %}
 {% block header_title %}비용/캐시 대시보드{% endblock %}
-{% block header_subtitle %}Gemini 토큰 사용량과 캐시 재사용 현황을 확인합니다.{% endblock %}
+{% block header_subtitle %}AI 토큰 사용량과 캐시 재사용 현황을 확인합니다.{% endblock %}
 {% block header_nav %}<nav><a href="/">QA 홈</a><a href="/qa-agent">QA Agent</a><a href="/impact-analyzer">Regression 분석</a><a href="/manual-review">매뉴얼 검증</a><a href="/knowledge">Knowledge</a><a href="/cost-dashboard/guide">사용법</a></nav>{% endblock %}
 {% block content %}
 <section>
@@ -44,7 +44,7 @@
   <section>
     <h2>캐시 재사용 현황</h2>
     {% if stats.cache_sample_size %}
-    <p>캐시 Hit율 {{ (stats.cache_hit_rate * 100) | round(1) }}% (Gemini 호출 {{ stats.cache_sample_size }}건 기준)</p>
+    <p>캐시 Hit율 {{ (stats.cache_hit_rate * 100) | round(1) }}% (AI 호출 {{ stats.cache_sample_size }}건 기준)</p>
     <p class="hint">Regression 영향 분석은 분석당 호출 1회, 매뉴얼 개정 검증은 변경 건마다 여러 번 호출하므로 "호출 1건" 단위로 두 기능을 함께 집계합니다.</p>
     {% else %}
     <p class="hint">캐시 Hit 여부가 기록된 분석이 없습니다.</p>

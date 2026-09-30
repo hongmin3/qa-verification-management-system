@@ -22,6 +22,11 @@ def _no_notifications(monkeypatch):
     monkeypatch.setattr(gemini_module, "notify_for_error", lambda *args, **kwargs: None)
 
 
+def _use_gemini(client: GeminiClient, monkeypatch) -> None:
+    """대신 쓸 모델·추론 켜기는 Gemini 에만 있는 동작이다 (REQ-AICALL-003)."""
+    monkeypatch.setitem(client.settings.raw, "ai", {"provider": "gemini"})
+
+
 def _analysis_settings(client: GeminiClient, monkeypatch, **values) -> None:
     analysis = dict(client.settings.raw.get("analysis") or {})
     analysis.update(values)
@@ -78,6 +83,8 @@ def test_cached_answer_keeps_fallback_model_record(tmp_path, monkeypatch):
         return {"decision": "PASS", "token_usage": {"total_tokens": 7}}
 
     first = GeminiClient(storage=storage, responder=unavailable_then_ok)
+
+    _use_gemini(first, monkeypatch)
     _analysis_settings(first, monkeypatch, retry_min_seconds=0, retry_max_seconds=0)
     requested = "gemini-requested-pro"
     fallback_model = str(first.settings.get("models.standard", "") or first.settings.secrets.gemini_model)
@@ -87,6 +94,8 @@ def test_cached_answer_keeps_fallback_model_record(tmp_path, monkeypatch):
     assert first.last_model == fallback_model
 
     second = GeminiClient(storage=storage, responder=lambda _: pytest.fail("저장본에서 꺼내야 한다"))
+
+    _use_gemini(second, monkeypatch)
     answer = second.generate_structured("same", prompt_name=PROMPT, response_schema=_Answer, model=requested)
     assert second.last_cache_hit
     assert second.last_model == fallback_model
@@ -107,10 +116,14 @@ def test_cached_answer_keeps_thinking_override_record(tmp_path, monkeypatch):
         return {"decision": "PASS", "token_usage": {"total_tokens": 9}}
 
     first = GeminiClient(storage=storage, responder=needs_thinking)
+
+    _use_gemini(first, monkeypatch)
     first.generate_structured("same", prompt_name=PROMPT, response_schema=_Answer, model="gemini-pro-x")
     assert first.thinking_override
 
     second = GeminiClient(storage=storage, responder=lambda _: pytest.fail("저장본에서 꺼내야 한다"))
+
+    _use_gemini(second, monkeypatch)
     second.generate_structured("same", prompt_name=PROMPT, response_schema=_Answer, model="gemini-pro-x")
     assert second.last_cache_hit
     assert second.thinking_override == first.thinking_override

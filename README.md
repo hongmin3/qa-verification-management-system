@@ -75,7 +75,10 @@ Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영�
   값 자체는 반환하지 않습니다 ([SECURITY.md](SECURITY.md)).
 - 무엇이 실제로 전송됐는지는 분석 상세 화면에서 **전송된 입력 JSON 원문 그대로** 확인할 수
   있습니다. 추정이 아니라 실제 payload를 봅니다.
-- **예외: 일일 QA 점검**은 회사 Claude Team 계정으로 Claude CLI 를 씁니다. 격리된 작업 폴더에 마스킹한
+- AI 판정은 기본으로 회사 Claude Team 계정의 Claude CLI(`claude -p`)로 받습니다. 화면 기능(Regression
+  분석·QA Agent·매뉴얼 개정 검증)의 호출에는 도구를 하나도 주지 않고, 저장소 밖 빈 폴더에서 실행합니다.
+  `config.yaml` 의 `ai.provider: gemini` 로 바꾸면 예전처럼 Gemini API 를 씁니다.
+- **예외: 일일 QA 점검**도 같은 Claude CLI 를 쓰지만 방식이 다릅니다. 격리된 작업 폴더에 마스킹한
   SRS·TC 색인을 두고 Claude 가 필요한 부분을 검색해 읽으므로, 나가는 양이 작업마다 다릅니다. 보낸 입력과
   Claude 가 읽은 파일·검색어가 실행마다 남습니다. 통제 목록과 남은 확인 사항은
   [AI 점검 보안 통제](docs/SECURITY_AI_AGENT.md) 에 있습니다.
@@ -176,7 +179,7 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
      SQLite                              PostgreSQL 16
   + 파일 저장소                          + 문서 저장소
         │
-        ├──▶ Gemini API  ← 분석 기능의 마지막 판단에만, 최소 입력으로
+        ├──▶ Claude CLI (기본) 또는 Gemini API  ← 분석 기능의 마지막 판단에만, 최소 입력으로
         └──▶ 일일 QA 점검 (평일 07:30, 앱과 분리된 프로세스)
                ├─ Polarion REST (읽기 전용)
                └─ Claude CLI (격리 작업 폴더, 회사 Team 계정)
@@ -189,11 +192,11 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
 
 ```text
 변경 문서 → Rule 기반 Change 추출(기준 사양서 diff) → BM25 Specification 검색
-   → TC Candidate 선정 → Gemini Semantic Decision(Structured Output, 1회 호출)
+   → TC Candidate 선정 → AI Semantic Decision(Claude CLI 구조화 응답, 1회 호출)
    → TC ID / Chunk ID 교차검증 → HTML Report + XLSX + 신규 TC 초안(md)
 ```
 
-Gemini가 등장하는 곳은 한 군데뿐이고, 나머지는 전부 결정적인 Python 코드입니다.
+AI 가 등장하는 곳은 한 군데뿐이고, 나머지는 전부 결정적인 Python 코드입니다.
 
 ---
 
@@ -207,7 +210,7 @@ AI가 QA를 판정하지 않습니다 — QA가 반복 수행하는 조사·비�
 ```text
 Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
    → Gate G1·G2·G4 ── 막히면 여기서 끝 (API 호출 0회)
-   → Gemini 1회 (Issue 분석 · 사양 관련도 · TC Coverage · Regression 동시)
+   → AI 1회 (Issue 분석 · 사양 관련도 · TC Coverage · Regression 동시)
    → ID 교차검증 → Gate G3·G5 → Human Review 6탭 → QA 승인
 ```
 
@@ -237,7 +240,7 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 - 실제 백엔드 단계 기반 실시간 진행 상태(SSE) — 가짜 퍼센트 없음
 - 사용자 관점으로 재구성한 HTML 보고서 + XLSX + 신규 TC 초안(md)
 - TC ID·Chunk ID 교차검증, Confidence 기반 Manual Review 분류
-- 분석 상세 감사 화면 (요청 / 근거 / System Instruction / Gemini 실제 입출력 JSON)
+- 분석 상세 감사 화면 (요청 / 근거 / System Instruction / AI 실제 입출력 JSON)
 
 → [상세 문서](docs/modules/impact-analyzer.md)
 
@@ -474,7 +477,7 @@ akela log applied / contradicted     근거로 쓴 규칙 · 결과가 뒤집은
 | 이전 지적사항 상태를 임의 변경 | QA가 확정하기 전까지 자동 변경 없음 |
 | 판단 근거를 알 수 없음 | 입력 JSON·원본 응답·BM25 후보 순위와 점수를 그대로 열람 |
 
-Unit Test는 Gemini Mock Response를 사용하므로 테스트에 API 비용이 발생하지 않습니다.
+Unit Test는 AI Mock Response(가짜 CLI 실행기 포함)를 사용하므로 테스트에 AI 비용이 발생하지 않습니다.
 
 ---
 
@@ -487,7 +490,7 @@ Unit Test는 Gemini Mock Response를 사용하므로 테스트에 API 비용이 
 | DB | SQLite (WAL) | PostgreSQL 16, SQLAlchemy 2.0, Alembic |
 | 문서 처리 | PyMuPDF, openpyxl, python-docx | — |
 | 검색 | rank-bm25 | PostgreSQL ILIKE |
-| AI | Google Gemini (Structured Output), Claude Code CLI (일일 QA 점검) | — |
+| AI | Claude Code CLI (기본, 일일 QA 점검 포함), Google Gemini (선택) | — |
 | 인증 | 사내망 전용 | Argon2id + 서버 세션 |
 | 테스트 | pytest | pytest (실제 PostgreSQL 필요) |
 | 배포 | uvicorn / systemd | systemd + rsync 또는 Docker Compose |
@@ -503,13 +506,18 @@ Unit Test는 Gemini Mock Response를 사용하므로 테스트에 API 비용이 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-Copy-Item secrets.example.txt secrets.txt -Force   # GEMINI_API_KEY 입력
+Copy-Item secrets.example.txt secrets.txt -Force   # 서버는 CLAUDE_CODE_OAUTH_TOKEN, Gemini 를 쓰면 GEMINI_API_KEY
 .\scripts\run.ps1                                   # http://localhost:24357 (포트는 config.yaml 의 app.port)
 ```
 
 ```bash
 ./scripts/run.sh    # Linux / macOS
 ```
+
+AI 판정에는 Claude CLI 가 필요합니다. 개발 PC 는 `claude` 를 설치하고 회사 Team 계정으로 한 번 로그인해 두면
+됩니다. 서버는 로그인 대신 `claude setup-token` 으로 발급한 토큰을 `secrets.txt` 의 `CLAUDE_CODE_OAUTH_TOKEN=` 에
+넣습니다([일일 QA 점검 서버 설치](docs/modules/daily-qa.md) 1~2단계와 같습니다). Regression 분석 화면 위쪽 표시줄이
+"AI: Claude CLI · 명령 claude …" 이면 준비된 것입니다.
 
 띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`, `/daily-qa/guide`에서 각 기능의 사용법을 볼 수 있습니다.
 

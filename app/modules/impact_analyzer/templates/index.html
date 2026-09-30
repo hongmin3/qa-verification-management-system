@@ -3,7 +3,7 @@
 <section>
   <h2>Regression 분석</h2>
   <div id="keystatus" class="keystatus">
-    <span>Gemini Key 상태 확인 중...</span>
+    <span>AI 연결 상태 확인 중...</span>
     <button type="button" id="keyreload">설정 다시 읽기</button>
   </div>
   {% if not products %}
@@ -89,7 +89,7 @@ f.addEventListener('submit',async e=>{
 </script>
 <script>
 const kb=document.querySelector('#keystatus'),kt=kb.querySelector('span');
-async function loadKey(reload){kt.textContent='Gemini Key 상태 확인 중...';try{const r=await fetch(reload?'/config/reload':'/config/status',{method:reload?'POST':'GET'});const d=await r.json();const k=d.gemini_api_key;const t=d.daily_token_usage;const usage=t&&t.limit>0?` · 오늘 토큰 ${t.used.toLocaleString()} / ${t.limit.toLocaleString()}${t.exceeded?' (한도 초과)':''}`:'';kb.classList.toggle('missing',!k.configured||(t&&t.exceeded));kt.innerHTML=(k.configured?`Gemini API Key 설정됨 · 출처 <code>${k.source}</code> · 길이 ${k.length}자 · 모델 <code>${d.gemini_model.value}</code>`:'Gemini API Key가 없습니다. 프로젝트 폴더의 <code>secrets.txt</code>를 메모장으로 열어 <code>GEMINI_API_KEY=</code> 뒤에 Key를 붙여넣고 저장한 뒤 이 버튼을 누르세요.')+usage}catch(e){kb.classList.add('missing');kt.textContent='Key 상태를 확인하지 못했습니다.'}}
+async function loadKey(reload){kt.textContent='AI 연결 상태 확인 중...';try{const r=await fetch(reload?'/config/reload':'/config/status',{method:reload?'POST':'GET'});const d=await r.json();const k=d.gemini_api_key;const a=d.ai_provider||{provider:'gemini',ready:k.configured};const t=d.daily_token_usage;const usage=t&&t.limit>0?` · 오늘 토큰 ${t.used.toLocaleString()} / ${t.limit.toLocaleString()}${t.exceeded?' (한도 초과)':''}`:'';kb.classList.toggle('missing',!a.ready||(t&&t.exceeded));let msg;if(a.provider==='claude_cli'){msg=a.claude_command_found?`AI: Claude CLI · 명령 <code>${a.claude_command}</code> · 인증 ${a.claude_token_configured?'토큰 설정됨':'이 PC 로그인 사용'} · 모델 <code>${a.model}</code>`:`Claude CLI 를 찾을 수 없습니다. 명령 <code>${a.claude_command}</code> 이 실행 경로에 있는지, <code>config.yaml</code> 의 <code>ai.claude.command</code> 를 확인하세요.`}else{msg=k.configured?`Gemini API Key 설정됨 · 출처 <code>${k.source}</code> · 길이 ${k.length}자 · 모델 <code>${d.gemini_model.value}</code>`:'Gemini API Key가 없습니다. 프로젝트 폴더의 <code>secrets.txt</code>를 메모장으로 열어 <code>GEMINI_API_KEY=</code> 뒤에 Key를 붙여넣고 저장한 뒤 이 버튼을 누르세요.'}kt.innerHTML=msg+usage}catch(e){kb.classList.add('missing');kt.textContent='AI 연결 상태를 확인하지 못했습니다.'}}
 document.querySelector('#keyreload').addEventListener('click',()=>loadKey(true));loadKey(false);
 </script>
 {% endblock %}

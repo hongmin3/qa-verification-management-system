@@ -2,6 +2,17 @@
 
 ## 2026-09-30
 
+### 화면 기능의 AI 판정을 Claude CLI 로 전환
+
+- REQ-AICALL-005: Regression 영향 분석, QA Agent, 매뉴얼 개정 검증이 기본으로 Claude CLI(`claude -p`)에서 판정을 받는다. 응답 형식은 `--json-schema` 로 고정한다. 도구는 하나도 주지 않고, 저장소 밖 빈 폴더(`~/.qa-ai-workspace`)에서 사용자 설정과 MCP 없이 실행한다. `config.yaml` 의 `ai.provider: gemini` 로 바꾸면 예전처럼 Gemini API 를 쓴다.
+- REQ-AICALL-001: 공통 통로가 `ai.provider` 로 AI 를 고른다. 가리기, 응답 저장본, 토큰 합산, 하루 한도는 두 제공자에 똑같이 적용한다. 감사 기록에 AI 제공자를 남긴다.
+- REQ-AICALL-003: Claude CLI 실패는 다시 시도하지 않는다. 대신 쓸 모델과 추론 켜기는 Gemini 에만 한다.
+- REQ-AICALL-004: 모델 등급별 모델 이름을 제공자별로 읽는다. Claude 기본값은 세 등급 모두 `claude-opus-5-5` 다(`ai.claude.models.*`).
+- REQ-USAGE-003: Claude 사용량 한도 도달과 CLI 인증 실패를 알림 메일 종류로 더했다.
+- REQ-USAGE-004: Claude 모델의 API 기준 단가를 비교용 추정 단가로 더했다.
+- REQ-IMPACT-021: 분석 화면 위쪽 표시줄과 `/config/status` 가 쓰는 AI, CLI 를 찾았는지, 인증 방식, 모델을 보인다. 하루 한도 초과 문구와 감사·대시보드 화면의 "Gemini" 표기를 "AI" 로 바꿨다.
+- 일일 QA 점검의 Claude 실행 환경 만들기 코드를 공통 모듈(`app/core/claude_cli.py`)과 같이 쓴다. 동작은 같다.
+
 ### HTML 사양서 가로 넘침 개선
 
 - 키트 렌더러 v7을 적용했다. 본문 폭을 넓히고 긴 표·경로·명령을 줄바꿈한다. 카드의 구현·테스트 정보는 줄별로 구분하고 작은 화면의 넓은 표는 항목 이름과 함께 세로로 표시한다. 사양 본문과 기능 동작은 유지했다.

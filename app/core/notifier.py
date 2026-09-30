@@ -1,8 +1,8 @@
 """운영 중 사람이 개입해야 하는 상황을 메일로 알린다.
 
 **무엇을 알리는가.** 앱이 스스로 복구할 수 없고 사람이 조치해야 끝나는 것만 보낸다.
-지금은 Gemini API 할당량·결제 문제가 그렇다 — 크레딧이 소진되면 모든 분석이 실패하는데,
-사용자가 화면을 보고 있지 않으면 알 방법이 없다.
+지금은 AI 사용량 한도·인증 문제가 그렇다 — Claude 사용량 한도에 닿거나 Gemini 크레딧이
+소진되면 모든 분석이 실패하는데, 사용자가 화면을 보고 있지 않으면 알 방법이 없다.
 
 **설계 원칙**
 
@@ -36,11 +36,21 @@ logger = logging.getLogger("regression_analyzer")
 # 알림 종류. 쿨다운은 종류별로 따로 센다.
 KIND_QUOTA_EXHAUSTED = "gemini_quota_exhausted"
 KIND_MODEL_UNAVAILABLE = "gemini_model_unavailable"
+KIND_CLAUDE_USAGE_LIMIT = "claude_usage_limit"
+KIND_CLAUDE_AUTH_FAILED = "claude_auth_failed"
 
 KIND_LABELS = {
     KIND_QUOTA_EXHAUSTED: "Gemini API 할당량·크레딧 소진",
     KIND_MODEL_UNAVAILABLE: "Gemini 모델 사용 불가",
+    KIND_CLAUDE_USAGE_LIMIT: "Claude 사용량 한도 도달",
+    KIND_CLAUDE_AUTH_FAILED: "Claude CLI 인증 실패",
 }
+
+#: Claude CLI 오류는 `app/core/claude_cli.py` 가 이 머리말로 시작하게 만든다. 머리말이 있으면
+#: Claude 종류만 본다 — "429" 같은 표현이 Gemini 할당량 알림으로 잘못 가지 않게 하기 위함이다.
+CLAUDE_ERROR_MARKER = "claude cli"
+_CLAUDE_LIMIT_HINTS = ("session limit", "usage limit", "rate limit", "limit reached", "429")
+_CLAUDE_AUTH_HINTS = ("not logged in", "invalid api key", "authentication", "401", "oauth token")
 
 # 오류 메시지에서 이 알림 종류를 판별하는 표현. API 문구가 바뀔 수 있어 상태 코드와 함께 본다.
 _QUOTA_HINTS = (
@@ -56,6 +66,12 @@ _QUOTA_HINTS = (
 def classify_error(message: str) -> str | None:
     """오류 메시지 → 알림 종류. 알림 대상이 아니면 None."""
     lowered = (message or "").casefold()
+    if CLAUDE_ERROR_MARKER in lowered:
+        if any(hint in lowered for hint in _CLAUDE_LIMIT_HINTS):
+            return KIND_CLAUDE_USAGE_LIMIT
+        if any(hint in lowered for hint in _CLAUDE_AUTH_HINTS):
+            return KIND_CLAUDE_AUTH_FAILED
+        return None
     if any(hint in lowered for hint in _QUOTA_HINTS):
         return KIND_QUOTA_EXHAUSTED
     if "no longer available" in lowered or ("404" in lowered and "model" in lowered):
@@ -157,6 +173,17 @@ def _build_message(config: EmailSettings, kind: str, detail: str, context: dict 
         lines += [
             "  1. config.yaml 의 models.* 값이 이 계정에서 쓸 수 있는 모델인지 확인합니다.",
             "  2. 상위 등급 모델이 막힌 경우에는 기본 모델로 자동 폴백되며 분석은 계속됩니다.",
+        ]
+    elif kind == KIND_CLAUDE_USAGE_LIMIT:
+        lines += [
+            "  1. 오류 내용의 한도 초기화 시각까지 새 분석은 계속 실패합니다.",
+            "  2. 자주 닿으면 config.yaml 의 ai.claude.models.* 를 더 가벼운 모델로 바꾸거나",
+            "     회사 Claude 계정의 사용량 한도를 확인합니다.",
+        ]
+    elif kind == KIND_CLAUDE_AUTH_FAILED:
+        lines += [
+            "  1. 서버 secrets.txt 의 CLAUDE_CODE_OAUTH_TOKEN 이 있고 만료되지 않았는지 확인합니다.",
+            "  2. 만료됐으면 브라우저가 있는 PC 에서 회사 Team 계정으로 claude setup-token 을 다시 합니다.",
         ]
     lines += [
         "",

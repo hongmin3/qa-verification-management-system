@@ -117,15 +117,24 @@ def test_integration_detection_is_safe_on_empty_text() -> None:
 # --- 모델·가격 설정 ----------------------------------------------------------
 
 
-def test_model_ids_come_from_settings() -> None:
-    """모델 ID 는 config.yaml 이 원천이다. 특정 ID 를 강제하지 않는다 — 모델은 폐기된다."""
+def test_model_ids_come_from_settings(monkeypatch) -> None:
+    """모델 ID 는 config.yaml 이 원천이다. 특정 ID 를 강제하지 않는다 — 모델은 폐기된다.
+
+    AI 제공자마다 읽는 곳이 다르다 (REQ-AICALL-004): Claude CLI 는 `ai.claude.models.*`, Gemini 는 `models.*`.
+    """
     from app.core.config import get_settings
 
     settings = get_settings()
+    monkeypatch.setitem(settings.raw, "ai", {**(settings.raw.get("ai") or {}), "provider": "claude_cli"})
+    for tier in (TIER_LIGHT, TIER_STANDARD, TIER_COMPLEX):
+        configured = str(settings.get(f"ai.claude.models.{tier}", "") or "")
+        assert model_for(tier) == configured, f"claude {tier}: 설정값과 다르다"
+        assert configured, f"claude {tier}: 모델이 설정되지 않았다"
+    monkeypatch.setitem(settings.raw, "ai", {**(settings.raw.get("ai") or {}), "provider": "gemini"})
     for tier in (TIER_LIGHT, TIER_STANDARD, TIER_COMPLEX):
         configured = str(settings.get(f"models.{tier}", "") or "")
-        assert model_for(tier) == configured, f"{tier}: 설정값과 다르다"
-        assert configured, f"{tier}: 모델이 설정되지 않았다"
+        assert model_for(tier) == configured, f"gemini {tier}: 설정값과 다르다"
+        assert configured, f"gemini {tier}: 모델이 설정되지 않았다"
 
 
 def test_pro_class_models_are_not_configured() -> None:
@@ -137,7 +146,14 @@ def test_pro_class_models_are_not_configured() -> None:
         assert "pro" not in model_for(tier), f"{tier} 에 Pro 계열이 설정됐다: {model_for(tier)}"
 
 
-def test_unknown_tier_falls_back_to_standard() -> None:
+def test_unknown_tier_falls_back_to_standard(monkeypatch) -> None:
+    from app.core.config import get_settings
+    from app.core.model_router import DEFAULT_CLAUDE_MODELS
+
+    settings = get_settings()
+    monkeypatch.setitem(settings.raw, "ai", {"provider": "claude_cli"})
+    assert model_for("nonexistent") == DEFAULT_CLAUDE_MODELS[TIER_STANDARD]
+    monkeypatch.setitem(settings.raw, "ai", {"provider": "gemini"})
     assert model_for("nonexistent") == DEFAULT_MODELS[TIER_STANDARD]
 
 

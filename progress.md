@@ -1,5 +1,21 @@
 # 진행 상태
 
+## 2026-09-30 오후 화면 기능 AI 를 Claude CLI 로 전환 (REQ-AICALL-005) · 전면 개편 전 정리
+
+- 완료: `ai.provider`(기본 `claude_cli`)로 Regression 분석·QA Agent·매뉴얼 개정 검증의 AI 를 고른다. 도구를 주지 않는 격리 호출(`app/core/claude_cli.py`), 제공자별 모델 등급, Claude 알림 종류, 상태 표시줄을 만들었다. Gemini 경로는 설정으로 계속 쓸 수 있다.
+- 검증(자동): 새 테스트 18개(`tests/test_claude_cli_provider.py`)와 전체 pytest 를 돌렸다. 기본 제공자가 바뀌어 Gemini 전용 동작을 보는 테스트 5개는 제공자를 `gemini` 로 고정하거나 기대값을 고쳤다.
+- 검증(이 PC, 실제 Claude CLI 2.1.285, Team 계정 로그인):
+  - 격리 호출: 도구를 모두 끈 상태에서도 `structured_output` 이 온다. `claude-opus-5-5` 가 통한다. 입력 토큰 1,321개로 전역 `CLAUDE.md` 는 섞이지 않았다. Claude Code 가 넣는 계정 이메일 한 줄은 보였다.
+  - Regression 분석(API, 메모만 입력): 약 35초, 토큰 69,655, TC 판정 31건. 메모(400→800%)와 TC(최대 3200%)의 차이를 근거로 확인 요청을 붙였다.
+  - QA Agent(VP-6669): 호출 1회, 약 70초, 토큰 32,054, 관문 G1~G5 판정까지 정상.
+  - 매뉴얼 개정 검증 2단계 판정(합성 변경 2건): 사양과 다른 배율은 `MODIFICATION_REQUIRED` 0.93, 맞는 문구는 `PASS` 로 상세 판정을 건너뛰어 호출 3회.
+- 확인 못 한 것:
+  1. 일일 QA 점검을 실제 Claude CLI 로 끝까지 돌리는 검증. 이 PC 에 Polarion 접속 정보가 없다. 가짜 Polarion 자료로 파이프라인을 돌리는 스크립트는 만들었지만 사용자 요청으로 여기서 멈췄다.
+  2. 일일 QA 점검의 작업 폴더 밖 읽기 거부, `claude_logs/` 도구 기록 형식(앞 항목과 같음).
+  3. 서버 배포. 서버는 아직 Gemini 경로의 옛 코드다. 배포 전에 서버에 Claude CLI 설치와 `CLAUDE_CODE_OAUTH_TOKEN` 이 필요하다(`docs/modules/daily-qa.md` 서버 설치 1~2단계).
+- 참고: 이 PC 의 Claude 계정은 13:50 까지 세션 한도에 걸려 있었다. 한도에 닿으면 세 화면 기능이 모두 실패하므로, 운영에서 자주 닿으면 `ai.claude.models.*` 를 `claude-sonnet-5-5` 로 낮춘다.
+- 다음: 사용자가 이 자동화의 전면 개편을 예고했다. 개편 전 기준점으로 이 상태를 커밋한다.
+
 ## 2026-09-30 HTML 사양서 가로 넘침 개선
 
 - 키트 렌더러 v7과 관리 도구를 적용했다. 본문 최대 폭을 1800px로 넓히고 표·경로·명령을 줄바꿈한다. 작은 화면의 넓은 표는 항목 이름이 붙은 세로 목록으로 표시한다. SPEC 본문·ID·추적성은 유지했다.

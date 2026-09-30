@@ -9,7 +9,9 @@ from google.genai import types
 from pydantic import BaseModel
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from app.core import claude_cli
 from app.core.config import get_settings
+from app.core.model_router import PROVIDER_CLAUDE, TIER_STANDARD, ai_provider, model_for
 from app.core.notifier import notify_for_error
 from app.core.prompt_manager import load_prompt
 from app.core.security_filter import MaskReport, mask_text
@@ -37,14 +39,20 @@ def _requires_thinking(exc: Exception) -> bool:
 
 
 class GeminiClient:
-    """도메인 무관 Gemini 구조화 호출 클라이언트. 어떤 모듈의 Pydantic 스키마인지, 어떤
-    system_instruction을 쓰는지는 전혀 모른다 — 호출자가 prompt_name(→prompts/*.yaml)과
-    response_schema를 그때그때 넘긴다. 캐시/재시도/토큰 사용량 추적만 여기서 담당한다."""
+    """도메인 무관 AI 구조화 호출 클라이언트 (SPEC REQ-AICALL-001). 어떤 모듈의 Pydantic 스키마인지,
+    어떤 system_instruction을 쓰는지는 전혀 모른다 — 호출자가 prompt_name(→prompts/*.yaml)과
+    response_schema를 그때그때 넘긴다. 캐시/재시도/토큰 사용량 추적만 여기서 담당한다.
 
-    def __init__(self, storage: Storage | None = None, responder: Callable[[str], dict] | None = None) -> None:
+    이름은 옛 이름이다. 실제로 부르는 AI 는 `ai.provider` 가 정한다 — 기본 `claude_cli` 는
+    Claude CLI(`app/core/claude_cli.py`, REQ-AICALL-005), `gemini` 는 Gemini API 다."""
+
+    def __init__(self, storage: Storage | None = None, responder: Callable[[str], dict] | None = None,
+                 claude_runner: claude_cli.Runner | None = None) -> None:
         self.settings = get_settings()
         self.storage = storage or Storage()
         self.responder = responder
+        #: 테스트가 `subprocess.run` 대신 끼우는 실행기. 비면 실제 CLI 를 부른다.
+        self.claude_runner = claude_runner
         self.request_count = 0
         self.cache_hit_count = 0
         self.token_usage: dict[str, int] = {}
@@ -55,12 +63,18 @@ class GeminiClient:
         #: 호출자가 만든 원본을 보여주면 "무엇이 나갔는지"를 확인하는 의미가 없다.
         self.last_sent_prompt = ""
         self.last_sent_system_instruction = ""
-        #: 직전 호출에 실제로 쓴 모델 (호출별로 다를 수 있다 — app/core/model_router.py).
-        self.last_model = self.settings.secrets.gemini_model
+        #: 직전 호출의 AI 제공자와 모델 (호출별로 다를 수 있다 — app/core/model_router.py).
+        self.last_provider = ai_provider(self.settings)
+        self.last_model = self._default_model(self.last_provider)
         #: 상위 등급 모델을 쓰지 못해 기본 모델로 물러난 경우의 기록. 조용히 바꾸지 않는다.
         self.model_fallback: dict | None = None
         #: thinking 을 끌 수 없는 모델이라 켜서 호출한 경우의 기록 (토큰이 늘어난다).
         self.thinking_override: dict | None = None
+
+    def _default_model(self, provider: str) -> str:
+        if provider == PROVIDER_CLAUDE:
+            return model_for(TIER_STANDARD)
+        return self.settings.secrets.gemini_model
 
     def _retry_policy(self) -> Retrying:
         """네트워크 오류(시간 초과·연결 끊김) 재시도 규칙. `config.yaml` 의 `analysis.max_retries`·
@@ -82,6 +96,16 @@ class GeminiClient:
         self.request_count += 1
         if self.responder:
             return self.responder(prompt)
+        if self.last_provider == PROVIDER_CLAUDE:
+            # 생성 온도·출력 상한·추론 예산은 CLI 인자에 없어 쓰지 않는다 (REQ-AICALL-001).
+            return claude_cli.request_structured(
+                prompt,
+                system_prompt=system_instruction,
+                schema=response_schema.model_json_schema(),
+                model=model,
+                settings=self.settings,
+                runner=self.claude_runner,
+            )
         if not self.settings.secrets.gemini_api_key:
             raise RuntimeError("GEMINI_API_KEY가 설정되지 않았습니다.")
         client = genai.Client(api_key=self.settings.secrets.gemini_api_key)
@@ -146,7 +170,8 @@ class GeminiClient:
         system_instruction = f"{prompt_cfg.system_instruction}\n\n{system_suffix}".strip() if system_suffix else prompt_cfg.system_instruction
         self.last_sent_prompt = prompt
         self.last_sent_system_instruction = system_instruction
-        self.last_model = model or self.settings.secrets.gemini_model
+        self.last_provider = ai_provider(self.settings)
+        self.last_model = model or self._default_model(self.last_provider)
         cache_key = hashlib.sha256(
             (self.last_model + prompt_name + str(prompt_cfg.version) + system_suffix + prompt).encode()
         ).hexdigest()
@@ -174,6 +199,9 @@ class GeminiClient:
                 context={"모델": self.last_model, "프롬프트": f"{prompt_name} v{prompt_cfg.version}"},
                 storage=self.storage,
             )
+            if self.last_provider == PROVIDER_CLAUDE:
+                # Claude CLI 는 추론 켜기·대신 쓸 모델이 없다. 시간 초과도 다시 하지 않는다 (REQ-AICALL-003).
+                raise
             if _requires_thinking(exc):
                 # Pro 계열은 thinking 을 끌 수 없다. 설정 실수로 전체가 멈추지 않게 thinking 을
                 # 켜서 다시 부르되, 그 사실을 남긴다 — thinking 토큰이 과금되고 응답이

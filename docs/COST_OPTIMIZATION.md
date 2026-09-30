@@ -63,7 +63,7 @@ Gemini는 JSON Schema로 강제된 Structured Output을 반환하며, Regression
 
 **9. 일일 토큰 한도 + 감사 기록**
 `analysis.daily_token_limit`을 넘으면 새 분석 실행 자체를 차단한다 (`/config/status`에서 사용량
-확인). 완료된 모든 호출은 요청 문서, Knowledge 근거, System Instruction, Gemini에 실제로
+확인). 완료된 모든 호출은 요청 문서, Knowledge 근거, System Instruction, AI 에 실제로
 전달된 입력 JSON과 원본 응답, 모델·캐시·생성 설정, BM25 후보 순위·점수를 분석 상세 화면에서
 그대로 열람할 수 있어 비용과 판단 근거를 사후 검증할 수 있다.
 

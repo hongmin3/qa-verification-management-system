@@ -12,7 +12,7 @@ PROMPT_NAME = "impact_analysis"
 
 
 class ImpactAnalysisAIClient:
-    """impact_analyzer 모듈의 도메인 전용 AI 호출 wrapper. core.GeminiClient를 감싸서
+    """impact_analyzer 모듈의 도메인 전용 AI 호출 wrapper. core.GeminiClient(공통 AI 통로)를 감싸서
     payload 조립과 응답 파싱(ImpactDecision/DraftTestCase/ChangeItem)만 담당한다."""
 
     def __init__(self, storage: Storage | None = None, responder: Callable[[str], dict] | None = None) -> None:
@@ -54,7 +54,8 @@ class ImpactAnalysisAIClient:
         return {
             "prompt_name": config.name,
             "prompt_version": config.version,
-            "model": self._client.settings.secrets.gemini_model,
+            "provider": self._client.last_provider,
+            "model": self._client.last_model,
             # 마스킹까지 끝난 실제 전송본을 보여준다 (app/core/security_filter.py).
             "system_instruction": self._client.last_sent_system_instruction or config.system_instruction,
             "user_prompt": self._client.last_sent_prompt or self.last_prompt,

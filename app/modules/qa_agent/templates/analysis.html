@@ -284,7 +284,7 @@
 
   {% if audit %}
   <details class="audit">
-    <summary>Gemini에 실제로 보낸 것 / 받은 것 (감사)</summary>
+    <summary>AI 에 실제로 보낸 것 / 받은 것 (감사)</summary>
     <p class="hint">
       프롬프트 {{ '{:,}'.format(audit.user_prompt_chars or 0) }}자 · 주입한 규칙 발췌 {{ '{:,}'.format(audit.system_suffix_chars or 0) }}자
       · {{ audit.prompt_name }} v{{ audit.prompt_version }} · {{ audit.model }}{% if audit.cache_hit %} · 캐시 적중{% endif %}
