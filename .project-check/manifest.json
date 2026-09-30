@@ -2,8 +2,9 @@
   "version": 1,
   "files": {
     "project-readiness.js": "2321197b8621983d4abae0037b6fd32b9e01a1b45d7261bfa7272f649a1e07a8",
-    "agents-spec-section.md": "ae688b6249fdf24e614cb06dfc91ddbe95a703bb07f045d26180ead94adf4791",
-    "render-spec-html.js": "69639516d731f83f5196106685be78f948067f391a3143c01f893b0c9fa04741",
+    "agents-spec-section.md": "99eed95e3e6ad1912b9593f5b32ab4514e096ea5e5f14c1f860f2c6aa15cdfff",
+    "render-spec-html.js": "f641eb32d50a25008f7cbff4f8a365c8329c1f729191f255750602d949c09233",
+    "spec-preservation.js": "63a9ff982282c4d3ca3ac271499ec710c3cdf4b3e12c1d6dfeaac7f49798bb17",
     "changelog-template.md": "755091aa8eb9e08243808da015a724ddbb34c67fe713e0faabda6fb590a89402"
   },
   "projectFiles": {}

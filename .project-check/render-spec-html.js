@@ -19,7 +19,8 @@ const crypto = require('crypto');
 // v5: 카드 소제목(####)을 이름표-내용 칸으로, 번호 목록을 단계로, `> **예외**` 인용을 색 상자로,
 //     `이유:` 줄을 따로 보이고, `| 용어 | 뜻 |` 표의 용어에 마우스를 올리면 뜻을 보인다.
 // v6: fence·표 파서를 준비 검사와 한 벌로(탭 들여쓰기, 4칸 들여쓴 닫는 표시는 닫지 않음, code span 속 `|`).
-const RENDERER_VERSION = 'v6';
+// v7: responsive reading layout.
+const RENDERER_VERSION = 'v7';
 const OUTPUT = 'docs/SPEC.html';
 const REGENERATE = 'node .project-check/render-spec-html.js .';
 const ID = /\b(?:REQ|NFR|TEST)-[A-Z0-9]+-\d{3}\b/g;
@@ -179,9 +180,10 @@ function renderTable(rows, ctx) {
     const a = align[i] ? ` style="text-align:${align[i]}"` : '';
     const word = text.toLowerCase();
     const body = BADGES.has(word) ? `<span class="badge st-${word}">${esc(word)}</span>` : inline(text, ctx);
-    return `<${tag}${a}>${body}</${tag}>`;
+    const label = tag === 'td' && header.length >= 4 ? ` data-label="${esc(header[i])}"` : '';
+    return `<${tag}${a}${label}>${body}</${tag}>`;
   };
-  const out = ['<div class="table-wrap"><table>', '<thead><tr>' + header.map((c, i) => cell('th', c, i)).join('') + '</tr></thead>', '<tbody>'];
+  const out = [`<div class="table-wrap"><table${header.length >= 4 ? ' class="responsive"' : ''}>`, '<thead><tr>' + header.map((c, i) => cell('th', c, i)).join('') + '</tr></thead>', '<tbody>'];
   for (const row of rows.slice(2)) {
     const values = cells(row);
     while (values.length < header.length) values.push('');
@@ -643,7 +645,7 @@ function featureIndex(ctx) {
   }
   if (!byCat.size) return '';
   const out = ['<section class="chapter" id="feature-index">', '<h2>기능 목록</h2>',
-    '<div class="table-wrap"><table class="index">', '<thead><tr><th>ID</th><th>이름</th><th>상태</th><th>구현</th><th>테스트</th></tr></thead>', '<tbody>'];
+    '<div class="table-wrap"><table class="index responsive">', '<thead><tr><th>ID</th><th>이름</th><th>상태</th><th>구현</th><th>테스트</th></tr></thead>', '<tbody>'];
   for (const [key, rows] of byCat) {
     const cat = key.replace(/^NFR /, '');
     const name = ctx.groups.get(cat);
@@ -651,7 +653,7 @@ function featureIndex(ctx) {
     for (const [id, def] of rows) {
       const t = ctx.trace.get(id) || {};
       const st = STATUSES.includes(t.status) ? `<span class="badge st-${t.status}">${t.status}</span>` : '';
-      out.push(`<tr><td><a class="idref" href="#${id}">${id}</a></td><td>${def.title ? inline(def.title, ctx, { noIds: true }) : '<span class="untitled">이름 없음</span>'}</td><td>${st}</td><td>${t.impl ? inline(t.impl, ctx, { noIds: true }) : ''}</td><td>${t.test ? inline(t.test, ctx, { noRefs: true }) : ''}</td></tr>`);
+      out.push(`<tr><td data-label="ID"><a class="idref" href="#${id}">${id}</a></td><td data-label="이름">${def.title ? inline(def.title, ctx, { noIds: true }) : '<span class="untitled">이름 없음</span>'}</td><td data-label="상태">${st}</td><td data-label="구현">${t.impl ? inline(t.impl, ctx, { noIds: true }) : ''}</td><td data-label="테스트">${t.test ? inline(t.test, ctx, { noRefs: true }) : ''}</td></tr>`);
     }
   }
   out.push('</tbody>', '</table></div>');
@@ -954,8 +956,8 @@ const CSS = `
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",sans-serif;word-break:keep-all;overflow-wrap:break-word}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);border-radius:4px;padding:.1em .35em}
-pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto}pre code{background:none;padding:0}
+code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);border-radius:4px;padding:.1em .35em;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}pre code{background:none;padding:0}
 .top{background:var(--panel);border-bottom:1px solid var(--line);padding:24px 32px}
 .top h1{margin:0 0 12px;font-size:26px;line-height:1.3}
 .chips,.stats{display:flex;flex-wrap:wrap;gap:8px}.chips{margin-bottom:14px}
@@ -964,7 +966,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;paddin
 .stat{border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:96px;background:var(--bg)}
 .stat b{display:block;font-size:22px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}
 .stat.st-draft b{color:var(--draft)}.stat.st-implemented b{color:var(--implemented)}.stat.st-verified b{color:var(--verified)}.stat.st-deprecated b{color:var(--deprecated)}
-.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;max-width:1280px;margin:0 auto;padding:24px 32px}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;max-width:1800px;margin:0 auto;padding:24px 24px}
 .toc{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto;font-size:13px}
 .toc input{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);margin-bottom:10px;font:inherit}
 .toc ul{list-style:none;margin:0;padding:0}.toc li{margin:1px 0}.toc a{display:block;padding:2px 8px;border-radius:6px;color:var(--text)}
@@ -979,6 +981,7 @@ main{min-width:0}
 .card{padding:4px 20px 12px}.card p,.card li{max-width:46em}.card p{margin:.4em 0 .9em;line-height:1.85}
 .field{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:0 18px;border-top:1px solid var(--line);padding:10px 0 2px}
 .field>h4,.field>h5,.field>h6{margin:.15em 0 0;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.field-body{min-width:0}
 .field-body>:first-child{margin-top:0}.field-body>:last-child{margin-bottom:.4em}
 .field-body ol{list-style:none;counter-reset:step;padding-left:0}
 .field-body ol>li{counter-increment:step;position:relative;padding-left:2.1em;margin:.45em 0}
@@ -994,13 +997,15 @@ p.why{color:var(--muted);border-left:3px solid var(--line);padding-left:10px}.wh
 .idtag{font:600 13px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--req);color:#fff;border-radius:6px;padding:2px 8px}
 .kind-nfr .idtag{background:var(--nfr)}.kind-test .idtag{background:var(--test)}
 .idref{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;white-space:nowrap}
+td .idref,.meta .idref{white-space:normal;overflow-wrap:anywhere}td .badge{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .idtag,.badge{white-space:nowrap}
-.card-meta{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;margin:2px 0 6px}
+.card-meta{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;justify-items:start;font-size:13px;margin:2px 0 6px}
+.meta{min-width:0;max-width:100%;overflow-wrap:anywhere}
 .meta b{color:var(--muted);font-weight:600;margin-right:4px}
 details.history{font-size:13px;margin:4px 0 8px}details.history summary{cursor:pointer;color:var(--muted)}
 details.history ul{margin:6px 0;padding-left:18px}.hist{color:var(--muted);font-size:12px}
 tr.group th{background:var(--bg);text-align:left;font-size:14px;padding-top:12px}.gcode{font:600 12px/1.4 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-right:4px}
-table.index td:first-child{white-space:nowrap}table.index td:nth-child(2){min-width:10em}table.index td:nth-child(4){min-width:13em}.untitled{color:var(--muted);font-style:italic}
+table.index th:nth-child(1){width:16%}table.index th:nth-child(2){width:24%}table.index th:nth-child(3){width:12%}table.index th:nth-child(4){width:24%}table.index th:nth-child(5){width:24%}.untitled{color:var(--muted);font-style:italic}
 .toc .toc-id span{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:var(--text)}
 .toc a.active{background:var(--code);color:var(--accent);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}.toc a.in-chapter{color:var(--accent)}
 figure.flow{margin:12px 0;overflow-x:auto}figure.flow svg{display:block;max-width:100%;height:auto;margin:0 auto}
@@ -1011,16 +1016,17 @@ figure.flow{margin:12px 0;overflow-x:auto}figure.flow svg{display:block;max-widt
 .nohist{color:var(--muted)}
 main img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
 .table-wrap{overflow-x:auto;margin:10px 0}
-table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:14px}th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{background:var(--code);font-weight:600}
 .badge{display:inline-block;border-radius:999px;padding:0 10px;font-size:12px;font-weight:600;color:#fff;background:var(--draft)}
 .st-implemented.badge{background:var(--implemented)}.st-verified.badge{background:var(--verified)}.st-deprecated.badge{background:var(--deprecated)}.st-active.badge{background:var(--active)}
 blockquote{margin:10px 0;padding:4px 16px;border-left:4px solid var(--line);color:var(--muted)}
 li.task{list-style:none;margin-left:-1.2em}
 hr{border:0;border-top:1px solid var(--line);margin:20px 0}
-footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);font-size:13px}
+footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);font-size:13px}
 .hidden{display:none}
 @media (max-width:860px){.field{grid-template-columns:1fr}.layout{grid-template-columns:1fr;padding:16px}.toc{position:static;max-height:260px}.top{padding:18px 16px}.chapter{padding:2px 14px 12px}footer{padding:8px 16px 32px}}
+@media screen and (max-width:600px){table.responsive,table.responsive tbody,table.responsive tr,table.responsive td{display:block;width:100%}table.responsive thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}table.responsive tr{margin-bottom:12px;border:1px solid var(--line);border-radius:6px}table.responsive td{border:0;border-top:1px solid var(--line)}table.responsive td::before{content:attr(data-label);display:block;font-size:12px;font-weight:600;color:var(--muted)}table.responsive tr.group th{display:block;width:100%;border:0}.card{padding:4px 12px 12px}}
 @media print{.toc,footer{display:none}.layout{display:block;padding:0}.chapter{break-inside:auto;border:0}.card{break-inside:avoid}body{background:#fff}}
 `.trim();
 
