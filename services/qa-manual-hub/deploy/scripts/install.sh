@@ -13,7 +13,7 @@
 #   SERVICE_USER   (default ubuntu)
 #   DB_NAME        (default qa_manual_hub)
 #   DB_USER        (default qamanual)
-#   BACKEND_PORT   (default 9180)
+#   BACKEND_PORT   (default 24358)
 #   SERVER_NAME    nginx server_name, e.g. manual.example.internal
 #                  (default: none -- the site answers on the host's bare IP)
 #   SKIP_UFW=1     do not add the firewall rule
@@ -33,7 +33,7 @@ DATA_ROOT="${DATA_ROOT:-/srv/qa-manual-hub}"
 SERVICE_USER="${SERVICE_USER:-ubuntu}"
 DB_NAME="${DB_NAME:-qa_manual_hub}"
 DB_USER="${DB_USER:-qamanual}"
-BACKEND_PORT="${BACKEND_PORT:-9180}"
+BACKEND_PORT="${BACKEND_PORT:-24358}"
 # Empty by default: `server_name  _;` alone still serves the host's bare IP.
 SERVER_NAME_EXPLICIT="${SERVER_NAME:+1}"
 SERVER_NAME="${SERVER_NAME:-}"
@@ -190,7 +190,7 @@ UNIT=/etc/systemd/system/qa-manual-hub.service
 sed \
     -e "s|/opt/qa-manual-hub|$APP_ROOT|g" \
     -e "s|/srv/qa-manual-hub|$DATA_ROOT|g" \
-    -e "s|--port 9180|--port $BACKEND_PORT|" \
+    -e "s|--port 24358|--port $BACKEND_PORT|" \
     -e "s|^User=.*|User=$SERVICE_USER|" \
     -e "s|^Group=.*|Group=$SERVICE_USER|" \
     "$REPO_ROOT/deploy/systemd/qa-manual-hub.service" > "$UNIT"
@@ -217,7 +217,7 @@ else
     fi
     sed \
         -e "s|/opt/qa-manual-hub|$APP_ROOT|g" \
-        -e "s|127.0.0.1:9180|127.0.0.1:$BACKEND_PORT|" \
+        -e "s|127.0.0.1:24358|127.0.0.1:$BACKEND_PORT|" \
         -e "s|__SERVER_NAME__|$SERVER_NAME|" \
         "$REPO_ROOT/deploy/nginx/qa-manual-hub.conf" > "$SITE"
     ln -sfn "$SITE" /etc/nginx/sites-enabled/qa-manual-hub.conf

@@ -58,7 +58,7 @@ WorkingDirectory도 새 경로로 갱신되어 있음을 실제로 확인했다(
 - **QA Manual Hub 통합**(`services/qa-manual-hub/`): 제품 문서를 Git처럼 Revision 이력으로
   보관하는 별도 FastAPI+PostgreSQL 서비스. 코드/DB는 공유하지 않고 HTTP API로만 연동해
   Cross-Manual 대조 소스로 활용한다. 같은 호스트 nginx가 `/`(핵심 앱 :24357)와
-  `/manual-hub/*`(SPA+백엔드 :9180)를 하나의 진입점으로 라우팅하며, 80은 443(self-signed
+  `/manual-hub/*`(SPA+백엔드 :24358)를 하나의 진입점으로 라우팅하며, 80은 443(self-signed
   인증서)으로 강제 리다이렉트한다(모니터링 헬스체크 경로만 예외).
 - 운영: `qa-verification.service`/`qa-manual-hub.service`/`nginx` 모두 systemd로 자동
   복구. `scripts/monitor_health.py`가 10분 간격으로 핵심 앱·nginx·manual_hub를 감시하고,

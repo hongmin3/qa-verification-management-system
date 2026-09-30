@@ -510,12 +510,12 @@ python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 cp ../deploy/.env.example .env                 # DATABASE_URL, STORAGE_ROOT 수정
 alembic upgrade head
-uvicorn app.main:app --reload --port 9180
+uvicorn app.main:app --reload --port 24358
 
 # Frontend (별도 터미널)
 cd frontend
 npm install
-npm run dev        # http://localhost:5173, /api 는 9180 으로 프록시
+npm run dev        # http://localhost:5173, /api 는 24358 으로 프록시
 ```
 
 `CORS_ORIGINS=http://localhost:5173` 를 `.env` 에 넣으면 Vite dev server 에서

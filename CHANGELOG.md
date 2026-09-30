@@ -2,6 +2,14 @@
 
 ## 2026-09-30
 
+### 옛 SRS 번호 대응표를 만들지 않기로 결정
+
+- REQ-DAILY-005: TC 옛 번호 → 새 번호 대응표는 만들지 않고 새 번호(`VP-…`)를 기준으로 삼기로 했다. 번호 맞추기 코드는 바뀌지 않았다. 이슈 스냅샷 비교 제안을 SPEC 13.4절과 `OPEN_QUESTIONS.md` 5절에 적었다.
+
+### QA Manual Hub 백엔드 포트 24358
+
+- REQ-HUBOPS-014, REQ-DEPLOY-004: Manual Hub 백엔드 포트를 흔한 번호 `9180` 에서 `24358` 로 바꿨다. 서버에서 비어 있고 임시 포트 범위 밖인 번호다. 포트가 적힌 다섯 곳(통합·단독 nginx, systemd 유닛, `install.sh`, 개발 서버 프록시)이 어긋나면 테스트가 실패한다. 운영 서버에는 아직 적용하지 않았다(절차는 `docs/local/OPERATIONS_LOCAL.md`).
+
 ### 저장소 비공개 전환 · 운영 메모 포함
 
 - NFR-PRIV-002: GitHub 저장소를 비공개로 바꿨다. 운영 서버 주소·경로·재기동 절차를 적은 `docs/local/OPERATIONS_LOCAL.md` 와 2026-09-09 보안 사고 메모를 저장소에 넣었다. 비밀 설정 파일(`secrets.txt`, `.env`, `.deploy.env`)과 사내 문서 사본·DB 는 계속 Git 에서 뺀다.

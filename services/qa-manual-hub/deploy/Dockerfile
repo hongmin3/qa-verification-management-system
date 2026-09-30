@@ -6,7 +6,7 @@
 #   docker compose -f deploy/docker-compose.yml up -d --build
 #
 # Two final targets:
-#   backend -- FastAPI/uvicorn on :9180, runs `alembic upgrade head` on start
+#   backend -- FastAPI/uvicorn on :24358, runs `alembic upgrade head` on start
 #   web     -- nginx serving the built SPA and proxying /api to backend
 #
 # LibreOffice is not installed, so doc/xls/ppt preview falls back to
@@ -34,10 +34,10 @@ RUN rm -rf tests \
     && mkdir -p /srv/qa-manual-hub/storage \
     && chown -R qamh:qamh /srv/qa-manual-hub
 USER qamh
-EXPOSE 9180
+EXPOSE 24358
 # Only the web container can reach this port (compose `expose`, not `ports`),
 # so the proxy headers it sets are the only ones that arrive here.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 9180 --workers 2 --proxy-headers --forwarded-allow-ips '*' --timeout-keep-alive 65"]
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 24358 --workers 2 --proxy-headers --forwarded-allow-ips '*' --timeout-keep-alive 65"]
 
 # --- web (nginx + SPA) ------------------------------------------------------- #
 FROM nginx:1.27-alpine AS web

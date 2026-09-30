@@ -16,7 +16,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 # Bound to loopback only: nginx is the sole entry point from the network.
 ExecStart=/opt/qa-manual-hub/venv/bin/uvicorn app.main:app \
     --host 127.0.0.1 \
-    --port 9180 \
+    --port 24358 \
     --workers 2 \
     --proxy-headers \
     --forwarded-allow-ips 127.0.0.1 \

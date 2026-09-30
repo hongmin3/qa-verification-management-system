@@ -213,7 +213,7 @@ curl -fsS http://127.0.0.1:24357/health
 ```text
 브라우저 → nginx :80 ┬ /             → 핵심 앱          127.0.0.1:24357
                      ├ /manual-hub/  → Manual Hub SPA   (정적 파일)
-                     └ /manual-hub/api → Manual Hub 백엔드 127.0.0.1:9180
+                     └ /manual-hub/api → Manual Hub 백엔드 127.0.0.1:24358
 ```
 
 ### 8-1. Manual Hub 설치 (nginx는 건너뛴다)

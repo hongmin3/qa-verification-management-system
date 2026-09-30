@@ -96,3 +96,21 @@ def test_nginx_upstream_matches_config_yaml():
         f"nginx upstream 포트 {ports} 가 config.yaml 의 app.port"
         f" {_config_port()} 와 다르다"
     )
+
+
+# Validates: REQ-DEPLOY-004, REQ-HUBOPS-014
+def test_manual_hub_backend_port_is_the_same_everywhere():
+    """Manual Hub 백엔드 포트는 설정 파일 하나로 모이지 않고 다섯 곳에 적혀 있다. 하나만 바꾸면 502 다."""
+    hub = ROOT / "services/qa-manual-hub"
+    found = {
+        "통합 nginx upstream": re.search(r"upstream\s+qa_manual_hub_backend\s*\{[^}]*?server\s+127\.0\.0\.1:(\d+)\s*;",
+                                        (ROOT / "deploy/nginx/qa-platform.conf").read_text(encoding="utf-8"), re.S),
+        "단독 nginx upstream": re.search(r"server\s+127\.0\.0\.1:(\d+)\s*;", (hub / "deploy/nginx/qa-manual-hub.conf").read_text(encoding="utf-8")),
+        "systemd 유닛": re.search(r"--port\s+(\d+)", (hub / "deploy/systemd/qa-manual-hub.service").read_text(encoding="utf-8")),
+        "install.sh 기본값": re.search(r'BACKEND_PORT="\$\{BACKEND_PORT:-(\d+)\}"', (hub / "deploy/scripts/install.sh").read_text(encoding="utf-8")),
+        "개발 서버 프록시": re.search(r"http://127\.0\.0\.1:(\d+)", (hub / "frontend/vite.config.ts").read_text(encoding="utf-8")),
+    }
+    ports = {name: match.group(1) if match else None for name, match in found.items()}
+    assert None not in ports.values(), f"포트를 찾지 못한 곳이 있다: {ports}"
+    assert len(set(ports.values())) == 1, f"Manual Hub 백엔드 포트가 서로 다르다: {ports}"
+    assert next(iter(ports.values())) != str(_config_port()), "핵심 앱과 같은 포트를 쓰면 안 된다"

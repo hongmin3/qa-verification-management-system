@@ -16,7 +16,7 @@
 | 핵심 앱 포트 | `24357` |
 | Manual Hub APP_ROOT | `/opt/qa-manual-hub` |
 | Manual Hub DATA_ROOT | `/srv/qa-manual-hub` |
-| Manual Hub 백엔드 포트 | `9180` |
+| Manual Hub 백엔드 포트 | `24358` (서버는 전환 전이라 아직 `9180`. 아래 전환 절차) |
 | nginx 사이트 | `/etc/nginx/sites-enabled/qa-platform.conf` |
 
 ## 같은 호스트의 다른 서비스 (건드리지 않을 것)
@@ -32,6 +32,26 @@
 | Gemini API Key | 프로젝트 루트 `secrets.txt` 의 `GEMINI_API_KEY` | Git 제외 |
 | 서버 sudo 비밀번호 | 프로젝트 루트 `secrets.txt` 의 `SERVER_SUDO_PASSWORD` | Git 제외. 앱이 인식하지 않는 키이므로 화면·Report에 노출되지 않음 |
 | Manual Hub DB 비밀번호 | 서버 `<APP_ROOT>/.env` (권한 600) | `install.sh`가 무작위 생성 |
+
+## Manual Hub 백엔드 포트 전환 (9180 → 24358, 저장소 반영 2026-09-30, 서버 미적용)
+
+저장소는 `24358` 로 바뀌었고 서버는 아직 `9180` 이다. 핵심 앱을 서버에 배포할 때 함께 한다.
+`24358` 은 2026-09-30 서버 `ss -ltn` 에서 비어 있었고 임시 포트 범위(32768~60999) 밖이다.
+적용 직전에 한 번 더 비어 있는지 본다.
+
+```bash
+ss -ltn 'sport = :24358'                                    # 비어 있어야 한다
+sudo cp /etc/systemd/system/qa-manual-hub.service ~/qa-manual-hub.service.bak-$(date +%F)
+sudo cp -L /etc/nginx/sites-enabled/qa-platform.conf ~/qa-platform.conf.bak-$(date +%F)
+sudo sed -i 's/--port 9180/--port 24358/' /etc/systemd/system/qa-manual-hub.service
+sudo sed -i --follow-symlinks 's/127.0.0.1:9180/127.0.0.1:24358/' /etc/nginx/sites-enabled/qa-platform.conf
+sudo systemctl daemon-reload && sudo systemctl restart qa-manual-hub
+curl -fsS http://127.0.0.1:24358/api/health && sudo nginx -t && sudo systemctl reload nginx
+curl -fsS http://127.0.0.1/manual-hub/api/health            # nginx 경유
+```
+
+실패하면 두 백업 파일을 되돌려 놓고 `daemon-reload` → `restart qa-manual-hub` → `reload nginx` 한다.
+Docker Compose 로 도는 설치본은 컨테이너 안 포트만 바뀌므로 이미지를 다시 빌드하면 된다.
 
 ## 재기동 절차
 

@@ -17,10 +17,13 @@
                        /            \
                       /              \
                      ▼                ▼
-        ② 핵심 앱 (포트 24357)   ③ QA Manual Hub 백엔드 (포트 9180)
+        ② 핵심 앱 (포트 24357)   ③ QA Manual Hub 백엔드 (포트 24358)
         "QA 자동화 로직 전체"      "매뉴얼 문서 보관소"
         FastAPI + SQLite           FastAPI + PostgreSQL
 ```
+
+> **참고** Manual Hub 백엔드 포트는 2026-09-30 에 저장소에서 `9180` → `24358` 로 바꿨다. 운영 서버는 다음 배포 때
+> 전환한다. 그 전까지 서버에서는 `9180` 으로 떠 있다.
 
 세 서버는 **서로의 코드나 데이터베이스를 직접 들여다보지 않는다.** 핵심 앱이 QA Manual
 Hub의 문서를 참고할 때도 코드를 import하는 게 아니라, 평범한 웹 API 호출(HTTP)로만
@@ -37,7 +40,7 @@ Hub의 문서를 참고할 때도 코드를 import하는 게 아니라, 평범�
 
 1. **교통 정리(리버스 프록시)**: 사용자가 `http://10.13.0.222/`로 들어오면 "이건 핵심
    앱한테 보내야겠다"고 판단해 뒤에 있는 ②(포트 24357)로 요청을 전달한다. `/manual-hub/`로
-   들어오면 ③(포트 9180)이나 그 화면 파일로 보낸다. 사용자는 포트 번호를 몰라도 되고,
+   들어오면 ③(포트 24358)이나 그 화면 파일로 보낸다. 사용자는 포트 번호를 몰라도 되고,
    실제로는 이 서버들이 외부에서 직접 보이지 않는다(`127.0.0.1`에만 열려 있음) — nginx가
    유일한 정문이다.
 2. **자물쇠 채우기(HTTPS)**: 브라우저와 서버 사이 통신을 암호화한다. 80번(암호화 없음)으로
@@ -152,7 +155,7 @@ FastAPI로 만들었지만, 데이터는 SQLite가 아니라 PostgreSQL(정식 �
 **실행 방식**: `qa-manual-hub.service` systemd 유닛, `uvicorn`으로 실행.
 
 ```
-ExecStart = venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 9180 --workers 2 ...
+ExecStart = venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 24358 --workers 2 ...
 ```
 
 `--workers 2`는 요청을 동시에 처리할 프로세스를 2개 띄운다는 뜻 — 핵심 앱보다 더 많은
@@ -165,7 +168,7 @@ ExecStart = venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 9180 --workers
 sudo systemctl restart qa-manual-hub
 systemctl status qa-manual-hub --no-pager
 journalctl -u qa-manual-hub -n 50 --no-pager
-curl -s http://127.0.0.1:9180/api/health
+curl -s http://127.0.0.1:24358/api/health
 
 # 관리용 CLI (계정 생성, 데이터 정합성 검사 등)
 <APP_ROOT>/scripts/qamh check-storage       # DB 기록과 실제 파일이 일치하는지 검사
@@ -182,7 +185,7 @@ cd services/qa-manual-hub/backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 alembic upgrade head                        # DB 스키마 최신화
-uvicorn app.main:app --reload --port 9180
+uvicorn app.main:app --reload --port 24358
 
 cd services/qa-manual-hub/frontend
 npm install
@@ -207,7 +210,7 @@ pytest tests -q
 | Manual Hub 재기동 | `sudo systemctl restart qa-manual-hub` |
 | nginx 설정 반영(무중단) | `sudo nginx -t && sudo systemctl reload nginx` |
 | 핵심 앱 살아있는지 확인 | `curl -fsS http://127.0.0.1:24357/health` |
-| Manual Hub 살아있는지 확인 | `curl -s http://127.0.0.1:9180/api/health` |
+| Manual Hub 살아있는지 확인 | `curl -s http://127.0.0.1:24358/api/health` |
 | 셋 다 밖에서 정상인지 확인 | `curl -k https://127.0.0.1/health`, `.../manual-hub/api/health` |
 | 핵심 앱 최근 로그 | `journalctl -u qa-verification -n 50 --no-pager` |
 | Manual Hub 최근 로그 | `journalctl -u qa-manual-hub -n 50 --no-pager` |

@@ -8208,7 +8208,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | `SERVICE_USER` | `ubuntu` | 서비스 실행 계정 |
 | `DB_NAME` | `qa_manual_hub` | DB 이름 |
 | `DB_USER` | `qamanual` | DB 계정 |
-| `BACKEND_PORT` | `9180` | 백엔드 포트(127.0.0.1에만) |
+| `BACKEND_PORT` | `24358` | 백엔드 포트(127.0.0.1에만) |
 | `SERVER_NAME` | (없음) | nginx 호스트 이름. 다시 실행할 때 비우면 기존 값을 유지한다 |
 | `SKIP_NGINX` | `0` | `1`이면 nginx 설치·설정을 건너뛴다(플랫폼 하위 설치) |
 | `SKIP_UFW` | `0` | `1`이면 방화벽 규칙을 더하지 않는다 |
@@ -9535,6 +9535,7 @@ REQ-DEPLOY-001을 `tests/test_serve_bind.py`로 검증한다. 세 가지를 분�
 - 동작 검증: 임시 루트에 다른 포트를 적은 `config.yaml` 을 놓고 실제 `build_settings()` 를 통과시켜 `app_bind()` 의 결과가 따라오는지 본다. 빈 값일 때만 기본값으로 떨어지는지, 정수가 아닌 포트에서 실패하는지도 같은 방식으로 본다.
 - 텍스트 검사: 세 진입점이 `--port` 를 들고 있지 않고 `app.serve` 를 부르는지 본다. 이 검사는 파일에 포트 지정이 없다는 것만 증명하며 서버가 어느 포트에 뜨는지는 증명하지 않는다.
 - 텍스트 대조: nginx upstream 포트가 `config.yaml` 의 `app.port` 와 같은지 본다.
+- 텍스트 대조: Manual Hub 백엔드 포트(기본 `24358`)가 통합 nginx, 단독 nginx, systemd 유닛, `install.sh` 기본값, 개발 서버 프록시 다섯 곳에서 같고 핵심 앱 포트와 다른지 본다(`test_manual_hub_backend_port_is_the_same_everywhere`).
 
 `tests/test_monitor_health.py` 의 `test_default_base_url_comes_from_config_yaml` 은 운영 점검의 기본 대상이 같은 설정에서 나오는지를 별도로 본다. 해당 assertion 실패는 검사 실패다.
 
@@ -10120,7 +10121,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-HUBOPS-011 | `services/qa-manual-hub/backend/app/config.py`, `services/qa-manual-hub/deploy/.env.example` | TEST-HUBOPS-001 | implemented |
 | REQ-HUBOPS-012 | `services/qa-manual-hub/deploy/docker-compose.yml`, `services/qa-manual-hub/deploy/Dockerfile`, `services/qa-manual-hub/deploy/nginx/docker.conf` | TEST-HUBOPS-004, `services/qa-manual-hub/backend/tests/test_deploy_scripts.py` | implemented |
 | REQ-HUBOPS-013 | `services/qa-manual-hub/deploy/nginx/qa-manual-hub.conf` | TEST-HUBOPS-001 | implemented |
-| REQ-HUBOPS-014 | `services/qa-manual-hub/deploy/systemd/qa-manual-hub.service` | TEST-HUBOPS-001 | implemented |
+| REQ-HUBOPS-014 | `services/qa-manual-hub/deploy/systemd/qa-manual-hub.service` | TEST-HUBOPS-001, TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
 | NFR-HUB-001 | `services/qa-manual-hub/backend/app/audit.py`, `services/qa-manual-hub/backend/app/routers/documents.py`, `services/qa-manual-hub/backend/app/storage.py` | TEST-HUBAUTH-004: `services/qa-manual-hub/backend/tests/test_audit.py` | implemented |
 | NFR-HUB-002 | `services/qa-manual-hub/backend/app/security.py`, `services/qa-manual-hub/backend/app/deps.py`, `services/qa-manual-hub/backend/app/schemas.py` | TEST-HUBAUTH-001: `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
 | NFR-HUB-003 | `services/qa-manual-hub/backend/app/storage.py` | TEST-HUBDATA-002: `services/qa-manual-hub/backend/tests/test_documents.py` | implemented |
@@ -10219,6 +10220,8 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 ### 13.4 VXvue 일일 QA 점검
 
 - (TBD) 새 이슈 조회식 `daily_qa.polarion.issue_query` 의 운영 값. 코드 기본값은 `type:issue`, 저장소 `config.yaml` 은 verified 상태 또는 연구소 검토 결과 `lab_fixed` 다. 실제 운영에서 쓰는 조회식은 확인 필요(기존 SPEC 13절 항목 유지).
+  - 제안(2026-09-30, 전면 개편 때 검토): 조회식을 넓게 두고 이슈 스냅샷을 날마다 비교해 신규 이슈와 업데이트된 이슈를 나눈다. 자세한 안은 [결정 대기 목록](OPEN_QUESTIONS.md) 5절에 있다.
+- 결정됨 (2026-09-30): TC 옛 번호 → 새 번호 대응표는 만들지 않는다. 새 번호(`VP-…`)를 기준으로 삼는다. 사양–TC 연결 점검의 번호 맞추기(REQ-DAILY-005)는 지금 방식(VP 번호와 맞는 옛 번호)을 유지한다. VP 번호만으로 바꿀지는 확인 필요다(결정 대기 목록 5절의 수치).
 - 결정 필요: Claude 에게 보이는 자료 범위. 작업 폴더에 SRS·TC 전체를 둘지 후보만 둘지(보안 문서 3절의 결정 대기 항목). 선택지: (가) 전체(후보 밖 TC 찾기가 강하다, 나가는 양이 작업마다 다르다), (나) 후보만(양이 고정된다, 후보 밖 TC 를 못 찾는다). 추천: 첫 서버 실행의 `claude_logs/` 로 실제 읽은 양을 보고 정한다.
 - 결정 필요: 검토 결정 이력. 지금은 Finding 마다 마지막 결정 하나만 저장하고, 다시 결정하면 앞 결정이 사라진다. "누가 언제 남겼는지" 를 모든 결정에 대해 남길지 확인 필요.
 - 결정 필요: 매번 실패하는 이슈가 하나 있으면 이슈 기준 시각이 계속 멈춰 있고 처리한 이슈 기록이 커진다(REQ-DAILY-002). 몇 번 실패한 뒤 포기할지 정해야 한다.

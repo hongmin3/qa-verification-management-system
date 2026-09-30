@@ -173,7 +173,7 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
         │ /                                   │ /manual-hub/
         ▼                                     ▼
   핵심 앱 (uvicorn :24357)              Manual Hub SPA (정적 파일)
-  FastAPI + Jinja2                      + 백엔드 (uvicorn :9180)
+  FastAPI + Jinja2                      + 백엔드 (uvicorn :24358)
         │                                     │
         ▼                                     ▼
      SQLite                              PostgreSQL 16

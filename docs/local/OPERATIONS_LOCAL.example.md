@@ -16,7 +16,7 @@
 | 핵심 앱 포트 | `24357` |
 | Manual Hub APP_ROOT | `/opt/qa-manual-hub` |
 | Manual Hub DATA_ROOT | `/srv/qa-manual-hub` |
-| Manual Hub 백엔드 포트 | `9180` |
+| Manual Hub 백엔드 포트 | `24358` |
 | nginx 사이트 | `<사이트 파일명>` |
 
 ## 같은 호스트의 다른 서비스 (건드리지 않을 것)

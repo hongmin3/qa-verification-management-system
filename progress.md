@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-09-30 저녁 Manual Hub 포트 24358 · 이슈 수집 제안 · 지식 검토 준비
+
+- 완료: Manual Hub 백엔드 포트를 `9180` → `24358` 로 바꿨다(저장소만). 서버 `ss -ltn` 에서 비어 있고 임시 포트 범위(32768~60999) 밖인 번호다. 다섯 곳의 포트가 어긋나면 `tests/test_serve_bind.py` 가 실패한다(파일 하나를 옛 포트로 되돌려 실패하는 것 확인).
+- 서버 미적용: 운영 서버는 아직 `9180` 이다. 전환 절차와 되돌리기는 `docs/local/OPERATIONS_LOCAL.md` 에 적었다. 다음 배포 때 핵심 앱(Claude CLI 전환)과 함께 한다.
+- 결정 기록: TC 옛 번호 대응표는 만들지 않는다. VP 번호만으로 맞추는 것은 보류했다. 실측으로 TC 없음이 214건에서 266건으로 늘어난다(`OPEN_QUESTIONS.md` 5절).
+- 제안 기록: 새 이슈 조회식 대신 이슈 스냅샷 비교로 신규·업데이트를 나누는 안(`OPEN_QUESTIONS.md` 5절). 구현은 전면 개편 때 한다.
+- 지식 검토(`akela/CURATE.md`): `akela stats` 로 대기열을 만들고 검토표를 사용자에게 올렸다. 승인 전이라 `knowledge/` 는 고치지 않았다.
+
 ## 2026-09-30 오후 화면 기능 AI 를 Claude CLI 로 전환 (REQ-AICALL-005) · 전면 개편 전 정리
 
 - 완료: `ai.provider`(기본 `claude_cli`)로 Regression 분석·QA Agent·매뉴얼 개정 검증의 AI 를 고른다. 도구를 주지 않는 격리 호출(`app/core/claude_cli.py`), 제공자별 모델 등급, Claude 알림 종류, 상태 표시줄을 만들었다. Gemini 경로는 설정으로 계속 쓸 수 있다.
