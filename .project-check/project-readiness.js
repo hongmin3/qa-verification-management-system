@@ -22,6 +22,10 @@ const DEFAULT_CHANGELOG = fs.existsSync(KIT_CHANGELOG) ? KIT_CHANGELOG : path.jo
 const REQUIRED = ['SPEC.md', 'CHANGELOG.md', 'progress.md', 'AGENTS.md', 'CLAUDE.md'];
 const ID = /^(REQ|NFR|TEST)-[A-Z0-9]+-\d{3}$/;
 const IDS = /\b(?:REQ|NFR|TEST)-[A-Za-z0-9]+-\d+\b/g;
+// SPEC.md의 필수 절. 기능 사양 문서(specs/<기능>.md)는 3·4·6~10절을 SPEC.md에서 물려받으므로 1·2·5·11·12만 둔다.
+// 번호는 일부러 SPEC.md와 같은 뜻이다 — 빠진 번호는 그 내용이 공통이라는 뜻이다.
+const SPEC_SECTIONS = [1, 2, 5, 9, 11, 12];
+const FEATURE_SECTIONS = [1, 2, 5, 11, 12];
 const PLACEHOLDER = /\bTBD\b|\{\{[^}]+\}\}|확인 필요/;
 const normalize = text => text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 
@@ -92,7 +96,7 @@ function checkProject(projectRoot, options = {}) {
   const template = normalize(fs.readFileSync(options.templatePath || DEFAULT_TEMPLATE, 'utf8')).trim();
   const expectedVersion = template.match(/<!--\s*spec-workflow:\s*(\S+)\s*-->/)?.[1];
   if (!expectedVersion || !template.startsWith('## ') || template.length < 200) throw new Error('Invalid canonical workflow template');
-  const result = { root, scope: 'project', errors: [], warnings: [], counts: { documents: 0, requirements: 0, implementationPaths: 0, testPaths: 0, traceRows: 0 }, workflowVersion: expectedVersion };
+  const result = { root, scope: 'project', errors: [], warnings: [], counts: { documents: 0, specDocuments: 0, requirements: 0, implementationPaths: 0, testPaths: 0, traceRows: 0 }, workflowVersion: expectedVersion };
   const error = (code, message) => result.errors.push({ code, message });
   const warning = (code, message) => result.warnings.push({ code, message });
   const docs = {};
@@ -138,38 +142,64 @@ function checkProject(projectRoot, options = {}) {
 
   const rawSpec = docs['SPEC.md'];
   if (rawSpec?.trim()) {
-    const spec = visibleMarkdown(rawSpec);
-    const sec = sections(spec);
-    for (const number of [1, 2, 5, 9, 11, 12]) {
-      if (!sec.has(number) || !sec.get(number)) error('SPEC_SECTION_MISSING', `SPEC.md: required section ${number} missing or empty`);
+    const specHtml = loadSpecHtml();
+    // 사양 묶음: SPEC.md, 그리고 인덱스 구역이 있으면 그 구역이 가리키는 specs/<기능>.md. 인덱스 해석은
+    // 렌더러 한 벌(specSet)이다 — HTML에 들어가는 문서와 여기서 검사하는 문서가 같아야 카드 수가 맞는다.
+    // 인덱스가 없으면 목록은 SPEC.md 하나이고 아래 규칙은 모두 예전과 똑같이 동작한다.
+    const set = specHtml.specSet(root, rawSpec);
+    for (const p of set.problems) (p.level === 'warning' ? warning : error)(p.code, p.message);
+    const specDocuments = [{ label: 'SPEC.md', raw: rawSpec, required: SPEC_SECTIONS }];
+    for (const d of set.documents) {
+      const raw = normalize(d.text);
+      if (!raw.trim()) { error('DOCUMENT_EMPTY', `${d.relative}: empty document`); continue; }
+      if (/\bbootstrap stub\b/i.test(raw)) error('BOOTSTRAP_INCOMPLETE', `${d.relative}: bootstrap stub remains`);
+      specDocuments.push({ label: d.relative, raw, required: FEATURE_SECTIONS });
     }
-    // Sections 13/14 explicitly hold open questions and future ideas. They remain
-    // visible warnings; placeholders in the implemented contract fail completion.
-    const core = spec.replace(/^##\s+(?:13|14)\.[\s\S]*?(?=^##\s+\d+\.|$(?![\s\S]))/gm, '');
-    if (PLACEHOLDER.test(core)) error('SPEC_INCOMPLETE', 'SPEC.md: unresolved placeholder in current specification');
-    if ([13, 14].some(n => PLACEHOLDER.test(sec.get(n) || ''))) warning('SPEC_OPEN_QUESTIONS', 'SPEC.md: open questions or future proposals remain; review their effect on the current scope');
+    result.counts.specDocuments = specDocuments.length;
+    for (const doc of specDocuments) { doc.text = visibleMarkdown(doc.raw); doc.sec = sections(doc.text); }
+
+    // 정의는 모든 문서에서 먼저 모은다: 기능 문서의 추적성 표가 SPEC.md의 NFR을 가리킬 수 있고, 두 번째
+    // 문서에서 다시 쓴 ID는 두 문서를 다 읽은 뒤에야 충돌로 보인다.
     const defined = new Map();
     const untitled = [];
-    const headings = [...spec.matchAll(/^ {0,3}#{2,4}\s+((?:REQ|NFR|TEST)-\S+)[^\n]*$/gm)];
-    for (let i = 0; i < headings.length; i++) {
-      const id = headings[i][1].replace(/[.,:;]+$/, '');
-      if (!ID.test(id)) { error('REQUIREMENT_ID_INVALID', `SPEC.md: invalid definition ${id}`); continue; }
-      if (defined.has(id)) error('REQUIREMENT_ID_DUPLICATE', `SPEC.md: duplicate definition ${id}`);
-      const body = spec.slice(headings[i].index + headings[i][0].length, headings[i + 1]?.index ?? spec.length).split(/^##\s/m)[0].trim();
-      if (!body || !body.replace(/^#{1,6}[^\n]*$/gm, '').trim()) error('REQUIREMENT_EMPTY', `SPEC.md: ${id} has no description`);
-      defined.set(id, body);
-      result.counts.requirements++;
-      // 번호만 보고 무슨 기능인지 알 수 있어야 한다: "### REQ-EXPORT-001 CSV 저장". 기존 SPEC을
-      // 막지 않도록 경고로만 알린다. TEST 절차는 검증 대상 ID가 이름 역할을 하므로 제외한다.
-      if (!id.startsWith('TEST-') && !headings[i][0].replace(/^ {0,3}#{2,4}\s+\S+/, '').replace(/^[.,:;\s]+/, '').trim()) untitled.push(id);
+    for (const doc of specDocuments) {
+      for (const number of doc.required) {
+        if (!doc.sec.has(number) || !doc.sec.get(number)) error('SPEC_SECTION_MISSING', `${doc.label}: required section ${number} missing or empty`);
+      }
+      // Sections 13/14 explicitly hold open questions and future ideas. They remain
+      // visible warnings; placeholders in the implemented contract fail completion.
+      const core = doc.text.replace(/^##\s+(?:13|14)\.[\s\S]*?(?=^##\s+\d+\.|$(?![\s\S]))/gm, '');
+      if (PLACEHOLDER.test(core)) error('SPEC_INCOMPLETE', `${doc.label}: unresolved placeholder in current specification`);
+      if ([13, 14].some(n => PLACEHOLDER.test(doc.sec.get(n) || ''))) warning('SPEC_OPEN_QUESTIONS', `${doc.label}: open questions or future proposals remain; review their effect on the current scope`);
+      doc.own = new Set();
+      const headings = [...doc.text.matchAll(/^ {0,3}#{2,4}\s+((?:REQ|NFR|TEST)-\S+)[^\n]*$/gm)];
+      for (let i = 0; i < headings.length; i++) {
+        const id = headings[i][1].replace(/[.,:;]+$/, '');
+        if (!ID.test(id)) { error('REQUIREMENT_ID_INVALID', `${doc.label}: invalid definition ${id}`); continue; }
+        const body = doc.text.slice(headings[i].index + headings[i][0].length, headings[i + 1]?.index ?? doc.text.length).split(/^##\s/m)[0].trim();
+        if (!body || !body.replace(/^#{1,6}[^\n]*$/gm, '').trim()) error('REQUIREMENT_EMPTY', `${doc.label}: ${id} has no description`);
+        const previous = defined.get(id);
+        if (previous) error('REQUIREMENT_ID_DUPLICATE', `${doc.label}: duplicate definition ${id}${previous.label === doc.label ? '' : `; already defined in ${previous.label}`}`);
+        else defined.set(id, { label: doc.label, body });
+        doc.own.add(id);
+        result.counts.requirements++;
+        // 번호만 보고 무슨 기능인지 알 수 있어야 한다: "### REQ-EXPORT-001 CSV 저장". 기존 SPEC을
+        // 막지 않도록 경고로만 알린다. TEST 절차는 검증 대상 ID가 이름 역할을 하므로 제외한다.
+        if (!id.startsWith('TEST-') && !headings[i][0].replace(/^ {0,3}#{2,4}\s+\S+/, '').replace(/^[.,:;\s]+/, '').trim()) untitled.push({ id, label: doc.label });
+      }
     }
     const named = [...defined.keys()].filter(id => !id.startsWith('TEST-')).length;
-    if (untitled.length) warning('REQUIREMENT_TITLE_MISSING', `SPEC.md: ${untitled.length} of ${named} REQ/NFR headings have no name (e.g. ${untitled.slice(0, 3).join(', ')}); write "### ${untitled[0]} <기능 이름>" so the ID alone tells what it does`);
-    if (![...defined.keys()].some(id => id.startsWith('REQ-'))) error('REQUIREMENT_MISSING', 'SPEC.md: no functional REQ definition');
-    const implPaths = new Set();
-    const testPaths = new Set(ticks(spec).filter(testToken));
-    const traceIds = new Set();
-    let header = null;
+    if (untitled.length) {
+      const where = [...new Set(untitled.map(u => u.label))].join(', ');
+      warning('REQUIREMENT_TITLE_MISSING', `${where}: ${untitled.length} of ${named} REQ/NFR headings have no name (e.g. ${untitled.slice(0, 3).map(u => u.id).join(', ')}); write "### ${untitled[0].id} <기능 이름>" so the ID alone tells what it does`);
+    }
+    if (![...defined.keys()].some(id => id.startsWith('REQ-'))) error('REQUIREMENT_MISSING', `SPEC.md: no functional REQ definition${specDocuments.length > 1 ? ` in ${specDocuments.length} specification documents` : ''}`);
+
+    // 각 문서는 자기가 정의한 ID를 자기 12절에서 추적한다. 통합 표를 하나 더 두면 같은 행이 두 벌이 되고
+    // 한쪽이 조용히 낡는다. 경로는 모든 문서에서 프로젝트 루트 기준이다(specs/ 안에서도).
+    const implPaths = new Map();
+    const testPaths = new Map();
+    const remember = (map, token, label) => { if (!map.has(token)) map.set(token, label); };
     const manualVerified = []; const ungatedVerified = [];
     // 무엇이 게이트에서 실행되는가: 호출자가 목록을 주면(키트: check-kit.js가 돌리는 테스트) 그 목록,
     // 아니면 프로젝트의 botyard.json verify 명령이 하나라도 있을 때 그 프로젝트의 테스트 전부로 본다.
@@ -179,81 +209,99 @@ function checkProject(projectRoot, options = {}) {
       const on = Array.isArray(verify) && verify.some(v => typeof v === 'string' && v.trim());
       return () => on;
     })();
-    for (const line of (sec.get(12) || '').split('\n')) {
-      if (!line.trim().startsWith('|')) continue;
-      const cells = loadSpecHtml().cells(line);
-      if (cells.some(c => /^(?:Requirement|요구사항)$/i.test(c))) { header = cells; continue; }
-      if (!cells.some(c => /\b(?:REQ|NFR|TEST)-/.test(c))) continue;
-      const reqCol = header?.findIndex(c => /^(?:Requirement|요구사항)$/i.test(c)) ?? 0;
-      const implCol = header?.findIndex(c => /^(?:Implementation|구현)$/i.test(c)) ?? 1;
-      const testCol = header?.findIndex(c => /^(?:Test|테스트)$/i.test(c)) ?? 2;
-      const statusCol = header ? header.findIndex(c => /^(?:Status|상태)$/i.test(c)) : 3;
-      if (implCol < 0 || testCol < 0) { error('TRACE_COLUMNS_MISSING', 'SPEC.md: traceability table requires Implementation and Test columns'); continue; }
-      const rowIds = cells[reqCol]?.match(IDS) || [];
-      if (!rowIds.length) continue;
-      result.counts.traceRows++;
-      for (const id of cells.join(' ').match(IDS) || []) if (!defined.has(id)) error('TRACE_UNDEFINED', `SPEC.md: traceability references undefined ${id}`);
-      rowIds.forEach(id => traceIds.add(id));
-      const paths = ticks(cells[implCol] || '').filter(fileToken);
-      paths.forEach(p => implPaths.add(p));
-      if (!paths.length) error('TRACE_IMPLEMENTATION_MISSING', `SPEC.md: ${rowIds.join(', ')} lacks implementation file reference`);
-      // Test 열은 테스트 경로(`tests/…`, `test-*.js` 등), `<도구> --self-test`, 정의된 TEST-ID만 받는다.
-      // 존재하기만 하면 되는 규칙이면 README.md를 적어도 통과한다.
-      const refs = [];
-      for (const token of ticks(cells[testCol] || '')) {
-        const r = testRef(token);
-        if (r) { refs.push(r); testPaths.add(r.file); } else error('TRACE_TEST_INVALID', `SPEC.md: ${rowIds.join(', ')} Test column \`${token}\` is not a test file, "<tool> --self-test" or TEST-ID`);
-      }
-      const testIds = (cells[testCol] || '').match(/\bTEST-[A-Z0-9]+-\d{3}\b/g) || [];
-      if (!refs.length && !testIds.some(id => defined.has(id))) error('TRACE_TEST_MISSING', `SPEC.md: ${rowIds.join(', ')} lacks test file or defined TEST procedure`);
-      if (statusCol >= 0) {
-        const value = (cells[statusCol] || '').replace(/`/g, '').trim().toLowerCase();
-        if (!STATUSES.includes(value)) error('TRACE_STATUS_INVALID', `SPEC.md: ${rowIds.join(', ')} Status "${cells[statusCol] || ''}" must be one of ${STATUSES.join(' / ')}`);
-        else if (value === 'verified') {
-          // 자동 테스트 = 표에 적은 테스트 경로, 또는 11절 본문에 테스트 경로가 있는 TEST-ID.
-          const automated = [...refs];
-          for (const id of testIds) for (const token of ticks(defined.get(id) || '')) { const r = testRef(token); if (r) automated.push(r); }
-          if (!automated.length) manualVerified.push(...rowIds);
-          else if (!automated.some(r => gated(r.ref))) ungatedVerified.push(...rowIds);
+    for (const doc of specDocuments) {
+      const label = doc.label;
+      for (const token of ticks(doc.text).filter(testToken)) remember(testPaths, token, label);
+      const traceIds = new Set();
+      let header = null;
+      for (const line of (doc.sec.get(12) || '').split('\n')) {
+        if (!line.trim().startsWith('|')) continue;
+        const cells = specHtml.cells(line);
+        if (cells.some(c => /^(?:Requirement|요구사항)$/i.test(c))) { header = cells; continue; }
+        if (!cells.some(c => /\b(?:REQ|NFR|TEST)-/.test(c))) continue;
+        const reqCol = header?.findIndex(c => /^(?:Requirement|요구사항)$/i.test(c)) ?? 0;
+        const implCol = header?.findIndex(c => /^(?:Implementation|구현)$/i.test(c)) ?? 1;
+        const testCol = header?.findIndex(c => /^(?:Test|테스트)$/i.test(c)) ?? 2;
+        const statusCol = header ? header.findIndex(c => /^(?:Status|상태)$/i.test(c)) : 3;
+        if (implCol < 0 || testCol < 0) { error('TRACE_COLUMNS_MISSING', `${label}: traceability table requires Implementation and Test columns`); continue; }
+        const rowIds = cells[reqCol]?.match(IDS) || [];
+        if (!rowIds.length) continue;
+        result.counts.traceRows++;
+        for (const id of cells.join(' ').match(IDS) || []) if (!defined.has(id)) error('TRACE_UNDEFINED', `${label}: traceability references undefined ${id}`);
+        rowIds.forEach(id => traceIds.add(id));
+        const paths = ticks(cells[implCol] || '').filter(fileToken);
+        paths.forEach(p => remember(implPaths, p, label));
+        if (!paths.length) error('TRACE_IMPLEMENTATION_MISSING', `${label}: ${rowIds.join(', ')} lacks implementation file reference`);
+        // Test 열은 테스트 경로(`tests/…`, `test-*.js` 등), `<도구> --self-test`, 정의된 TEST-ID만 받는다.
+        // 존재하기만 하면 되는 규칙이면 README.md를 적어도 통과한다.
+        const refs = [];
+        for (const token of ticks(cells[testCol] || '')) {
+          const r = testRef(token);
+          if (r) { refs.push(r); remember(testPaths, r.file, label); } else error('TRACE_TEST_INVALID', `${label}: ${rowIds.join(', ')} Test column \`${token}\` is not a test file, "<tool> --self-test" or TEST-ID`);
+        }
+        const testIds = (cells[testCol] || '').match(/\bTEST-[A-Z0-9]+-\d{3}\b/g) || [];
+        if (!refs.length && !testIds.some(id => defined.has(id))) error('TRACE_TEST_MISSING', `${label}: ${rowIds.join(', ')} lacks test file or defined TEST procedure`);
+        if (statusCol >= 0) {
+          const value = (cells[statusCol] || '').replace(/`/g, '').trim().toLowerCase();
+          if (!STATUSES.includes(value)) error('TRACE_STATUS_INVALID', `${label}: ${rowIds.join(', ')} Status "${cells[statusCol] || ''}" must be one of ${STATUSES.join(' / ')}`);
+          else if (value === 'verified') {
+            // 자동 테스트 = 표에 적은 테스트 경로, 또는 11절 본문에 테스트 경로가 있는 TEST-ID.
+            const automated = [...refs];
+            for (const id of testIds) for (const token of ticks(defined.get(id)?.body || '')) { const r = testRef(token); if (r) automated.push(r); }
+            if (!automated.length) manualVerified.push(...rowIds);
+            else if (!automated.some(r => gated(r.ref))) ungatedVerified.push(...rowIds);
+          }
         }
       }
+      // 정의한 문서가 추적한다. 다른 문서의 표에 적어도 이 문서의 누락은 메워지지 않는다.
+      for (const id of doc.own) if (!id.startsWith('TEST-') && !traceIds.has(id)) error('TRACE_REQUIREMENT_MISSING', `${label}: ${id} missing from traceability table`);
     }
-    for (const id of defined.keys()) if (!id.startsWith('TEST-') && !traceIds.has(id)) error('TRACE_REQUIREMENT_MISSING', `SPEC.md: ${id} missing from traceability table`);
+    const labels = specDocuments.length > 1 ? 'specification documents' : 'SPEC.md';
     // 이번 workflow 판에서는 경고다. 다음 판에서 오류로 올린다(docs/project-readiness.md).
-    if (manualVerified.length) warning('TRACE_VERIFIED_MANUAL', `SPEC.md: ${manualVerified.length} verified row(s) have only manual TEST procedures (${manualVerified.slice(0, 5).join(', ')}); set Status to implemented, or add an automated test that the gate runs`);
-    if (ungatedVerified.length) warning('TRACE_VERIFIED_UNGATED', `SPEC.md: ${ungatedVerified.length} verified row(s) have automated tests that no gate runs (${ungatedVerified.slice(0, 5).join(', ')}); ${options.gatedTests ? 'register the test in the gate' : 'add the test command to botyard.json "verify"'}, or set Status to implemented`);
+    if (manualVerified.length) warning('TRACE_VERIFIED_MANUAL', `${labels}: ${manualVerified.length} verified row(s) have only manual TEST procedures (${manualVerified.slice(0, 5).join(', ')}); set Status to implemented, or add an automated test that the gate runs`);
+    if (ungatedVerified.length) warning('TRACE_VERIFIED_UNGATED', `${labels}: ${ungatedVerified.length} verified row(s) have automated tests that no gate runs (${ungatedVerified.slice(0, 5).join(', ')}); ${options.gatedTests ? 'register the test in the gate' : 'add the test command to botyard.json "verify"'}, or set Status to implemented`);
     for (const [kind, paths] of [['IMPLEMENTATION', implPaths], ['TEST', testPaths]]) {
       result.counts[kind === 'TEST' ? 'testPaths' : 'implementationPaths'] = paths.size;
-      for (const token of paths) {
+      for (const [token, label] of paths) {
         const file = token.split('#')[0].replace(/\\/g, '/');
         const target = path.resolve(root, file);
-        if (path.isAbsolute(file) || /^[A-Za-z]:/.test(file) || !inside(root, target)) { error('PATH_OUTSIDE_PROJECT', `SPEC.md: ${token} must be project-relative`); continue; }
+        if (path.isAbsolute(file) || /^[A-Za-z]:/.test(file) || !inside(root, target)) { error('PATH_OUTSIDE_PROJECT', `${label}: ${token} must be project-relative`); continue; }
         try {
-          if (!inside(root, fs.realpathSync(target))) error('PATH_OUTSIDE_PROJECT', `SPEC.md: ${token} resolves outside project`);
-          else if (!fs.statSync(target).isFile()) error(`${kind}_PATH_MISSING`, `SPEC.md: ${token} is not a file`);
+          if (!inside(root, fs.realpathSync(target))) error('PATH_OUTSIDE_PROJECT', `${label}: ${token} resolves outside project`);
+          else if (!fs.statSync(target).isFile()) error(`${kind}_PATH_MISSING`, `${label}: ${token} is not a file`);
         } catch (err) {
-          if (err.code === 'ENOENT' || err.code === 'ENOTDIR') error(`${kind}_PATH_MISSING`, `SPEC.md: referenced file ${token} missing`);
+          if (err.code === 'ENOENT' || err.code === 'ENOTDIR') error(`${kind}_PATH_MISSING`, `${label}: referenced file ${token} missing`);
           else throw err;
         }
       }
     }
-    const specHtml = loadSpecHtml();
     const html = specHtml.status(root);
     const regenerate = `run ${specHtml.REGENERATE}`;
+    const sources = specDocuments.length > 1 ? `SPEC.md and ${specDocuments.length - 1} feature specification(s)` : 'SPEC.md';
     if (html.status === 'MISSING') error('SPEC_HTML_MISSING', `${html.output}: human-readable SPEC view missing; ${regenerate}`);
-    else if (html.status === 'STALE') error('SPEC_HTML_STALE', `${html.output}: ${html.reason === 'content' ? 'content differs from a fresh render of SPEC.md (edited by hand?)' : 'generated from an older SPEC.md'}; ${regenerate}`);
+    else if (html.status === 'STALE') error('SPEC_HTML_STALE', `${html.output}: ${html.reason === 'content' ? `content differs from a fresh render of ${sources} (edited by hand?)` : `generated from an older ${sources}`}; ${regenerate}`);
     else if (html.status === 'UNMANAGED') error('SPEC_HTML_UNMANAGED', `${html.output}: not generated from SPEC.md (or a symlink); move it aside, then ${regenerate}`);
-    else if (html.cards !== undefined && html.cards !== result.counts.requirements) error('SPEC_HTML_CARDS_MISMATCH', `${html.output}: ${html.cards} requirement cards but ${result.counts.requirements} definitions in SPEC.md; the page would hide or invent requirements`);
+    else if (html.cards !== undefined && html.cards !== result.counts.requirements) error('SPEC_HTML_CARDS_MISMATCH', `${html.output}: ${html.cards} requirement cards but ${result.counts.requirements} definitions in ${sources}; the page would hide or invent requirements`);
     else if (html.version !== specHtml.RENDERER_VERSION) warning('SPEC_HTML_RENDERER_OUTDATED', `${html.output}: rendered by ${html.version}; ${regenerate} for the ${specHtml.RENDERER_VERSION} layout`);
     // 쉬운 말 기준(AGENTS.md "SPEC 문장 쓰기"). 판정이 아니라 다시 읽을 곳을 알린다. 목록은 렌더러 한 벌이다.
-    const plain = specHtml.plainLanguage(rawSpec);
-    result.counts.paragraphs = plain.paragraphs;
-    if (plain.words.length || plain.long.length) {
-      const words = plain.words.map(w => `${w.word} ${w.count}(SPEC.md:${w.line})`).join(', ');
-      const long = plain.long.length ? `${plain.long.length} paragraph(s) over ${plain.limit} chars (first SPEC.md:${plain.long[0].line}, ${plain.long[0].chars} chars)` : '';
-      warning('SPEC_PLAIN_LANGUAGE', `SPEC.md: hard-to-read wording for a first-time reader — ${[words && 'words: ' + words, long].filter(Boolean).join('; ')}; ${plain.paragraphs} paragraphs inspected; rewrite per AGENTS.md "SPEC 문장 쓰기"`);
+    result.counts.paragraphs = 0;
+    for (const doc of specDocuments) {
+      const plain = specHtml.plainLanguage(doc.raw);
+      result.counts.paragraphs += plain.paragraphs;
+      if (plain.words.length || plain.long.length) {
+        const words = plain.words.map(w => `${w.word} ${w.count}(${doc.label}:${w.line})`).join(', ');
+        const long = plain.long.length ? `${plain.long.length} paragraph(s) over ${plain.limit} chars (first ${doc.label}:${plain.long[0].line}, ${plain.long[0].chars} chars)` : '';
+        warning('SPEC_PLAIN_LANGUAGE', `${doc.label}: hard-to-read wording for a first-time reader — ${[words && 'words: ' + words, long].filter(Boolean).join('; ')}; ${plain.paragraphs} paragraphs inspected; rewrite per AGENTS.md "SPEC 문장 쓰기"`);
+      }
     }
-    if (result.counts.testPaths === 0) warning('NO_TEST_FILE_REFERENCES', 'SPEC.md: no automated test file references inspected; documented TEST procedures need actual execution evidence');
+    // 한눈에 보기(workflow v8): SPEC.md 1절에 프로젝트 전체의 흐름도가 있어야 처음 보는 사람이 무슨 프로젝트이고
+    // 어떤 흐름으로 돌아가는지 먼저 본다. 그릴 수 있는지는 렌더러의 파서로 판정한다(HTML에 그려지는 것과 같다).
+    // 경고다: 오류로 두면 자동 갱신된 다른 PC의 프로젝트가 흐름도를 쓰기 전까지 세션 준비에서 막힌다.
+    const overview = specHtml.flowBlocks(rawSpec, 1);
+    result.counts.overviewDiagrams = overview.filter(b => b.drawable).length;
+    if (!overview.length) warning('SPEC_OVERVIEW_MISSING', 'SPEC.md: section 1 has no overview diagram; add "### 한눈에 보기" with a ```flow block showing what starts this project, its main steps, results and failure paths (AGENTS.md "한눈에 보기")');
+    else if (!result.counts.overviewDiagrams) warning('SPEC_OVERVIEW_INVALID', `SPEC.md:${overview[0].line}: the section 1 flow block cannot be drawn; write each line as "A -> B -> C" (labelled: "A -(실패)-> B"), it is shown as plain code until then`);
+    if (result.counts.testPaths === 0) warning('NO_TEST_FILE_REFERENCES', `${labels}: no automated test file references inspected; documented TEST procedures need actual execution evidence`);
   }
   return result;
 }
@@ -276,7 +324,7 @@ function main(args) {
     else {
       for (const finding of result.errors) console.log(`ERROR ${finding.code}: ${finding.message}`);
       for (const finding of result.warnings) console.log(`WARN ${finding.code}: ${finding.message}`);
-      console.log(`TOTAL scope=project discovered=1 checked=1 excluded=0 failed=${result.errors.length ? 1 : 0} documents=${result.counts.documents} requirements=${result.counts.requirements} implementationPaths=${result.counts.implementationPaths} testPaths=${result.counts.testPaths}`);
+      console.log(`TOTAL scope=project discovered=1 checked=1 excluded=0 failed=${result.errors.length ? 1 : 0} documents=${result.counts.documents} specDocuments=${result.counts.specDocuments} requirements=${result.counts.requirements} implementationPaths=${result.counts.implementationPaths} testPaths=${result.counts.testPaths}`);
     }
     return result.errors.length ? 1 : 0;
   } catch (err) {
@@ -286,4 +334,4 @@ function main(args) {
   }
 }
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { checkProject, visibleMarkdown, testRef, STATUSES };
+module.exports = { checkProject, visibleMarkdown, sections, testRef, STATUSES, SPEC_SECTIONS, FEATURE_SECTIONS };

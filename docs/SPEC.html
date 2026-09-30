@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v6">
 <meta name="spec-html-renderer" content="v6">
-<meta name="spec-source-sha256" content="283e10801ea25e8ecd0a456ac1a038bead76d5539e393fbf46c3602317a4098a">
+<meta name="spec-source-sha256" content="08cbc5239286550ae493dbe8f7c4eb85dcc64c2ae17ee5ed168c95e255062c4d">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -801,6 +801,49 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>개발팀이 &quot;로그인 화면의 비밀번호 규칙 변경&quot;이라는 변경사항 PDF 를 보내면, 이 시스템은 <span class="term" title="문서를 묶는 가장 위 단위. 예: VXvue. 화면 이름은 Products" tabindex="0">제품</span> <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span>와 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> Excel 을 대조해 다시 확인할 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 목록과 그 이유(<span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span>의 어느 절, <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 의 어느 행)를 보여 준다. 최종 결정은 사람이 한다.</p>
 </aside>
 <p>사람이 따로 AI 채팅에 <span class="term" title="AI 가 판정에 필요한데 자료에 없어 사람에게 묻는 문장(open_questions). 답은 다음 실행 입력에 들어간다" tabindex="0">질문</span>하지 않고, 정해진 화면과 예약 실행 안에서 이 일이 끝나는 것이 핵심이다.</p>
+<h3>한눈에 보기</h3>
+<figure class="flow">
+<svg viewBox="0 0 595 532" width="595" height="532" role="img" aria-label="QA 담당자 화면 요청 → 변경 문서·이슈·개정 매뉴얼, 변경 문서·이슈·개정 매뉴얼 → 사양서·TC·지식 사본과 대조, 사양서·TC·지식 사본과 대조 → Gemini 판정, Gemini 판정 → 판정 검증, 판정 검증 → 보고서·Excel·Word Comment, 평일 07:30 예약 실행 → 일일 QA 점검(5.4절), 일일 QA 점검(5.4절) → Claude Skill, Claude Skill → 결과 형식 검증, 결과 형식 검증 → 요약 메일, 요약 메일 → 검토 화면 승인·거절, 담당자 PC 예약 실행 → 사양서·지식 폴더 동기화, 사양서·지식 폴더 동기화 → 서버 사양서·지식 사본, 판정 검증 → 확인 요청, 확인 요청 → 사람이 원본 확인, 결과 형식 검증 → 작업 실패·건너뜀 기록, 작업 실패·건너뜀 기록 → 요약 메일">
+<defs><marker id="flow-arrow-1" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M116 44 L106.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M106.5 124 L134.5 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M134.5 204 L227 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M227 284 L203.5 328" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M203.5 364 L189.5 408" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M297.5 44 L307.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M307.5 124 L315 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M315 204 L361 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M361 284 L358.5 408" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M358.5 444 L220.5 488" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M479 44 L498.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M498.5 124 L478 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M203.5 364 L466.5 408" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="335" y="386">근거 부족·AI 오류</text>
+<path class="edge" d="M466.5 444 L385 488" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M361 284 L351.5 328" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="356.3" y="306">형식 오류 또는 한도</text>
+<path class="edge" d="M351.5 364 L358.5 408" marker-end="url(#flow-arrow-1)"/>
+<g class="node"><rect x="39.5" y="8" width="153" height="36" rx="8"/><text x="116" y="26">QA 담당자 화면 요청</text></g>
+<g class="node"><rect x="8" y="88" width="197" height="36" rx="8"/><text x="106.5" y="106">변경 문서·이슈·개정 매뉴얼</text></g>
+<g class="node"><rect x="35" y="168" width="199" height="36" rx="8"/><text x="134.5" y="186">사양서·TC·지식 사본과 대조</text></g>
+<g class="node"><rect x="175.5" y="248" width="103" height="36" rx="8"/><text x="227" y="266">Gemini 판정</text></g>
+<g class="node"><rect x="161.5" y="328" width="84" height="36" rx="8"/><text x="203.5" y="346">판정 검증</text></g>
+<g class="node"><rect x="86.5" y="408" width="206" height="36" rx="8"/><text x="189.5" y="426">보고서·Excel·Word Comment</text></g>
+<g class="node"><rect x="216.5" y="8" width="162" height="36" rx="8"/><text x="297.5" y="26">평일 07:30 예약 실행</text></g>
+<g class="node"><rect x="229" y="88" width="157" height="36" rx="8"/><text x="307.5" y="106">일일 QA 점검(5.4절)</text></g>
+<g class="node"><rect x="258" y="168" width="114" height="36" rx="8"/><text x="315" y="186">Claude Skill</text></g>
+<g class="node"><rect x="302.5" y="248" width="117" height="36" rx="8"/><text x="361" y="266">결과 형식 검증</text></g>
+<g class="node"><rect x="316.5" y="408" width="84" height="36" rx="8"/><text x="358.5" y="426">요약 메일</text></g>
+<g class="node"><rect x="145" y="488" width="151" height="36" rx="8"/><text x="220.5" y="506">검토 화면 승인·거절</text></g>
+<g class="node"><rect x="402.5" y="8" width="153" height="36" rx="8"/><text x="479" y="26">담당자 PC 예약 실행</text></g>
+<g class="node"><rect x="410" y="88" width="177" height="36" rx="8"/><text x="498.5" y="106">사양서·지식 폴더 동기화</text></g>
+<g class="node"><rect x="396" y="168" width="164" height="36" rx="8"/><text x="478" y="186">서버 사양서·지식 사본</text></g>
+<g class="node"><rect x="424.5" y="408" width="84" height="36" rx="8"/><text x="466.5" y="426">확인 요청</text></g>
+<g class="node"><rect x="320" y="488" width="130" height="36" rx="8"/><text x="385" y="506">사람이 원본 확인</text></g>
+<g class="node"><rect x="269.5" y="328" width="164" height="36" rx="8"/><text x="351.5" y="346">작업 실패·건너뜀 기록</text></g>
+</svg>
+</figure>
+<aside class="callout callout-info"><span class="callout-label">참고</span>
+<p>화면 요청은 <span class="term" title="한 곳을 고친 뒤 원래 되던 기능이 망가지지 않았는지 다시 시험하는 것" tabindex="0">Regression</span> 영향 분석(5.1절), QA Agent(5.2절), <span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI가 먼저 검토하고 QA가 확정하는 기능(/manual-review)" tabindex="0">매뉴얼 개정 검증</span>(5.3절)이다. 동기화와 공통 기반은 5.5절, <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스(services/qa-manual-hub). 이 앱과 HTTP로만 연결한다" tabindex="0">매뉴얼 서버</span> QA Manual Hub 는 5.6절에 있다. 자세한 예약 순서는 4절에 있다.</p>
+</aside>
 </section>
 <section class="chapter" id="sec-2">
 <h2>2. 프로젝트 범위</h2>
@@ -1041,14 +1084,14 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 </table></div>
 <figure class="flow">
 <svg viewBox="0 0 1211 292" width="1211" height="292" role="img" aria-label="07:30 서버: 일일 QA 점검 → Polarion 직접 조회, Polarion 직접 조회 → 네 가지 점검 결과, 네 가지 점검 결과 → 요약 메일, 09:00 PC: ALM 통합 수집(ALM-QA-Automation) → 사양서 PDF 를 크롤러 output 과 지식 폴더에 배포, 09:40 PC: 사양서 동기화(REQ-SYNC-001) → 서버 사양서 등록, 10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) → 서버 지식 사본 갱신, 서버 지식 사본 갱신 → 다음 날 07:30 점검이 사용">
-<defs><marker id="flow-arrow-1" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M104 44 L255.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M255.5 124 L495.5 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M495.5 204 L605.5 248" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M389.5 44 L528.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M724 44 L791 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1048 44 L955.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M955.5 124 L686.5 168" marker-end="url(#flow-arrow-1)"/>
+<defs><marker id="flow-arrow-2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M104 44 L255.5 88" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M255.5 124 L495.5 168" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M495.5 204 L605.5 248" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M389.5 44 L528.5 88" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M724 44 L791 88" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M1048 44 L955.5 88" marker-end="url(#flow-arrow-2)"/>
+<path class="edge" d="M955.5 124 L686.5 168" marker-end="url(#flow-arrow-2)"/>
 <g class="node"><rect x="8" y="8" width="192" height="36" rx="8"/><text x="104" y="26">07:30 서버: 일일 QA 점검</text></g>
 <g class="node"><rect x="180" y="88" width="151" height="36" rx="8"/><text x="255.5" y="106">Polarion 직접 조회</text></g>
 <g class="node"><rect x="426.5" y="168" width="138" height="36" rx="8"/><text x="495.5" y="186">네 가지 점검 결과</text></g>
@@ -1065,21 +1108,21 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>서버 <span class="term" title="서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span> 한 번의 흐름 (<a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>):</p>
 <figure class="flow">
 <svg viewBox="0 0 822 852" width="822" height="852" role="img" aria-label="잠금 → 사전 점검(규칙 판·자격증명·작업 폴더), 사전 점검(규칙 판·자격증명·작업 폴더) → SRS 스냅샷·비교, SRS 스냅샷·비교 → 이슈 수집, 이슈 수집 → TC 색인, TC 색인 → 사양–TC 연결 점검(AI 없이 코드로 계산), 사양–TC 연결 점검(AI 없이 코드로 계산) → 저장, TC 색인 → 작업 묶음(사양 변경 영향 검토·이슈 수정확인 초안·매뉴얼 누락 후보 점검), 작업 묶음(사양 변경 영향 검토·이슈 수정확인 초안·매뉴얼 누락 후보 점검) → Claude Skill(격리 작업 폴더), Claude Skill(격리 작업 폴더) → 결과 형식 검증, 결과 형식 검증 → 저장, 결과 형식 검증 → 한 번 더 실행, 한 번 더 실행 → 작업 실패로 기록, 저장 → 이슈 수정확인 초안 Excel, 이슈 수정확인 초안 Excel → 요약 메일">
-<defs><marker id="flow-arrow-2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M411 44 L411 88" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 124 L411 168" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 204 L411 248" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 284 L411 328" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 364 L149.5 408" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M149.5 444 L343 648" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 364 L564.5 408" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M564.5 444 L411 488" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 524 L411 568" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 604 L343 648" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M411 604 L459 648" marker-end="url(#flow-arrow-2)"/><text class="elabel" x="435" y="626">형식 오류</text>
-<path class="edge" d="M459 684 L305 728" marker-end="url(#flow-arrow-2)"/><text class="elabel" x="382" y="706">또 오류</text>
-<path class="edge" d="M343 684 L488 728" marker-end="url(#flow-arrow-2)"/>
-<path class="edge" d="M488 764 L411 808" marker-end="url(#flow-arrow-2)"/>
+<defs><marker id="flow-arrow-3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M411 44 L411 88" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 124 L411 168" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 204 L411 248" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 284 L411 328" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 364 L149.5 408" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M149.5 444 L343 648" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 364 L564.5 408" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M564.5 444 L411 488" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 524 L411 568" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 604 L343 648" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M411 604 L459 648" marker-end="url(#flow-arrow-3)"/><text class="elabel" x="435" y="626">형식 오류</text>
+<path class="edge" d="M459 684 L305 728" marker-end="url(#flow-arrow-3)"/><text class="elabel" x="382" y="706">또 오류</text>
+<path class="edge" d="M343 684 L488 728" marker-end="url(#flow-arrow-3)"/>
+<path class="edge" d="M488 764 L411 808" marker-end="url(#flow-arrow-3)"/>
 <g class="node"><rect x="375" y="8" width="72" height="36" rx="8"/><text x="411" y="26">잠금</text></g>
 <g class="node"><rect x="275" y="88" width="272" height="36" rx="8"/><text x="411" y="106">사전 점검(규칙 판·자격증명·작업 폴더)</text></g>
 <g class="node"><rect x="347.5" y="168" width="127" height="36" rx="8"/><text x="411" y="186">SRS 스냅샷·비교</text></g>
@@ -1099,12 +1142,12 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>사람 검토 고리 (<a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-DAILY-009">REQ-DAILY-009</a>):</p>
 <figure class="flow">
 <svg viewBox="0 0 682 212" width="682" height="212" role="img" aria-label="요약 메일 → /daily-qa 검토 대기열, /daily-qa 검토 대기열 → 승인·거절·근거 추가 필요, 검토 대기열 → AI 질문에 답변, AI 질문에 답변 → 다음 날 점검 입력에 반영, 승인한 초안 → 사람이 원본 Checklist·Polarion 에 직접 반영">
-<defs><marker id="flow-arrow-3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M220 44 L94 88" marker-end="url(#flow-arrow-3)"/>
-<path class="edge" d="M94 124 L237 168" marker-end="url(#flow-arrow-3)"/>
-<path class="edge" d="M334.5 44 L263.5 88" marker-end="url(#flow-arrow-3)"/>
-<path class="edge" d="M263.5 124 L445 168" marker-end="url(#flow-arrow-3)"/>
-<path class="edge" d="M455.5 44 L510.5 88" marker-end="url(#flow-arrow-3)"/>
+<defs><marker id="flow-arrow-4" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M220 44 L94 88" marker-end="url(#flow-arrow-4)"/>
+<path class="edge" d="M94 124 L237 168" marker-end="url(#flow-arrow-4)"/>
+<path class="edge" d="M334.5 44 L263.5 88" marker-end="url(#flow-arrow-4)"/>
+<path class="edge" d="M263.5 124 L445 168" marker-end="url(#flow-arrow-4)"/>
+<path class="edge" d="M455.5 44 L510.5 88" marker-end="url(#flow-arrow-4)"/>
 <g class="node"><rect x="178" y="8" width="84" height="36" rx="8"/><text x="220" y="26">요약 메일</text></g>
 <g class="node"><rect x="8" y="88" width="172" height="36" rx="8"/><text x="94" y="106">/daily-qa 검토 대기열</text></g>
 <g class="node"><rect x="145" y="168" width="184" height="36" rx="8"/><text x="237" y="186">승인·거절·근거 추가 필요</text></g>
@@ -1169,20 +1212,20 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>분석 한 건의 흐름 (<a class="idref" href="#REQ-IMPACT-002">REQ-IMPACT-002</a> ~ <a class="idref" href="#REQ-IMPACT-014">REQ-IMPACT-014</a>):</p>
 <figure class="flow">
 <svg viewBox="0 0 282 1012" width="282" height="1012" role="img" aria-label="분석 화면 → 요청 검사, 요청 검사 → 대기(QUEUED), 대기(QUEUED) → 실행(RUNNING), 실행(RUNNING) → 1 입력 문서 분석, 1 입력 문서 분석 → 2 변경사항 추출, 2 변경사항 추출 → 3 최신 사양서 조회, 3 최신 사양서 조회 → 4 TC 후보 검색, 4 TC 후보 검색 → 5 AI 영향도 분석, 5 AI 영향도 분석 → 6 Regression TC 선정, 6 Regression TC 선정 → 7 신규 TC 초안 검증, 7 신규 TC 초안 검증 → 8 HTML 결과 생성, 8 HTML 결과 생성 → 완료(DONE), 실행(RUNNING) → 실패(FAILED)">
-<defs><marker id="flow-arrow-4" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M141 44 L141 88" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 124 L141 168" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 204 L141 248" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 284 L74 328" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M74 364 L141 408" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 444 L141 488" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 524 L141 568" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 604 L141 648" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 684 L141 728" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 764 L141 808" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 844 L141 888" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 924 L141 968" marker-end="url(#flow-arrow-4)"/>
-<path class="edge" d="M141 284 L219 328" marker-end="url(#flow-arrow-4)"/><text class="elabel" x="180" y="306">어느 단계든 오류</text>
+<defs><marker id="flow-arrow-5" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M141 44 L141 88" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 124 L141 168" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 204 L141 248" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 284 L74 328" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M74 364 L141 408" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 444 L141 488" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 524 L141 568" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 604 L141 648" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 684 L141 728" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 764 L141 808" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 844 L141 888" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 924 L141 968" marker-end="url(#flow-arrow-5)"/>
+<path class="edge" d="M141 284 L219 328" marker-end="url(#flow-arrow-5)"/><text class="elabel" x="180" y="306">어느 단계든 오류</text>
 <g class="node"><rect x="99" y="8" width="84" height="36" rx="8"/><text x="141" y="26">분석 화면</text></g>
 <g class="node"><rect x="99" y="88" width="84" height="36" rx="8"/><text x="141" y="106">요청 검사</text></g>
 <g class="node"><rect x="86" y="168" width="110" height="36" rx="8"/><text x="141" y="186">대기(QUEUED)</text></g>
@@ -1202,15 +1245,15 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>결과를 쓰고 평가하는 흐름 (<a class="idref" href="#REQ-IMPACT-013">REQ-IMPACT-013</a> ~ <a class="idref" href="#REQ-IMPACT-018">REQ-IMPACT-018</a>, <a class="idref" href="#REQ-CORE-001">REQ-CORE-001</a> ~ <a class="idref" href="#REQ-CORE-006">REQ-CORE-006</a>):</p>
 <figure class="flow">
 <svg viewBox="0 0 367 532" width="367" height="532" role="img" aria-label="완료(DONE) → HTML 보고서 · XLSX · 신규 TC 초안(md), HTML 보고서 · XLSX · 신규 TC 초안(md) → 분석 이력, 분석 이력 → 분석 상세, 분석 상세 → QA 정답 저장, QA 정답 저장 → 이 분석의 precision·recall·F1, 이 분석의 precision·recall·F1 → 누적 micro 평균, 분석 상세 → 같은 입력으로 재실행, 같은 입력으로 재실행 → 새 분석 ID">
-<defs><marker id="flow-arrow-5" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M183.5 44 L183.5 88" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M183.5 124 L183.5 168" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M183.5 204 L183.5 248" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M183.5 284 L93.5 328" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M93.5 364 L125 408" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M125 444 L183.5 488" marker-end="url(#flow-arrow-5)"/>
-<path class="edge" d="M183.5 284 L248.5 328" marker-end="url(#flow-arrow-5)"/><text class="elabel" x="216" y="306">실패했거나 다시 보고 싶음</text>
-<path class="edge" d="M248.5 364 L312.5 408" marker-end="url(#flow-arrow-5)"/>
+<defs><marker id="flow-arrow-6" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M183.5 44 L183.5 88" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M183.5 124 L183.5 168" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M183.5 204 L183.5 248" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M183.5 284 L93.5 328" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M93.5 364 L125 408" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M125 444 L183.5 488" marker-end="url(#flow-arrow-6)"/>
+<path class="edge" d="M183.5 284 L248.5 328" marker-end="url(#flow-arrow-6)"/><text class="elabel" x="216" y="306">실패했거나 다시 보고 싶음</text>
+<path class="edge" d="M248.5 364 L312.5 408" marker-end="url(#flow-arrow-6)"/>
 <g class="node"><rect x="136" y="8" width="95" height="36" rx="8"/><text x="183.5" y="26">완료(DONE)</text></g>
 <g class="node"><rect x="39.5" y="88" width="288" height="36" rx="8"/><text x="183.5" y="106">HTML 보고서 · XLSX · 신규 TC 초안(md)</text></g>
 <g class="node"><rect x="141.5" y="168" width="84" height="36" rx="8"/><text x="183.5" y="186">분석 이력</text></g>
@@ -1225,13 +1268,13 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <p>AI에게 가는 입력이 <span class="term" title="실행 안의 한 부분. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 네 가지 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs)" tabindex="0">단계</span>마다 줄어드는 모습:</p>
 <figure class="flow">
 <svg viewBox="0 0 443 292" width="443" height="292" role="img" aria-label="등록된 사양서 전체 → 사양 조각 전체, 사양 조각 전체 → BM25 상위 8개, 등록된 TC 전체 → BM25 상위 150개, 변경 문서 전체 → 관련 줄 60줄, 관련 줄 60줄 → 기준 사양서에 없는 줄, 기준 사양서에 없는 줄 → 변경 기능 목록">
-<defs><marker id="flow-arrow-6" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M79.5 44 L79 88" marker-end="url(#flow-arrow-6)"/>
-<path class="edge" d="M79 124 L127.5 168" marker-end="url(#flow-arrow-6)"/>
-<path class="edge" d="M234.5 44 L227 88" marker-end="url(#flow-arrow-6)"/>
-<path class="edge" d="M376.5 44 L369.5 88" marker-end="url(#flow-arrow-6)"/><text class="elabel" x="373" y="66">사용자 요청 사항이 있음</text>
-<path class="edge" d="M369.5 124 L291.5 168" marker-end="url(#flow-arrow-6)"/>
-<path class="edge" d="M291.5 204 L221.5 248" marker-end="url(#flow-arrow-6)"/>
+<defs><marker id="flow-arrow-7" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M79.5 44 L79 88" marker-end="url(#flow-arrow-7)"/>
+<path class="edge" d="M79 124 L127.5 168" marker-end="url(#flow-arrow-7)"/>
+<path class="edge" d="M234.5 44 L227 88" marker-end="url(#flow-arrow-7)"/>
+<path class="edge" d="M376.5 44 L369.5 88" marker-end="url(#flow-arrow-7)"/><text class="elabel" x="373" y="66">사용자 요청 사항이 있음</text>
+<path class="edge" d="M369.5 124 L291.5 168" marker-end="url(#flow-arrow-7)"/>
+<path class="edge" d="M291.5 204 L221.5 248" marker-end="url(#flow-arrow-7)"/>
 <g class="node"><rect x="8" y="8" width="143" height="36" rx="8"/><text x="79.5" y="26">등록된 사양서 전체</text></g>
 <g class="node"><rect x="20.5" y="88" width="117" height="36" rx="8"/><text x="79" y="106">사양 조각 전체</text></g>
 <g class="node"><rect x="69.5" y="168" width="116" height="36" rx="8"/><text x="127.5" y="186">BM25 상위 8개</text></g>
@@ -2469,21 +2512,21 @@ footer{max-width:1280px;margin:0 auto;padding:8px 32px 40px;color:var(--muted);f
 <h3>5.2 QA Agent (이슈 검증 범위 산정)</h3>
 <figure class="flow">
 <svg viewBox="0 0 316 1092" width="316" height="1092" role="img" aria-label="분석 요청 → 이슈 읽기, 이슈 읽기 → 지식 문서 읽기, 지식 문서 읽기 → QA 규칙 읽기, QA 규칙 읽기 → 근거 검색, 근거 검색 → 관문 G1·G2·G4, 관문 G1·G2·G4 → 결과 저장(AI 호출 0회), 관문 G1·G2·G4 → AI 판단 1회, AI 판단 1회 → AI 응답 검사, AI 응답 검사 → 근거 붙이기, 근거 붙이기 → 관문 G3·G5, 관문 G3·G5 → 결과 저장, 결과 저장 → 결과 화면 6탭, 결과 화면 6탭 → QA 결정 기록, QA 결정 기록 → 사람이 TC·Polarion 에 직접 반영">
-<defs><marker id="flow-arrow-7" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M158 44 L158 88" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 124 L158 168" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 204 L158 248" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 284 L158 328" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 364 L158 408" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 444 L95.5 488" marker-end="url(#flow-arrow-7)"/><text class="elabel" x="126.8" y="466">중단 또는 입력 대기, 초안 불허</text>
-<path class="edge" d="M158 444 L257.5 488" marker-end="url(#flow-arrow-7)"/><text class="elabel" x="207.8" y="466">통과 또는 초안 허용</text>
-<path class="edge" d="M257.5 524 L158 568" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 604 L158 648" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 684 L158 728" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 764 L158 808" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 844 L158 888" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 924 L158 968" marker-end="url(#flow-arrow-7)"/>
-<path class="edge" d="M158 1004 L158 1048" marker-end="url(#flow-arrow-7)"/>
+<defs><marker id="flow-arrow-8" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M158 44 L158 88" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 124 L158 168" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 204 L158 248" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 284 L158 328" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 364 L158 408" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 444 L95.5 488" marker-end="url(#flow-arrow-8)"/><text class="elabel" x="126.8" y="466">중단 또는 입력 대기, 초안 불허</text>
+<path class="edge" d="M158 444 L257.5 488" marker-end="url(#flow-arrow-8)"/><text class="elabel" x="207.8" y="466">통과 또는 초안 허용</text>
+<path class="edge" d="M257.5 524 L158 568" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 604 L158 648" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 684 L158 728" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 764 L158 808" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 844 L158 888" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 924 L158 968" marker-end="url(#flow-arrow-8)"/>
+<path class="edge" d="M158 1004 L158 1048" marker-end="url(#flow-arrow-8)"/>
 <g class="node"><rect x="116" y="8" width="84" height="36" rx="8"/><text x="158" y="26">분석 요청</text></g>
 <g class="node"><rect x="116" y="88" width="84" height="36" rx="8"/><text x="158" y="106">이슈 읽기</text></g>
 <g class="node"><rect x="99.5" y="168" width="117" height="36" rx="8"/><text x="158" y="186">지식 문서 읽기</text></g>
@@ -3580,21 +3623,21 @@ python scripts/rule_capability_report.py --markdown
 <p><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI가 먼저 검토하고 QA가 확정하는 기능(/manual-review)" tabindex="0">매뉴얼 개정 검증</span> 한 건의 흐름:</p>
 <figure class="flow">
 <svg viewBox="0 0 272 772" width="272" height="772" role="img" aria-label="검증 등록 → 문서 파싱, 문서 파싱 → SRS 근거 준비, SRS 근거 준비 → Release 범위 대조, Release 범위 대조 → 다른 Manual 영향 추적, 다른 Manual 영향 추적 → AI 판정, AI 판정 → 결과 저장, 결과 저장 → 결과 화면, 결과 화면 → QA 재판정, QA 재판정 → Word Comment 파일 받기, 문서 파싱 → Baseline 등록, Baseline 등록 → 끝, AI 판정 → 다음 변경, AI 판정 → detail 판정, detail 판정 → 다음 변경">
-<defs><marker id="flow-arrow-8" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M136 44 L136 88" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 124 L65 168" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M65 204 L88 248" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M88 284 L136 328" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 364 L136 408" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 444 L72.5 488" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M72.5 524 L82 568" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M82 604 L136 648" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 684 L136 728" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 124 L205 168" marker-end="url(#flow-arrow-8)"/><text class="elabel" x="170.5" y="146">비교 대상 없는 첫 PDF</text>
-<path class="edge" d="M205 204 L220 248" marker-end="url(#flow-arrow-8)"/>
-<path class="edge" d="M136 444 L190 568" marker-end="url(#flow-arrow-8)"/><text class="elabel" x="163" y="506">quick 판정이 문제없음</text>
-<path class="edge" d="M136 444 L190 488" marker-end="url(#flow-arrow-8)"/><text class="elabel" x="163" y="466">quick 판정이 문제 의심</text>
-<path class="edge" d="M190 524 L190 568" marker-end="url(#flow-arrow-8)"/>
+<defs><marker id="flow-arrow-9" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M136 44 L136 88" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 124 L65 168" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M65 204 L88 248" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M88 284 L136 328" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 364 L136 408" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 444 L72.5 488" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M72.5 524 L82 568" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M82 604 L136 648" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 684 L136 728" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 124 L205 168" marker-end="url(#flow-arrow-9)"/><text class="elabel" x="170.5" y="146">비교 대상 없는 첫 PDF</text>
+<path class="edge" d="M205 204 L220 248" marker-end="url(#flow-arrow-9)"/>
+<path class="edge" d="M136 444 L190 568" marker-end="url(#flow-arrow-9)"/><text class="elabel" x="163" y="506">quick 판정이 문제없음</text>
+<path class="edge" d="M136 444 L190 488" marker-end="url(#flow-arrow-9)"/><text class="elabel" x="163" y="466">quick 판정이 문제 의심</text>
+<path class="edge" d="M190 524 L190 568" marker-end="url(#flow-arrow-9)"/>
 <g class="node"><rect x="94" y="8" width="84" height="36" rx="8"/><text x="136" y="26">검증 등록</text></g>
 <g class="node"><rect x="94" y="88" width="84" height="36" rx="8"/><text x="136" y="106">문서 파싱</text></g>
 <g class="node"><rect x="8" y="168" width="114" height="36" rx="8"/><text x="65" y="186">SRS 근거 준비</text></g>
@@ -3614,9 +3657,9 @@ python scripts/rule_capability_report.py --markdown
 <p>비용 대시보드의 흐름:</p>
 <figure class="flow">
 <svg viewBox="0 0 267 212" width="267" height="212" role="img" aria-label="각 기능의 분석 완료 → 분석 기록 표에 토큰·캐시 기록 저장, 분석 기록 표에 토큰·캐시 기록 저장 → 대시보드가 기간별로 모아 보여 줌">
-<defs><marker id="flow-arrow-9" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M133.5 44 L133.5 88" marker-end="url(#flow-arrow-9)"/>
-<path class="edge" d="M133.5 124 L133.5 168" marker-end="url(#flow-arrow-9)"/>
+<defs><marker id="flow-arrow-10" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M133.5 44 L133.5 88" marker-end="url(#flow-arrow-10)"/>
+<path class="edge" d="M133.5 124 L133.5 168" marker-end="url(#flow-arrow-10)"/>
 <g class="node"><rect x="58" y="8" width="151" height="36" rx="8"/><text x="133.5" y="26">각 기능의 분석 완료</text></g>
 <g class="node"><rect x="8" y="88" width="251" height="36" rx="8"/><text x="133.5" y="106">분석 기록 표에 토큰·캐시 기록 저장</text></g>
 <g class="node"><rect x="15.5" y="168" width="236" height="36" rx="8"/><text x="133.5" y="186">대시보드가 기간별로 모아 보여 줌</text></g>
@@ -4853,29 +4896,29 @@ QA 가 <span class="term" title="일일 QA 점검이 부르는 Anthropic 의 생
 <p>실행 한 번의 흐름:</p>
 <figure class="flow">
 <svg viewBox="0 0 787 1252" width="787" height="1252" role="img" aria-label="예약 실행(평일 07:30) → 잠금, 잠금 → 사전 점검, 사전 점검 → SRS 수집·비교, SRS 수집·비교 → 이슈 수집, 이슈 수집 → TC 색인, 잠금 → 끝(실행 기록 없음), TC 색인 → 삭제된 SRS 를 가리키는 TC 찾기(매일, AI 없음), 삭제된 SRS 를 가리키는 TC 찾기(매일, AI 없음) → Finding 저장, TC 색인 → 사양–TC 연결 점검(주 1회, AI 없음), 사양–TC 연결 점검(주 1회, AI 없음) → Finding 저장, TC 색인 → 작업 묶음 만들기, 작업 묶음 만들기 → 마스킹, 마스킹 → 작업 폴더, 작업 폴더 → Claude Skill, Claude Skill → 결과 파일 검사, 결과 파일 검사 → Finding·질문 저장, 결과 파일 검사 → 한 번 더 실행, 한 번 더 실행 → 작업 실패, Finding·질문 저장 → 초안 Excel, 초안 Excel → 실행 결과 판정, 실행 결과 판정 → audit.json, audit.json → 요약 메일">
-<defs><marker id="flow-arrow-10" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M393.5 44 L393.5 88" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 124 L309 168" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M309 204 L393.5 248" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 284 L393.5 328" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 364 L393.5 408" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 124 L447.5 168" marker-end="url(#flow-arrow-10)"/><text class="elabel" x="420.5" y="146">다른 실행이 진행 중</text>
-<path class="edge" d="M393.5 444 L175 488" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M175 524 L345.5 568" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 444 L495.5 488" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M495.5 524 L345.5 568" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 444 L714 488" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M714 524 L460.5 568" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M460.5 604 L393.5 648" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 684 L393.5 728" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 764 L393.5 808" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 844 L325.5 888" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 844 L477.5 888" marker-end="url(#flow-arrow-10)"/><text class="elabel" x="435.5" y="866">형식 오류</text>
-<path class="edge" d="M477.5 924 L334 968" marker-end="url(#flow-arrow-10)"/><text class="elabel" x="405.8" y="946">또 오류</text>
-<path class="edge" d="M325.5 924 L447.5 968" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M447.5 1004 L393.5 1048" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 1084 L393.5 1128" marker-end="url(#flow-arrow-10)"/>
-<path class="edge" d="M393.5 1164 L393.5 1208" marker-end="url(#flow-arrow-10)"/>
+<defs><marker id="flow-arrow-11" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M393.5 44 L393.5 88" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 124 L309 168" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M309 204 L393.5 248" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 284 L393.5 328" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 364 L393.5 408" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 124 L447.5 168" marker-end="url(#flow-arrow-11)"/><text class="elabel" x="420.5" y="146">다른 실행이 진행 중</text>
+<path class="edge" d="M393.5 444 L175 488" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M175 524 L345.5 568" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 444 L495.5 488" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M495.5 524 L345.5 568" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 444 L714 488" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M714 524 L460.5 568" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M460.5 604 L393.5 648" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 684 L393.5 728" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 764 L393.5 808" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 844 L325.5 888" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 844 L477.5 888" marker-end="url(#flow-arrow-11)"/><text class="elabel" x="435.5" y="866">형식 오류</text>
+<path class="edge" d="M477.5 924 L334 968" marker-end="url(#flow-arrow-11)"/><text class="elabel" x="405.8" y="946">또 오류</text>
+<path class="edge" d="M325.5 924 L447.5 968" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M447.5 1004 L393.5 1048" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 1084 L393.5 1128" marker-end="url(#flow-arrow-11)"/>
+<path class="edge" d="M393.5 1164 L393.5 1208" marker-end="url(#flow-arrow-11)"/>
 <g class="node"><rect x="308.5" y="8" width="170" height="36" rx="8"/><text x="393.5" y="26">예약 실행(평일 07:30)</text></g>
 <g class="node"><rect x="357.5" y="88" width="72" height="36" rx="8"/><text x="393.5" y="106">잠금</text></g>
 <g class="node"><rect x="267" y="168" width="84" height="36" rx="8"/><text x="309" y="186">사전 점검</text></g>
@@ -4903,15 +4946,15 @@ QA 가 <span class="term" title="일일 QA 점검이 부르는 Anthropic 의 생
 <p>사람 검토의 흐름:</p>
 <figure class="flow">
 <svg viewBox="0 0 526 452" width="526" height="452" role="img" aria-label="요약 메일 → /daily-qa 실행 상세, /daily-qa 실행 상세 → 검토 대기열, 검토 대기열 → Finding 상세, Finding 상세 → 승인·거절·근거 추가 필요, 검토 대기열 → 질문 화면, 질문 화면 → 답변 저장, 답변 저장 → 다음 실행의 작업 입력, 승인한 초안 → 사람이 원본 Checklist·Polarion 에 직접 반영">
-<defs><marker id="flow-arrow-11" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M202.5 44 L87.5 88" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M87.5 124 L263 168" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M263 204 L209 248" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M209 284 L209 328" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M263 204 L330 248" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M330 284 L367 328" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M367 364 L263 408" marker-end="url(#flow-arrow-11)"/>
-<path class="edge" d="M317 44 L354.5 88" marker-end="url(#flow-arrow-11)"/>
+<defs><marker id="flow-arrow-12" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M202.5 44 L87.5 88" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M87.5 124 L263 168" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M263 204 L209 248" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M209 284 L209 328" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M263 204 L330 248" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M330 284 L367 328" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M367 364 L263 408" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M317 44 L354.5 88" marker-end="url(#flow-arrow-12)"/>
 <g class="node"><rect x="160.5" y="8" width="84" height="36" rx="8"/><text x="202.5" y="26">요약 메일</text></g>
 <g class="node"><rect x="8" y="88" width="159" height="36" rx="8"/><text x="87.5" y="106">/daily-qa 실행 상세</text></g>
 <g class="node"><rect x="214.5" y="168" width="97" height="36" rx="8"/><text x="263" y="186">검토 대기열</text></g>
@@ -6266,19 +6309,19 @@ QA 가 <span class="term" title="일일 QA 점검이 부르는 Anthropic 의 생
 <p><span class="term" title="한 제품 안의 문서 한 종류. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>가 분석에 쓰이기까지:</p>
 <figure class="flow">
 <svg viewBox="0 0 605 452" width="605" height="452" role="img" aria-label="지식 폴더(담당자 PC) → 수집(분류·최신 판 고르기), 수집(분류·최신 판 고르기) → 서버로 업로드(바뀐 파일만), 서버로 업로드(바뀐 파일만) → 서버에서 텍스트 추출, 서버에서 텍스트 추출 → 문서 표에 등록, 문서 표에 등록 → 분석이 검색, ALM 크롤러 output(담당자 PC) → 사양서 동기화, 사양서 동기화 → /knowledge/specification 등록, /knowledge/specification 등록 → 문서 표, 사람 → /knowledge 화면에서 파일 올리기, /knowledge 화면에서 파일 올리기 → 문서 표, 문서 표 → 파싱 저장본, 파싱 저장본 → Regression 분석·QA Agent·매뉴얼 검증">
-<defs><marker id="flow-arrow-12" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M131.5 44 L104 88" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M104 124 L171.5 168" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M171.5 204 L254.5 248" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M254.5 284 L242 328" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M242 364 L150.5 408" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M346.5 44 L279 88" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M279 124 L413 168" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M413 204 L392.5 248" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M517.5 44 L477.5 88" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M477.5 124 L392.5 248" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M392.5 284 L373 328" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M373 364 L363 408" marker-end="url(#flow-arrow-12)"/>
+<defs><marker id="flow-arrow-13" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M131.5 44 L104 88" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M104 124 L171.5 168" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M171.5 204 L254.5 248" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M254.5 284 L242 328" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M242 364 L150.5 408" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M346.5 44 L279 88" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M279 124 L413 168" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M413 204 L392.5 248" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M517.5 44 L477.5 88" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M477.5 124 L392.5 248" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M392.5 284 L373 328" marker-end="url(#flow-arrow-13)"/>
+<path class="edge" d="M373 364 L363 408" marker-end="url(#flow-arrow-13)"/>
 <g class="node"><rect x="51.5" y="8" width="160" height="36" rx="8"/><text x="131.5" y="26">지식 폴더(담당자 PC)</text></g>
 <g class="node"><rect x="8" y="88" width="192" height="36" rx="8"/><text x="104" y="106">수집(분류·최신 판 고르기)</text></g>
 <g class="node"><rect x="73" y="168" width="197" height="36" rx="8"/><text x="171.5" y="186">서버로 업로드(바뀐 파일만)</text></g>
@@ -6298,16 +6341,16 @@ QA 가 <span class="term" title="일일 QA 점검이 부르는 Anthropic 의 생
 <p>AI 호출 한 번:</p>
 <figure class="flow">
 <svg viewBox="0 0 625 532" width="625" height="532" role="img" aria-label="기능 모듈 → 하루 토큰 한도 확인, 하루 토큰 한도 확인 → 가리기, 가리기 → 응답 저장본 확인, 응답 저장본 확인 → 저장본 반환, 응답 저장본 확인 → Gemini 호출, Gemini 호출 → 응답 저장, 응답 저장 → 토큰 합산, Gemini 호출 → 알림 메일(재발송 대기 시간 안이면 건너뜀), Gemini 호출 → 대신 쓸 모델로 한 번 더">
-<defs><marker id="flow-arrow-13" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M312.5 44 L312.5 88" marker-end="url(#flow-arrow-13)"/>
-<path class="edge" d="M312.5 124 L312.5 168" marker-end="url(#flow-arrow-13)"/>
-<path class="edge" d="M312.5 204 L312.5 248" marker-end="url(#flow-arrow-13)"/>
-<path class="edge" d="M312.5 284 L249 328" marker-end="url(#flow-arrow-13)"/><text class="elabel" x="280.8" y="306">있음</text>
-<path class="edge" d="M312.5 284 L373 328" marker-end="url(#flow-arrow-13)"/><text class="elabel" x="342.8" y="306">없음</text>
-<path class="edge" d="M373 364 L50 408" marker-end="url(#flow-arrow-13)"/>
-<path class="edge" d="M50 444 L312.5 488" marker-end="url(#flow-arrow-13)"/>
-<path class="edge" d="M373 364 L265 408" marker-end="url(#flow-arrow-13)"/><text class="elabel" x="319" y="386">할당량 소진·모델 없음</text>
-<path class="edge" d="M373 364 L527.5 408" marker-end="url(#flow-arrow-13)"/><text class="elabel" x="450.3" y="386">모델 없음</text>
+<defs><marker id="flow-arrow-14" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M312.5 44 L312.5 88" marker-end="url(#flow-arrow-14)"/>
+<path class="edge" d="M312.5 124 L312.5 168" marker-end="url(#flow-arrow-14)"/>
+<path class="edge" d="M312.5 204 L312.5 248" marker-end="url(#flow-arrow-14)"/>
+<path class="edge" d="M312.5 284 L249 328" marker-end="url(#flow-arrow-14)"/><text class="elabel" x="280.8" y="306">있음</text>
+<path class="edge" d="M312.5 284 L373 328" marker-end="url(#flow-arrow-14)"/><text class="elabel" x="342.8" y="306">없음</text>
+<path class="edge" d="M373 364 L50 408" marker-end="url(#flow-arrow-14)"/>
+<path class="edge" d="M50 444 L312.5 488" marker-end="url(#flow-arrow-14)"/>
+<path class="edge" d="M373 364 L265 408" marker-end="url(#flow-arrow-14)"/><text class="elabel" x="319" y="386">할당량 소진·모델 없음</text>
+<path class="edge" d="M373 364 L527.5 408" marker-end="url(#flow-arrow-14)"/><text class="elabel" x="450.3" y="386">모델 없음</text>
 <g class="node"><rect x="270.5" y="8" width="84" height="36" rx="8"/><text x="312.5" y="26">기능 모듈</text></g>
 <g class="node"><rect x="237" y="88" width="151" height="36" rx="8"/><text x="312.5" y="106">하루 토큰 한도 확인</text></g>
 <g class="node"><rect x="276.5" y="168" width="72" height="36" rx="8"/><text x="312.5" y="186">가리기</text></g>
@@ -6323,14 +6366,14 @@ QA 가 <span class="term" title="일일 QA 점검이 부르는 Anthropic 의 생
 <p>운영:</p>
 <figure class="flow">
 <svg viewBox="0 0 955 292" width="955" height="292" role="img" aria-label="systemd → python -m app.serve, python -m app.serve → 앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작), cron 10분마다 → 운영 점검, 운영 점검 → /health·/config/status·/operations/status, /health·/config/status·/operations/status → 문제 있으면 종료 코드 1, cron 매일 02:15 → 백업 ZIP, 백업 ZIP → 지문·DB 검사 확인">
-<defs><marker id="flow-arrow-14" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M329 44 L371.5 88" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M371.5 124 L217.5 168" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M449.5 44 L521 88" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M521 124 L617 168" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M617 204 L477.5 248" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M598 44 L627 88" marker-end="url(#flow-arrow-14)"/>
-<path class="edge" d="M627 124 L877 168" marker-end="url(#flow-arrow-14)"/>
+<defs><marker id="flow-arrow-15" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M329 44 L371.5 88" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M371.5 124 L217.5 168" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M449.5 44 L521 88" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M521 124 L617 168" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M617 204 L477.5 248" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M598 44 L627 88" marker-end="url(#flow-arrow-15)"/>
+<path class="edge" d="M627 124 L877 168" marker-end="url(#flow-arrow-15)"/>
 <g class="node"><rect x="290.5" y="8" width="77" height="36" rx="8"/><text x="329" y="26">systemd</text></g>
 <g class="node"><rect x="288" y="88" width="167" height="36" rx="8"/><text x="371.5" y="106">python -m app.serve</text></g>
 <g class="node"><rect x="8" y="168" width="419" height="36" rx="8"/><text x="217.5" y="186">앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작)</text></g>
@@ -8096,22 +8139,22 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <h3>5.6 하위 서비스 QA Manual Hub</h3>
 <figure class="flow">
 <svg viewBox="0 0 495 612" width="495" height="612" role="img" aria-label="로그인 → 제품 선택, 제품 선택 → 문서 등록, 문서 등록 → 새 버전 업로드, 새 버전 업로드 → 파일 검사, 파일 검사 → 저장소에 저장, 저장소에 저장 → Current 지정, Current 지정 → 감사 기록, 파일 검사 → 업로드 거부, 새 버전 업로드 → 이력으로만 추가, 문서 상세 → 매뉴얼 뷰어, 매뉴얼 뷰어 → PDF 변환, PDF 변환 → 미리보기 PDF 저장, 백업 → DB 덤프 + 저장소 압축 + manifest, DB 덤프 + 저장소 압축 + manifest → 복구, 복구 → 파일 점검">
-<defs><marker id="flow-arrow-15" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M145.5 44 L50 88" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M50 124 L147.5 168" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M147.5 204 L111.5 248" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M111.5 284 L174 328" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M174 364 L187 408" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M187 444 L247.5 488" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M247.5 524 L247.5 568" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M174 364 L314.5 408" marker-end="url(#flow-arrow-15)"/><text class="elabel" x="244.3" y="386">확장자·형식·크기 오류</text>
-<path class="edge" d="M111.5 284 L301.5 328" marker-end="url(#flow-arrow-15)"/><text class="elabel" x="206.5" y="306">Current 지정 해제</text>
-<path class="edge" d="M247.5 44 L164.5 88" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M164.5 124 L253.5 168" marker-end="url(#flow-arrow-15)"/><text class="elabel" x="209" y="146">오피스 문서</text>
-<path class="edge" d="M253.5 204 L264 248" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M349.5 44 L362 88" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M362 124 L353.5 168" marker-end="url(#flow-arrow-15)"/>
-<path class="edge" d="M353.5 204 L400 248" marker-end="url(#flow-arrow-15)"/>
+<defs><marker id="flow-arrow-16" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
+<path class="edge" d="M145.5 44 L50 88" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M50 124 L147.5 168" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M147.5 204 L111.5 248" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M111.5 284 L174 328" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M174 364 L187 408" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M187 444 L247.5 488" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M247.5 524 L247.5 568" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M174 364 L314.5 408" marker-end="url(#flow-arrow-16)"/><text class="elabel" x="244.3" y="386">확장자·형식·크기 오류</text>
+<path class="edge" d="M111.5 284 L301.5 328" marker-end="url(#flow-arrow-16)"/><text class="elabel" x="206.5" y="306">Current 지정 해제</text>
+<path class="edge" d="M247.5 44 L164.5 88" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M164.5 124 L253.5 168" marker-end="url(#flow-arrow-16)"/><text class="elabel" x="209" y="146">오피스 문서</text>
+<path class="edge" d="M253.5 204 L264 248" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M349.5 44 L362 88" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M362 124 L353.5 168" marker-end="url(#flow-arrow-16)"/>
+<path class="edge" d="M353.5 204 L400 248" marker-end="url(#flow-arrow-16)"/>
 <g class="node"><rect x="109.5" y="8" width="72" height="36" rx="8"/><text x="145.5" y="26">로그인</text></g>
 <g class="node"><rect x="8" y="88" width="84" height="36" rx="8"/><text x="50" y="106">제품 선택</text></g>
 <g class="node"><rect x="105.5" y="168" width="84" height="36" rx="8"/><text x="147.5" y="186">문서 등록</text></g>

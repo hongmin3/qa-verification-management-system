@@ -1,5 +1,11 @@
 # 진행 상태
 
+## 2026-09-30 오후 키트 작업 규칙 v8 반영 · 한눈에 보기
+
+- 완료: 앞 세션(한도로 중단)의 작업을 다시 검증해 `106589a` 로 커밋했다. 키트 migration 으로 `AGENTS.md` 사양 규칙과 `.project-check/` 를 v8 로 올리고, SPEC 1절에 "한눈에 보기" 흐름도를 넣었다.
+- 검증: 핵심 앱 pytest 841 passed · 1 skipped, Hub DB 없는 테스트 46 passed, 배포 셸 스크립트 `bash -n`, 준비 검사 실패 0, 워크스페이스 검사 `failed=0 gateFailures=0`.
+- 남은 일: 바로 아래 항목의 "확인 못 한 것" 4가지와 "남은 일"이 그대로 남아 있다.
+
 ## 2026-09-30 결정 18건 반영 · 사양–코드 불일치 60건 수정
 
 - 완료: `OPEN_QUESTIONS.md` 8-1~8-18 을 추천안대로 구현했다. `docs/SPEC_CODE_MISMATCH.md` 65건 가운데 60건을 고치고 1건을 일부 고쳤다. 영역은 공통 기반, 매뉴얼 개정 검증, Regression 분석, QA Agent, 일일 QA 점검, QA Manual Hub 다. SPEC·12절 추적성·13절·CHANGELOG 를 같이 고쳤다.
