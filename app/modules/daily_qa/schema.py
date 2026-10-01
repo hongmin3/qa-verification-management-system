@@ -19,16 +19,35 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+#: 개편 전 Skill (옛 Finding 표시·옛 결과 검증용). 새 실행은 SKILL_B·SKILL_C 를 돌리지 않는다.
 SKILL_B = "vxvue-spec-change-impact"
 SKILL_C = "vxvue-issue-verification"
-SKILL_E = "vxvue-trace-gap"
-SKILL_F = "vxvue-manual-completeness"
+LEGACY_SKILL_E = "vxvue-trace-gap"
+LEGACY_SKILL_F = "vxvue-manual-completeness"
+#: 제품 공통 Skill (NFR-QAINTEL-002).
+SKILL_E = "qa-trace-gap"
+SKILL_F = "qa-manual-completeness"
+SKILL_COVERAGE = "qa-spec-coverage-analysis"
 
 SKILL_LABELS = {
     SKILL_B: "사양 변경 영향 검토",
     SKILL_C: "이슈 수정확인 초안",
     SKILL_E: "사양–TC 연결 점검",
     SKILL_F: "매뉴얼 누락 후보 점검",
+    LEGACY_SKILL_E: "사양–TC 연결 점검",
+    LEGACY_SKILL_F: "매뉴얼 누락 후보 점검",
+    "qa-new-issue-analysis": "신규 이슈 분석",
+    "qa-fixed-issue-analysis": "수정 완료 이슈 분석",
+    "qa-spec-decision-analysis": "Spec 판정 이슈 분석",
+    "qa-comment-analysis": "새 댓글 분석",
+    SKILL_COVERAGE: "사양 변경 Coverage 분석",
+}
+
+#: 같은 Finding 인지 가릴 때 함께 보는 옛 Skill 이름 (이름을 바꾼 뒤 옛 Finding 과 겹치지 않게).
+SKILL_ALIASES: dict[str, tuple[str, ...]] = {
+    SKILL_E: (LEGACY_SKILL_E,),
+    SKILL_F: (LEGACY_SKILL_F,),
+    SKILL_COVERAGE: (SKILL_B,),
 }
 
 VERDICTS: dict[str, tuple[str, ...]] = {
@@ -36,7 +55,20 @@ VERDICTS: dict[str, tuple[str, ...]] = {
     SKILL_C: ("신규 TC 필요", "기존 TC 보강", "유지", "사양 확인 필요", "판정만"),
     SKILL_E: ("TC 없음", "삭제된 SRS 참조"),
     SKILL_F: ("보강 권장", "타 문서 위임 적절", "유지", "사양 확인 필요"),
+    LEGACY_SKILL_E: ("TC 없음", "삭제된 SRS 참조"),
+    LEGACY_SKILL_F: ("보강 권장", "타 문서 위임 적절", "유지", "사양 확인 필요"),
+    "qa-new-issue-analysis": ("SPEC_VIOLATION", "CONSISTENT_WITH_SPEC", "SPEC_UNDEFINED", "SPEC_AMBIGUOUS", "INSUFFICIENT_EVIDENCE"),
+    "qa-fixed-issue-analysis": ("CONSISTENT_WITH_SPEC", "PARTIALLY_CONSISTENT", "CONTRADICTS_SPEC", "SPEC_UNDEFINED", "INSUFFICIENT_EVIDENCE"),
+    "qa-spec-decision-analysis": ("SUPPORTED_BY_SPEC", "PARTIALLY_SUPPORTED", "SPEC_AMBIGUOUS", "SPEC_NOT_FOUND", "CONTRADICTS_SPEC"),
+    "qa-comment-analysis": ("ROOT_CAUSE_INFORMATION", "RESOLUTION_INFORMATION", "REPRODUCTION_INFORMATION", "SPEC_CLAIM",
+                            "REQUIREMENT_INFORMATION", "QA_ACTION_REQUIRED", "OTHER_SIGNIFICANT_INFORMATION", "NOT_SIGNIFICANT"),
+    SKILL_COVERAGE: ("FULLY_COVERED", "PARTIALLY_COVERED", "NOT_COVERED", "SPEC_REVIEW_REQUIRED"),
 }
+
+#: 새 분석 Skill. 결과 검증은 `evidence_validation.py` 가 한다 (REQ-QAINTEL-017).
+ANALYSIS_SKILL_NAMES = frozenset(
+    {"qa-new-issue-analysis", "qa-fixed-issue-analysis", "qa-spec-decision-analysis", "qa-comment-analysis", SKILL_COVERAGE}
+)
 
 ISSUE_TYPES = (
     "Program Fixed",
@@ -71,10 +103,20 @@ FORBIDDEN_ACTION_RE = re.compile(
 
 
 class Evidence(BaseModel):
-    source_type: Literal["srs", "tc", "issue", "manual", "rules", "user_answer"]
+    #: `spec_doc`(Knowledge 사양서 조각)·`comment`(이슈 댓글)는 QA Intelligence 분석에서 쓴다.
+    source_type: Literal["srs", "tc", "issue", "manual", "rules", "user_answer", "spec_doc", "comment"]
     location: str
     summary: str = ""
     validity: Literal["Current", "Deleted", "Deprecated", "Unknown"] = "Unknown"
+    #: 작업 입력으로 받은 참조 번호 (`spec:<조각>`, 댓글 번호). 코드가 입력과 대조한다.
+    ref: str = ""
+
+
+#: 검증 TC 관점 (REQ-QAINTEL-013 · REQ-QAINTEL-016). 빈 값은 개편 전 초안이다.
+DRAFT_PERSPECTIVES = (
+    "DIRECT_FIX", "DIRECT_SPEC", "REGRESSION", "STATE_TRANSITION", "PERSISTENCE", "BOUNDARY", "NEGATIVE",
+    "INTEGRATION", "CONFIGURATION", "ENVIRONMENT",
+)
 
 
 class DraftTc(BaseModel):
@@ -87,6 +129,9 @@ class DraftTc(BaseModel):
     test_step: str
     expected_result: str
     test_data: str = ""
+    perspective: str = ""
+    #: 왜 이 TC 가 필요한가 (분석 근거와 연결)
+    rationale: str = ""
 
 
 class TcRef(BaseModel):
@@ -108,6 +153,8 @@ class Finding(BaseModel):
     issue_type: str = ""
     action: str = ""
     draft_tcs: list[DraftTc] = Field(default_factory=list)
+    #: QA Intelligence 분석 구획. 모양은 분석 종류마다 다르고 `evidence_validation.py` 가 검사한다.
+    sections: dict = Field(default_factory=dict)
 
 
 class OpenQuestion(BaseModel):
@@ -141,6 +188,11 @@ def rejection_reason(skill: str, finding: Finding) -> str | None:
     allowed = VERDICTS.get(skill, ())
     if finding.verdict not in allowed:
         return f"허용되지 않은 판정 값: {finding.verdict}"
+    if finding.action and FORBIDDEN_ACTION_RE.search(finding.action):
+        return f"금지된 조치를 담고 있습니다(QA 규칙 §55): {finding.action[:80]}"
+    if skill in ANALYSIS_SKILL_NAMES:
+        # 번호·근거가 실제 자료에 있는지는 작업 입력을 아는 evidence_validation.py 가 본다 (REQ-QAINTEL-017).
+        return None
     if not finding.evidence:
         return "근거(evidence)가 없습니다."
     if not any(LOCATION_RE.search(item.location or "") for item in finding.evidence):

@@ -1,6 +1,6 @@
-# AI 점검 보안 통제 (일일 QA 점검)
+# AI 점검 보안 통제 (QA Agent 점검)
 
-> 상위 문서: [문서 지도](README.md) · 기능: [일일 QA 점검](modules/daily-qa.md) · 사양: [SPEC](../SPEC.md) `NFR-SEC-001`, `REQ-DAILY-002`, `REQ-DAILY-007`
+> 상위 문서: [문서 지도](README.md) · 기능: [QA Agent 점검](modules/daily-qa.md) · 사양: [SPEC](../SPEC.md) `NFR-SEC-001`, `REQ-DAILY-002`, `REQ-DAILY-007`, [QA Intelligence](../specs/qa-intelligence.md) `REQ-QAINTEL-017`
 
 사내 사양서·이슈를 외부 AI(Claude)로 보내는 자동 점검의 보안 통제 목록이다. 항목마다
 **무엇으로 막는지**와 **어떻게 확인하는지**를 함께 적는다. 정보보안 검토를 받을 때 이 문서와
@@ -15,13 +15,13 @@
 | 3 | 마스킹 | 작업 폴더에 쓰기 전 `app/core/security_filter.py` 로 메일·사내 경로 등을 가린다. SRS/Issue ID·버전은 남긴다 | `tests/test_daily_qa_runner.py` `test_task_input_is_masked_before_it_reaches_the_workspace` | 통과, 마스킹 제거 시 실패 확인 |
 | 4 | 도구 제한 | Claude 에게 읽기·검색·결과 폴더 쓰기만 허용. 명령 실행(Bash)·웹 조회·MCP 금지. 허용 목록 밖은 묻지 않고 거부(`dontAsk`) | `test_command_restricts_tools_settings_and_mcp` | 통과, Bash 추가 시 실패 확인 |
 | 5 | 설정 격리 | `--setting-sources project`: 서버 사용자 홈의 설정·hook 을 읽지 않는다. `--strict-mcp-config`, `--no-session-persistence` | 같은 테스트 | 통과 |
-| 6 | 작업 폴더 격리 | 저장소 밖, 상위 폴더에 `CLAUDE.md`/`AGENTS.md` 가 없는 곳만 허용 (개발 지침이 섞이지 않게) | `test_workspace_inside_repo_is_refused`, `test_workspace_under_folder_with_agent_doc_is_refused` | 통과, 검사 제거 시 실패 확인 |
+| 6 | 작업 폴더 격리 | 저장소 밖, 상위 폴더에 `CLAUDE.md`/`AGENTS.md` 가 없는 곳만 허용 (개발 지침이 섞이지 않게). 제품마다 그 아래 `<slug>/` 를 따로 써서 제품 자료가 섞이지 않는다 | `test_workspace_inside_repo_is_refused`, `test_workspace_under_folder_with_agent_doc_is_refused` | 통과, 검사 제거 시 실패 확인 |
 | 7 | 비밀값 격리 | Claude 프로세스에는 `CLAUDE_CODE_OAUTH_TOKEN` 과 원격 측정 차단 값만 넘긴다. Gemini 키·SMTP·Polarion 토큰은 넘기지 않는다. 오류 메시지에서 토큰 문자열을 지운다 | `test_env_passes_only_token_and_quiet_flags`, `test_runner_hides_token_in_errors_and_records_usage` | 통과 |
 | 8 | 외부 통신 최소화 | `DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `DISABLE_AUTOUPDATER` | 같은 테스트 | 통과 |
 | 9 | Polarion 읽기 전용 | 클라이언트에 GET 외의 요청 함수가 없다. 토큰도 읽기 권한 계정으로 발급 | `test_client_module_only_issues_get_requests` (소스 검사) | 통과 |
-| 10 | 사람 승인 | 모든 결과는 `검토 대기`. 자동 Close·TC 덮어쓰기 경로가 없고, 그런 조치를 담은 Finding 은 버린다 (QA 규칙 §55) | `test_rule_breaking_findings_are_rejected_with_reason` | 통과 |
-| 11 | 근거 없는 판정 차단 | 근거 위치(SRS ID·시트/행·절)가 없는 Finding 은 저장하지 않는다 | 같은 테스트 | 통과, 검사 제거 시 실패 확인 |
-| 12 | 감사 기록 | 실행마다 보낸 입력(`sent/`), 받은 결과, 작업별 소요 시간·사용량(`audit.json`), Claude 가 부른 도구와 대상(`claude_logs/`, 쓴 내용은 길이만), 실패 이유 문장을 남긴다 | `test_full_run_creates_findings_questions_draft_and_email`, `test_claude_tool_logs_are_collected_into_the_run_folder`, `test_stream_output_records_tool_calls_without_written_content`, `test_usage_limit_is_a_failure_with_its_reason_recorded` | 통과, 도구 기록을 빼면 실패 확인 |
+| 10 | 사람 판단 | 모든 결과는 참고 초안이다. Polarion·원본 TC 에 옮기는 일은 사람이 한다. 자동 Close·TC 덮어쓰기 경로가 없고, 그런 조치를 담은 Finding 은 버린다 (QA 규칙 §55) | `test_rule_breaking_findings_are_rejected_with_reason` | 통과 |
+| 11 | 근거 없는 판정 차단 | 근거 위치(SRS ID·시트/행·절)가 없는 Finding 은 저장하지 않는다. 결과의 번호·근거가 실제 자료(스냅샷·작업 입력)에 없으면 그 번호를 뺀다 (REQ-QAINTEL-017, `tests/test_qa_intel_validation.py`) | 같은 테스트 | 통과, 검사 제거 시 실패 확인 |
+| 12 | 감사 기록 | 실행마다 보낸 입력(`sent/`), 받은 결과, 작업별 소요 시간·사용량(`audit.json`), Claude 가 부른 도구와 대상(`claude_logs/`, 쓴 내용은 길이만), 실패 이유 문장을 남긴다 | `test_full_run_uses_legacy_snapshot_and_creates_findings_draft_and_email`, `test_claude_tool_logs_are_collected_into_the_run_folder`, `test_stream_output_records_tool_calls_without_written_content`, `test_usage_limit_is_a_failure_with_its_reason_recorded` | 통과, 도구 기록을 빼면 실패 확인 |
 | 13 | 공개 저장소 보호 | 산출물(`data/daily_qa/`, `output/daily_qa/`)은 `.gitignore`. Polarion 주소·토큰은 `secrets.txt`. QA 규칙 원문은 커밋하지 않는다 | `git check-ignore` | 확인 |
 | 14 | 서버 권한 | 점검은 앱과 같은 일반 사용자로 돈다(sudo 없음). (선택) `/etc/claude-code/managed-settings.json` 으로 서버의 모든 Claude 사용에 명령 실행·웹 조회 금지를 강제 | 서버에서 `id`, `cat /etc/claude-code/managed-settings.json` | 서버 설치 후 확인 필요 |
 | 15 | 네트워크 | 서버 방화벽·프록시에서 Claude 용 나가는 주소를 Anthropic API 로 한정 | 서버 네트워크 설정 | 확인 필요 (담당: 서버 관리자) |

@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 from collections import Counter
 
+from app.modules.daily_qa.change_events import ANALYSIS_LABELS, EVENT_LABELS
 from app.modules.daily_qa.schema import SKILL_B, SKILL_C, SKILL_E, SKILL_F, SKILL_LABELS
 
 STAGE_LABELS = {
@@ -16,10 +17,13 @@ STAGE_LABELS = {
     "collect_srs": "SRS 수집",
     "collect_issues": "이슈 수집",
     "tc_index": "TC 색인",
-    "B": SKILL_LABELS[SKILL_B],
-    "C": SKILL_LABELS[SKILL_C],
+    "events": "변경 감지",
+    **ANALYSIS_LABELS,
     "E": SKILL_LABELS[SKILL_E],
     "F": SKILL_LABELS[SKILL_F],
+    # 개편 전 실행 기록의 단계
+    "B": SKILL_LABELS[SKILL_B],
+    "C": SKILL_LABELS[SKILL_C],
 }
 
 STATUS_LABELS = {
@@ -29,6 +33,7 @@ STATUS_LABELS = {
     "rules": "규칙 판 불일치",
     "partial": "일부 실패",
     "not_due": "오늘은 대상 아님",
+    "limit": "Claude 사용량 한도",
 }
 
 
@@ -55,12 +60,24 @@ def _stage_lines(stages: dict) -> list[tuple[str, str, str]]:
     return lines
 
 
-def build_email(run_id: str, status_label: str, stages: dict, summary: dict, review_url: str, rules_warning: str) -> tuple[str, str, str]:
-    subject = f"[QA 일일 점검] {run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건"
+def _event_line(summary: dict) -> str:
+    events = summary.get("events") or {}
+    if not events:
+        return "변경 없음"
+    return ", ".join(f"{EVENT_LABELS.get(name, name)} {count}" for name, count in sorted(events.items()))
+
+
+def build_email(run_id: str, status_label: str, stages: dict, summary: dict, review_url: str, rules_warning: str,
+                product: str = "") -> tuple[str, str, str]:
+    prefix = f"[QA Agent] {product} " if product else "[QA Agent] "
+    subject = f"{prefix}{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건"
+    limit = summary.get("claude_limit") or {}
     text = []
     if rules_warning:
         text += [f"※ {rules_warning}", ""]
-    text += [f"실행 ID: {run_id}", f"결과: {status_label}", "", "[단계]"]
+    if limit:
+        text += [f"※ {limit.get('description', '')} 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.", ""]
+    text += [f"실행 ID: {run_id}", f"결과: {status_label}", f"오늘 변경: {_event_line(summary)}", "", "[단계]"]
     for label, status, note in _stage_lines(stages):
         text.append(f"- {label}: {status}" + (f" ({note})" if note else ""))
     text += ["", "[Skill 별 Finding]"]
@@ -81,8 +98,11 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
         for skill, count in summary.get("by_skill", {}).items()
     ) or "<li>새 Finding 없음</li>"
     warning = f"<p style='color:#b00020'><b>※ {html.escape(rules_warning)}</b></p>" if rules_warning else ""
+    if limit:
+        warning += f"<p style='color:#b00020'><b>※ {html.escape(limit.get('description', ''))}</b></p>"
     body = (
-        f"<div style='font-family:sans-serif'>{warning}<h3>QA 일일 점검 {html.escape(run_id)} — {html.escape(status_label)}</h3>"
+        f"<div style='font-family:sans-serif'>{warning}<h3>QA Agent {html.escape(product)} {html.escape(run_id)} — {html.escape(status_label)}</h3>"
+        f"<p>오늘 변경: {html.escape(_event_line(summary))}</p>"
         f"<table border='1' cellpadding='4' cellspacing='0'><tr><th>단계</th><th>상태</th><th>비고</th></tr>{rows}</table>"
         f"<h4>Skill 별 Finding</h4><ul>{skills}</ul>"
         f"<p>답이 필요한 질문: <b>{summary.get('questions', 0)}</b>건</p>"

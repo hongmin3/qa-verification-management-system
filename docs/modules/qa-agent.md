@@ -5,6 +5,26 @@
 Polarion Issue 하나에서 **관련 사양 → 기존 TC → Regression 범위**를 근거와 함께 정리한다.
 AI가 QA를 판정하지 않는다 — QA가 반복적으로 수행하는 조사·비교·추적 절차를 표준화한다.
 
+## 0. 화면 구성 — 대시보드와 단일 이슈 분석
+
+`/qa-agent` 는 이제 **QA Intelligence Agent 대시보드**다. 매일 아침 SRS·이슈 변경을 탐지해 분석한 결과를
+보여 준다. 엔진과 운영은 [QA Intelligence Agent 엔진](daily-qa.md), 사양은
+[specs/qa-intelligence.md](../../specs/qa-intelligence.md) 에 있다. 이 문서의 나머지는 사람이 이슈 하나를
+골라 돌리는 **단일 이슈 분석**을 다룬다.
+
+| 주소 | 화면 |
+|---|---|
+| `/qa-agent` | 대시보드: 오늘 변경 요약, 분석 5종 카드, 분석 대기 수, 지식 문서 목록, 다음 실행, Claude 한도 알림, [지금 실행](기간 선택) |
+| `/qa-agent/period` | 기간 조회: 시작일~종료일의 이벤트·Finding |
+| `/qa-agent/findings/<번호>` | Finding 상세: 요약, 근거, 관련 번호, 초안 TC, 원본 이벤트 |
+| `/qa-agent/runs/<실행 ID>` | 실행 상세: 단계 상태, 이벤트, 결과 파일 |
+| `/qa-agent/status` | 대시보드 상태 JSON(실행 중 여부, 한도, 다음 실행) |
+| `/qa-agent/issue-analysis` | 단일 이슈 분석 첫 화면(아래 1~10절). 옛 `/qa-agent` 첫 화면이 여기로 옮겨 왔다 |
+| `/qa-agent/guide` | 앱 안 사용법 |
+
+대시보드에는 승인·거절·질문 답변 양식이 없다. 분석 결과는 참고 초안이다.
+단일 이슈 분석의 판정 기록(`qa_agent_approvals`)은 그대로 쓴다.
+
 ---
 
 ## 1. 왜 이 기능이 따로 있는가
@@ -343,7 +363,7 @@ Issue ID 목록이 화면에 채워진다. 서버에 그 폴더가 없으면 `ba
 
 | Skill | 상태 |
 |---|---|
-| S04 Fix Verification | 미구현 — 수정확인 Checklist 설계 |
+| S04 Fix Verification | 대시보드의 **수정 완료 이슈 분석**(`qa-fixed-issue-analysis`, REQ-QAINTEL-013)이 수정확인·Regression TC 초안을 만든다. 단일 이슈 분석에는 없다 |
 | S06 Issue Writing & Closure | 미구현 — 초안까지만 만드는 것이 규칙 준수 |
 | S07 Document Change Review | **매뉴얼 개정 검증 모듈이 이미 담당** |
 | S08 API/WebSocket/DICOM | 미구현 — Command 표 추출은 코드로 가능 |

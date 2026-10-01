@@ -2,20 +2,24 @@
 
 이 모듈은 `/qa-agent` prefix 아래에 붙는다 (`app/web/router.py` 가 prefix 만 결정한다).
 
-화면 구성은 규칙 §14 Human Review UI 를 따른다 — 상단에 Gate 판정, 그 아래 Issue /
-Specification / TC Coverage / Regression / QA Action 다섯 개 탭.
+- `/qa-agent` 는 변경 탐지 기반 QA Intelligence 대시보드다(SPEC REQ-QAINTEL-019). 예약·수동 실행이
+  같은 파이프라인(`app/modules/daily_qa/pipeline.py`)을 쓰고, 이 화면은 결과를 읽기만 한다.
+- `/qa-agent/issue-analysis` 는 사람이 이슈 하나를 골라 돌리는 단일 이슈 분석이다(상위 SPEC 5.2절).
+  화면 구성은 규칙 §14 Human Review UI 를 따른다 — 상단에 Gate 판정, 그 아래 Issue /
+  Specification / TC Coverage / Regression / QA Action 다섯 개 탭.
 """
 
 from __future__ import annotations
 
 import html
 import json
+import re
 import uuid
 from pathlib import Path
 from threading import Thread
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core import usage as usage_module
@@ -25,6 +29,7 @@ from app.core.qa_rules import SKILL_TITLES, load_rule_set, rule_coverage
 from app.core.storage import Storage
 from app.core.uploads import save_upload
 from app.modules.qa_agent import approval_history
+from app.modules.qa_agent import dashboard as dash
 from app.modules.qa_agent.analyzer import ANALYSIS_STAGES, QaAgentAnalyzer, valid_qa_issue_type
 from app.modules.qa_agent.gates import ExecutionContext
 from app.modules.qa_agent.rule_capability import (
@@ -141,8 +146,127 @@ def _product_readiness(product: str) -> dict:
     }
 
 
+DOWNLOADABLE_SUFFIXES = (".xlsx", ".json")
+#: 실행 번호: `YYYYMMDD-HHMMSS` 또는 `YYYYMMDD-HHMMSS-<제품 slug>` (REQ-QAINTEL-023).
+RUN_ID_RE = re.compile(r"\d{8}-\d{6}(?:-[a-z0-9][a-z0-9-]*)?")
+
+
+def _choice(product: str):
+    choice = dash.choose(product)
+    if choice is None:
+        raise HTTPException(404, "등록된 제품이 아닙니다.")
+    return choice
+
+
+def _dash_context(**values) -> dict:
+    values.setdefault("label", dash.label)
+    values.setdefault("kst", dash.kst)
+    values.setdefault("analysis_labels", dash.ANALYSIS_TYPE_LABELS)
+    return values
+
+
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
+def dashboard_home(request: Request, product: str = ""):
+    """QA Intelligence 대시보드 (REQ-QAINTEL-019·022)."""
+    choice = _choice(product)
+    return templates.TemplateResponse(
+        request, "dashboard.html", _dash_context(products=choice.products, selected=choice.cfg.product, **dash.dashboard(choice))
+    )
+
+
+@router.get("/status")
+def run_status(product: str = ""):
+    """실행 상태 JSON. 화면이 몇 초마다 읽어 갱신한다 (REQ-QAINTEL-021 4번)."""
+    return dash.status(_choice(product))
+
+
+@router.post("/runs")
+def run_now(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """[지금 실행]. 예약 실행과 같은 함수로 분리 프로세스를 띄우고 바로 답한다 (REQ-QAINTEL-021).
+
+    `since`·`until` 을 주면 그 기간의 변경을 분석한다 (REQ-QAINTEL-027).
+    """
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+
+    choice = _choice(product)
+    try:
+        since_day, until_day = dash.parse_run_period(since, until)
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day)
+    messages = {
+        "running": "QA Agent가 이미 실행 중입니다.",
+        "disabled": "QA Agent 가 꺼져 있습니다 (daily_qa.enabled).",
+        "not_configured": "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다.",
+    }
+    if result["status"] in messages:
+        return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
+    limit = dash.limit_info(choice)
+    if limit:
+        # 한도 중에도 변경 감지는 돈다. 무엇이 대기로 남는지 먼저 알린다 (REQ-QAINTEL-025).
+        result["warning"] = f"{limit['description']} 이번 실행은 변경 감지만 하고 AI 분석은 대기로 남습니다."
+    return JSONResponse(result, status_code=202)
+
+
+@router.get("/runs/{run_id}", response_class=HTMLResponse)
+def run_detail(request: Request, run_id: str):
+    """실행 상세: 단계·이벤트·내려받을 파일 (REQ-QAINTEL-020)."""
+    choice = dash.choose("")
+    store = choice.store
+    run = store.get_run(run_id)
+    if not run:
+        raise HTTPException(404, "실행 기록이 없습니다.")
+    from app.modules.daily_qa.report import STAGE_LABELS, STATUS_LABELS
+
+    out_dir = choice.cfg.output_dir / run_id
+    files = sorted(path.name for path in out_dir.glob("*") if path.suffix in DOWNLOADABLE_SUFFIXES) if out_dir.is_dir() else []
+    findings = store.list_findings(run_id=run_id, limit=500)
+    return templates.TemplateResponse(request, "run_detail.html", _dash_context(
+        run=run, files=files, events=store.list_events(run_id=run_id), cards=[dash.card(item) for item in findings],
+        stage_labels=STAGE_LABELS, status_labels=STATUS_LABELS, event_labels=dash.EVENT_LABELS))
+
+
+@router.get("/runs/{run_id}/files/{name}")
+def run_file(run_id: str, name: str):
+    # 실행 번호 모양이 아니면(`..`, 경로 구분자) 실행 폴더 밖을 가리킬 수 있어 거절한다.
+    if not RUN_ID_RE.fullmatch(run_id):
+        raise HTTPException(404, "파일이 없습니다.")
+    output_dir = dash.choose("").cfg.output_dir.resolve()
+    base = (output_dir / run_id).resolve()
+    target = (base / name).resolve()
+    if base.parent != output_dir or target.parent != base or target.suffix not in DOWNLOADABLE_SUFFIXES or not target.is_file():
+        raise HTTPException(404, "파일이 없습니다.")
+    return FileResponse(target, filename=target.name)
+
+
+@router.get("/findings/{finding_id}", response_class=HTMLResponse)
+def finding_detail(request: Request, finding_id: int):
+    """분석 상세. 분석 종류에 맞는 구획을 보인다 (REQ-QAINTEL-020)."""
+    store = dash.choose("").store
+    finding = store.get_finding(finding_id)
+    if not finding:
+        raise HTTPException(404, "Finding 이 없습니다.")
+    events = store.list_events(ids=finding.get("event_ids") or []) if finding.get("event_ids") else []
+    questions = store.list_questions(run_id=finding["run_id"], subject=finding["subject"])
+    return templates.TemplateResponse(request, "finding_detail.html", _dash_context(
+        finding=finding, card=dash.card(finding), events=events, questions=questions, event_labels=dash.EVENT_LABELS,
+        axes=AXIS_LABELS))
+
+
+@router.get("/period", response_class=HTMLResponse)
+def period_view(request: Request, product: str = "", start: str = "", end: str = "", event_type: str = ""):
+    """기간 분석 조회 (REQ-QAINTEL-024)."""
+    choice = _choice(product)
+    try:
+        data = dash.period(choice, start, end, event_type)
+    except dash.PeriodError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return templates.TemplateResponse(request, "period.html", _dash_context(
+        products=choice.products, selected=choice.cfg.product, **data))
+
+
+@router.get("/issue-analysis", response_class=HTMLResponse)
 def home(request: Request, product: str = ""):
     products = storage.list_products()
     selected = product or (products[0] if products else "")

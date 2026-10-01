@@ -1,0 +1,117 @@
+{% extends "module_base.html" %}
+{% block content %}
+{% include "_intel_style.html" %}
+{% set s = finding.sections or {} %}
+{% set kind = finding.analysis_type %}
+
+{% macro issue_list(entries, extra_key='') %}
+  {% if entries %}<ul>{% for entry in entries %}
+    <li><b>{{ entry.issue_id }}</b>{% if entry.similarity %} <span class="pill">{{ entry.similarity }}</span>{% endif %}
+      {% if entry.relation %} <span class="pill">{{ label(entry.relation) }}</span>{% endif %}
+      {% if entry.flag %} <span class="pill">{{ label(entry.flag) }}</span>{% endif %}
+      {% if entry.past_resolution %} · 과거 처리 {{ entry.past_resolution }}{% endif %}
+      {% if entry.reason %}<div>{{ entry.reason }}</div>{% endif %}
+      {% if entry.differences %}<div class="hint" style="margin:0">차이: {{ entry.differences }}</div>{% endif %}</li>
+  {% endfor %}</ul>{% else %}<p class="hint">없음</p>{% endif %}
+{% endmacro %}
+
+{% macro text_block(value) %}{% if value %}<div class="qa-pre">{{ value }}</div>{% else %}<p class="hint">없음</p>{% endif %}{% endmacro %}
+
+<section>
+  <h2>[{{ finding.subject }}] {{ card.kind }}</h2>
+  <p class="hint">{{ finding.subject_title }} · 실행 <a href="/qa-agent/runs/{{ finding.run_id }}">{{ finding.run_id }}</a> · {{ kst(finding.created_at) }}</p>
+  <div class="tags"><span class="pill">{{ finding.verdict }}</span> {{ card.verdict_label }} · 신뢰도 {{ finding.confidence or '-' }}
+    {% for badge in card.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>
+
+  <div class="qa-section"><h3>Summary</h3>{{ text_block(finding.summary) }}{% if finding.detail %}{{ text_block(finding.detail) }}{% endif %}</div>
+
+  {% if kind == 'NEW_ISSUE' %}
+    <div class="qa-section"><h3>Duplicate Analysis</h3>
+      <p><span class="pill">{{ (s.duplicate or {}).verdict or '-' }}</span> {{ label((s.duplicate or {}).verdict or '') }} {{ (s.duplicate or {}).summary or '' }}</p>
+      {{ issue_list((s.duplicate or {}).candidates) }}</div>
+    <div class="qa-section"><h3>Specification Analysis</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+      {{ text_block((s.specification or {}).summary) }}
+      {% if (s.specification or {}).questions_for_lab %}<p><b>연구소·기획에 확인할 것</b></p><ul>{% for q in s.specification.questions_for_lab %}<li>{{ q }}</li>{% endfor %}</ul>{% endif %}</div>
+    <div class="qa-section"><h3>Historical Analysis</h3>
+      <div class="tags">{% for flag in (s.historical or {}).flags or [] %}<span class="pill">{{ label(flag) }}</span>{% endfor %}</div>
+      <p class="hint">과거 이슈와의 관계는 근거 기반 후보입니다. 확정 사실이 아닙니다.</p>
+      {{ issue_list((s.historical or {}).candidates) }}</div>
+    <div class="qa-section"><h3>QA Recommendation</h3>
+      {% set rec = s.recommendation or {} %}
+      {% if rec.actions %}<ul>{% for a in rec.actions %}<li>{{ a }}</li>{% endfor %}</ul>{% endif %}
+      {% if rec.checks %}<p><b>확인할 점</b></p><ul>{% for c in rec.checks %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+      {% if not rec.actions and not rec.checks %}{{ text_block(finding.action) }}{% endif %}</div>
+
+  {% elif kind == 'FIXED_ISSUE' %}
+    <div class="qa-section"><h3>Root Cause Review</h3>{{ text_block((s.root_cause_review or {}).summary) }}{{ text_block((s.root_cause_review or {}).assessment) }}</div>
+    <div class="qa-section"><h3>Resolution Review</h3>{{ text_block((s.resolution_review or {}).summary) }}{{ text_block((s.resolution_review or {}).assessment) }}</div>
+    <div class="qa-section"><h3>Specification Consistency</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+      {{ text_block((s.specification or {}).summary) }}{{ text_block((s.change_scope or {}).summary) }}</div>
+    <div class="qa-section"><h3>Regression Risk</h3>
+      <div class="table-wrap"><table class="history"><thead><tr><th>축</th><th>해당</th><th>이유</th></tr></thead><tbody>
+      {% for axis in (s.regression_risk or {}).axes or [] %}
+        <tr><td>{{ axes.get(axis.axis, axis.axis) }}</td><td>{% if axis.applicable is none %}QA 확인 필요{% elif axis.applicable %}해당{% else %}해당 없음{% endif %}</td><td>{{ axis.reason }}</td></tr>
+      {% endfor %}</tbody></table></div>
+      {% if s.tc_coverage %}<p><b>기존 TC Coverage</b></p><ul>{% for tc in s.tc_coverage %}<li>{{ tc.tc_id or tc.location }} — {% if tc.covers %}원인을 덮음{% else %}덮지 못함{% endif %}. {{ tc.reason }}</li>{% endfor %}</ul>{% endif %}</div>
+    <div class="qa-section"><h3>Verification TC</h3>{% include "_draft_tcs.html" %}</div>
+
+  {% elif kind == 'SPEC_DECISION' %}
+    <div class="qa-section"><h3>R&amp;D Claim</h3>{{ text_block((s.rd_claim or {}).summary) }}</div>
+    <div class="qa-section"><h3>Specification Evidence</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>{{ text_block((s.specification or {}).summary) }}</div>
+    <div class="qa-section"><h3>Historical Decisions</h3>
+      <div class="tags">{% for flag in (s.historical or {}).flags or [] %}<span class="pill">{{ label(flag) }}</span>{% endfor %}</div>
+      {{ issue_list((s.historical or {}).candidates) }}</div>
+    <div class="qa-section"><h3>QA Analysis</h3>{{ text_block((s.qa_analysis or {}).summary) }}
+      {% if (s.qa_analysis or {}).checks %}<ul>{% for c in s.qa_analysis.checks %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}</div>
+
+  {% elif kind == 'COMMENT' %}
+    {% for entry in s.comments or [] %}
+    <div class="qa-section"><h3>New Comment <span class="mono">{{ entry.comment_id }}</span></h3>{{ text_block(entry.summary) }}
+      <p><b>Classification</b> <span class="pill">{{ entry.classification }}</span> {{ label(entry.classification) }}</p>
+      <p><b>Impact</b></p>{{ text_block(entry.impact) }}
+      {% if entry.follow_up %}<p><b>추가 확인사항</b></p>{{ text_block(entry.follow_up) }}{% endif %}</div>
+    {% endfor %}
+
+  {% elif kind == 'SPEC_COVERAGE' %}
+    <div class="qa-section"><h3>Specification Change</h3>{{ text_block((s.change or {}).summary) }}
+      {% if (s.change or {}).changed_requirements %}<ul>{% for r in s.change.changed_requirements %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}</div>
+    <div class="qa-section"><h3>Historical Issue Coverage</h3>
+      <p>{% if (s.issue_coverage or {}).has_related %}관련 Issue 있음{% else %}관련 Issue 없음{% endif %}</p>
+      {{ issue_list((s.issue_coverage or {}).issues) }}</div>
+    <div class="qa-section"><h3>Checklist Coverage</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+      <div class="table-wrap"><table class="history"><thead><tr><th>TC</th><th>조치</th><th>이유</th><th>추천 수정</th></tr></thead><tbody>
+      {% for tc in (s.checklist_coverage or {}).tcs or [] %}
+        <tr><td>{{ tc.tc_id }}<div class="hint" style="margin:0">{{ tc.location }}</div></td><td><span class="pill">{{ tc.decision }}</span></td><td>{{ tc.reason }}</td><td>{{ tc.recommended_change }}</td></tr>
+      {% else %}<tr><td colspan="4">관련 TC 없음</td></tr>{% endfor %}</tbody></table></div></div>
+    <div class="qa-section"><h3>Coverage Gap</h3>
+      {% if s.gaps %}<ul>{% for gap in s.gaps %}<li><span class="pill">{{ gap.perspective }}</span> {{ gap.description }}</li>{% endfor %}</ul>{% else %}<p class="hint">없음</p>{% endif %}
+      {% for alert in s.alerts or [] %}<p class="qa-banner"><b>{{ label(alert.type) }}</b> {{ alert.detail }}</p>{% endfor %}</div>
+    <div class="qa-section"><h3>Recommended TC Changes</h3>{% include "_draft_tcs.html" %}</div>
+
+  {% else %}
+    <div class="qa-section"><h3>상세</h3>{{ text_block(finding.action) }}{% if finding.tc_ref %}<p>대상 TC: {{ finding.tc_ref.workbook }} / {{ finding.tc_ref.sheet }} / {{ finding.tc_ref.row }}행 {{ finding.tc_ref.tc_id }}</p>{% endif %}
+      {% if finding.draft_tcs %}{% include "_draft_tcs.html" %}{% endif %}</div>
+  {% endif %}
+
+  <div class="qa-section"><h3>Evidence</h3>
+    {% if finding.evidence %}<ul>{% for ev in finding.evidence %}<li><span class="pill">{{ ev.source_type }}</span> <b>{{ ev.location }}</b> {{ ev.summary }} {% if ev.validity and ev.validity != 'Current' %}({{ ev.validity }}){% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="hint">근거 없음 — 근거가 없음을 뜻하는 판정이라 신뢰도를 올리지 않았습니다.</p>{% endif %}</div>
+
+  {% if questions %}<div class="qa-section"><h3>추가 확인사항</h3><ul>{% for q in questions %}<li>{{ q.question }}{% if q.why %} <span class="hint">({{ q.why }})</span>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+
+  {% set validation = s.validation or {} %}
+  {% if validation.removed or validation.notes %}
+  <div class="qa-section"><h3>근거 검증 기록</h3>
+    {% for note in validation.notes or [] %}<p class="hint">{{ note }}</p>{% endfor %}
+    {% if validation.removed %}<ul>{% for item in validation.removed %}<li>뺀 항목 <b>{{ item.value }}</b> ({{ item.kind }}) — {{ item.reason }}</li>{% endfor %}</ul>{% endif %}</div>
+  {% endif %}
+
+  {% if events %}
+  <div class="qa-section"><h3>이 분석을 만든 변경 이벤트</h3><ul>
+    {% for event in events %}<li>#{{ event.id }} {{ event_labels.get(event.event_type, event.event_type) }} · 바뀐 필드 {{ event.changed_fields|join(', ') or '-' }} · <span class="pill {{ event.analysis_status }}">{{ event.status_label }}</span></li>{% endfor %}
+  </ul></div>
+  {% endif %}
+  {% if finding.related_ids %}<p class="hint">관련 번호: 이슈 {{ (finding.related_ids.issues or [])|join(', ') or '-' }} · SRS {{ (finding.related_ids.srs or [])|join(', ') or '-' }} · TC {{ (finding.related_ids.tcs or [])|join(', ') or '-' }}</p>{% endif %}
+  <p class="hint">모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "module_base.html" %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+{% include "_intel_style.html" %}
+
+<section>
+  <h2>지식 문서 업로드 현황 <span class="hint">담당자가 직접 올려야 하는 문서: {{ knowledge.kinds|join(', ') }}</span></h2>
+  {% if knowledge.available %}
+  <p class="hint">마지막 수집 {{ knowledge.synced_at or '-' }} (한국 시간)</p>
+  <div class="table-wrap"><table class="history qa-docs">
+    <thead><tr><th>종류</th><th>파일</th><th>서버 업로드</th><th>파일 수정일</th><th>올린 경로</th></tr></thead>
+    <tbody>
+    {% for row in knowledge.rows %}
+      <tr><td>{{ row.kind }}</td><td>{{ row.file_name }}{% if row.error %} <span class="pill FAILED">읽지 못함</span>{% endif %}</td>
+          <td class="mono">{{ row.uploaded }}</td><td class="mono">{{ row.modified }}</td><td>{{ row.route }}</td></tr>
+    {% else %}
+      <tr><td colspan="5">수동으로 올린 지식 문서가 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <p class="status">수집된 지식 문서가 없습니다. 담당자 PC 의 지식 폴더 업로드(REQ-SYNC-002)를 확인하세요.</p>
+  {% endif %}
+</section>
+
+<section class="qa-section">
+  {% if products|length > 1 %}
+  <form method="get" class="inline-form"><label>제품
+    <select name="product" onchange="this.form.submit()">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+  </label></form>
+  {% endif %}
+  <h2>{{ selected }} 실행</h2>
+  {% if status.claude_limit %}
+  <p class="qa-banner" id="limit-banner"><b>{{ status.claude_limit.label }}</b> — {{ status.claude_limit.description }}
+    그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.</p>
+  {% endif %}
+  <div class="qa-run">
+    <span>마지막 실행 <b id="last-run">{% if status.last_run %}{{ status.last_run.started }}{% else %}없음{% endif %}</b></span>
+    <span>실행 결과 <span id="last-status" class="pill {{ status.last_run.status if status.last_run else '' }}">{{ status.last_run.status_label if status.last_run else '-' }}</span></span>
+    <span>다음 자동 실행 <b>{{ status.next_run or '-' }}</b></span>
+    <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"></label>
+    <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"></label>
+    <button type="button" id="run-now" data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}지금 실행{% endif %}</button>
+    {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">실행 상세</a>{% endif %}
+  </div>
+  <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.</p>
+
+  <h3>오늘 변경 요약</h3>
+  {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}
+  <div class="qa-stats">
+    <div class="qa-stat"><b>{{ summary.new_issue }}</b>신규 Issue</div>
+    <div class="qa-stat"><b>{{ summary.fixed }}</b>Fixed</div>
+    <div class="qa-stat"><b>{{ summary.spec }}</b>Spec</div>
+    <div class="qa-stat"><b>{{ summary.comment }}</b>Comment Update</div>
+    <div class="qa-stat"><b>{{ summary.srs }}</b>SRS Update</div>
+  </div>
+</section>
+
+<section class="qa-section">
+  <h2>최신 분석 결과</h2>
+  <form method="get" action="/qa-agent/period" class="inline-form">
+    <input type="hidden" name="product" value="{{ selected }}">
+    기간 조회 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
+  </form>
+  <div class="qa-cards">
+  {% for item in cards %}
+    <div class="qa-card">
+      <h4>[{{ item.subject }}] {{ item.kind }} <small>{{ item.created }}</small></h4>
+      {% if item.title %}<div class="hint" style="margin:0">{{ item.title }}</div>{% endif %}
+      <div class="tags"><span class="pill">{{ item.verdict_label }}</span>{% for badge in item.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>
+      <div>{{ item.summary }}</div>
+      <a href="/qa-agent/findings/{{ item.id }}">상세보기</a>
+    </div>
+  {% else %}
+    <p class="hint">아직 분석 결과가 없습니다.</p>
+  {% endfor %}
+  </div>
+</section>
+
+<section class="qa-section">
+  <h2>최근 실행</h2>
+  <div class="table-wrap"><table class="history">
+    <thead><tr><th>실행 ID</th><th>결과</th><th>시작</th><th>변경</th><th>Finding</th><th></th></tr></thead>
+    <tbody>
+    {% for run in runs %}
+      <tr><td class="mono">{{ run.id }}</td><td><span class="pill {{ run.status }}">{{ run.status_label }}</span></td>
+          <td class="mono">{{ kst(run.started_at) }}</td>
+          <td>{% for name, count in (run.summary.events or {}).items() %}{{ event_labels.get(name, name) }} {{ count }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</td>
+          <td>{{ run.summary.findings or 0 }}</td><td><a href="/qa-agent/runs/{{ run.id }}">실행 상세</a></td></tr>
+    {% else %}
+      <tr><td colspan="6">실행 기록이 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <p class="hint">사람이 이슈 하나를 골라 깊게 보려면 <a href="/qa-agent/issue-analysis">단일 이슈 분석</a>을 쓰세요.</p>
+</section>
+
+<script>
+(function () {
+  const button = document.getElementById('run-now');
+  const message = document.getElementById('run-message');
+  if (!button) return;
+  const product = button.dataset.product;
+  async function poll() {
+    const response = await fetch('/qa-agent/status?product=' + encodeURIComponent(product));
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.last_run) {
+      document.getElementById('last-run').textContent = data.last_run.started;
+      const pill = document.getElementById('last-status');
+      pill.textContent = data.last_run.status_label;
+      pill.className = 'pill ' + data.last_run.status;
+    }
+    // 프로세스가 잠금을 만들기 전에 읽은 "실행 중 아님"은 끝났다는 뜻이 아니다. 한 번 실행 중을 본 뒤에만 끝으로 본다.
+    if (data.running) seenRunning = true;
+    waited += 1;
+    const finished = seenRunning && !data.running;
+    button.disabled = data.running || (button.dataset.started && !finished && waited < 12);
+    button.textContent = data.running ? '실행 중…' : '지금 실행';
+    if (finished && button.dataset.started) location.reload();
+    else if (data.running || (button.dataset.started && waited < 12)) setTimeout(poll, 5000);
+  }
+  let seenRunning = false, waited = 0;
+  button.addEventListener('click', async function () {
+    button.disabled = true;
+    const body = new FormData(); body.append('product', product);
+    body.append('since', document.getElementById('run-since').value);
+    body.append('until', document.getElementById('run-until').value);
+    const response = await fetch('/qa-agent/runs', {method: 'POST', body});
+    const data = await response.json();
+    if (response.status === 202) {
+      message.textContent = '실행을 시작했습니다.' + (data.warning ? ' ' + data.warning : '');
+      button.dataset.started = '1';
+      setTimeout(poll, 3000);
+    } else {
+      message.textContent = data.detail || '실행하지 못했습니다.';
+      button.disabled = false;
+    }
+  });
+  {% if status.running %}setTimeout(poll, 5000);{% endif %}
+})();
+</script>
+{% endblock %}

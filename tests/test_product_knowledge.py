@@ -315,6 +315,62 @@ def test_sync_reports_failure_per_file_and_keeps_going(tmp_path: Path) -> None:
     ]
 
 
+def _deny_reading(monkeypatch: pytest.MonkeyPatch, marker: str) -> None:
+    """이름에 `marker` 가 든 파일은 읽기 권한이 없는 것처럼 만든다(보안 프로그램이 잠근 파일 등)."""
+    real_open = Path.open
+
+    def guarded(self, *args, **kwargs):
+        if marker in self.name:
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_open(self, *args, **kwargs)
+
+    import shutil
+    real_copy = shutil.copy2
+
+    def guarded_copy(src, dst, *args, **kwargs):
+        if marker in Path(src).name:
+            raise PermissionError(13, "Permission denied", str(src))
+        return real_copy(src, dst, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", guarded)
+    monkeypatch.setattr(shutil, "copy2", guarded_copy)
+
+
+def test_unreadable_file_does_not_stop_scan_or_sync(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """읽을 수 없는 파일 하나가 있어도 스캔·수집은 계속되고 그 파일만 error 로 남는다 (REQ-KNOW-011 순서 5)."""
+    source = tmp_path / "지식"
+    _write(source, "(사양서) Acme 사양서1(260907).md", "정상")
+    _write(source, "(사양서) Acme 잠김 사양서(260907).md", "읽을 수 없음")
+    root = tmp_path / "project"
+    _deny_reading(monkeypatch, "잠김")
+
+    scan = scan_source(_config(source))
+    locked = [asset for asset in scan.assets if "잠김" in asset.file_name]
+    assert len(scan.assets) == 2 and locked and locked[0].sha256 == ""
+
+    outcome = sync_product(_config(source), root=root)
+    assert outcome.status == "PARTIAL"
+    assert outcome.copied == ["(사양서) Acme 사양서1(260907).md"]
+    assert outcome.failed == ["(사양서) Acme 잠김 사양서(260907).md"]
+    record = next(a for a in load_manifest("Acme Viewer", root)["assets"] if "잠김" in a["file_name"])
+    assert "PermissionError" in record["error"]
+
+
+def test_unreadable_file_is_retried_not_treated_as_unchanged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """지문을 읽지 못한 파일은 '미변경' 으로 넘기지 않는다. 다음 수집에서 읽히면 정상 수집된다."""
+    source = tmp_path / "지식"
+    _write(source, "(사양서) Acme 잠김 사양서(260907).md", "본문")
+    root = tmp_path / "project"
+    with monkeypatch.context() as patch:
+        _deny_reading(patch, "잠김")
+        assert sync_product(_config(source), root=root).status == "FAILED"
+        # 두 번째도 읽을 수 없으면 계속 실패로 남는다(빈 지문끼리 같다고 '미변경' 처리하지 않는다).
+        again = sync_product(_config(source), root=root)
+        assert again.failed == ["(사양서) Acme 잠김 사양서(260907).md"] and again.unchanged == []
+    recovered = sync_product(_config(source), root=root)
+    assert recovered.status == "SUCCESS" and recovered.copied == ["(사양서) Acme 잠김 사양서(260907).md"]
+
+
 def test_missing_source_dir_yields_needs_config(tmp_path: Path) -> None:
     outcome = sync_product(_config(tmp_path / "없는폴더"), root=tmp_path / "project")
     assert outcome.status == "NEEDS_CONFIG"

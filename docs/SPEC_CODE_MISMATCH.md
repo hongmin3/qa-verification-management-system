@@ -421,6 +421,8 @@ Action: 사용자 확인 필요 (열 이름을 "시작 시각(UTC)"으로 고칠
 
 ## 4. VXvue 일일 QA 점검 (7건, 해결 7건)
 
+> **참고** 2026-09-30 에 이 점검은 변경 탐지 기반 QA Intelligence Agent(`specs/qa-intelligence.md`)로 바뀌었다. 아래 해결 가운데 사양 변경 대기(`spec_change_pending`)와 이슈 기준 시각·처리한 이슈(`issues_processed`)는 변경 이벤트 표(`qa_change_events`)의 분석 상태(`pending`·`failed`·`abandoned`)가 대신한다. 옛 대기 상태는 첫 실행에서 대기 SRS 이벤트로 바뀐다(REQ-QAINTEL-006, `tests/test_qa_intel_failures.py`). 사람 검토 대기열 기준 문구는 대시보드(REQ-QAINTEL-019)로 옮겼다.
+
 ```text
 SPEC / CODE MISMATCH
 Requirement: REQ-DAILY-001 (기존 SPEC 4절 "어디서 끊기면" 표와 REQ-DAILY-001 예시)

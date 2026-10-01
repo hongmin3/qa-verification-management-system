@@ -1,4 +1,4 @@
-"""Validates: NFR-SEC-001, REQ-DAILY-008, REQ-DAILY-010 (TEST-DAILY-006)."""
+"""Validates: NFR-SEC-001, REQ-DAILY-008, REQ-DAILY-010 (TEST-DAILY-006), REQ-QAINTEL-023, REQ-QAINTEL-025."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from app.modules.daily_qa import agent_runner, rules
+from app.modules.daily_qa import agent_runner, claude_limits, rules
 from app.modules.daily_qa.agent_runner import ClaudeRunner, build_command, build_env, build_prompt
 from app.modules.daily_qa.packages import Task
 from app.modules.daily_qa.report import build_email
@@ -72,12 +72,21 @@ def test_workspace_under_folder_with_agent_doc_is_refused(tmp_path):
 def test_prepare_writes_settings_skills_and_rules(tmp_path):
     guide = tmp_path / "guide.md"
     guide.write_text("규칙 본문 담당자 hong@example.com", encoding="utf-8")
-    run = prepare(tmp_path / "ws", tmp_path / "repo", "20260928-090000", guide, None)
+    product_skills = Path(__file__).resolve().parents[1] / "config" / "products" / "vxvue" / "skills"
+    (tmp_path / "ws").mkdir()
+    # 개편 전에 작업 폴더 뿌리에 이 모듈이 쓴 CLAUDE.md 는 제품 폴더로 옮기며 지운다.
+    (tmp_path / "ws" / "CLAUDE.md").write_text("# 무인 실행 규칙 (VXvue 일일 QA 점검)", encoding="utf-8")
+    run = prepare(tmp_path / "ws" / "vxvue", tmp_path / "repo", "20260928-090000", guide, None, "VXvue", product_skills, "vxvue-qa-rules")
+    assert not (tmp_path / "ws" / "CLAUDE.md").exists()
+    assert "VXvue" in (run.root / "CLAUDE.md").read_text(encoding="utf-8")
     settings = json.loads((run.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
     assert settings["permissions"]["deny"][0] == "Bash"
     assert settings["permissions"]["allow"] == list(ALLOWED_TOOLS)
     skills = {path.parent.name for path in (run.root / ".claude" / "skills").glob("*/SKILL.md")}
-    assert {"vxvue-qa-rules", "vxvue-spec-change-impact", "vxvue-issue-verification", "vxvue-manual-completeness"} <= skills
+    assert {"qa-common-rules", "qa-new-issue-analysis", "qa-fixed-issue-analysis", "qa-spec-decision-analysis",
+            "qa-comment-analysis", "qa-spec-coverage-analysis", "qa-manual-completeness", "vxvue-qa-rules"} <= skills
+    assert not {"vxvue-spec-change-impact", "vxvue-issue-verification"} & skills
+    assert "vxvue-qa-rules" in build_prompt(Task("NEW-001", "qa-new-issue-analysis", {}), run)
     copied = (run.root / "rules" / "qa-guide.md").read_text(encoding="utf-8")
     assert "hong@example.com" not in copied                   # 규칙 사본도 마스킹된다
     assert run.out_dir.is_dir() and run.in_dir.is_dir()
@@ -120,11 +129,12 @@ def test_rules_revision_mismatch_blocks(tmp_path, monkeypatch):
     guide.write_text("x", encoding="utf-8")
     monkeypatch.setattr(rules, "collected_assets", lambda product, kind, root=None: [{"file_name": guide.name}] if kind == rules.KIND_QA_RULES else [])
     monkeypatch.setattr(rules, "collected_path", lambda product, asset, root=None: tmp_path / asset["file_name"])
-    state = rules.check("VXvue")
+    state = rules.check("VXvue", supported_rev="1.17")
     assert not state.ok and state.found_rev == "1.12" and "1.17" in state.reason
     guide.rename(tmp_path / guide.name.replace("1.12", "1.17"))
     monkeypatch.setattr(rules, "collected_assets", lambda product, kind, root=None: [{"file_name": guide.name.replace("1.12", "1.17")}] if kind == rules.KIND_QA_RULES else [])
-    assert rules.check("VXvue").ok
+    assert rules.check("VXvue", supported_rev="1.17").ok
+    assert rules.check("VXvue").ok                     # 기준 판이 없는 제품은 판을 검사하지 않는다
 
 
 def test_email_contains_counts_and_link_but_no_spec_text():
@@ -173,5 +183,6 @@ def test_usage_limit_is_a_failure_with_its_reason_recorded(tmp_path, monkeypatch
     outcome = ClaudeRunner("claude", "tok", 30).run(Task("B-001", "vxvue-spec-change-impact", {}), run)
     assert not outcome.ok
     assert "session limit" in outcome.error
+    assert outcome.limit is not None and outcome.limit.kind == claude_limits.KIND_SESSION and outcome.limit.reset_at
     log = json.loads((run.run_dir / "logs" / "B-001.claude.json").read_text(encoding="utf-8"))
     assert log["is_error"] is True and log["tool_call_log"] == []

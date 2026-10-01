@@ -1,0 +1,19 @@
+{% set hold = (finding.sections or {}).tc_hold or {} %}
+{% if hold.reason %}<p class="qa-banner"><b>Checklist TC 생성 보류</b> — {{ hold.reason }}
+  {% if hold.questions %}<br>확인 필요: {{ hold.questions|join(' / ') }}{% endif %}</p>{% endif %}
+{% for tc in finding.draft_tcs %}
+<details {% if loop.first %}open{% endif %}><summary><span class="pill">{{ tc.kind }}</span> {% if tc.perspective %}<span class="pill">{{ tc.perspective }}</span>{% endif %} {{ tc.title }}</summary>
+  <dl class="qa-kv">
+    <dt>SRS No</dt><dd>{{ tc.srs_no or '-' }}</dd>
+    <dt>변경사항</dt><dd>{{ tc.change }}</dd>
+    <dt>변경사항 상세</dt><dd>{{ tc.change_detail }}</dd>
+    <dt>Precondition</dt><dd>{{ tc.precondition }}</dd>
+    <dt>Test Step</dt><dd>{{ tc.test_step }}</dd>
+    <dt>Expected Result</dt><dd>{{ tc.expected_result or '확인 필요 (사양 근거 부족)' }}</dd>
+    <dt>Test Data</dt><dd>{{ tc.test_data }}</dd>
+    {% if tc.rationale %}<dt>필요한 이유</dt><dd>{{ tc.rationale }}</dd>{% endif %}
+  </dl>
+</details>
+{% else %}
+{% if not hold.reason %}<p class="hint">검증 TC 초안 없음</p>{% endif %}
+{% endfor %}

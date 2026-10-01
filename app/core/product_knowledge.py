@@ -282,6 +282,15 @@ def _sha256(path: Path, chunk_size: int = 1 << 20) -> str:
     return digest.hexdigest()
 
 
+def _readable_sha256(path: Path) -> str:
+    """읽을 수 없는 파일(권한·보안 프로그램 잠금)은 빈 지문으로 둔다. 스캔은 멈추지 않고, 수집 단계의
+    복사가 그 파일만 `error` 로 남긴다(REQ-KNOW-011 순서 5)."""
+    try:
+        return _sha256(path)
+    except OSError:
+        return ""
+
+
 def _should_ignore(file_name: str, ignore: tuple[str, ...]) -> bool:
     """제외 패턴 비교. 이름을 정규화한다 — `[자동화*` 처럼 한글이 든 패턴이 NFD 이름에
     맞지 않으면 제외돼야 할 파일이 수집된다."""
@@ -352,7 +361,7 @@ def scan_source(config: ProductConfig) -> ScanResult:
             source_path=str(path),
             name_note=name_note,
             size=stat.st_size,
-            sha256=_sha256(path),
+            sha256=_readable_sha256(path),
             modified=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
             **parsed,
         )
@@ -450,7 +459,8 @@ def sync_product(config: ProductConfig, root: Path | None = None, dry_run: bool 
         original_target = target / "original" / asset.kind / asset.file_name
         # 지난번에 읽지 못한(error) 파일은 "미변경"으로 넘기지 않고 다시 읽어 본다. 넘기면 error 표시가
         # 빠져 읽지 못한 판이 읽힌 판으로 둔갑한다(SPEC_CODE_MISMATCH 5절 3번).
-        if known and known.get("sha256") == asset.sha256 and original_target.is_file() and not known.get("error"):
+        # 지문을 읽지 못한 파일(빈 지문)은 비교할 수 없으므로 '미변경' 으로 넘기지 않는다.
+        if known and asset.sha256 and known.get("sha256") == asset.sha256 and original_target.is_file() and not known.get("error"):
             record["normalized_path"] = known.get("normalized_path", "")
             record["normalized_chars"] = known.get("normalized_chars", 0)
             record["collected_at"] = known.get("collected_at", "")
@@ -565,7 +575,33 @@ class RegisterOutcome:
     refreshed: list[str] = field(default_factory=list)
     #: 다른 경로로 이미 등록돼 있어 이 수집본과 겹칠 수 있는 문서. 지우지 않고 보고만 한다.
     duplicates: list[str] = field(default_factory=list)
+    #: 같은 논리 문서의 더 최신 판이 이미 등록돼 있어 등록하지 않은 수집본 (REQ-KNOW-012).
+    skipped_older: list[str] = field(default_factory=list)
     detail: str = ""
+
+
+def document_logical_key(kind: str, name: str, metadata: dict | None = None) -> str:
+    """등록 문서의 논리 문서 키. `KnowledgeAsset.logical_id` 와 같은 규칙이다(종류 + 이름 + 언어).
+
+    지식 폴더 수집·사람의 등록·ALM 동기화가 모두 이 키로 "같은 문서의 다른 판"을 가린다 —
+    최신본을 고르는 규칙을 길마다 따로 만들지 않는다 (REQ-KNOW-003, REQ-KNOW-009).
+    """
+    metadata = metadata or {}
+    parsed = parse_asset_name(name)
+    base = str(metadata.get("base_name") or parsed["base_name"]).casefold()
+    language = str(metadata.get("language") or parsed["language"]).upper()
+    return "|".join([kind, base, language] if language else [kind, base])
+
+
+def is_strictly_older_name(name: str, than: str) -> bool:
+    """파일 이름 `name` 의 리비전이 `than` 보다 **확실히** 오래됐는가. 표기가 다르거나 없으면 False."""
+    left, right = parse_asset_name(name), parse_asset_name(than)
+    if not left["revision"] or not right["revision"] or left["revision_kind"] != right["revision_kind"]:
+        return False
+    try:
+        return _revision_sort_key(left["revision"], left["revision_kind"]) < _revision_sort_key(right["revision"], right["revision_kind"])
+    except ValueError:
+        return False
 
 
 def _is_strictly_older(existing_name: str, asset: dict) -> bool:
@@ -645,6 +681,22 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                 continue
             resolved = str(path.resolve()).casefold()
             already = next((document for document in existing_all if str(Path(document["path"]).resolve()).casefold() == resolved), None)
+            if already is None:
+                # 사람이 화면에서 새 판으로 교체했는데 지식 폴더에는 아직 옛 판이 있으면, 옛 판을
+                # 등록하지 않는다. 등록하면 두 판이 함께 검색되고 "최신본만 쓴다"가 깨진다.
+                asset_key = document_logical_key(kind, asset["file_name"], asset)
+                newer = next(
+                    (
+                        document for document in existing_all
+                        if document["kind"] == kind and document["id"] not in removed_ids
+                        and document_logical_key(kind, document["name"], json.loads(document.get("metadata_json") or "{}")) == asset_key
+                        and is_strictly_older_name(asset["file_name"], document["name"])
+                    ),
+                    None,
+                )
+                if newer is not None:
+                    outcome.skipped_older.append(f"{asset['file_name']} (등록된 {newer['name']} 가 더 최신)")
+                    continue
             if already is not None:
                 # 리비전 표시가 없는 이름은 내용이 바뀌어도 같은 경로에 덮어쓴다. 등록 때의 sha256 과
                 # 다르면 파싱 저장본(document_cache)이 옛 내용이므로 버리고 sha256 을 새로 적는다.
@@ -714,10 +766,12 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
     outcome.duplicates = list(dict.fromkeys(outcome.duplicates))
     outcome.detail = (
         f"등록 {len(outcome.registered)}건, 미변경 {len(outcome.unchanged)}건, "
-        f"이전 리비전 정리 {len(outcome.replaced)}건, 중복 확인 필요 {len(outcome.duplicates)}건"
+        f"이전 리비전 정리 {len(outcome.replaced)}건, 중복 확인 요청 {len(outcome.duplicates)}건"
     )
     if outcome.refreshed:
         outcome.detail += f", 내용 변경으로 다시 읽음 {len(outcome.refreshed)}건"
+    if outcome.skipped_older:
+        outcome.detail += f", 등록된 판이 더 최신이라 건너뜀 {len(outcome.skipped_older)}건"
     return outcome
 
 

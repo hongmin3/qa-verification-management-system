@@ -17,7 +17,7 @@
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [일일 QA 점검](modules/daily-qa.md) · [QA Agent](modules/qa-agent.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
@@ -33,7 +33,7 @@
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
 | **운영 서버 주소·경로·재기동 절차(사내 정보)** | [운영 로컬 메모](local/OPERATIONS_LOCAL.md) · 2026-09-09 노출 사고 기록은 [보안 사고 메모](local/SECURITY_INCIDENT_2026-09-09.md). 비공개 저장소에만 있다 |
 | **AI 제공자(Claude CLI / Gemini) 바꾸기** | [SPEC REQ-AICALL-005](../SPEC.md) → `config.yaml` 의 `ai.provider` |
-| **일일 QA 점검을 서버에 설치·운영하기** | [일일 QA 점검](modules/daily-qa.md) |
+| **QA Agent 점검을 서버에 설치·운영하기** (예약·공휴일·한도·기간 실행) | [QA Agent 점검 엔진](modules/daily-qa.md) |
 | **AI 점검의 보안 통제를 설명하기** | [AI 점검 보안 통제](SECURITY_AI_AGENT.md) |
 
 ## 사용법은 앱 안에 있다
@@ -44,8 +44,7 @@
 | 주소 | 내용 |
 |---|---|
 | `/` | 허브 — 기능 선택 |
-| `/daily-qa/guide` | 일일 QA 점검 사용법 (검토 대기열, 승인·거절) |
-| `/qa-agent/guide` | QA Agent 사용법 (Issue 검증 범위) |
+| `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간 조회·지금 실행·한도 안내, 단일 이슈 분석) |
 | `/impact-analyzer/guide` | Regression 영향 분석 사용법 |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
 | `/knowledge/guide` | Knowledge 사용법 (문서·규칙 관리, 파일명 규약) |
@@ -85,11 +84,11 @@
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | precision·recall·F1 기반 추천 정확도 평가 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서·지식 폴더 자동 동기화(PC 예약 작업), 하루 실행 순서, 보고서 구조 |
-| [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | 일일 QA 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
-| [modules/daily-qa.md](modules/daily-qa.md) | 일일 QA 점검 구조, Skill, 서버 설치, 운영 |
+| [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | QA Agent 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
+| [modules/daily-qa.md](modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조, 분석 5종·Skill, 제품별 분리, 서버 설치, 설정, 운영 |
 | [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |
-| [QA_AGENT_ARCHITECTURE.md](QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit 설계 |
-| [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 파일명 규약, 리비전 판별, 코드 변경 없이 편입 |
+| [QA_AGENT_ARCHITECTURE.md](QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit 설계 · 변경 탐지 점검과 공유하는 것(17절) |
+| [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 파일명 규약, 리비전 판별, QA Agent 점검 연결(Polarion·필드·연구소 결과 매핑·예약·Baseline), 코드 변경 없이 편입 |
 | [POST_DEPLOY_TESTS.md](POST_DEPLOY_TESTS.md) | 실서버 반영 후 확인 항목 (로컬에서 확인 불가한 것만) |
 
 ### `docs/modules/` — 기능별 상세

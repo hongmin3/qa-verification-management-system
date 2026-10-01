@@ -307,7 +307,7 @@ def _readiness(export_available: bool) -> dict:
 def test_home_without_export_folder_asks_for_file_only(web, monkeypatch, storage) -> None:
     monkeypatch.setattr(router_module, "_product_readiness", lambda product: _readiness(False))
     monkeypatch.setattr(QaAgentAnalyzer, "available_issue_ids", lambda self, product: [])
-    page = web.get("/qa-agent?product=VXvue").text
+    page = web.get("/qa-agent/issue-analysis?product=VXvue").text
     assert 'name="issue_id"' not in page
     assert "Issue ID를 직접 입력" not in page
     assert "backup.json" in page
@@ -327,7 +327,7 @@ def test_start_rejects_issue_id_only_when_export_folder_is_missing(web, monkeypa
 def test_home_offers_issue_type_choice(web, monkeypatch) -> None:
     monkeypatch.setattr(router_module, "_product_readiness", lambda product: _readiness(True))
     monkeypatch.setattr(QaAgentAnalyzer, "available_issue_ids", lambda self, product: ["VP-1"])
-    page = web.get("/qa-agent?product=VXvue").text
+    page = web.get("/qa-agent/issue-analysis?product=VXvue").text
     assert 'name="qa_issue_type"' in page
     assert "G. Cannot Reproduce" in page
 

@@ -1,5 +1,14 @@
 # 진행 상태
 
+## 2026-10-01 QA Intelligence Agent 개편 마무리 (중단된 세션 이어받음)
+
+- 이어받은 범위: 인계 문서 `2026-09-30-qa-intelligence-agent.md` 8절. 1~3번(종류 열, xfail 3건, TEST-QAINTEL-013)과 문서·SPEC 5.4절 정리는 앞 세션들이 끝내 두었다. 이 세션은 코드 리뷰 지적과 사용자 결정을 반영했다.
+- 사용자 결정(앞 세션에서 받음): 상태 이름 `확인 필요` → `주의`, 전체 pytest 를 `botyard.json` verify 로 등록, 수집이 모두 성공해야 `NO_CHANGE`, 기간 실행·이벤트 세부 규칙 9가지 추천안.
+- 리뷰 반영: 지난 날 기간 실행이 대기 이벤트를 포기하던 문제(Critical), `run_file` 경로 탈출, 이벤트 하나의 두 분석, 기간 실행 중복 판정, 같은 전이의 재발, 답변 제품 필터, catch-up 유실, 인증 오탐, 멈춘 실행의 토큰, 매뉴얼 점검 작업 상한, 비용 대시보드의 `PARTIAL` 집계.
+- 고치지 않은 리뷰 항목: 시간 초과 뒤 재시도는 SPEC.md REQ-DAILY-016 표("제한 시간 초과 → 한 번 더")가 정한 동작이라 그대로 둔다. 상세 화면이 첫 제품 설정으로 저장소를 여는 점(`dash.choose("")`)은 DB·출력 폴더가 제품 공통이라 지금은 맞다.
+- 검증: 새 재현 테스트 `tests/test_qa_intel_review_fixes.py` 20개 통과. 핵심 가드 4개와 스냅샷 댓글 대체·경로 탈출 가드를 지워 테스트가 실패하는 것을 확인하고 되돌렸다. `run_daily_qa.py --check` 종료 코드 2(Polarion·토큰 없음 `[주의]`), `--dry-run --no-email` 은 `PARTIAL`·종료 코드 1·Claude 0회. 12000 포트 서버에서 `/qa-agent`·기간 조회·실행 상세·`/knowledge`·`/cost-dashboard` 200, `/daily-qa` 307, 경로 탈출 404, 1920·390px 가로 스크롤 없음.
+- 남은 일: Knowledge 재설계(인계 문서 `2026-09-30-knowledge-dashboard-redesign.md` 4절). SPEC 의 REQ-KNOW-001~005·012·017 은 이미 개정됐고 코드는 아직 옛 화면이다. REQ-KNOW-018~020 은 `draft` 다.
+
 ## 2026-09-30 저녁 Manual Hub 포트 24358 · 이슈 수집 제안 · 지식 검토 준비
 
 - 완료: Manual Hub 백엔드 포트를 `9180` → `24358` 로 바꿨다(저장소만). 서버 `ss -ltn` 에서 비어 있고 임시 포트 범위(32768~60999) 밖인 번호다. 다섯 곳의 포트가 어긋나면 `tests/test_serve_bind.py` 가 실패한다(파일 하나를 옛 포트로 되돌려 실패하는 것 확인).

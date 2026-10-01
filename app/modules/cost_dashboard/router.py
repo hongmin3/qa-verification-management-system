@@ -14,7 +14,12 @@ router = APIRouter()
 templates = Jinja2Templates(directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"])
 storage = Storage()
 
-MODULE_LABELS = {"impact_analyzer": "Regression 영향 분석", "manual_review": "매뉴얼 개정 검증", "qa_agent": "QA Agent"}
+MODULE_LABELS = {
+    "impact_analyzer": "Regression 영향 분석",
+    "manual_review": "매뉴얼 개정 검증",
+    "qa_agent": "QA Agent 단일 이슈 분석",
+    "qa_agent_run": "QA Agent 점검(예약·수동, Claude CLI)",
+}
 
 
 @router.get("/cost-dashboard/guide", response_class=HTMLResponse)

@@ -194,10 +194,17 @@ notifications:
 # 비밀값(POLARION_HOST, POLARION_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, DAILY_QA_EMAIL_TO)은 secrets.txt 에 둔다.
 daily_qa:
   enabled: true
+  # 제품 목록이 없을 때의 제품, 개편 전 기록(product 빈 값)의 제품.
   product: "VXvue"
+  # 예약·대시보드에 올릴 제품 목록. 제품마다 config/products/<slug>.yaml 의 alm·qa_intelligence 가 있어야 한다.
+  # 비우면 product 하나만 돈다. 예: products: ["VXvue", "Bellalun Viewer"]
+  # products: ["VXvue"]
   schedule:
     day_of_week: "mon-fri"
     time: "07:30"
+    # 공휴일(config/holidays/kr.yaml)에는 예약 실행을 건너뛴다. 회사 휴무일은 extra_holidays 에 더한다.
+    skip_holidays: true
+    # extra_holidays: ["2026-05-01"]
   # Claude 가 읽고 쓰는 격리 폴더. **반드시 저장소 밖**이어야 한다 (NFR-SEC-001).
   # 저장소 안이면 저장소의 개발용 CLAUDE.md/AGENTS.md 가 함께 읽혀 실행이 거부된다.
   # 빈 값이면 사용자 홈의 ~/.qa-daily-workspace 를 쓴다.
@@ -216,12 +223,21 @@ daily_qa:
   weekly_day: "mon"
   polarion:
     project_id: "VXvue"
+    # 조회식은 제품 설정(config/products/<slug>.yaml 의 alm.queries)이 먼저다. srs_query·issue_query 는 제품 설정에
+    # 조회식이 없을 때만 쓴다. 이슈는 전체를 읽어 스냅샷으로 비교하므로 좁히지 않는다 (REQ-QAINTEL-004).
     srs_query: "type:srs"
-    # 새 이슈의 기준. 마지막 성공 실행 이후 updated 된 것만 새 이슈로 본다.
-    issue_query: "type:issue AND (status:verified OR rndReviewResult.KEY:lab_fixed)"
+    issue_query: "type:issue"
     verify_ssl: true
     timeout_seconds: 90
     page_size: 100
     request_interval_seconds: 0.15
-  # 메일에 넣을 검토 화면 주소의 앞부분 (예: http://서버주소). 비우면 경로(/daily-qa)만 적는다.
+  # 메일에 넣을 실행 상세 주소의 앞부분 (예: http://서버주소). 비우면 경로(/qa-agent/runs/<실행 ID>)만 적는다.
   review_base_url: ""
+  # 후보 압축·댓글·재시도·한도 catch-up (specs/qa-intelligence.md). 적지 않으면 아래 기본값을 쓴다.
+  # intelligence:
+  #   comment_fetch_limit: 300     # 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에
+  #   comment_min_chars: 15        # 이보다 짧은 댓글은 의미 없는 댓글로 본다
+  #   event_max_attempts: 3        # 같은 이벤트 분석이 이 횟수만큼 실패하면 포기(abandoned)
+  #   catchup_max_hours: 12        # 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다
+  #   catchup_delay_minutes: 5
+  #   use_knowledge_documents: true  # 등록된 사양서 문서 조각도 후보로 찾는다

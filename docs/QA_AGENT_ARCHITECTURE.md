@@ -557,3 +557,35 @@ python scripts/rule_capability_report.py
 
 목표는 답변 생성이 아니라 **Issue → Specification → TC → Regression 추적성을 근거 기반으로
 남기는 것**이다.
+
+---
+
+## 17. QA Intelligence Agent — 변경 탐지 점검 (2026-09-30)
+
+단일 이슈 분석(1~16절)에 더해, 매일 아침 SRS·이슈 **변경을 탐지해 바뀐 것만 분석하는** 점검이 `/qa-agent`
+대시보드가 되었다. 사양은 [specs/qa-intelligence.md](../specs/qa-intelligence.md), 운영은
+[QA Intelligence Agent 엔진](modules/daily-qa.md) 에 있다. 여기서는 위 구조와 무엇을 공유하는지만 적는다.
+
+```text
+평일 07:30 예약(제품마다) · [지금 실행] · 한도 catch-up
+    │ 분리 프로세스 scripts/run_daily_qa.py --product <제품>
+    ▼
+수집(Polarion GET) → 제품별 스냅샷 → Change Event(11종) → 분석 5종 작업 묶음
+    │                                   │ 분석 필요 없음 → Claude 0회 (NO_CHANGE)
+    ▼                                   ▼
+후보 압축: Exact → BM25 (app/retrieval/hybrid.py 재사용) · 공용 Knowledge 사양서 조각
+    ▼
+Claude CLI (제품별 격리 작업 폴더, Skill: qa-* 공통 + 제품 규칙 Skill) → 근거 검증(코드) → daily_qa_findings
+```
+
+| 공유하는 것 | 위치 |
+|---|---|
+| Exact → BM25 단계 검색 (점수를 합치지 않는다, [qa-agent.md](modules/qa-agent.md) 3.3절) | `app/retrieval/hybrid.py` |
+| 공용 Knowledge 문서 | `app/core/knowledge_documents.py` |
+| Regression 축을 코드가 고정 (qa-agent.md 3.5절). 축 목록은 제품 설정 `qa_intelligence.regression_axes` | `config/products/<slug>.yaml` |
+| 모델이 만든 ID 를 믿지 않음 (qa-agent.md 3.6절). 결과의 번호·근거를 실제 자료와 대조 | `app/modules/daily_qa/evidence_validation.py` |
+| 외부 전송 전 마스킹 | `app/modules/daily_qa/workspace.py` (`security_filter` 재사용) |
+
+단일 이슈 분석과 달리 모델은 Gemini API 가 아니라 서버의 Claude CLI(`claude -p`)이고, 사용량은 비용
+대시보드의 `qa_agent_run` 줄에 합산된다. 제품 차이는 제품 설정과 제품 규칙 Skill 에만 두고, 새 제품은
+[제품 추가](PRODUCT_ONBOARDING.md) 절차로 붙인다.

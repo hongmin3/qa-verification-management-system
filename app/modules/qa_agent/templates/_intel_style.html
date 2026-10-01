@@ -1,0 +1,26 @@
+<style>
+.qa-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+.qa-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;display:grid;gap:6px}
+.qa-card h4{margin:0;font-size:15px}.qa-card h4 small{font-weight:400;color:#5b6b82}
+.qa-card .tags{display:flex;flex-wrap:wrap;gap:6px}
+.qa-card a{color:#075985;font-weight:700}
+.qa-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:10px}
+.qa-stat{background:#f8fafc;border-radius:9px;padding:10px 12px;text-align:center}.qa-stat b{display:block;font-size:22px;color:#173b67}
+.qa-banner{padding:12px 14px;border-radius:9px;background:#fdf1e7;border:1px solid #f0b27a;margin:0 0 14px}
+.qa-run{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.pill.SUCCESS,.pill.done{background:#dcfce7;color:#166534}.pill.FAILED,.pill.failed,.pill.abandoned{background:#fee2e2;color:#991b1b}
+.pill.PARTIAL,.pill.pending{background:#fef9c3;color:#854d0e}.pill.NO_CHANGE,.pill.BASELINE,.pill.not_required{background:#e2e8f0}
+.qa-section{margin-top:18px}.qa-section h3{margin-bottom:6px}
+.qa-kv{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:14px}.qa-kv dt{color:#5b6b82}.qa-kv dd{margin:0;white-space:pre-wrap}
+.qa-pre{white-space:pre-wrap;font-size:13px;background:#f8fafc;padding:8px 10px;border-radius:8px}
+details summary{cursor:pointer;color:#075985}
+/* 지식 문서 표: 공용 .history 의 고정 열 폭 대신 파일 이름 열이 남는 폭을 모두 쓴다 (REQ-QAINTEL-022). */
+.history.qa-docs th:nth-child(n),.history.qa-docs td:nth-child(n){width:auto}
+.history.qa-docs th:nth-child(1),.history.qa-docs td:nth-child(1){width:130px;white-space:nowrap}
+.history.qa-docs th:nth-child(3),.history.qa-docs td:nth-child(3),.history.qa-docs th:nth-child(4),.history.qa-docs td:nth-child(4){width:150px;white-space:nowrap}
+.history.qa-docs th:nth-child(5),.history.qa-docs td:nth-child(5){width:150px}
+/* 실행 상세 단계 표: 상태 이름('오늘은 대상 아님')은 한 줄로 (REQ-QAINTEL-020). */
+.history.qa-stages th:nth-child(2),.history.qa-stages td:nth-child(2){width:150px;white-space:nowrap}
+@media(max-width:700px){.history.qa-docs{table-layout:auto;min-width:640px}}
+@media(max-width:700px){.qa-kv{grid-template-columns:1fr}}
+</style>

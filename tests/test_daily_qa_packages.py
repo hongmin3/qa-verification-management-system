@@ -32,17 +32,9 @@ def test_srs_tokens_accept_polarion_ids_and_legacy_numbers():
 
 def test_candidates_match_polarion_id_and_legacy_number(tmp_path):
     rows = read_workbook(make_tc_workbook(tmp_path / "tc.xlsx", [("TC_1", "VP-10", "A"), ("TC_2", "03-10-05", "B"), ("TC_3", "VP-99", "C")]))
-    diff = SrsDiff(modified=[{"id": "VP-10", "old_id": "03-10-05", "title": "T", "fields": ["text"], "before": {"text": "a"}, "after": {"text": "b"}}])
-    tasks = packages.build_b_tasks(diff, rows, batch_size=5, candidate_limit=10, answers=[])
-    assert len(tasks) == 1 and tasks[0].task_id == "B-001"
-    candidates = tasks[0].payload["changes"][0]["candidates"]
-    assert [item["tc_id"] for item in candidates] == ["TC_1", "TC_2"]
-
-
-def test_b_tasks_are_batched(tmp_path):
-    diff = SrsDiff(added=[_srs(f"VP-{index}") for index in range(7)])
-    tasks = packages.build_b_tasks(diff, [], batch_size=3, candidate_limit=5, answers=[])
-    assert [task.task_id for task in tasks] == ["B-001", "B-002", "B-003"]
+    index = __import__("app.modules.daily_qa.tc_index", fromlist=["by_srs"]).by_srs(rows)
+    picked = packages.candidates_for({"id": "VP-10", "old_id": "03-10-05"}, index, limit=10)
+    assert [row.tc_id for row in picked] == ["TC_1", "TC_2"]
 
 
 def test_removed_srs_still_referenced_becomes_must_update(tmp_path):
@@ -72,12 +64,3 @@ def test_trace_gaps_finds_uncovered_srs_and_deleted_references_but_not_legacy(tm
     assert by_verdict == {"TC 없음": ["VP-3"], "삭제된 SRS 참조": ["VP-404"]}
     assert result.legacy_unmatched == 1          # 99-99-99 는 삭제로 단정하지 않는다
     assert (result.srs_seen, result.srs_examined, result.tc_rows_seen) == (5, 3, 4)
-
-
-def test_c_tasks_attach_linked_srs_and_their_tcs(tmp_path):
-    rows = read_workbook(make_tc_workbook(tmp_path / "tc.xlsx", [("TC_1", "VP-767", "A")]))
-    issue = {"id": "VP-6669", "linked_ids": ["VP-767", "VP-999"], "updated": "2026-09-27"}
-    tasks = packages.build_c_tasks([issue], {"VP-767": _srs("VP-767")}, rows, batch_size=5, candidate_limit=10, answers=[])
-    packed = tasks[0].payload["issues"][0]
-    assert [srs["id"] for srs in packed["linked_srs"]] == ["VP-767"]
-    assert [row["tc_id"] for row in packed["candidates"]] == ["TC_1"]

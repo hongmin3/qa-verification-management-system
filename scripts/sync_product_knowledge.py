@@ -114,7 +114,7 @@ def main() -> int:
             result = sync_and_register(product)
         print(f"[{product}] {result['status']} — {result['detail']}")
         for note in result.get("duplicates", []):
-            print(f"  중복 확인 필요: {note}")
+            print(f"  중복 확인 요청: {note}")
         for note in result.get("excluded", []):
             print(f"  제외: {note}")
         for note in result.get("removed", []):

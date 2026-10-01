@@ -1,7 +1,7 @@
-"""작업 묶음 만들기와 결정적 계산 (SPEC REQ-DAILY-003 · 004 · 005 · 006).
+"""작업 묶음 공통 모양과 결정적 계산 (SPEC REQ-DAILY-003 삭제 계산 · 005 · 006).
 
-AI 에 무엇을 보낼지는 여기서 코드로 정한다. 후보 TC 선택, 삭제 SRS 참조, 추적 공백처럼
-규칙으로 계산되는 것은 AI 를 부르지 않는다.
+삭제 SRS 참조, 추적 공백처럼 규칙으로 계산되는 것은 AI 를 부르지 않는다. 이벤트 분석의 작업 묶음은
+`intelligence.py` 가 만든다(REQ-QAINTEL-011).
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from app.modules.daily_qa.schema import SKILL_B, SKILL_C, SKILL_E, SKILL_F
+from app.modules.daily_qa.schema import SKILL_B, SKILL_E, SKILL_F
 from app.modules.daily_qa.srs_snapshot import SrsDiff
 from app.modules.daily_qa.tc_index import TcRow, by_srs
 
@@ -102,79 +102,6 @@ def removed_srs_findings(diff: SrsDiff, rows: list[TcRow]) -> list[Deterministic
                 )
             )
     return findings
-
-
-def b_changes(diff: SrsDiff, carried: list[dict] | None = None) -> list[dict]:
-    """사양 변경 영향 검토에 넣을 SRS 변경 목록 (후보 TC 없이).
-
-    `carried` 는 앞 실행에서 상한 때문에 미뤘거나 작업이 실패해 검토하지 못한 변경이다
-    (MISMATCH 4-3). 오늘 다시 바뀐 SRS 는 두 변경을 합친다: 바뀐 필드는 합치고, 바뀌기 전 값은
-    처음 것을, 바뀐 뒤 값은 오늘 것을 쓴다. 오늘 삭제된 SRS 는 삭제 계산이 따로 다루므로 뺀다.
-    """
-    today: list[dict] = [{"change": "added", "srs": srs} for srs in diff.added]
-    for item in diff.modified:
-        today.append({
-            "change": "modified",
-            "srs": {"id": item["id"], "old_id": item.get("old_id", ""), "title": item.get("title", "")},
-            "fields": list(item["fields"]),
-            "before": dict(item["before"]),
-            "after": dict(item["after"]),
-        })
-    removed = {srs["id"] for srs in diff.removed}
-    by_id = {change["srs"]["id"]: change for change in today}
-    merged: list[dict] = []
-    for old in carried or []:
-        srs_id = (old.get("srs") or {}).get("id", "")
-        if not srs_id or srs_id in removed:
-            continue
-        new = by_id.pop(srs_id, None)
-        if new is None:
-            merged.append(old)
-        elif old.get("change") == "added" or new["change"] == "added":
-            merged.append({**new, "change": "added"} if new["change"] == "added" else {"change": "added", "srs": {**old["srs"], **new["srs"]}})
-        else:
-            fields = list(dict.fromkeys([*old.get("fields", []), *new["fields"]]))
-            before = {**new["before"], **old.get("before", {})}
-            merged.append({**new, "fields": fields, "before": {name: before.get(name, "") for name in fields},
-                           "after": {**old.get("after", {}), **new["after"]}})
-    merged.extend(change for change in today if change["srs"]["id"] in by_id)
-    return merged
-
-
-def build_b_tasks(
-    diff: SrsDiff, rows: list[TcRow], batch_size: int, candidate_limit: int, answers: list[dict], carried: list[dict] | None = None
-) -> list[Task]:
-    index = by_srs(rows)
-    changes = [
-        {**change, "candidates": [row.as_dict() for row in candidates_for(change["srs"], index, candidate_limit)]}
-        for change in b_changes(diff, carried)
-    ]
-    return [
-        Task(task_id=f"B-{number:03d}", skill=SKILL_B, payload={"changes": chunk, "answered_questions": answers})
-        for number, chunk in enumerate(_chunks(changes, batch_size), start=1)
-    ]
-
-
-def build_c_tasks(
-    issues: list[dict], srs_by_id: dict[str, dict], rows: list[TcRow], batch_size: int, candidate_limit: int, answers: list[dict]
-) -> list[Task]:
-    index = by_srs(rows)
-    packed: list[dict] = []
-    for issue in issues:
-        linked_srs = [srs_by_id[item] for item in issue.get("linked_ids", []) if item in srs_by_id]
-        candidates: list[dict] = []
-        seen: set[tuple] = set()
-        for srs in linked_srs:
-            for row in candidates_for(srs, index, candidate_limit):
-                identity = (row.workbook, row.sheet, row.row)
-                if identity not in seen:
-                    seen.add(identity)
-                    candidates.append(row.as_dict())
-        packed.append({"issue": issue, "linked_srs": linked_srs, "candidates": candidates[:candidate_limit]})
-    return [
-        Task(task_id=f"C-{number:03d}", skill=SKILL_C, payload={"issues": chunk, "answered_questions": answers})
-        for number, chunk in enumerate(_chunks(packed, batch_size), start=1)
-    ]
 
 
 def trace_gaps(srs_items: list[dict], rows: list[TcRow]) -> TraceGapResult:

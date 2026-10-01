@@ -1,0 +1,5 @@
+{
+  "verify": [
+    ".venv/Scripts/python.exe -m pytest -q"
+  ]
+}

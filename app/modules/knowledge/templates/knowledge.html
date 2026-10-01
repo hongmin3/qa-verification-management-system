@@ -167,7 +167,7 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) { alert(body.detail || `수집 실패 (HTTP ${response.status})`); return; }
       const notes = [body.detail];
-      if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 필요]\n' + body.duplicates.join('\n'));
+      if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 요청]\n' + body.duplicates.join('\n'));
       alert(notes.join('\n'));
       location.reload();
     } finally {

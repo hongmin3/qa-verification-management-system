@@ -1,0 +1,35 @@
+{% extends "module_base.html" %}
+{% block content %}
+{% include "_intel_style.html" %}
+<section>
+  <h2>실행 {{ run.id }} <span class="pill {{ run.status }}">{{ run.status_label }}</span></h2>
+  <p class="hint">시작 {{ kst(run.started_at) }} · 종료 {{ kst(run.finished_at) or '-' }} · {% if run.dry_run %}시험 실행 · {% endif %}메일 {{ run.email_status or '-' }}
+    · Claude 호출 {{ run.summary.claude_calls if run.summary.claude_calls is defined else '-' }}회</p>
+  {% if run.summary.claude_limit %}<p class="qa-banner"><b>{{ run.summary.claude_limit.label }}</b> — {{ run.summary.claude_limit.description }}</p>{% endif %}
+
+  <h3>단계</h3>
+  <div class="table-wrap"><table class="history qa-stages"><thead><tr><th>단계</th><th>상태</th><th>비고</th></tr></thead><tbody>
+  {% for key, stage in run.stages.items() %}
+    <tr><td>{{ stage_labels.get(key, key) }}</td><td>{{ status_labels.get(stage.status, stage.status) }}</td>
+        <td>{{ stage.note }}{% if stage.counts %}<div class="hint" style="margin:0">{% for name, value in stage.counts.items() %}{{ name }} {{ value }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}</td></tr>
+  {% endfor %}</tbody></table></div>
+
+  <h3>변경 이벤트 ({{ events|length }}건)</h3>
+  <div class="table-wrap"><table class="history"><thead><tr><th>대상</th><th>이벤트</th><th>바뀐 필드</th><th>AI 분석</th><th>이유</th></tr></thead><tbody>
+  {% for event in events %}
+    <tr><td>{{ event.entity_id }}</td><td>{{ event_labels.get(event.event_type, event.event_type) }}</td><td>{{ event.changed_fields|join(', ') }}</td>
+        <td><span class="pill {{ event.analysis_status }}">{{ event.status_label }}</span>{% if event.attempts %} ({{ event.attempts }}회 시도){% endif %}
+          {% for fid in event.finding_ids %} <a href="/qa-agent/findings/{{ fid }}">#{{ fid }}</a>{% endfor %}</td>
+        <td>{{ event.reason }}</td></tr>
+  {% else %}<tr><td colspan="5">이번 실행에서 만든 이벤트가 없습니다.</td></tr>{% endfor %}</tbody></table></div>
+
+  <h3>분석 결과 ({{ cards|length }}건)</h3>
+  <div class="qa-cards">{% for item in cards %}
+    <div class="qa-card"><h4>[{{ item.subject }}] {{ item.kind }}</h4>
+      <div class="tags"><span class="pill">{{ item.verdict_label }}</span>{% for badge in item.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>
+      <div>{{ item.summary }}</div><a href="/qa-agent/findings/{{ item.id }}">상세보기</a></div>
+  {% endfor %}</div>
+
+  {% if files %}<h3>내려받기</h3><ul>{% for name in files %}<li><a href="/qa-agent/runs/{{ run.id }}/files/{{ name }}">{{ name }}</a></li>{% endfor %}</ul>{% endif %}
+</section>
+{% endblock %}

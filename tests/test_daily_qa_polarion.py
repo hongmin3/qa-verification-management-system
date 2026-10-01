@@ -1,4 +1,4 @@
-"""Validates: REQ-DAILY-002 (TEST-DAILY-002)."""
+"""Validates: REQ-DAILY-002 (TEST-DAILY-002), REQ-QAINTEL-003."""
 
 from __future__ import annotations
 
@@ -8,10 +8,11 @@ import inspect
 import pytest
 
 from app.modules.daily_qa import polarion
-from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient, normalize_issue, normalize_srs
+from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient
+from app.modules.daily_qa.product_adapter import normalize_issue, normalize_srs
 from app.modules.daily_qa.settings import PolarionSettings
 from app.modules.daily_qa.srs_snapshot import diff_snapshots, previous_snapshot, save_snapshot
-from tests.daily_qa_fixtures import issue_item, srs_item
+from tests.daily_qa_fixtures import VXVUE_PROFILE, issue_item, srs_item
 
 CONFIG = PolarionSettings(host="https://alm.example", token="pat", project_id="VXvue", srs_query="type:srs",
                           issue_query="type:issue", page_size=2, request_interval_seconds=0)
@@ -55,10 +56,10 @@ def test_client_refuses_without_credentials():
 
 
 def test_normalize_srs_and_issue_fields():
-    srs = normalize_srs(srs_item("VP-1108", "03-10-05", "목록 화면", text="기능 요약"))
+    srs = normalize_srs(srs_item("VP-1108", "03-10-05", "목록 화면", text="기능 요약"), VXVUE_PROFILE)
     assert srs["id"] == "VP-1108" and srs["old_id"] == "03-10-05" and "기능 요약" in srs["text"]
-    issue = normalize_issue(issue_item("VP-6669", "2026-09-27T10:00:00Z", ["VP-767"]))
-    assert issue["lab_review_result"] == "lab_fixed"
+    issue = normalize_issue(issue_item("VP-6669", "2026-09-27T10:00:00Z", ["VP-767"]), VXVUE_PROFILE)
+    assert issue["rd_result_raw"] == "lab_fixed" and issue["rd_result"] == "FIXED"
     assert issue["linked_ids"] == ["VP-767"]
     assert "1. 실행" in issue["reproduction_step"]
 
@@ -87,3 +88,30 @@ def test_previous_snapshot_excludes_same_day(tmp_path):
     save_snapshot(tmp_path, "2026-09-28", [_item("VP-1")])
     assert previous_snapshot(tmp_path, "2026-09-28").stem == "2026-09-25"
     assert previous_snapshot(tmp_path, "2026-09-25") is None
+
+
+def test_comment_pages_are_read_and_strict_failure_raises():
+    pages = {1: {"data": [{"id": "c1"}], "links": {"next": "x"}}, 2: {"data": [{"id": "c2"}], "links": {}}}
+
+    def transport(url, params):
+        assert url.endswith("/workitems/VP-1/comments")
+        return pages[params["page[number]"]]
+
+    assert [item["id"] for item in ReadOnlyPolarionClient(CONFIG, transport=transport).get_comments("VXvue/VP-1")] == ["c1", "c2"]
+
+    def broken(url, params):
+        raise PolarionError("boom")
+
+    client = ReadOnlyPolarionClient(CONFIG, transport=broken)
+    assert client.get_comments("VP-1") == []
+    with pytest.raises(PolarionError):
+        client.get_comments("VP-1", strict=True)
+
+
+def test_diff_ignores_whitespace_and_narrows_text_to_sentences():
+    before = [_item("VP-1", text="표시 항목은 3개다. 정렬은 이름순이다."), _item("VP-2", title="A  B")]
+    after = [_item("VP-1", text="표시 항목은 4개다. 정렬은 이름순이다."), _item("VP-2", title="A B\n")]
+    diff = diff_snapshots(before, after)
+    assert [item["id"] for item in diff.modified] == ["VP-1"]
+    assert diff.modified[0]["added_sentences"] == ["표시 항목은 4개다."]
+    assert diff.modified[0]["removed_sentences"] == ["표시 항목은 3개다."]

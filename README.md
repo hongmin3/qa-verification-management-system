@@ -45,10 +45,10 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 | 이 **변경**으로 어디까지 다시 검증해야 하는가 | [Regression 영향 분석](docs/modules/impact-analyzer.md) |
 | 매뉴얼이 최신 사양을 반영했는가 | [매뉴얼 개정 검증](docs/modules/manual-review.md) |
 | 매뉴얼의 최신본이 어느 것인가 | [QA Manual Hub](services/qa-manual-hub/README.md) |
-| 어제 바뀐 VXvue 사양·이슈 가운데 **오늘 검토할 것**은 무엇인가 | [일일 QA 점검](docs/modules/daily-qa.md) |
+| 어제 바뀐 사양·이슈 가운데 **오늘 검토할 것**은 무엇인가 | [QA Agent 점검](docs/modules/daily-qa.md) |
 
-일일 QA 점검은 사람이 자료를 넣지 않습니다. 서버가 평일 아침마다 Polarion 을 직접 읽어 초안을 만들고,
-사람은 아침 메일을 받아 검토 화면에서 승인·거절만 합니다.
+QA Agent 점검은 사람이 자료를 넣지 않습니다. 서버가 평일 아침마다 Polarion 을 직접 읽어 바뀐 것만 분석하고,
+사람은 아침 메일과 `/qa-agent` 대시보드에서 결과를 봅니다.
 
 세 분석 기능은 **입력이 다릅니다.** 목적이 아니라 손에 있는 자료로 고릅니다 —
 Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영향 분석, 개정 매뉴얼을
@@ -78,7 +78,7 @@ Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영�
 - AI 판정은 기본으로 회사 Claude Team 계정의 Claude CLI(`claude -p`)로 받습니다. 화면 기능(Regression
   분석·QA Agent·매뉴얼 개정 검증)의 호출에는 도구를 하나도 주지 않고, 저장소 밖 빈 폴더에서 실행합니다.
   `config.yaml` 의 `ai.provider: gemini` 로 바꾸면 예전처럼 Gemini API 를 씁니다.
-- **예외: 일일 QA 점검**도 같은 Claude CLI 를 쓰지만 방식이 다릅니다. 격리된 작업 폴더에 마스킹한
+- **예외: QA Agent 점검**도 같은 Claude CLI 를 쓰지만 방식이 다릅니다. 격리된 작업 폴더에 마스킹한
   SRS·TC 색인을 두고 Claude 가 필요한 부분을 검색해 읽으므로, 나가는 양이 작업마다 다릅니다. 보낸 입력과
   Claude 가 읽은 파일·검색어가 실행마다 남습니다. 통제 목록과 남은 확인 사항은
   [AI 점검 보안 통제](docs/SECURITY_AI_AGENT.md) 에 있습니다.
@@ -127,7 +127,7 @@ qa-verification-management-system/
 │  │  ├─ impact_analyzer/   Regression 영향 분석          → /impact-analyzer
 │  │  ├─ manual_review/     매뉴얼 개정 검증              → /manual-review
 │  │  ├─ knowledge/         문서·규칙 관리 (전 기능 공유)  → /knowledge
-│  │  ├─ daily_qa/          VXvue 일일 QA 점검 (Claude Skill 5개 포함) → /daily-qa
+│  │  ├─ daily_qa/          QA Agent 점검 엔진 (변경 탐지·Claude Skill) → /qa-agent 대시보드
 │  │  └─ cost_dashboard/    AI 사용량 집계                → /cost-dashboard
 │  ├─ web/                  모듈 라우터를 한 서버에 취합하는 얇은 계층 + 공용 template/static
 │  └─ serve.py              서버 진입점 — config.yaml 의 app.host/app.port 로 uvicorn 기동
@@ -180,7 +180,7 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
   + 파일 저장소                          + 문서 저장소
         │
         ├──▶ Claude CLI (기본) 또는 Gemini API  ← 분석 기능의 마지막 판단에만, 최소 입력으로
-        └──▶ 일일 QA 점검 (평일 07:30, 앱과 분리된 프로세스)
+        └──▶ QA Agent 점검 (제품마다 평일 07:30, 공휴일 제외, 앱과 분리된 프로세스)
                ├─ Polarion REST (읽기 전용)
                └─ Claude CLI (격리 작업 폴더, 회사 Team 계정)
 ```
@@ -260,24 +260,29 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 
 → [상세 문서](docs/modules/manual-review.md)
 
-### VXvue 일일 QA 점검 — `/daily-qa`
+### QA Agent 점검 (QA Intelligence Agent) — `/qa-agent`
 
-운영 서버가 **평일 아침마다 스스로** Polarion 의 SRS·이슈를 읽고, 수집된 TC·매뉴얼과 비교해
-검토할 초안을 만듭니다. 결과는 요약 메일과 검토 대기열 화면으로 받고, QA 가 승인·거절합니다.
+운영 서버가 **평일 아침마다 스스로** Polarion 의 SRS·이슈를 전부 읽어 어제와 비교하고, **바뀐 것만**
+분석합니다. 바뀐 것이 없으면 AI 를 부르지 않습니다. 결과는 요약 메일과 `/qa-agent` 대시보드로 봅니다.
+공휴일에는 돌지 않고, 제품마다 따로 돕니다(VXvue 가 첫 제품).
 
-| 단계 | 하는 일 | AI |
+| 분석 | 무엇이 바뀌면 | 결과 |
 |---|---|---|
-| 사양 변경 영향 검토 | 바뀐 SRS 를 가리키는 TC 마다 유지·수정 필수·신규 TC 필요 등 판정 | Claude Skill |
-| 이슈 수정확인 초안 | 이슈 유형 분류, Program Fixed 만 영향성평가 Checklist 형식 TC 초안 | Claude Skill |
-| 사양–TC 연결 점검 (주 1회) | TC 없는 SRS, 삭제된 SRS 를 가리키는 TC | 없음(코드 계산) |
-| 매뉴얼 누락 후보 점검 (주 1회) | 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 후보 | Claude Skill |
+| 신규 이슈 분석 | 새 이슈 등록 | 중복 후보·관련 사양·비슷한 과거 이슈 |
+| 수정 완료 이슈 분석 | 연구소 결과가 수정 완료(FIXED) | 수정확인·Regression TC 초안(Checklist 형식 Excel) |
+| Spec 판정 이슈 분석 | 연구소 결과가 사양대로·결함 아님 | 사양 근거 확인 |
+| 새 댓글 분석 | 진행 알림이 아닌 새 댓글 | 댓글이 바꾼 판단 |
+| 사양 변경 Coverage 분석 | 새 SRS·바뀐 SRS | 기존 TC 로 덮이는지, 고칠 TC·새 TC |
 
+- 상태만 바뀐 이슈는 기록만 남깁니다. 사양–TC 연결 점검·매뉴얼 누락 후보 점검은 주 1회 돕니다.
+- 대시보드에서 [지금 실행]으로 기간(기본: 어제~오늘)을 골라 바로 돌릴 수 있고, 기간 조회로 지난 분석을 봅니다.
+- Claude 사용량 한도에 걸리면 초기화 시각을 화면·메일에 알리고, 한도가 풀리면 밀린 분석을 이어서 합니다.
 - 회사 Claude **Team 계정** 토큰으로 서버에서 `claude -p` 를 돌립니다. Claude 에게는 읽기·검색과
   결과 파일 쓰기만 허용하고 명령 실행·웹·MCP 는 막습니다. 보내는 입력은 마스킹 후 그대로 보관합니다.
-- 근거 위치 없는 판정, 이슈 종료·TC 덮어쓰기 제안은 코드가 버립니다 (QA 규칙 §55).
-- Polarion 은 GET 만 하는 읽기 전용 클라이언트로 읽습니다.
+- 결과의 번호·근거가 실제 자료에 없으면 코드가 버립니다. Polarion 은 GET 만 하는 읽기 전용 클라이언트로 읽습니다.
+- 이슈 하나를 골라 검증 범위를 분석하는 기존 기능은 `/qa-agent/issue-analysis` 로 옮겼습니다.
 
-→ [상세 문서](docs/modules/daily-qa.md) · [보안 통제](docs/SECURITY_AI_AGENT.md) · 사용법: 앱 안 `/daily-qa/guide`
+→ [엔진·운영 문서](docs/modules/daily-qa.md) · [사양](specs/qa-intelligence.md) · [보안 통제](docs/SECURITY_AI_AGENT.md) · 사용법: 앱 안 `/qa-agent/guide`
 
 ### 지식 관리 — `/knowledge`
 
@@ -490,7 +495,7 @@ Unit Test는 AI Mock Response(가짜 CLI 실행기 포함)를 사용하므로 �
 | DB | SQLite (WAL) | PostgreSQL 16, SQLAlchemy 2.0, Alembic |
 | 문서 처리 | PyMuPDF, openpyxl, python-docx | — |
 | 검색 | rank-bm25 | PostgreSQL ILIKE |
-| AI | Claude Code CLI (기본, 일일 QA 점검 포함), Google Gemini (선택) | — |
+| AI | Claude Code CLI (기본, QA Agent 점검 포함), Google Gemini (선택) | — |
 | 인증 | 사내망 전용 | Argon2id + 서버 세션 |
 | 테스트 | pytest | pytest (실제 PostgreSQL 필요) |
 | 배포 | uvicorn / systemd | systemd + rsync 또는 Docker Compose |
@@ -516,12 +521,12 @@ Copy-Item secrets.example.txt secrets.txt -Force   # 서버는 CLAUDE_CODE_OAUTH
 
 AI 판정에는 Claude CLI 가 필요합니다. 개발 PC 는 `claude` 를 설치하고 회사 Team 계정으로 한 번 로그인해 두면
 됩니다. 서버는 로그인 대신 `claude setup-token` 으로 발급한 토큰을 `secrets.txt` 의 `CLAUDE_CODE_OAUTH_TOKEN=` 에
-넣습니다([일일 QA 점검 서버 설치](docs/modules/daily-qa.md) 1~2단계와 같습니다). Regression 분석 화면 위쪽 표시줄이
+넣습니다([QA Agent 점검 서버 설치](docs/modules/daily-qa.md) 1~2단계와 같습니다). Regression 분석 화면 위쪽 표시줄이
 "AI: Claude CLI · 명령 claude …" 이면 준비된 것입니다.
 
-띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`, `/daily-qa/guide`에서 각 기능의 사용법을 볼 수 있습니다.
+띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`, `/qa-agent/guide`에서 각 기능의 사용법을 볼 수 있습니다.
 
-### 일일 QA 점검 시험 실행
+### QA Agent 점검 시험 실행
 
 설정과 자격증명이 갖춰졌는지 먼저 봅니다. 모든 줄이 `[OK]` 면 서버에서 정식 실행할 수 있습니다.
 
@@ -535,9 +540,9 @@ Claude 를 부르지 않고 입력 묶음과 코드 계산(추적 공백 등)만
 .\.venv\Scripts\python.exe scripts\run_daily_qa.py --dry-run --no-email
 ```
 
-기대 결과: 단계별 상태가 한 줄씩 출력되고, `/daily-qa` 에 실행 기록이 생깁니다. Polarion·Claude
+기대 결과: 단계별 상태가 한 줄씩 출력되고, `/qa-agent` 에 실행 기록이 생깁니다. Polarion·Claude
 자격증명이 없는 PC 에서는 수집·AI 단계가 `skipped` 로 나오는 것이 정상입니다. 서버 설치와 정식 실행은
-[일일 QA 점검](docs/modules/daily-qa.md) "서버 설치"를 따릅니다.
+[QA Agent 점검](docs/modules/daily-qa.md) "서버 설치"를 따릅니다.
 
 ### 테스트
 
@@ -582,7 +587,7 @@ pytest tests -q
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | 작업 복구 · 백업 · 모니터링 |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | 추천 정확도 평가 |
 | [docs/AUTOMATION.md](docs/AUTOMATION.md) | 진행 상태 · 사양서/지식 폴더 자동 동기화 · PC 예약 작업과 하루 실행 순서 |
-| [docs/modules/daily-qa.md](docs/modules/daily-qa.md) | 일일 QA 점검 구조 · Skill · 서버 설치 · 운영 |
-| [docs/SECURITY_AI_AGENT.md](docs/SECURITY_AI_AGENT.md) | 일일 QA 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
+| [docs/modules/daily-qa.md](docs/modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조 · Skill · 서버 설치 · 운영 |
+| [docs/SECURITY_AI_AGENT.md](docs/SECURITY_AI_AGENT.md) | QA Agent 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
 | [SECURITY.md](SECURITY.md) | 비밀정보 취급 규칙 |
 | [NEXT_STEPS.md](NEXT_STEPS.md) · [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | 남은 작업 · 결정 대기 항목 |

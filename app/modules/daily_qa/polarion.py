@@ -4,8 +4,8 @@
 없으므로, 일일 점검 코드가 Polarion 을 바꿀 경로가 코드에 존재하지 않는다
 (`tests/test_daily_qa_polarion.py` 가 이 사실을 검사한다).
 
-필드 이름(`oldId`, `descriptionKR`, `rndReviewResult` 등)은 ALM-QA-Automation 의 srs-spec 앱과
-issue-export 앱(통합 전 alm-issue-export)이 실제 서버에서 확인해 쓰는 이름을 그대로 따른다.
+응답을 공통 모델로 바꾸는 일(필드 이름 대응)은 이 파일이 하지 않는다. 제품마다 필드 이름이 달라서
+제품 설정과 `product_adapter.py` 가 맡는다 (SPEC REQ-QAINTEL-002).
 """
 
 from __future__ import annotations
@@ -92,84 +92,21 @@ class ReadOnlyPolarionClient:
                 return
             page += 1
 
-    def get_comments(self, workitem_id: str) -> list[dict[str, Any]]:
+    def get_comments(self, workitem_id: str, strict: bool = False) -> list[dict[str, Any]]:
+        """댓글 목록. `strict` 면 실패를 예외로 알린다 (스냅샷이 실패를 '댓글 없음'으로 오해하지 않게)."""
         short = workitem_id.split("/")[-1]
-        try:
-            data = self._get(f"/projects/{self.config.project_id}/workitems/{short}/comments", {"fields[workitem_comments]": "@all"})
-        except PolarionError:
-            return []
-        return data.get("data") or []
-
-
-def _rich_text(value: Any) -> str:
-    if isinstance(value, dict):
-        return str(value.get("value") or "")
-    return str(value or "")
-
-
-def _enum_text(value: Any) -> str:
-    """열거형 필드는 문자열 또는 `{"id": ...}` 로 온다."""
-    if isinstance(value, dict):
-        return str(value.get("id") or value.get("name") or "")
-    return str(value or "")
-
-
-def _relationship_ids(relationships: dict, name: str) -> list[str]:
-    node = (relationships or {}).get(name) or {}
-    data = node.get("data")
-    if isinstance(data, dict):
-        data = [data]
-    ids = []
-    for entry in data or []:
-        raw = str((entry or {}).get("id") or "")
-        if raw:
-            ids.append(raw.split("/")[-1])
-    return ids
-
-
-def normalize_srs(item: dict[str, Any]) -> dict[str, Any]:
-    """SRS Work Item 하나를 스냅샷 항목으로 바꾼다. 본문은 HTML 을 걷어낸 텍스트다."""
-    from app.parsers.polarion_issue import html_to_text
-
-    attrs = item.get("attributes") or {}
-    item_id = str(attrs.get("id") or str(item.get("id") or "").split("/")[-1])
-    body_html = _rich_text(attrs.get("descriptionKR")) or _rich_text(attrs.get("description"))
-    text, _ = html_to_text(body_html)
-    return {
-        "id": item_id,
-        "old_id": str(attrs.get("oldId") or ""),
-        "title": str(attrs.get("title") or ""),
-        "status": str(attrs.get("status") or ""),
-        "updated": str(attrs.get("updated") or ""),
-        "is_category": bool(attrs.get("isCategory") or False) or str(attrs.get("type") or "") == "category",
-        "text": text.strip(),
-    }
-
-
-def normalize_issue(item: dict[str, Any]) -> dict[str, Any]:
-    """이슈 Work Item 을 AI 입력용 사전으로 바꾼다. 첨부 이미지는 넣지 않는다."""
-    from app.parsers.polarion_issue import html_to_text
-
-    attrs = item.get("attributes") or {}
-    relationships = item.get("relationships") or {}
-
-    def text(name: str) -> str:
-        value, _ = html_to_text(_rich_text(attrs.get(name)))
-        return value.strip()
-
-    return {
-        "id": str(attrs.get("id") or str(item.get("id") or "").split("/")[-1]),
-        "title": str(attrs.get("title") or ""),
-        "status": str(attrs.get("status") or ""),
-        "severity": str(attrs.get("severity") or ""),
-        "lab_review_result": _enum_text(attrs.get("rndReviewResult")),
-        "updated": str(attrs.get("updated") or ""),
-        "created": str(attrs.get("created") or ""),
-        "description": text("description"),
-        "reproduction_step": text("reproductionStep"),
-        "occurrence_cause": text("occurrenceCause"),
-        "action_details": text("actionDetails"),
-        "occurred_versions": _relationship_ids(relationships, "occurredVersion"),
-        "target_versions": _relationship_ids(relationships, "targetVersion"),
-        "linked_ids": _relationship_ids(relationships, "linkedWorkItems"),
-    }
+        path = f"/projects/{self.config.project_id}/workitems/{short}/comments"
+        items: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            try:
+                data = self._get(path, {"fields[workitem_comments]": "@all", "page[size]": self.config.page_size, "page[number]": page})
+            except PolarionError:
+                if strict:
+                    raise
+                return items
+            batch = data.get("data") or []
+            items.extend(batch)
+            if not batch or not (data.get("links") or {}).get("next"):
+                return items
+            page += 1

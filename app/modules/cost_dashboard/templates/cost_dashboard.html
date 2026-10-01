@@ -89,7 +89,7 @@
           <td>{{ item.product or '-' }}</td>
           <td>{{ "{:,}".format(item.tokens) }}</td>
           <td>{% if item.cache_calls is none %}-{% else %}{{ item.cache_hits }}/{{ item.cache_calls }}{% endif %}</td>
-          <td>{{ item.id }}</td>
+          <td>{% if item.module == 'qa_agent_run' %}<a href="/qa-agent/runs/{{ item.id }}">{{ item.id }}</a>{% else %}{{ item.id }}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

@@ -1,0 +1,54 @@
+{% extends "module_base.html" %}
+{% block content %}
+{% include "_intel_style.html" %}
+<section>
+  <h2>기간 분석 조회</h2>
+  <p class="hint">검증을 쉬는 동안 쌓인 변경과 분석을 한 번에 봅니다. 날짜를 비우면 최근 7일입니다.</p>
+  <form method="get" action="/qa-agent/period" class="qa-run">
+    {% if products|length > 1 %}<select name="product">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+    {% else %}<input type="hidden" name="product" value="{{ selected }}">{% endif %}
+    <label>시작일 <input type="date" name="start" value="{{ start }}"></label>
+    <label>종료일 <input type="date" name="end" value="{{ end }}"></label>
+    <label>이벤트 종류 <select name="event_type"><option value="">전체</option>{% for code, name in event_labels.items() %}<option value="{{ code }}" {% if code == event_type %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+    <button type="submit">조회</button>
+  </form>
+
+  <h3>기간 요약 ({{ start }} ~ {{ end }})</h3>
+  <div class="qa-stats">
+    <div class="qa-stat"><b>{{ summary.runs }}</b>실행</div>
+    <div class="qa-stat"><b>{{ summary.no_change_runs }}</b>변경사항 없음 실행</div>
+    <div class="qa-stat"><b>{{ groups|length }}</b>분석 대상</div>
+    <div class="qa-stat"><b>{{ summary.drafts }}</b>초안 TC</div>
+  </div>
+  <p class="hint">실행 결과: {% for name, count in summary.run_status.items() %}{{ name }} {{ count }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</p>
+  <p class="hint">이벤트: {% for name, count in summary.by_event.items() %}{{ name }} {{ count }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</p>
+  <p class="hint">분석: {% for name, count in summary.by_analysis.items() %}{{ name }} {{ count }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</p>
+</section>
+
+<section class="qa-section">
+  <h2>대상별 분석</h2>
+  <div class="qa-cards">
+  {% for group in groups %}
+    {% set item = group.latest %}
+    <div class="qa-card">
+      <h4>[{{ group.subject }}] {{ item.kind }} <small>{{ item.created }}</small></h4>
+      <div class="tags"><span class="pill">{{ item.verdict_label }}</span>{% for badge in item.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>
+      <div>{{ item.summary }}</div>
+      <a href="/qa-agent/findings/{{ item.id }}">상세보기</a>
+      {% if group.earlier %}<details><summary>이전 분석 {{ group.earlier|length }}건</summary><ul>
+        {% for old in group.earlier %}<li>{{ old.created }} · {{ old.kind }} · {{ old.verdict_label }} <a href="/qa-agent/findings/{{ old.id }}">보기</a></li>{% endfor %}</ul></details>{% endif %}
+    </div>
+  {% else %}<p class="hint">이 기간의 분석 결과가 없습니다.</p>{% endfor %}
+  </div>
+</section>
+
+<section class="qa-section">
+  <h2>기간의 이벤트 ({{ events|length }}건)</h2>
+  <div class="table-wrap"><table class="history"><thead><tr><th>시각</th><th>대상</th><th>이벤트</th><th>AI 분석</th><th>실행</th></tr></thead><tbody>
+  {% for event in events|reverse %}
+    <tr><td class="mono">{{ kst(event.created_at) }}</td><td>{{ event.entity_id }}</td><td>{{ event_labels.get(event.event_type, event.event_type) }}</td>
+        <td><span class="pill {{ event.analysis_status }}">{{ event.status_label }}</span>{% for fid in event.finding_ids %} <a href="/qa-agent/findings/{{ fid }}">#{{ fid }}</a>{% endfor %}</td>
+        <td><a href="/qa-agent/runs/{{ event.run_id }}">{{ event.run_id }}</a></td></tr>
+  {% else %}<tr><td colspan="5">이 기간의 이벤트가 없습니다.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

@@ -32,13 +32,14 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 
 ```flow
 QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양서·TC·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
-평일 07:30 예약 실행 -> 일일 QA 점검(5.4절) -> Claude Skill -> 결과 형식 검증 -> 요약 메일 -> 검토 화면 승인·거절
+평일 07:30 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
+QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
 결과 형식 검증 -(형식 오류 또는 한도)-> 작업 실패·건너뜀 기록 -> 요약 메일
 ```
 
-> **참고** 화면 요청은 Regression 영향 분석(5.1절), QA Agent(5.2절), 매뉴얼 개정 검증(5.3절)이다. 동기화와 공통 기반은 5.5절, 매뉴얼 서버 QA Manual Hub 는 5.6절에 있다. 자세한 예약 순서는 4절에 있다.
+> **참고** 화면 요청은 Regression 영향 분석(5.1절), QA Agent 단일 이슈 분석(5.2절, `/qa-agent/issue-analysis`), 매뉴얼 개정 검증(5.3절)이다. 예약 점검은 QA Intelligence Agent(5.4절과 [기능 사양](specs/qa-intelligence.md))다. 동기화와 공통 기반은 5.5절, 매뉴얼 서버 QA Manual Hub 는 5.6절에 있다. 자세한 예약 순서는 4절에 있다.
 
 ### 기능 한눈에 보기
 
@@ -48,7 +49,7 @@ QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양�
 | QA Agent (이슈 검증 범위) | QA 담당자가 이슈 하나를 검증하기 전에 화면에서 | Polarion 이슈 번호(이슈 Export) | 이슈 유형, 관련 사양·TC, 수정확인·Regression 범위, 모자란 정보 질문 | 5.2 |
 | 매뉴얼 개정 검증 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정, 결과 Excel, Word Comment 파일 | 5.3 |
 | 비용 대시보드 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
-| VXvue 일일 QA 점검 | 서버가 평일 07:30 에 스스로 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, 검토 화면의 Finding·질문, 이슈 수정확인 초안 Excel | 5.4 |
+| QA Intelligence Agent 일일 점검 | 서버가 평일 07:30 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [지금 실행]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
 | QA Manual Hub | 사내 사용자가 매뉴얼을 찾거나 올릴 때 | 매뉴얼 파일 | 제품·문서·버전별로 정리된 매뉴얼과 최신본(Current) | 5.6 |
 
@@ -58,7 +59,7 @@ QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양�
 
 | 배포 단위 | 위치 | 하는 일 |
 |---|---|---|
-| 핵심 앱 | `app/` | Regression 영향 분석, QA Agent, 매뉴얼 개정 검증, 일일 QA 점검, Knowledge, 비용 대시보드 |
+| 핵심 앱 | `app/` | Regression 영향 분석, QA Agent, 매뉴얼 개정 검증, QA Intelligence Agent 일일 점검, Knowledge, 비용 대시보드 |
 | 하위 서비스 QA Manual Hub | `services/qa-manual-hub/` | 제품 매뉴얼 파일을 버전별로 올리고 찾아보는 사내 매뉴얼 서버 |
 
 포함:
@@ -85,17 +86,17 @@ QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양�
 | SRS | 소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 `VP-1234` 모양의 번호를 갖는다 |
 | 사양서 | 제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word `.docx`). Knowledge 메뉴에 제품별로 등록한다 |
 | Polarion | 사양(SRS)과 이슈를 관리하는 회사의 ALM 도구 |
-| Claude | Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. 일일 QA 점검과, 기본 설정에서 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 부른다 |
+| Claude | Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 부른다 |
 | Claude CLI | Claude 를 명령줄에서 부르는 프로그램(`claude`). 이 시스템은 `claude -p` 로 사람 없이 한 번씩 부른다 |
 | Gemini | Google 의 생성형 AI. 설정(`ai.provider: gemini`)으로 고르면 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 Claude 대신 부른다 |
 | AI 제공자 | 세 화면 기능이 판정을 받을 AI(`ai.provider`)다. `claude_cli`(기본) 또는 `gemini` 다(REQ-AICALL-005). 5.1~5.3절 본문의 "Gemini 를 부른다", "Gemini 토큰"은 이 설정으로 고른 AI 를 부른다는 뜻이다 |
-| Skill | Claude Code 가 읽는 작업 설명서 폴더(`SKILL.md`). 일일 QA 점검의 Skill 은 `app/modules/daily_qa/skills/` 에 있다 |
+| Skill | Claude Code 가 읽는 작업 설명서 폴더(`SKILL.md`). 일일 점검의 공통 Skill 은 `app/modules/daily_qa/skills/`, 제품 규칙 Skill 은 `config/products/<slug>/skills/` 에 있다 |
 | 토큰 | AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다 |
 | 확인 요청 | 근거가 부족해 사람이 원본을 보고 정해야 한다는 표시. 화면·보고서·TC 초안에는 "확인"과 "필요"를 이어 쓴 문구로 보인다("사양 확인 요청", "중복 확인 요청"도 같다). 사양서에서는 준비 검사가 그 문구를 미완성 표시로 읽기 때문에 "확인 요청"으로 적는다 |
 | 사람 검토 필요 표시 | AI 판정을 믿지 말고 QA 가 원본을 직접 보라는 표시(`manual_review_required`, `needs_human_review`) |
 | Finding | AI 가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다. 화면에도 이 이름으로 보인다 |
 | QA 규칙 | QA 팀이 정한 TC 설계·자체검토 규칙 문서(`[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev*.md`)와 지침 프롬프트. "§55" 는 이 문서의 55절을 뜻한다 |
-| 일일 점검 | 서버가 평일 아침마다 스스로 돌리는 VXvue QA 점검 한 번(`daily_qa` 실행) |
+| 일일 점검 | 서버가 평일 아침마다 제품별로 스스로 돌리는 QA Intelligence Agent 점검 한 번(`daily_qa` 실행) |
 | 작업 폴더 | Claude 가 읽고 쓰는 격리된 폴더(`daily_qa.workspace_dir`). 저장소 밖에 둔다 |
 | 지식 폴더 | QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더 |
 | 지식 사본 | 서버가 지식 폴더에서 받아 둔 사본(`data/product_knowledge/<제품>/`). 서버는 지식 폴더를 직접 볼 수 없다 |
@@ -109,7 +110,7 @@ QA 담당자 화면 요청 -> 변경 문서·이슈·개정 매뉴얼 -> 사양�
 
 ## 4. 전체 자동화 흐름
 
-담당자 PC 와 운영 서버가 예약된 수집·점검을 하고, QA 담당자는 결과를 읽고 승인·거절한다. 승인한 초안을 원본 TC·Polarion 에 반영하는 일도 사람이 한다.
+담당자 PC 와 운영 서버가 예약된 수집·점검을 하고, QA 담당자는 결과를 읽고 판단한다. 초안을 원본 TC·Polarion 에 반영하는 일은 사람이 한다.
 
 PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02:30은 서버 시간대 기준이며, 한국 시간으로 환산하려면 서버 시간대와 cron 설정을 확인해야 한다.
 
@@ -122,14 +123,15 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
 | 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
 | 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
-| 07:30 (평일) | 운영 서버 앱 내장 예약(`daily_qa_vxvue`) | VXvue 일일 QA 점검 | Polarion 을 직접 읽어 네 가지 점검을 하고 결과를 저장한다(4.3절) | `/daily-qa` 화면, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-SCHED-002 |
+| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 07:30 줄과 같다 | 아래 07:30 줄과 같다 | REQ-QAINTEL-025 |
+| 07:30 (평일, 공휴일 제외) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 일일 점검 | Polarion 을 직접 읽어 어제와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-SCHED-002 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`ALM_QA_Automation_Daily`) | ALM 통합 수집. 다른 저장소 ALM-QA-Automation 의 기능 | SRS 와 이슈를 모아 어제와 비교하고, 바뀐 사양에 연결된 이슈에 우선순위를 붙인다. 사양서 PDF 를 크롤러 output 과 지식 폴더에 놓는다 | 크롤러 output 폴더, 지식 폴더 | 그 저장소가 보내는 알림 메일 | 이 저장소 밖 |
 | 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`) | 지식 폴더 업로드(`scripts/sync_product_knowledge.py`) | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 최신본을 서버 지식 사본으로 올린다. 다음 날 07:30 점검이 이것을 쓴다 | 서버 `/knowledge` 화면의 "마지막 수집" | 없음 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 
 ```flow
-07:30 서버: 일일 QA 점검 -> Polarion 직접 조회 -> 네 가지 점검 결과 -> 요약 메일
+07:30 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
 09:00 PC: ALM 통합 수집(ALM-QA-Automation) -> 사양서 PDF 를 크롤러 output 과 지식 폴더에 배포
 09:40 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
 10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 서버 지식 사본 갱신 -> 다음 날 07:30 점검이 사용
@@ -143,60 +145,67 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 
 - 07:30 일일 점검은 전날 10:00 에 올린 지식 사본을 쓴다. 그날 아침 바뀐 TC·매뉴얼은 다음 날 점검에 들어간다.
 
-> **참고** 담당자 PC 의 예약 작업은 "예약된 시작 시간을 놓치면 가능한 대로 빨리 실행"이 켜져 있다. PC 가 그 시각에 꺼져 있었으면 켜진 뒤에 돈다. 서버의 일일 점검은 늦게 깨어나도 1시간 안이면 돈다(REQ-SCHED-002).
+> **참고** 담당자 PC 의 예약 작업은 "예약된 시작 시간을 놓치면 가능한 대로 빨리 실행"이 켜져 있다. PC 가 그 시각에 꺼져 있었으면 켜진 뒤에 돈다. 서버의 일일 점검은 늦게 깨어나도 1시간 안이면 돈다(REQ-SCHED-002). 공휴일에는 예약 점검을 띄우지 않고 앱 로그만 남긴다(REQ-QAINTEL-001).
 
 > **참고** 서버 앱도 사양서 동기화와 지식 폴더 수집을 예약해 두지만, 서버에서 크롤러 폴더와 지식 폴더에 접근할 수 없으면 건너뛴다. 이 두 일은 담당자 PC 가 한다(REQ-SCHED-002).
 
-사양–TC 연결 점검과 매뉴얼 누락 후보 점검은 일일 점검 안에서 주 1회(`daily_qa.weekly_day`, 기본 월요일)만 돈다. 매뉴얼 누락 후보 점검은 매뉴얼이 바뀐 날에도 돈다(REQ-DAILY-005, REQ-DAILY-006).
+사양–TC 연결 점검과 매뉴얼 누락 후보 점검은 일일 점검 안에서 주 1회(`daily_qa.weekly_day`, 기본 월요일)만 돈다. 매뉴얼 누락 후보 점검은 매뉴얼이 바뀐 날에도 돈다. 변경이 없는 날에는 매뉴얼 누락 후보 점검을 다음 변경이 있는 실행으로 미룬다(REQ-DAILY-005, REQ-DAILY-006).
 
 ### 4.2 결과를 알려 주는 곳
 
 | 알림 | 언제 오나 | 받는 곳 | 담는 것 | 요구사항 |
 |---|---|---|---|---|
-| 일일 QA 점검 요약 메일 | 평일 07:30 점검이 끝날 때마다 한 통 | `DAILY_QA_EMAIL_TO` 의 수신자 | 네 가지 점검 결과, 검토할 Finding 수, 실패한 단계와 첫 실패 이유, 검토 화면 링크 | REQ-DAILY-008, REQ-MAIL-002 |
-| 일일 QA 검토 화면 | 메일 링크를 누를 때 | `/daily-qa` | Finding 승인·거절·근거 추가 필요, AI 질문에 답변 | REQ-DAILY-009 |
+| QA Agent 요약 메일(제목 `[QA Agent]`) | 점검이 끝날 때마다 한 통(예약·[지금 실행]·한도 뒤 다시 돌기) | `DAILY_QA_EMAIL_TO` 의 수신자 | 오늘 변경 요약, 새 Finding 수, 실패한 단계와 첫 실패 이유, Claude 사용량 한도와 초기화 시각, 실행 상세 링크 | REQ-DAILY-008, REQ-MAIL-002 |
+| QA Agent 대시보드 | 메일 링크를 누르거나 아무 때나 | `/qa-agent` | 마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 TC 초안, 기간 조회. 승인·거절 입력은 없다 | REQ-QAINTEL-019, REQ-QAINTEL-020 |
 | Gemini 할당량 소진·모델 사용 불가 메일 | 분석 중 사람이 조치해야 하는 Gemini 오류가 날 때. 같은 종류는 재발송 대기 시간 동안 다시 보내지 않는다 | `NOTIFY_EMAIL_TO` 의 수신자 | 발생 시각, 모델, 가린 오류 문구, 조치 방법 | REQ-USAGE-003 |
 | ALM 통합 수집 메일 | 평일 09:00 수집 뒤 | ALM-QA-Automation 설정의 수신자 | 바뀐 사양과 연결된 이슈, 우선순위 | 이 저장소 밖 |
 | Redmine Teams 메시지 | 평일 10:00, 알림을 켰을 때 | Teams | 담당자별 Open 이슈 요약 | 이 저장소 밖 |
 
 화면에서 요청하는 기능(Regression 영향 분석, QA Agent, 매뉴얼 개정 검증)은 예약으로 돌지 않는다. 사람이 요청할 때만 돌고, 결과는 그 화면의 보고서와 내려받기 파일로 받는다.
 
-### 4.3 일일 QA 점검 한 번에 하는 일
+### 4.3 QA Intelligence Agent 일일 점검 한 번에 하는 일
 
-평일 아침 서버는 네 가지 점검을 한다.
+평일 아침 서버는 제품마다 Polarion 의 SRS 전체와 이슈 전체를 어제 스냅샷과 비교한다. 바뀐 것만 변경 이벤트로 남기고, 이벤트 종류에 맞는 분석을 돌린다. 바뀐 것이 없으면 AI 를 부르지 않는다.
 
-| 점검 | 하는 일 | AI 사용 |
+| 분석·점검 | 하는 일 | AI 사용 |
 |---|---|---|
-| 사양 변경 영향 검토 | 어제와 비교해 바뀐 사양(SRS)마다 다시 확인할 TC 와 새로 만들 TC 후보를 고른다 | 예 |
-| 이슈 수정확인 초안 | 해결된 이슈마다 수정 확인 절차와 함께 돌릴 Regression TC 초안을 만든다 | 예 |
-| 사양–TC 연결 점검 | TC 가 하나도 연결되지 않은 사양, 삭제된 사양을 가리키는 TC 를 찾는다 | 아니오 |
+| 신규 이슈 분석 | 새로 등록된 이슈의 중복 후보, 사양 대비 판단, 과거 이슈와의 관계를 정리한다 | 예 |
+| 수정 완료 이슈 분석 | 연구소 결과가 `FIXED` 로 바뀐 이슈의 원인·조치·Regression 범위를 검토하고 검증 TC 초안을 만든다 | 예 |
+| Spec 판정 이슈 분석 | "사양대로"·"결함 아님" 으로 판정된 이슈를 사양과 과거 이슈에 비춰 다시 본다 | 예 |
+| 새 댓글 분석 | 어제 없던 의미 있는 댓글만 읽어 QA 판단에 영향이 있는지 나눈다 | 예 |
+| 사양 변경 Coverage 분석 | 새로 생기거나 바뀐 사양(SRS)을 기존 TC·과거 이슈가 이미 다루는지 보고, 모자라면 TC 수정안이나 신규 TC 초안을 낸다 | 예 |
+| 사양–TC 연결 점검 | TC 가 하나도 연결되지 않은 사양, 삭제된 사양을 가리키는 TC 를 찾는다(주 1회) | 아니오 |
 | 매뉴얼 누락 후보 점검 | 바뀐 사양이 사용자 매뉴얼에 반영되지 않았을 수 있는 곳을 찾는다 | 예 |
+
+자세한 사양은 [QA Intelligence Agent 기능 사양](specs/qa-intelligence.md)에 있다.
 
 서버 일일 점검 한 번의 흐름 (REQ-DAILY-001):
 
 ```flow
-잠금 -> 사전 점검(규칙 판·자격증명·작업 폴더) -> SRS 스냅샷·비교 -> 이슈 수집 -> TC 색인
+잠금 -> 사전 점검(규칙 판·자격증명·사용량 한도·작업 폴더) -> SRS·이슈 전체 수집 -> TC 색인 -> 스냅샷 저장·비교 -> 변경 이벤트
 TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
-TC 색인 -> 작업 묶음(사양 변경 영향 검토·이슈 수정확인 초안·매뉴얼 누락 후보 점검) -> Claude Skill(격리 작업 폴더) -> 결과 형식 검증 -> 저장
-결과 형식 검증 -(형식 오류)-> 한 번 더 실행 -(또 오류)-> 작업 실패로 기록
-저장 -> 이슈 수정확인 초안 Excel -> 요약 메일
+변경 이벤트 -> 분석 대상 고르기(다섯 가지 분석) -> Claude Skill(격리 작업 폴더) -> 결과 형식·근거 검증 -> 저장
+변경 이벤트 -(바뀐 것 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
+결과 형식·근거 검증 -(형식 오류)-> 한 번 더 실행 -(또 오류)-> 이벤트 실패(다음 실행에서 다시 분석)
+저장 -> 검증 TC 초안 Excel -> 요약 메일
 ```
 
-사람 검토 고리 (REQ-DAILY-008, REQ-DAILY-009):
+사람이 결과를 보는 길 (REQ-DAILY-008, REQ-QAINTEL-019):
 
 ```flow
-요약 메일 -> /daily-qa 검토 대기열 -> 승인·거절·근거 추가 필요
-검토 대기열 -> AI 질문에 답변 -> 다음 날 점검 입력에 반영
-승인한 초안 -> 사람이 원본 Checklist·Polarion 에 직접 반영
+요약 메일 -> /qa-agent 실행 상세 -> 분석 상세(근거·검증 TC 초안)
+/qa-agent 대시보드 -> 오늘 변경 요약·분석 카드 -> 분석 상세(근거·검증 TC 초안)
+분석 상세(근거·검증 TC 초안) -> 사람이 원본 Checklist·Polarion 에 직접 반영
 ```
 
 ### 4.4 어디서 끊기면 무엇이 달라지는가
 
 | 멈춘 곳 | 결과 |
 |---|---|
-| Polarion 조회 실패 | 사양 변경 영향 검토는 `실패` "SRS 수집이 실패해 검토하지 못했습니다", 이슈 수정확인 초안은 `실패` "이슈 수집이 실패해 검토하지 못했습니다". 사양–TC 연결 점검은 저장된 스냅샷으로 돈다 |
-| Claude 토큰 없음·사용량 한도 | AI 단계 `건너뜀` 또는 `실패`, 이유가 메일과 `audit.json` 에 남는다 |
-| QA 규칙 판이 Skill 기준과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다(REQ-DAILY-010) |
+| Polarion 조회 실패·0건·이슈 급감 | 그 수집 단계가 `실패` 다. 오늘 스냅샷과 이벤트를 저장하지 않아 다음 실행이 마지막 정상 스냅샷과 비교한다(REQ-QAINTEL-009). 사양–TC 연결 점검은 저장된 스냅샷으로 돈다 |
+| Claude 토큰 없음 | AI 단계 `건너뜀`, 이유가 메일과 `audit.json` 에 남는다. 이벤트는 대기로 남는다 |
+| Claude 사용량 한도·인증 실패 | AI 단계 `Claude 사용량 한도`. 변경 감지는 계속하고 이벤트는 대기로 남는다. 초기화 시각이 메일·대시보드에 보이고, 세션 한도면 풀린 뒤 한 번 다시 돈다(REQ-QAINTEL-025) |
+| QA 규칙 판이 제품 설정의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
 | PC 가 꺼져 있음 | 서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다 |
 | ALM 수집 실패 | 새 사양서 PDF 가 없으므로 사양서 동기화는 마지막 수집본을 대상으로 한다. 지식 업로드는 TC·매뉴얼 등 지식 폴더의 다른 변경도 확인한다 |
 
@@ -218,7 +227,7 @@ TC 색인 -> 작업 묶음(사양 변경 영향 검토·이슈 수정확인 초�
 | RULE | QA 규칙 주입과 규칙 절별 구현 현황 | 5.2 |
 | MANUAL | 매뉴얼 개정 검증 | 5.3 |
 | COST | 비용·사용량 표시 | 5.3 |
-| DAILY | VXvue 일일 QA 점검 (사양 변경 영향 검토, 이슈 수정확인 초안, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검, 검토 화면, 요약 메일) | 5.4 |
+| DAILY | QA Intelligence Agent 일일 점검의 공통 부분 (예약·수집·잠금, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검, 결과 검사·저장, 초안 Excel, 요약 메일, Skill). 변경 감지와 다섯 가지 분석은 기능 사양의 QAINTEL | 5.4 |
 | NFR-DAILY | 일일 점검의 비용·시간 상한과 산출물 보관 | 5.4 |
 | NFR-SEC | AI 실행 격리 | 5.4, 5.5 |
 | KNOW | Knowledge 화면·문서 등록·파일명 규약 | 5.5 |
@@ -2924,7 +2933,7 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
 | 검증 이력이 없음 | 빈 표 대신 문구를 보인다 | "아직 등록된 검증 이력이 없습니다." |
-| 제품이 하나도 없음 | 제품 목록이 비어 있다 | 제품 칸 옆에 "Knowledge에서 제품을 추가하세요" 안내 링크 |
+| 제품이 하나도 없음 | 제품 목록이 비어 있다 | 제품 칸 옆에 "목록에 없으면 제품 설정을 먼저 추가하세요(docs/PRODUCT_ONBOARDING.md)" 안내와 Knowledge 링크 |
 
 ### REQ-MANUAL-002 검증 요청 등록
 
@@ -3893,87 +3902,98 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 - Regression 분석, 매뉴얼 개정 검증, QA Agent, Knowledge 화면 메뉴에 "비용 대시보드" 링크가 있다.
 - 대시보드와 사용법 화면 메뉴에서 QA 홈, QA Agent, Regression 분석, 매뉴얼 검증, Knowledge 로 돌아갈 수 있다.
 
-### 5.4 VXvue 일일 QA 점검
+### 5.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)
 
 **이 기능은**
 
-- 서버가 평일 아침마다 스스로 한 번 돌리고, QA 담당자는 아침에 요약 메일을 받아 결과를 검토한다.
-- Polarion 의 SRS·이슈와, 담당자 PC 가 서버에 올린 TC Excel·매뉴얼·QA 규칙을 읽는다.
-- 네 가지 점검 결과를 얻는다. 바뀐 SRS 때문에 고쳐야 할 TC, 새로 고쳐진 이슈의 수정확인·Regression TC 초안(Excel), TC 가 없는 SRS 와 없어진 SRS 를 가리키는 TC, 매뉴얼 반영이 빠졌을 수 있는 SRS 다.
-- 모든 결과는 AI 초안이다. 승인·거절은 사람이 화면에서 정하고, Polarion 과 원본 TC·Checklist 에 옮기는 일도 사람이 직접 한다.
+- 서버가 평일 07:30(한국 시간)에 제품마다 한 번 스스로 돈다. 주말과 대한민국 공휴일에는 돌지 않는다. QA 담당자는 `/qa-agent` 대시보드의 [지금 실행]으로 같은 점검을 바로 돌릴 수도 있다.
+- Polarion 의 SRS 전체와 이슈 전체를 읽어 전날 스냅샷과 비교하고, 바뀐 것만 변경 이벤트로 남긴다. 담당자 PC 가 서버에 올린 TC Excel·매뉴얼·QA 규칙도 읽는다.
+- 변경 이벤트의 종류에 따라 다섯 가지 분석을 돌린다. 신규 이슈, 수정 완료 이슈, Spec 판정 이슈, 새 댓글, 사양 변경 Coverage 분석이다. AI 없이 계산하는 사양–TC 연결 점검과 매뉴얼 누락 후보 점검도 함께 돈다.
+- 바뀐 것이 하나도 없으면 Claude 를 한 번도 부르지 않고 "변경사항 없음" 으로 끝난다.
+- 결과는 요약 메일과 `/qa-agent` 대시보드에서 본다. 모든 결과는 AI 초안이다. 화면에는 승인·거절 입력이 없고, Polarion 과 원본 TC·Checklist 에 옮기는 일은 사람이 직접 한다.
+
+> **참고** 변경 감지, 다섯 가지 분석, 대시보드의 자세한 사양은 [QA Intelligence Agent 기능 사양](specs/qa-intelligence.md)(REQ-QAINTEL-001 ~ REQ-QAINTEL-027)에 있다. 이 절은 수집·잠금·작업 폴더·결과 검사·메일·감사 기록처럼 두 문서가 함께 쓰는 부분을 정한다.
 
 **요구사항 지도**
 
-- 매일 아침 한 번 돌기(자료 읽기, TC 목록 만들기): REQ-DAILY-001, REQ-DAILY-002, REQ-DAILY-014
-- 네 가지 점검: REQ-DAILY-003 ~ REQ-DAILY-006
-- AI 에 일을 맡기고 결과를 검사해 저장하기: REQ-DAILY-015, REQ-DAILY-016, REQ-DAILY-007, REQ-DAILY-017, REQ-DAILY-018
+- 매일 아침 한 번 돌기(예약·잠금, 자료 읽기, TC 목록 만들기): REQ-DAILY-001, REQ-DAILY-002, REQ-DAILY-014, REQ-QAINTEL-001
+- 무엇이 바뀌었나와 다섯 가지 분석: REQ-QAINTEL-003 ~ REQ-QAINTEL-017
+- AI 없이 계산하는 점검과 매뉴얼 점검: REQ-DAILY-005, REQ-DAILY-006
+- AI 에 일을 맡기고 결과를 검사해 저장하기: REQ-DAILY-015, REQ-DAILY-016, REQ-DAILY-007, REQ-DAILY-018
 - 결과물 남기기(초안 Excel, 실행 폴더, 감사 기록, 실행 결과, 메일): REQ-DAILY-019 ~ REQ-DAILY-022, REQ-DAILY-008
-- 사람이 검토하고 답하기: REQ-DAILY-009, REQ-DAILY-017, REQ-DAILY-026
+- 결과 보기: REQ-QAINTEL-019(대시보드), REQ-QAINTEL-020(상세 화면), REQ-QAINTEL-024(기간 조회)
 - 서버 관리자가 직접 돌리고 시험하기: REQ-DAILY-011 ~ REQ-DAILY-013
 - QA 규칙 판과 Skill: REQ-DAILY-010, REQ-DAILY-024, REQ-DAILY-025
 - 안전하게 돌리기(격리, 비용 상한, 보관 위치): REQ-DAILY-023, NFR-SEC-001, NFR-DAILY-001, NFR-DAILY-002
+- 더 쓰지 않는 요구사항: REQ-DAILY-003, REQ-DAILY-004, REQ-DAILY-009, REQ-DAILY-017, REQ-DAILY-026. 카드에 대신하는 ID 를 적었다.
 
-실행 한 번은 이렇게 흐른다. 자료를 읽고 TC 목록을 만든 뒤, AI 없이 계산하는 점검과 AI 에 맡기는 점검을 돌리고, 결과를 모아 메일을 보낸다.
+실행 한 번은 이렇게 흐른다. 자료를 모두 읽어 어제와 비교하고, 바뀐 것만 AI 에 맡기고, 결과를 모아 메일을 보낸다.
 
 ```flow
-예약 실행(평일 07:30) -> 잠금 -> 사전 점검 -> SRS 수집·비교 -> 이슈 수집 -> TC 색인
-잠금 -(다른 실행이 진행 중)-> 끝(실행 기록 없음)
-TC 색인 -> 삭제된 SRS 를 가리키는 TC 찾기(매일, AI 없음) -> Finding 저장
-TC 색인 -> 사양–TC 연결 점검(주 1회, AI 없음) -> Finding 저장
-TC 색인 -> 작업 묶음 만들기 -> 마스킹 -> 작업 폴더 -> Claude Skill -> 결과 파일 검사 -> Finding·질문 저장
-결과 파일 검사 -(형식 오류)-> 한 번 더 실행 -(또 오류)-> 작업 실패
-Finding·질문 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 메일
+예약 실행(평일 07:30, 공휴일 제외) 또는 [지금 실행] -> 잠금 -> 사전 점검 -> SRS·이슈 전체 수집 -> 스냅샷 비교 -> 변경 이벤트
+잠금 -(같은 제품의 다른 실행이 진행 중)-> 끝(실행 기록 없음)
+스냅샷 비교 -> TC 색인 -> 사양–TC 연결 점검(주 1회, AI 없음) -> Finding 저장
+변경 이벤트 -> 분석 대상 고르기 -> 작업 묶음 만들기 -> 마스킹 -> 작업 폴더 -> Claude Skill -> 결과 검사·근거 검증 -> Finding 저장
+변경 이벤트 -(바뀐 것 없음)-> 변경사항 없음(Claude 호출 0회) -> 요약 메일
+결과 검사·근거 검증 -(형식 오류)-> 한 번 더 실행 -(또 오류)-> 이벤트 실패(다음 실행에서 다시 분석)
+Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 메일
 ```
 
-사람은 메일에서 시작해 화면에서 검토하고, 승인한 초안은 원본에 직접 옮긴다.
+사람은 메일이나 대시보드에서 결과를 읽고, 쓸 만한 초안은 원본에 직접 옮긴다. 화면에서 승인·거절을 남기지 않는다.
 
 ```flow
-요약 메일 -> /daily-qa 실행 상세 -> 검토 대기열 -> Finding 상세 -> 승인·거절·근거 추가 필요
-검토 대기열 -> 질문 화면 -> 답변 저장 -> 다음 실행의 작업 입력
-승인한 초안 -> 사람이 원본 Checklist·Polarion 에 직접 반영
+요약 메일 -> /qa-agent 실행 상세 -> 분석 상세(근거·검증 TC 초안)
+/qa-agent 대시보드 -> 오늘 변경 요약·분석 카드 -> 분석 상세(근거·검증 TC 초안)
+분석 상세(근거·검증 TC 초안) -> 사람이 원본 Checklist·Polarion 에 직접 반영
 ```
 
 **이 절의 용어**
 
 | 용어 | 뜻 |
 |---|---|
-| 실행 ID | 실행 하나의 이름이다. 시작 시각을 `YYYYMMDD-HHMMSS` 모양으로 쓴다(예: `20260928-073000`) |
+| 제품 slug | 제품 이름을 소문자로 바꾼 짧은 이름(예: `vxvue`)이다. 예약 이름·실행 ID·스냅샷 폴더·잠금 파일·상태 값 키가 제품마다 이 이름으로 나뉜다(REQ-QAINTEL-023) |
+| 실행 ID | 실행 하나의 이름이다. 시작 시각과 제품 slug 를 `YYYYMMDD-HHMMSS-<slug>` 모양으로 쓴다(예: `20260930-073000-vxvue`). 개편 전 실행은 slug 없이 `YYYYMMDD-HHMMSS` 다 |
 | 실행 폴더 | 실행 하나의 결과 파일을 모아 두는 폴더다(`output/daily_qa/<실행 ID>/`) |
-| 단계 | 실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 네 가지 점검이 있고, 실행 기록에는 영어 키로 저장한다(예: `collect_srs`) |
-| 내부 키 | 네 가지 점검을 실행 기록에 저장할 때 쓰는 한 글자 이름(`B`, `C`, `E`, `F`)이다. 화면·메일에는 보이지 않는다 |
-| 사양 변경 영향 검토 | 바뀐 SRS 때문에 고쳐야 할 기존 TC 를 찾는 점검이다. 내부 키 `B`, Skill `vxvue-spec-change-impact` |
-| 이슈 수정확인 초안 | 새로 고쳐진 이슈의 유형을 나누고 수정확인·Regression TC 초안을 만드는 점검이다. 내부 키 `C`, Skill `vxvue-issue-verification` |
-| 사양–TC 연결 점검 | TC 가 없는 SRS 와 없어진 SRS 를 가리키는 TC 를 AI 없이 찾는 점검이다. 내부 키 `E`. 결과의 Skill 이름 칸에는 `vxvue-trace-gap` 이 저장된다 |
-| 매뉴얼 누락 후보 점검 | 최근 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 것을 고르는 점검이다. 내부 키 `F`, Skill `vxvue-manual-completeness` |
+| 단계 | 실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: `collect_srs`, `events`, `NEW_ISSUE`) |
+| 내부 키 | AI 없는 두 점검을 실행 기록에 저장할 때 쓰는 한 글자 이름(`E`, `F`)이다. 개편 전 기록의 `B`, `C` 도 그대로 읽는다. 화면·메일에는 보이지 않는다 |
+| 변경 이벤트 | 스냅샷 비교로 찾은 변경 하나다. 표 `qa_change_events` 에 한 줄로 저장한다(REQ-QAINTEL-005, REQ-QAINTEL-006) |
+| 분석 종류 | 변경 이벤트를 받아 돌리는 AI 분석이다. 신규 이슈(`NEW_ISSUE`), 수정 완료 이슈(`FIXED_ISSUE`), Spec 판정 이슈(`SPEC_DECISION`), 새 댓글(`COMMENT`), 사양 변경 Coverage(`SPEC_COVERAGE`)가 있다(REQ-QAINTEL-010) |
+| 사양–TC 연결 점검 | TC 가 없는 SRS 와 없어진 SRS 를 가리키는 TC 를 AI 없이 찾는 점검이다. 내부 키 `E`. 결과의 Skill 이름 칸에는 `qa-trace-gap` 이 저장된다(개편 전 기록은 `vxvue-trace-gap`) |
+| 매뉴얼 누락 후보 점검 | 최근 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 것을 고르는 점검이다. 내부 키 `F`, Skill `qa-manual-completeness`(개편 전 이름 `vxvue-manual-completeness`) |
+| 공통 규칙 Skill | 모든 제품의 무인 점검 Skill 이 먼저 읽는 규칙이다. `app/modules/daily_qa/skills/qa-common-rules/` 에 있다(REQ-DAILY-024) |
+| 제품 규칙 Skill | 한 제품에만 해당하는 규칙 절 번호와 검증 관문을 적은 Skill 이다. VXvue 는 `config/products/vxvue/skills/vxvue-qa-rules/` 에 있다 |
 | Legacy 번호 | SRS 의 옛 번호(`oldId`)로, `03-10-05` 모양이다. TC 파일은 이 번호를 쓰는 경우가 많다 |
-| 스냅샷 | 그날 Polarion 에서 읽은 SRS 전체를 저장해 둔 파일(`data/daily_qa/snapshots/<날짜>.json`)이다. 다음 날 비교의 기준이 된다 |
-| 기준 스냅샷만 저장 | 비교할 전날 스냅샷이 없어 오늘 것만 저장하고 비교는 하지 않은 상태(`baseline_only`)다 |
+| 스냅샷 | 그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 `data/daily_qa/snapshots/<slug>/srs/<날짜>.json`, 이슈는 `data/daily_qa/snapshots/<slug>/issues/<날짜>.json` 이다. 다음 실행 비교의 기준이 된다 |
+| 기준 스냅샷만 저장 | 비교할 전날 스냅샷이 없어 오늘 것만 저장하고 비교는 하지 않은 상태(`baseline_only`)다. 실행 결과는 `BASELINE` 이다(REQ-QAINTEL-008) |
 | TC 색인 | 지식 사본의 TC Excel 에서 행마다 SRS 번호·Title·Step·Expected 를 읽어 모은 목록이다 |
 | 후보 TC | SRS 번호 열이 그 SRS 의 번호와 같아서 코드가 먼저 골라 준 TC 행이다 |
 | 작업 묶음 | Claude 에게 한 번에 맡기는 입력 하나다(`B-001`, `C-003` 같은 작업 ID). SRS 변경이나 이슈 여러 건을 묶는다 |
 | 근거 | Finding 을 뒷받침하는 문서 위치 목록(`evidence`)이다. SRS 번호, TC 의 `파일 / 시트 / N행`, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다 |
-| 검토 상태 | 사람이 Finding 에 남긴 결정으로, `검토 대기`, `승인`, `거절`, `근거 추가 필요` 중 하나다 |
-| 질문 | 판정에 필요한데 자료에 없어 AI 가 사람에게 묻는 문장(`open_questions`)이다. 답은 다음 실행 입력에 들어간다 |
-| 규칙 판 | QA 규칙 파일 이름의 `Rev1.17` 같은 판 번호다. Skill 이 기준으로 삼는 판은 `SUPPORTED_RULES_REV` 이다 |
+| 검토 상태 | Finding 에 붙은 결정 칸으로, `검토 대기`, `승인`, `거절`, `근거 추가 필요` 중 하나다. 새 Finding 은 모두 `검토 대기` 로 저장한다. 화면에서 이 값을 바꾸는 입력은 없다. 개편 전에 사람이 남긴 결정은 표에 그대로 남는다 |
+| 질문 | 판정에 필요한데 자료에 없어 AI 가 남긴 문장(`open_questions`)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(`answered_questions`)에 들어간다 |
+| 규칙 판 | QA 규칙 파일 이름의 `Rev1.17` 같은 판 번호다. 제품 규칙 Skill 이 기준으로 삼는 판은 제품 설정의 `qa_intelligence.rules.supported_rev` 다 |
 | 규칙 절 번호 | QA 규칙 안의 절을 가리키는 `§55` 같은 표시다. `§` 는 "몇 절" 이라는 뜻이다 |
 | 검증 관문 | QA 규칙 76절이 정한 일곱 가지 점검 항목(G1~G7)이다. 결과 파일의 `gate_status` 에 관문마다 통과 여부를 적는다 |
-| Program Fixed | 프로그램 코드·화면·API·DB 가 고쳐진 이슈다. 이 유형에만 TC 초안을 만든다 |
+| Program Fixed | 프로그램 코드·화면·API·DB 가 고쳐진 이슈를 뜻하는 개편 전 이슈 유형이다. 지금은 연구소 결과가 `FIXED` 인 이슈의 수정 완료 이슈 분석만 TC 초안을 만든다(REQ-QAINTEL-013) |
 | 수정확인 TC | 이슈의 원래 조건으로 다시 해 보아 고친 결과를 확인하는 TC 다 |
 | Regression TC | 고친 원인이 닿는 다른 경로가 망가지지 않았는지 보는 TC 다 |
 | 영향성평가 Checklist | 지식 폴더에 있는 변경사항 영향성평가 Checklist Excel 이다. 초안 Excel 의 열 순서와 머리글 서식 본보기다 |
-| 이슈 기준 시각 | 이 시각 뒤에 바뀐 이슈만 새 이슈로 본다. 상태 표(`daily_qa_state`)의 `issues_last_success_at` 에 저장한다 |
+| 상태 값 | 실행 사이에 넘겨야 하는 값을 상태 표(`daily_qa_state`)에 저장한 것이다. 키 앞에 `<slug>:` 를 붙인다(예: `vxvue:manual_check_due`). 개편 전 키(`issues_last_success_at` 등)는 지우지 않고 더 쓰지 않는다 |
 | 감사 기록 | 무엇을 보내고 무엇을 받았는지 남긴 파일이다. 실행 폴더의 `audit.json`, `sent/`, `claude_logs/` 이다 |
 
 ### REQ-DAILY-001 일일 점검 실행 순서
 
-**하는 일** 서버가 평일 아침마다 VXvue 점검을 한 번 돈다. 예를 들어 월요일 07:30 에 시작해 Polarion 에서 SRS·이슈를 읽고, 네 가지 점검을 하고, 결과를 저장한 뒤 요약 메일을 보낸다.
+**하는 일** 서버가 평일 아침마다 제품별 점검을 한 번 돈다. 예를 들어 월요일 07:30 에 VXvue 점검이 시작해 Polarion 에서 SRS·이슈 전체를 읽고, 어제와 바뀐 것만 분석하고, 결과를 저장한 뒤 요약 메일을 보낸다.
 
 **언제**
 
-- 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 에 적힌 요일·시각(기본 평일 07:30, 한국 시간)에 깨어난다. 예약 이름은 `daily_qa_vxvue` 다.
-- 예약 기능은 점검을 웹 프로세스 안에서 돌리지 않는다. `scripts/run_daily_qa.py` 를 웹 프로세스와 분리된 별도 프로세스로 띄우고 바로 돌아온다.
+- 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 에 적힌 요일·시각(기본 평일 07:30, 한국 시간)에 깨어난다.
+- 예약은 제품마다 하나다. 예약 이름은 `qa_agent_<slug>` 다(예: `qa_agent_vxvue`). 제품 목록은 `daily_qa.products` 이고, 없으면 `daily_qa.product` 하나다(REQ-QAINTEL-001).
+- 대한민국 공휴일에는 띄우지 않는다. 공휴일은 로컬 표 `config/holidays/kr.yaml` 과 `daily_qa.schedule.extra_holidays` 로 가린다. `daily_qa.schedule.skip_holidays` 가 false 면 공휴일에도 돈다(REQ-QAINTEL-001).
+- 예약 기능은 점검을 웹 프로세스 안에서 돌리지 않는다. `scripts/run_daily_qa.py --product <제품>` 을 웹 프로세스와 분리된 별도 프로세스로 띄우고 바로 돌아온다.
 - 별도 프로세스의 화면 출력은 `output/logs/daily_qa.out` 에 이어 쓴다.
 - 예약 시각에 앱이 멈춰 있었어도 1시간 안에 다시 뜨면 그때 한 번 띄운다.
+- 이와 별도로 감시 예약 `qa_agent_limit_catchup` 이 10분마다 깨어나, Claude 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025).
 
 이유: 점검 한 번이 Claude 작업 때문에 수십 분 걸릴 수 있다. 앱이 재시작돼도 진행 중인 점검은 끊기지 않아야 한다.
 
@@ -3981,9 +4001,11 @@ Finding·질문 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 
 
 | 경우 | 앱 로그 |
 |---|---|
-| `daily_qa.enabled` 가 false 라 띄우지 않음 | `daily_qa_skipped reason=disabled` |
-| Polarion 설정(주소·토큰·프로젝트) 가운데 하나라도 없어 띄우지 않음 | `daily_qa_skipped reason=polarion_설정_없음` |
-| 띄웠다 | `daily_qa_launched pid=<번호>` |
+| `daily_qa.enabled` 가 false 라 띄우지 않음 | `qa_agent_skipped reason=disabled product=<slug>` |
+| Polarion 설정(주소·토큰·프로젝트) 가운데 하나라도 없어 띄우지 않음 | `qa_agent_skipped reason=polarion_설정_없음 product=<slug>` |
+| 공휴일이라 띄우지 않음 | `qa_agent_skipped reason=holiday product=<slug> date=<날짜> name=<공휴일 이름>` |
+| 같은 제품의 실행이 진행 중이라 띄우지 않음 | `qa_agent_skipped reason=running product=<slug>` |
+| 띄웠다 | `daily_qa_launched pid=<번호> product=<slug> trigger=<실행 방법>` |
 
 Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_claude_token` 을 남기고, AI 단계만 `건너뜀` 으로 남는다(사전 점검 비고와 메일에 이유).
 
@@ -3991,58 +4013,64 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 
 | 자료 | 가져오는 곳 | 새로 바뀌는 때 |
 |---|---|---|
-| SRS, 이슈 | Polarion (점검 때 서버가 직접 읽는다) | 매 실행 |
+| SRS 전체, 이슈 전체 | Polarion (점검 때 서버가 직접 읽는다) | 매 실행 |
+| 전날 스냅샷 | `data/daily_qa/snapshots/<slug>/srs/`, `.../issues/` | 매 정상 실행 |
+| 분석을 기다리는 변경 이벤트 | 이벤트 표(`qa_change_events`)의 `pending`·`failed` 줄 | 매 실행 |
 | TC Excel, 매뉴얼 텍스트, QA 규칙·지침 프롬프트 | 서버의 지식 사본(`data/product_knowledge/<제품>/`) | 담당자 PC 가 올릴 때 (PC 의 예약 작업, 평일 10:00) |
-| 영향성평가 Checklist | 지식 사본의 TC 가운데 파일 이름에 `영향성평가` 가 들어간 첫 파일 | 위와 같다 |
-| 사람이 답한 질문 | 이 시스템의 질문 표(`daily_qa_questions`) | 답을 저장할 때 |
+| 영향성평가 Checklist | 지식 사본의 TC 가운데 파일 이름에 제품 설정의 표시 글자(VXvue 는 `영향성평가`)가 들어간 첫 파일 | 위와 같다 |
+| 사람이 답한 질문 | 이 시스템의 질문 표(`daily_qa_questions`). 개편 전에 남긴 답만 있다 | 바뀌지 않는다 |
 
-> **주의** PC 가 꺼져 있거나 업로드가 실패하면 서버의 TC·매뉴얼·규칙은 마지막으로 올린 것을 그대로 쓴다. 마지막 업로드 시각과 규칙 판은 `/knowledge` 화면의 제품별 "마지막 수집" 줄에서 본다.
+> **주의** PC 가 꺼져 있거나 업로드가 실패하면 서버의 TC·매뉴얼·규칙은 마지막으로 올린 것을 그대로 쓴다. 마지막 업로드 시각은 `/qa-agent` 대시보드 맨 위 지식 문서 목록(REQ-QAINTEL-022)과 `/knowledge` 화면에서 본다.
 
 **순서**
 
-1. 잠금 파일(`data/daily_qa/run.lock`)을 만든다. 이미 있으면 새 실행은 바로 끝난다. 이때 실행 기록은 만들지 않는다(REQ-DAILY-011 의 종료 코드 3).
+1. 제품의 잠금 파일(`data/daily_qa/<slug>/run.lock`)을 만든다. 이미 있으면 새 실행은 바로 끝난다. 이때 실행 기록은 만들지 않는다(REQ-DAILY-011 의 종료 코드 3).
 2. 잠금 파일이 6시간보다 오래됐으면 멈춘 실행이 남긴 것으로 보고 지운 뒤 진행한다.
-3. 실행 ID 를 정하고 실행 기록을 `실행 중` 으로 만든다.
-4. 사전 점검을 한다. QA 규칙 판(REQ-DAILY-010), Claude 토큰, 작업 폴더 위치(NFR-SEC-001)를 확인하고, 지식 사본에서 TC·매뉴얼·영향성평가 Checklist 위치를 읽는다.
-5. SRS 를 읽고 전날 스냅샷과 비교한다(REQ-DAILY-002).
-6. 새 이슈를 읽는다(REQ-DAILY-002).
+3. 실행 ID(`YYYYMMDD-HHMMSS-<slug>`)를 정하고 실행 기록을 `실행 중` 으로 만든다. 실행 기록에 제품을 함께 적는다.
+4. 사전 점검을 한다. QA 규칙 판(REQ-DAILY-010), Claude 토큰, 남아 있는 Claude 사용량 한도(REQ-QAINTEL-025), 작업 폴더 위치(NFR-SEC-001)를 확인하고, 지식 사본에서 TC·매뉴얼·영향성평가 Checklist 위치를 읽는다.
+5. SRS 전체를 읽는다(REQ-DAILY-002, REQ-QAINTEL-003).
+6. 이슈 전체를 읽는다(REQ-DAILY-002, REQ-QAINTEL-004).
 7. TC 색인을 만든다(REQ-DAILY-014).
-8. AI 없이 계산하는 두 가지를 한다. 삭제된 SRS 를 가리키는 TC 찾기(매일, REQ-DAILY-003)와 사양–TC 연결 점검(주 1회, REQ-DAILY-005)이다.
-9. AI 작업을 사양 변경 영향 검토, 이슈 수정확인 초안, 매뉴얼 누락 후보 점검 차례로 돌린다. 실행당 작업 묶음 수 상한(NFR-DAILY-001) 안에서만 돈다.
-10. 이번 실행에서 저장한 이슈 수정확인 초안 Finding 으로 초안 Excel 을 만든다(REQ-DAILY-019).
-11. 실행 결과를 정하고(REQ-DAILY-022) `audit.json` 을 쓰고 실행 기록을 마친다.
-12. 요약 메일을 보낸다(REQ-DAILY-008). 잠금 파일을 지운다.
+8. 스냅샷을 저장하고 전날 스냅샷과 비교해 변경 이벤트를 만들어 저장한다(REQ-QAINTEL-005, REQ-QAINTEL-006).
+9. AI 없이 계산하는 두 가지를 한다. 삭제된 SRS 를 가리키는 TC 찾기(매일, 13.4절)와 사양–TC 연결 점검(주 1회, REQ-DAILY-005)이다.
+10. 분석이 필요한 이벤트를 다섯 가지 분석으로 나눠 차례로 돌린다(REQ-QAINTEL-010). 실행당 작업 묶음 수 상한(NFR-DAILY-001) 안에서만 돈다.
+11. 매뉴얼 누락 후보 점검을 돌릴 차례면 돌린다(REQ-DAILY-006).
+12. 이번 실행의 검증 TC 초안과 Coverage 조치로 초안 Excel 을 만든다(REQ-QAINTEL-018).
+13. 실행 결과를 정하고(REQ-DAILY-022) `audit.json` 을 쓰고 실행 기록을 마친다.
+14. 요약 메일을 보낸다(REQ-DAILY-008). 잠금 파일을 지운다.
 
 한 단계가 실패해도 다른 단계는 계속 돈다. 실패한 단계와 이유는 실행 기록의 단계 상태와 메일에 남는다.
 
-> **예시** Polarion 조회가 실패하면 SRS 수집 단계가 `실패` 로 남는다. 사양–TC 연결 점검은 마지막으로 저장된 스냅샷과 TC 사본으로 그대로 돈다.
+> **예시** Polarion 조회가 실패하면 SRS 수집 단계가 `실패` 로 남고 스냅샷과 이벤트를 저장하지 않는다(REQ-QAINTEL-009). 사양–TC 연결 점검은 마지막으로 저장된 스냅샷과 TC 사본으로 그대로 돈다.
 
 **결과**
 
-- 실행 기록(`daily_qa_runs`) 한 줄: 실행 ID, 시작·종료 시각, 실행 결과, dry-run 여부, 단계별 상태, 요약, 메일 발송 결과.
+- 실행 기록(`daily_qa_runs`) 한 줄: 실행 ID, 제품, 시작·종료 시각, 실행 결과, dry-run 여부, 단계별 상태, 요약, 메일 발송 결과.
 - 실행 폴더(`output/daily_qa/<실행 ID>/`)와 그 안의 파일(REQ-DAILY-020).
-- Finding, 질문, 상태 값(이슈 기준 시각, 매뉴얼 지문).
+- 변경 이벤트, Finding, 질문, 상태 값(매뉴얼 지문, 매뉴얼 점검 미룸 표시, Claude 사용량 한도).
 
 **설정**
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
 | `daily_qa.enabled` | `true` | false 면 예약 실행도 CLI 정식 실행도 하지 않는다 |
-| `daily_qa.product` | `VXvue` | 지식 사본과 규칙을 찾을 제품 이름 |
+| `daily_qa.product` | `VXvue` | 제품이 하나일 때의 제품 이름. 개편 전 기록(제품 칸이 빈 것)도 이 제품 것으로 읽는다 |
+| `daily_qa.products` | `[daily_qa.product]` | 예약을 등록할 제품 이름 목록 |
 | `daily_qa.schedule.day_of_week` | `mon-fri` | 예약 요일 |
 | `daily_qa.schedule.time` | `07:30` | 예약 시각(`HH:MM`, 한국 시간) |
+| `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛸지 |
 
 **안 될 때**
 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
-| 다른 실행이 진행 중 | 새 실행은 바로 끝난다 | CLI 문장 "다른 일일 점검이 실행 중입니다", 종료 코드 3. 메일 없음 |
+| 같은 제품의 다른 실행이 진행 중 | 새 실행은 바로 끝난다 | CLI 문장 "다른 QA Agent 점검이 실행 중입니다 (<잠금 파일>).", 종료 코드 3. 메일 없음 |
 | 예상하지 못한 오류로 점검이 멈춤 | 실행 결과를 `실패` 로 저장하고 메일은 보낸다 | 사전 점검 단계 비고 "예상 못 한 오류: <오류 종류>" |
 | 한 단계 실패 | 나머지 단계는 계속 돈다 | 그 단계가 `실패`, 실행 결과 `일부 실패` |
 
 ### REQ-DAILY-002 Polarion 읽기 전용 수집
 
-**하는 일** Polarion 에서 SRS 전체와 이슈를 읽기만 한다. 수집 코드에는 GET 요청을 만드는 함수 하나만 있고, 다른 방식의 요청을 만드는 함수는 없다.
+**하는 일** Polarion 에서 SRS 전체와 이슈 전체를 읽기만 한다. 수집 코드에는 GET 요청을 만드는 함수 하나만 있고, 다른 방식의 요청을 만드는 함수는 없다.
 
 **언제** 실행마다 SRS 수집 단계(`collect_srs`)와 이슈 수집 단계(`collect_issues`)에서 돈다.
 
@@ -4052,9 +4080,9 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 |---|---|---|
 | Polarion 주소 | 비밀 설정 `POLARION_HOST` | 예 |
 | Polarion 토큰 | 비밀 설정 `POLARION_TOKEN` | 예 |
-| 프로젝트 | `daily_qa.polarion.project_id` | 예 |
-| SRS 조회식 | `daily_qa.polarion.srs_query` | 아니요(기본 `type:srs`) |
-| 이슈 조회식 | `daily_qa.polarion.issue_query` | 아니요(코드 기본 `type:issue`) |
+| 프로젝트 | 제품 설정의 `alm.project_id`. 없으면 `daily_qa.polarion.project_id` | 예 |
+| SRS 조회식 | 제품 설정의 `alm.queries.srs`. 없으면 `daily_qa.polarion.srs_query` | 아니요(기본 `type:srs`) |
+| 이슈 조회식 | 제품 설정의 `alm.queries.issue`(VXvue 는 `type:issue`). 없으면 `daily_qa.polarion.issue_query` | 아니요(기본 `type:issue`) |
 
 **순서 (요청마다 공통)**
 
@@ -4068,12 +4096,12 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 
 **순서 (SRS)**
 
-1. SRS 항목마다 번호, Legacy 번호(`oldId`), 제목, 상태, 수정 시각, 분류용 항목 여부, 본문을 뽑는다. 본문은 한국어 설명(`descriptionKR`)이 있으면 그것을, 없으면 `description` 을 쓰고 HTML 을 걷어낸 글로 바꾼다.
+1. SRS 항목마다 번호, Legacy 번호, 제목, 상태, 수정 시각, 분류용 항목 여부, 본문을 뽑는다. 원본 필드 이름은 제품 설정에서 읽는다(REQ-QAINTEL-002). VXvue 는 한국어 설명(`descriptionKR`)이 있으면 그것을, 없으면 `description` 을 쓰고 HTML 을 걷어낸 글로 바꾼다.
 2. 읽은 SRS 가 0건이면 실패로 본다. 이때 스냅샷을 저장하지 않는다.
 3. 오늘보다 앞선 날짜의 스냅샷 가운데 가장 최근 것을 비교 대상으로 고른다. 같은 날 다시 돌려도 그날 스냅샷은 비교 대상에서 뺀다.
 4. 비교 대상이 없으면 비교 없이 오늘 스냅샷만 저장한다(기준 스냅샷만 저장).
-5. 비교 대상이 있으면 번호로 맞대어 신규·삭제·변경으로 나눈다. 변경은 Legacy 번호, 제목, 상태, 본문 가운데 하나라도 다른 것이다. 수정 시각만 바뀐 것은 변경이 아니다.
-6. 오늘 스냅샷을 저장한다(시험 실행은 저장하지 않는다, REQ-DAILY-013). 임시 파일에 먼저 쓰고 이름을 바꾸므로 쓰다 끊겨도 반쪽 파일이 남지 않는다.
+5. 비교 대상이 있으면 번호로 맞대어 신규·삭제·변경으로 나눈다. 변경은 Legacy 번호, 제목, 상태, 본문 가운데 하나라도 다른 것이다. 수정 시각만 바뀐 것은 변경이 아니다. 자세한 비교 규칙은 REQ-QAINTEL-003 에 있다.
+6. 오늘 스냅샷을 `data/daily_qa/snapshots/<slug>/srs/<날짜>.json` 에 저장한다(시험 실행은 저장하지 않는다, REQ-DAILY-013). 임시 파일에 먼저 쓰고 이름을 바꾸므로 쓰다 끊겨도 반쪽 파일이 남지 않는다.
 7. 비교 결과를 실행 폴더의 `srs_diff.json` 에 쓴다.
 
 이유: 0건 결과를 저장하면 다음 날 모든 SRS 가 삭제로 보인다.
@@ -4082,26 +4110,22 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 
 **순서 (이슈)**
 
-1. 이슈 조회식으로 모두 읽는다. 항목마다 번호, 제목, 상태, 심각도, 연구소 검토 결과(`rndReviewResult`), 생성·수정 시각, 설명·재현 절차·발생 원인·조치 내용(HTML 을 걷어낸 글), 발생 버전·목표 버전, 연결된 Work Item 번호를 뽑는다. 첨부 이미지는 넣지 않는다.
-2. 이슈 기준 시각보다 뒤에 수정된 이슈만 새 이슈로 본다.
-   - 기준 시각이 저장돼 있지 않으면(첫 실행) 실행 시각 24시간 전을 쓴다.
-   - 앞 실행에서 처리를 끝낸 이슈는 그 뒤로 다시 수정되지 않았으면 새 이슈로 보지 않는다(처리한 이슈 기록 `issues_processed`).
-3. 새 이슈 가운데 앞쪽 `batch_size × max_tasks_per_run` 건(기본 150건)만 댓글을 읽는다. 이슈당 댓글은 20개까지, 댓글 하나는 2000자까지 쓴다.
-4. 이슈 기준 시각은 아래 경우에만, 읽은 이슈 가운데 가장 늦은 수정 시각으로 옮긴다.
-   - 이슈 수정확인 초안 단계가 `완료` 이고, 상한 때문에 미룬 묶음이 없고, dry-run 이 아닐 때. 이때 처리한 이슈 기록을 비운다.
-   - 이슈 수집은 성공했는데 새 이슈가 하나도 없고, dry-run 이 아닐 때
-5. 그 밖에 이슈 수정확인 초안을 돌린 날(일부 실패, 미룬 묶음 있음)은 기준 시각을 옮기지 않는다.
-   - 기준 시각이 없던 첫 실행이면 이번에 쓴 시각을 저장한다.
-   - 성공한 묶음의 이슈 번호와 수정 시각만 처리한 이슈 기록에 더한다.
+1. 이슈 조회식으로 이슈 전체를 쪽 단위로 읽는다. 항목마다 번호, 제목, 상태, 심각도, 연구소 검토 결과, 생성·수정 시각, 설명·재현 절차·발생 원인·조치 내용(HTML 을 걷어낸 글), 발생 버전·목표 버전, 연결된 Work Item 번호를 뽑아 공통 모델로 바꾼다(REQ-QAINTEL-002). 첨부 이미지는 넣지 않는다.
+2. 댓글은 필요한 이슈만 읽는다. 어떤 이슈를 읽는지와 한 실행의 상한(`daily_qa.intelligence.comment_fetch_limit`)은 REQ-QAINTEL-004 에 있다. 이슈당 댓글은 20개까지, 댓글 하나는 2000자까지 쓴다.
+3. 이슈 전체를 이슈 스냅샷 `data/daily_qa/snapshots/<slug>/issues/<날짜>.json` 에 저장한다(시험 실행은 저장하지 않는다).
+4. 전날 이슈 스냅샷과 번호로 맞대어 변경 이벤트를 만든다(REQ-QAINTEL-005). 새 이슈인지는 수정 시각이 아니라 스냅샷 비교로 정한다. 전날 이슈 스냅샷이 없으면 기준만 저장한다(REQ-QAINTEL-008).
+5. 이슈가 0건이거나 어제보다 크게 줄었으면 이슈 수집을 실패로 보고 스냅샷과 이벤트를 저장하지 않는다(REQ-QAINTEL-009).
 
-이유: 실패한 이슈는 다음 날 다시 읽히게 하고, 이미 처리한 이슈는 다시 보내지 않기 위해서다.
+이유: 수정 시각만 보면 연구소 결과·발생 원인·댓글 가운데 무엇이 바뀌었는지 알 수 없다. 전체를 스냅샷으로 비교하면 바뀐 필드마다 이벤트를 남기고, 상태만 바뀐 이슈는 AI 없이 기록만 할 수 있다.
+
+> **참고** 개편 전의 이슈 기준 시각(`issues_last_success_at`)과 처리한 이슈 기록(`issues_processed`)은 더 쓰지 않는다. 상태 표에 남아 있어도 지우지 않는다(REQ-QAINTEL-006).
 
 **결과**
 
 | 단계 | 상태와 건수 |
 |---|---|
 | SRS 수집 | `완료` + 전체·신규·삭제·변경 건수. 첫 실행이면 비고 "기준 스냅샷만 저장(비교 대상 없음)" |
-| 이슈 수집 | `완료` + 새 이슈 건수, 비고 "기준 시각 <시각>" |
+| 이슈 수집 | `완료` + 전체 이슈 수, 댓글을 읽은 이슈 수, 댓글 읽기 실패 수 |
 
 **설정**
 
@@ -4109,9 +4133,10 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 |---|---|---|
 | `POLARION_HOST` (비밀 설정) | 없음 | Polarion 주소 |
 | `POLARION_TOKEN` (비밀 설정) | 없음 | 읽기 권한만 있는 계정의 개인 토큰 |
-| `daily_qa.polarion.project_id` | 없음 | Polarion 프로젝트 |
-| `daily_qa.polarion.srs_query` | `type:srs` | SRS 조회식 |
-| `daily_qa.polarion.issue_query` | `type:issue` (운영 `config.yaml` 은 verified 상태 또는 연구소 검토 결과 `lab_fixed`) | 새 이슈 조회식 |
+| `alm.project_id` (제품 설정) | 없음 | Polarion 프로젝트 |
+| `alm.queries.srs` (제품 설정) | `type:srs` | SRS 조회식 |
+| `alm.queries.issue` (제품 설정) | `type:issue` | 이슈 전체 조회식 |
+| `daily_qa.polarion.project_id`, `daily_qa.polarion.srs_query`, `daily_qa.polarion.issue_query` | 없음, `type:srs`, `type:issue` | 제품 설정에 `alm` 절이 없을 때 대신 쓰는 값(예전 설정과 호환) |
 | `daily_qa.polarion.verify_ssl` | `true` | 인증서 검사 여부 |
 | `daily_qa.polarion.timeout_seconds` | `90` | 요청 하나의 제한 시간(초) |
 | `daily_qa.polarion.page_size` | `100` | 한 쪽 항목 수 |
@@ -4125,7 +4150,8 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 | 인증 오류 | 그 단계 실패 | 비고 "Polarion 인증/권한 오류 HTTP 401" |
 | 세 번 다 실패 | 그 단계 실패 | 비고 "Polarion 요청이 3회 실패했습니다" |
 | SRS 0건 | 실패, 스냅샷 저장 안 함 | 비고 "SRS 조회 결과가 0건입니다. 조회식·권한을 확인하세요." |
-| 한 이슈의 댓글 읽기 실패 | 그 이슈는 댓글 없이 진행한다 | 따로 보이지 않는다 |
+| 이슈 0건 또는 급감 | 실패, 스냅샷·이벤트 저장 안 함 | REQ-QAINTEL-009 의 비고 |
+| 한 이슈의 댓글 읽기 실패 | 그 이슈는 어제 댓글을 옮겨 적고 다음 실행에서 다시 읽는다 | 이슈 수집 단계의 댓글 읽기 실패 수(REQ-QAINTEL-004) |
 
 **지킬 것**
 
@@ -4135,128 +4161,17 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 
 ### REQ-DAILY-003 사양 변경 영향 검토
 
-**하는 일** 바뀐 SRS 때문에 고쳐야 할 기존 TC 를 찾는다. 예를 들어 `VP-10` 의 본문이 "표시 항목 3개" 에서 "4개" 로 바뀌었고 TC_1 의 Expected 가 3개 기준이면, TC_1 을 `수정 필수` 로 올린다.
+**상태** deprecated — REQ-QAINTEL-016 이 대신한다.
 
-내부 키 `B`, Skill `vxvue-spec-change-impact`.
+바뀐 SRS 마다 고칠 TC 를 판정하던 점검(내부 키 `B`, Skill `vxvue-spec-change-impact`)은 돌지 않는다. 새로 생기거나 바뀐 SRS 는 사양 변경 Coverage 분석(Skill `qa-spec-coverage-analysis`)이 과거 이슈와 기존 TC 의 Coverage 로 본다. 개편 전 Finding 은 표에 그대로 남는다.
 
-**언제** 매 실행. SRS 수집이 `완료` 이고 비교 대상 스냅샷이 있을 때만 AI 작업이 생긴다. 첫 실행(기준 스냅샷만 저장)에는 `건너뜀` 이 정상이다.
-
-**입력**
-
-- 신규·변경 SRS 목록(REQ-DAILY-002 비교 결과). 삭제 SRS 는 아래 "삭제된 SRS 를 가리키는 TC" 계산이 따로 다룬다.
-- SRS 마다 후보 TC(REQ-DAILY-015). 최대 `tc_candidate_limit` 개.
-- 이 점검의 질문에 사람이 남긴 답(REQ-DAILY-017).
-
-**순서**
-
-1. 코드가 신규·변경 SRS 마다 후보 TC 를 고른다. TC 의 SRS 번호 열 값이 SRS 번호나 Legacy 번호와 같으면 후보다. 앞 실행에서 넘어온 변경(NFR-DAILY-001)도 여기에 더한다.
-   - 넘어온 변경과 오늘 변경이 같은 SRS 면 하나로 합친다. 바뀐 필드는 합치고, 바뀌기 전 값은 처음 것, 바뀐 뒤 값은 오늘 것을 쓴다.
-   - 오늘 삭제된 SRS 는 삭제 계산이 따로 다룬다.
-2. 작업 묶음을 만들어 Skill 에 넘긴다(REQ-DAILY-015, REQ-DAILY-016).
-3. Skill 이 변경 전후를 비교해 무엇이 바뀌었는지 정리한다.
-4. Skill 이 연관 SRS 를 찾는다. 바뀐 동작의 입력이나 앞선 상태를 다른 SRS 가 만들면, 그 SRS 도 오늘 SRS 전체에서 찾는다.
-5. Skill 이 후보 밖 TC 를 찾는다. 기능명·메뉴명으로 TC 전체 색인을 검색하고, 쓴 검색어를 Finding 의 상세(`detail`)에 적는다.
-6. Skill 이 TC 마다 아래 판정 가운데 하나를 낸다. 서식·오탈자만 바뀌었고 판정할 TC 가 없으면 Finding 을 만들지 않는다.
-
-| 판정 | 뜻 |
-|---|---|
-| 유지 | 바뀐 사양에서도 TC 가 그대로 유효하다. 유지도 SRS 위치와 TC 위치를 근거로 적는다 |
-| 경미 수정 | 의미는 같고 문구만 고치면 된다 |
-| 수정 필수 | Step 또는 Expected 가 바뀐 사양과 다르다 |
-| 신규 TC 필요 | 기존 TC 로 잡을 수 없는 새 동작이다. 같은 조건·관찰점·실패 조건의 TC 가 이미 있으면 올리지 않는다 |
-| 사양 확인 요청 | 근거가 모자라거나 사양끼리 맞지 않는다. 질문을 함께 남긴다 |
-
-7. 이미 결과가 있는 TC 의 의미를 바꿔야 하면 `수정 필수` 로 올린다. 이때 조치(`action`)에 "기존 TC 는 유지하고 신규 TC 로 분리 검토" 를 적는다.
-8. 신규 SRS 에 대응하는 TC 가 없으면 대상 TC 없이 `신규 TC 필요` Finding 하나를 낸다.
-
-> **참고** 화면과 결과 파일의 판정 이름은 QA 규칙 표기를 그대로 쓴다. 표의 "사양 확인 요청" 은 규칙 표기로 "사양 확인" 뒤에 "필요" 가 붙은 이름이다. 정확한 목록은 `app/modules/daily_qa/schema.py` 의 `VERDICTS` 에 있다.
-
-**삭제된 SRS 를 가리키는 TC (AI 없음)**
-
-전날 스냅샷에는 있고 오늘 없는 SRS 를 TC 가 아직 가리키면, 코드가 그 TC 마다 `수정 필수` Finding 을 만든다. 근거는 두 개다.
-
-- SRS 번호와 "(직전 스냅샷에만 있음)"
-- TC 의 `파일 / 시트 / N행`
-
-이 계산은 AI 를 부르지 않는다. 그래서 규칙 판 불일치나 Claude 토큰 없음과 상관없이 매일 돈다. 신뢰도는 `Confirmed`, 작업 ID 는 `B-removed` 로 저장한다.
-
-**결과**
-
-- Finding(Skill `vxvue-spec-change-impact`, 대상 = SRS 번호, 대상 TC 위치 `tc_ref`).
-- 단계 `B` 의 상태와 건수(작업 수, 끝난 작업, 실패 작업, 저장한 Finding, 버린 Finding).
-- 사용하는 검증 관문: G1, G2, G3, G7(REQ-DAILY-024).
-
-**안 될 때**
-
-| 경우 | 동작 | 사용자에게 보이는 것 |
-|---|---|---|
-| 첫 실행 | AI 작업 없음 | 단계 `건너뜀` "입력이 없습니다 (변경·신규 항목 없음)." |
-| 바뀐 SRS 없음 | AI 작업 없음 | 위와 같다 |
-| 규칙 판 불일치 | AI 작업을 돌리지 않는다. 삭제 SRS 계산은 돈다 | 단계 `규칙 판 불일치` |
+> **참고** 이 카드에 있던 "삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)" 는 코드에서 계속 돈다. 이 계산을 어느 카드가 정할지는 13.4절에 적었다.
 
 ### REQ-DAILY-004 이슈 수정확인 초안
 
-**하는 일** 새로 고쳐진 이슈마다 먼저 유형을 나누고, 프로그램이 고쳐진 이슈(`Program Fixed`)에만 수정확인 TC 와 Regression TC 초안을 만든다. 예를 들어 검색 조건 오류를 고친 이슈 `VP-6669` 에는 "시작일만 입력한 검색" 수정확인 TC 초안이 생긴다.
+**상태** deprecated — REQ-QAINTEL-013 이 대신한다.
 
-내부 키 `C`, Skill `vxvue-issue-verification`.
-
-**언제** 매 실행. 이슈 수집이 새 이슈를 하나 이상 찾았을 때만 돈다.
-
-**입력**
-
-- 이슈마다 이슈 본문(REQ-DAILY-002), 이슈가 연결한 SRS 의 오늘 본문, 그 SRS 를 가리키는 후보 TC(최대 `tc_candidate_limit` 개).
-- 이 점검의 질문에 사람이 남긴 답.
-
-**순서 (이슈마다, Skill 이 한다)**
-
-1. 유형을 나눈다. QA 규칙 6절(이슈 산출물 유형 결정)과 72절(이슈 상태별 범위)을 읽고, 연구소 검토 결과와 본문으로 정한다. 애매하면 가장 가까운 유형을 쓰고, 신뢰도를 `Review Needed` 로 두고, 질문을 남긴다.
-
-| 이슈 유형 | 뜻 | TC 초안 |
-|---|---|---|
-| `Program Fixed` | 프로그램 코드·화면·API·DB·계산·연동이 고쳐졌다 | 만든다 |
-| `Spec/Not Bug` | 지금 동작이 정상 사양이다 | 만들지 않는다 |
-| `Spec Change/Document Fix` | 사양이나 문서를 고쳤다 | 만들지 않는다 |
-| `Inquiry` | 문의다 | 만들지 않는다 |
-| `Duplicate` | 다른 이슈와 같다 | 만들지 않는다 |
-| `Blocked` | 막혀서 진행할 수 없다 | 만들지 않는다 |
-| `Cannot Reproduce` | 재현되지 않는다 | 만들지 않는다 |
-
-2. `Program Fixed` 가 아니면 공식 사양과 비교한 판정만 `판정만` 으로 남긴다.
-3. 고친 기능의 현재 사양을 연결 SRS 와 오늘 SRS 전체에서 찾는다. 앞선 상태를 만드는 다른 사양까지 거슬러 찾는다.
-4. 같은 원인이 다시 생기면 실패하는 기존 TC 가 있는지 후보와 TC 전체 색인에서 본다. TC 에 이슈 번호가 적혀 있다는 이유만으로 그 TC 가 잡아낸다고 보지 않는다. 있으면 `유지` 또는 `기존 TC 보강` 이다.
-5. `Program Fixed` 이고 기존 TC 로 잡을 수 없으면 초안을 쓴다.
-   - 수정확인 TC: 원래 Precondition·Test Data·수행 경로로 해 보아, 고치기 전 결과가 다시 나오지 않음을 확인한다.
-   - Regression TC: 원인이 닿는 다른 경로(다른 조작, 거꾸로 가는 상태 변화, 저장 후 다시 들어가기, 연동)만 만든다. 같은 조작·같은 관찰점이면 만들지 않는다.
-   - Step 하나에 조작 하나를 쓰고, Expected 번호는 Step 번호와 맞춘다.
-   - Precondition·Step 이 기대는 사양 근거가 없으면 초안 대신 `사양 확인 요청` 과 질문을 남긴다.
-6. 마지막에 이슈, 사양, 시험 상태, TC, Expected 가 서로 맞는지 본다(검증 관문 G7).
-
-| 판정 | 뜻 |
-|---|---|
-| 신규 TC 필요 | 초안을 만들었다(`draft_tcs`) |
-| 기존 TC 보강 | 기존 TC 를 고치면 잡을 수 있다 |
-| 유지 | 기존 TC 로 잡을 수 있다 |
-| 사양 확인 요청 | 사양 근거가 없어 판정하거나 초안을 쓸 수 없다 |
-| 판정만 | `Program Fixed` 가 아니어서 판정과 근거만 남긴다 |
-
-**결과**
-
-- Finding(대상 = 이슈 번호, 대상 제목 = 이슈 제목, 이슈 유형, 초안 목록).
-- 초안이 있든 없든, 이번 실행에 이 점검의 Finding 이 하나라도 있으면 초안 Excel 을 만든다(REQ-DAILY-019).
-- 사용하는 검증 관문: G1, G2, G3, G4, G5, G7.
-
-**안 될 때**
-
-| 경우 | 동작 | 사용자에게 보이는 것 |
-|---|---|---|
-| `Program Fixed` 가 아닌 이슈에 초안이 있다 | 코드가 그 Finding 을 버린다(REQ-DAILY-007) | 단계 비고 "규칙 위반으로 버린 Finding N건" |
-| 이슈 유형 값이 일곱 가지 밖이다 | 버린다 | 위와 같다 |
-| 새 이슈 없음 | 돌지 않는다 | 단계 `건너뜀` |
-
-**지킬 것**
-
-- 기존 Checklist 와 TC 원본 파일은 읽기만 하고 고치지 않는다.
-- 초안을 Polarion 이나 원본 TC 에 자동으로 넣지 않는다. 사람이 승인한 뒤 직접 옮긴다.
+새로 고쳐진 이슈의 유형을 나누고 초안을 만들던 점검(내부 키 `C`, Skill `vxvue-issue-verification`)은 돌지 않는다. 연구소 결과가 `FIXED` 로 바뀐 이슈는 수정 완료 이슈 분석(Skill `qa-fixed-issue-analysis`)이 원인·조치·Regression 범위를 검토하고 검증 TC 초안을 만든다. 개편 전 Finding 은 표에 그대로 남는다.
 
 ### REQ-DAILY-005 사양–TC 연결 점검
 
@@ -4289,9 +4204,9 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 | TC 없음 | SRS 번호 | SRS 번호와 Legacy 번호 |
 | 삭제된 SRS 참조 | TC 가 가리키는 번호 | TC 의 `파일 / 시트 / N행`, "(오늘 스냅샷에 없음)" |
 
-- Finding 의 Skill 이름 칸은 `vxvue-trace-gap`, 작업 ID 는 `E-weekly`, 신뢰도는 `Confirmed` 다.
+- Finding 의 Skill 이름 칸은 `qa-trace-gap`(개편 전 기록은 `vxvue-trace-gap`), 작업 ID 는 `E-weekly`, 신뢰도는 `Confirmed` 다.
 - 단계 건수: 본 SRS 수, 검사한 SRS 수, TC 행 수, 찾은 수, 새로 저장한 수.
-- 같은 대상·같은 판정이 이미 열려 있으면 다시 만들지 않는다(REQ-DAILY-018).
+- 같은 대상·같은 판정이 이미 열려 있으면 다시 만들지 않는다(REQ-DAILY-018). 이름을 바꾸기 전의 `vxvue-trace-gap` Finding 도 같은 것으로 본다.
 
 **안 될 때**
 
@@ -4300,20 +4215,25 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 | 지정 요일이 아님 | 돌지 않는다 | `오늘은 대상 아님` "매주 <요일> 에만 돕니다." |
 | SRS 도 저장 스냅샷도 없거나 TC 색인이 비었다 | 돌지 않는다 | `건너뜀` "SRS 스냅샷 또는 TC 색인이 없습니다." |
 
-> **주의** `TC 없음` 에는 번호만 달라서 못 찾은 TC 가 섞일 수 있다. 사람은 대화형 Skill `vxvue-trace-gap` 으로 후속 확인한다(REQ-DAILY-025).
+> **주의** `TC 없음` 에는 번호만 달라서 못 찾은 TC 가 섞일 수 있다. 사람은 대화형 Skill `qa-trace-gap` 으로 후속 확인한다(REQ-DAILY-025).
 
 ### REQ-DAILY-006 매뉴얼 누락 후보 점검
 
 **하는 일** 최근 7일 동안 바뀐 SRS 가운데 매뉴얼에 반영이 빠졌을 수 있는 것을 후보로 낸다. 대상 매뉴얼은 Operation, Service, DICOM Conformance Statement, System Integration Guide, API Protocol Manual 이다. 결과는 늘 후보이고, 확정 판정이 아니다.
 
-내부 키 `F`, Skill `vxvue-manual-completeness`.
+내부 키 `F`, Skill `qa-manual-completeness`.
 
-**언제** 아래 둘 중 하나일 때 돈다.
+**언제** 아래 가운데 하나일 때 돌 차례가 된다.
 
 - 설정한 요일(`daily_qa.weekly_day`)이거나 CLI `--weekly` 일 때
 - 지식 사본의 매뉴얼 텍스트가, 지난번 이 점검을 끝냈을 때와 달라졌을 때
+- 앞 실행이 이 점검을 미뤄 두었을 때(상태 값 `<slug>:manual_check_due`)
 
-매뉴얼이 바뀌었는지는 지문으로 가린다. 매뉴얼 파일 이름과 내용으로 만든 지문(SHA-256)을 상태 값 `manual_hash` 와 비교한다.
+매뉴얼이 바뀌었는지는 지문으로 가린다. 매뉴얼 파일 이름과 내용으로 만든 지문(SHA-256)을 상태 값 `<slug>:manual_hash` 와 비교한다. 개편 전 키 `manual_hash` 도 읽는다.
+
+돌 차례여도 변경이 없는 실행(`NO_CHANGE`)에서는 돌리지 않는다. 미룸 표시(`<slug>:manual_check_due`)를 남기고, 다음 변경이 있는 실행에서 돌린다(REQ-QAINTEL-007). 점검이 `완료` 로 끝나면 미룸 표시를 지운다.
+
+이유: 변경이 없는 날에는 Claude 를 한 번도 부르지 않는다(NFR-QAINTEL-001).
 
 **입력**
 
@@ -4351,8 +4271,9 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
 | 지정 요일이 아니고 매뉴얼도 그대로 | 돌지 않는다 | `오늘은 대상 아님` "매주 <요일> 또는 매뉴얼이 바뀐 날에만 돕니다." |
+| 돌 차례인데 변경이 없는 실행 | 돌지 않고 미룸 표시를 남긴다 | `오늘은 대상 아님` "변경이 없는 실행이라 다음 변경이 있는 실행으로 미룹니다." |
 | 지식 사본에 매뉴얼이 없거나 바뀐 SRS 가 없다 | 돌지 않는다 | `건너뜀` "입력이 없습니다" |
-| 단계가 `완료` 가 아님 | 매뉴얼 지문을 저장하지 않는다 | 다음 실행에서 다시 "매뉴얼이 바뀐 날" 로 본다 |
+| 단계가 `완료` 가 아님 | 매뉴얼 지문을 저장하지 않고 미룸 표시를 남긴다 | 다음 실행에서 다시 돌 차례로 본다 |
 
 ### REQ-DAILY-007 AI 결과 형식 검증
 
@@ -4360,7 +4281,7 @@ SRS 수집이 실패하거나 건너뛰어지면, 저장된 스냅샷 가운데 
 
 **입력** 작업 폴더의 `runs/<실행 ID>/out/<작업 ID>.json`.
 
-결과 파일의 형식은 QA 규칙 46절(Skill 입출력 형식)의 공통 출력 항목을 JSON 으로 옮긴 것이다. 코드 쪽 정의는 `app/modules/daily_qa/schema.py` 의 `SkillResult`, Skill 쪽 설명은 `vxvue-qa-rules/references/output-contract.md` 에 있다.
+결과 파일의 형식은 QA 규칙 46절(Skill 입출력 형식)의 공통 출력 항목을 JSON 으로 옮긴 것이다. 코드 쪽 정의는 `app/modules/daily_qa/schema.py` 의 `SkillResult`, Skill 쪽 설명은 공통 규칙 Skill 의 `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` 에 있다.
 
 | 필드 | 뜻 | 꼭 필요한가 |
 |---|---|---|
@@ -4409,6 +4330,8 @@ Finding 하나의 필드:
    6. 이슈 수정확인 초안에서 `Program Fixed` 가 아닌데 초안이 있다.
 3. 남은 Finding 은 모두 `검토 대기` 상태로 저장한다(REQ-DAILY-018).
 
+> **참고** 2번의 5·6은 개편 전 이슈 수정확인 초안(REQ-DAILY-004, deprecated) 결과에만 해당한다. 다섯 가지 분석은 이 검사 뒤에 번호·근거가 실제 자료에 있는지와 TC 초안 규칙을 한 번 더 본다(REQ-QAINTEL-017).
+
 이유: QA 규칙 55절(자동화 금지 원칙)은 네 가지를 금지한다. 근거 위치 없는 판단 저장, AI 판단만으로 이슈 자동 종료, QA 승인 없는 기존 TC 덮어쓰기, TC 결과·이력 자동 삭제다.
 
 **결과**
@@ -4421,9 +4344,9 @@ Finding 하나의 필드:
 
 **하는 일** 실행이 끝나면 담당자에게 요약 메일을 한 통 보낸다. 메일에는 건수와 상태만 넣는다. 사양·이슈 본문과 AI 판단 문장은 넣지 않는다.
 
-이유: 메일은 사내 시스템 밖으로 전달되기 쉽다. 자세한 내용은 검토 화면에서 본다.
+이유: 메일은 사내 시스템 밖으로 전달되기 쉽다. 자세한 내용은 `/qa-agent` 대시보드에서 본다.
 
-**언제** 실행 마지막(REQ-DAILY-001 12번). 예상 못 한 오류로 멈춘 실행에도 보낸다. CLI `--no-email` 이면 보내지 않는다.
+**언제** 실행 마지막(REQ-DAILY-001 14번). 예상 못 한 오류로 멈춘 실행에도 보낸다. CLI `--no-email` 이면 보내지 않는다.
 
 **입력**
 
@@ -4431,25 +4354,30 @@ Finding 하나의 필드:
 |---|---|
 | 수신자 | 비밀 설정 `DAILY_QA_EMAIL_TO`. 비어 있으면 `NOTIFY_EMAIL_TO`. 쉼표나 세미콜론으로 여러 명을 적는다 |
 | 메일 서버 | 기존 알림 메일 설정 |
-| 검토 화면 링크 앞부분 | `daily_qa.review_base_url`. 비어 있으면 경로(`/daily-qa/runs/<실행 ID>`)만 쓴다 |
+| 실행 상세 링크 앞부분 | `daily_qa.review_base_url`. 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
 
 **결과**
 
-제목: `[QA 일일 점검] <실행 ID> <실행 결과> · Finding N건 · 질문 N건`
+제목: `[QA Agent] <제품> <실행 ID> <실행 결과> · Finding N건 · 질문 N건`
+
+> **예시** `[QA Agent] VXvue 20260930-073000-vxvue 변경사항 없음 · Finding 0건 · 질문 0건`
 
 글 본문은 이 순서다.
 
 1. 규칙 판 불일치면 첫 줄에 "※ <이유>" 와 빈 줄.
-2. 실행 ID, 실행 결과.
-3. `[단계]` 아래에 단계마다 "- <단계 이름>: <상태> (<비고>)". 비고는 200자까지.
-4. `[Skill 별 Finding]` 아래에 점검 이름마다 건수와 판정별 건수. 새 Finding 이 없으면 "- 새 Finding 없음".
-5. "답이 필요한 질문: N건".
-6. "검토 화면: <링크>".
-7. "모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다."
+2. Claude 사용량 한도가 걸렸으면 "※ <한도 설명> 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다." 와 빈 줄. 한도 설명에는 한도 종류와 초기화 시각이 들어간다(REQ-QAINTEL-025).
+3. 실행 ID, 실행 결과.
+4. "오늘 변경: <이벤트 이름> N, ..." 으로 이번 실행이 만든 변경 이벤트의 종류별 건수. 이벤트가 없으면 "오늘 변경: 변경 없음".
+5. `[단계]` 아래에 단계마다 "- <단계 이름>: <상태> (<비고>)". 비고는 200자까지.
+6. `[Skill 별 Finding]` 아래에 분석·점검 이름마다 건수와 판정별 건수. 새 Finding 이 없으면 "- 새 Finding 없음".
+7. "답이 필요한 질문: N건".
+8. "검토 화면: <링크>". 링크는 그 실행의 실행 상세(`/qa-agent/runs/<실행 ID>`)다.
+9. "모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다."
 
 HTML 본문도 같은 내용을 담는다. 단계는 표로, 점검별 건수는 목록으로 보인다. 판정별 건수는 넣지 않는다.
 
-- 단계 이름과 점검 이름은 화면과 같은 이름을 쓴다(사전 점검, SRS 수집, 이슈 수집, TC 색인, 사양 변경 영향 검토, 이슈 수정확인 초안, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검). 내부 키(`B` 등)는 보이지 않는다.
+- 단계 이름과 점검 이름은 화면과 같은 이름을 쓴다(사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 신규 이슈 분석, 수정 완료 이슈 분석, Spec 판정 이슈 분석, 새 댓글 분석, 사양 변경 Coverage 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검). 내부 키(`E` 등)는 보이지 않는다.
+- 이미 보낸 옛 메일의 링크(`/daily-qa/runs/<실행 ID>`)는 새 주소로 넘어간다(REQ-QAINTEL-019).
 - Finding 건수는 이번 실행에서 새로 저장한 것만 센다. 중복이라 저장하지 않은 것은 세지 않는다.
 
 메일 발송 결과는 실행 기록의 메일 칸에 남는다.
@@ -4470,68 +4398,13 @@ HTML 본문도 같은 내용을 담는다. 단계는 표로, 점검별 건수는
 
 ### REQ-DAILY-009 검토 화면
 
-**하는 일** 사람이 `/daily-qa` 화면에서 실행 결과를 보고, Finding 마다 결정을 남기고, AI 질문에 답한다. 화면에서 남긴 결정은 이 시스템 안에만 저장된다.
+**상태** deprecated — REQ-QAINTEL-019 가 대신한다.
 
-**언제** 화면 위쪽 메뉴: `QA 홈`, `실행 목록`, `검토 대기열`, `질문`, `사용법`.
-
-| 주소 | 화면 | 보이는 것 |
-|---|---|---|
-| `/daily-qa` | 실행 목록 | 검토 상태별 전체 건수(검토 대기·근거 추가 필요는 대기열 링크), 답이 필요한 질문 수, 최근 30개 실행(실행 ID, 결과, Finding 수, 질문 수, 메일 결과, 시작 시각, dry-run 표시) |
-| `/daily-qa/runs/<실행 ID>` | 실행 상세 | 시작·종료 시각, 메일 결과, 규칙 판 불일치 경고, 단계 표(단계, 상태, 비고, 건수), 내려받을 결과 파일, 이 실행의 Finding 최대 50건, 이 실행의 질문 |
-| `/daily-qa/runs/<실행 ID>/files/<파일 이름>` | 결과 파일 내려받기 | 실행 폴더 바로 아래의 `.xlsx`, `.json` 파일만 |
-| `/daily-qa/queue` | 검토 대기열 | 점검·판정·검토 상태(기본 `검토 대기`)·실행 ID 로 거른 Finding 최대 300건 |
-| `/daily-qa/findings/<번호>` | Finding 상세 | 점검 이름, 실행, 작업 ID, 신뢰도, 이슈 유형, 요약, 상세, 대상 TC 위치, 근거 목록, TC 초안 표, 현재 결정과 결정 입력란 |
-| `/daily-qa/questions` | 질문 | 답이 없는 질문(기본) 또는 모든 질문과 답 입력란 |
-| `/daily-qa/guide` | 사용법 | REQ-DAILY-026 |
-
-Finding 목록 표의 열: 번호, 점검 이름(Skill 열), 대상과 제목, 판정과 이슈 유형, 요약, 근거 위치 두 개까지("외 N건"), 검토 상태와 검토자.
-
-**입력 (Finding 결정)**
-
-| 값 | 뜻 | 꼭 필요한가 |
-|---|---|---|
-| 결정 | `승인`, `거절`, `근거 추가 필요` 단추 중 하나 | 예 |
-| 검토자 | 이름 글자 | 예 |
-| 메모 | 글자 | `근거 추가 필요` 일 때만 필요 |
-
-**순서 (Finding 결정)**
-
-1. 검토자가 비었으면 거부한다.
-2. `근거 추가 필요` 인데 메모가 비었으면 거부한다.
-3. 세 가지 밖의 결정 값은 거부한다. `검토 대기` 로 되돌리는 결정은 없다.
-4. 결정, 검토자, 메모, 결정 시각을 그 Finding 에 저장한다. 이미 결정이 있으면 새 결정으로 바꾼다.
-5. 검토자 이름을 브라우저에 180일 동안 기억해 다음 입력란에 채운다. 한글 이름은 주소 인코딩해 저장한다.
-6. 대기열로 돌아간다. 돌아갈 주소가 `/daily-qa` 로 시작하지 않으면 그 Finding 상세로 간다.
-
-질문 답변은 REQ-DAILY-017 에 있다.
-
-**결과**
-
-| 검토 상태 | 저장 값 | 뜻 |
-|---|---|---|
-| 검토 대기 | `PENDING` | 아직 사람이 보지 않았다. 모든 Finding 은 이 상태로 저장된다 |
-| 승인 | `APPROVED` | 사람이 맞다고 보았다. 반영은 사람이 원본에 직접 한다 |
-| 거절 | `REJECTED` | 틀렸거나 필요 없다 |
-| 근거 추가 필요 | `NEED_EVIDENCE` | 판단하려면 무엇이 더 필요한지 메모를 남겼다 |
-
-**안 될 때**
-
-| 경우 | 동작 | 사용자에게 보이는 것 |
-|---|---|---|
-| 없는 실행·Finding·질문 | 거부(404) | "실행 기록이 없습니다." 등 |
-| 검토자 없음 | 거부(400) | "검토자 이름을 입력하세요." |
-| 근거 추가 필요인데 메모 없음 | 거부(400) | "근거 추가 필요는 무엇이 필요한지 메모를 남겨야 합니다." |
-| 알 수 없는 결정 | 거부(400) | "알 수 없는 검토 결정" |
-| 실행 폴더 밖이나 다른 종류의 파일 요청 | 거부(404) | "파일이 없습니다." |
-
-**지킬 것**
-
-- 화면의 결정을 Polarion 이나 원본 TC 파일로 내보내지 않는다.
-- 실행 폴더의 하위 폴더(`sent/`, `claude_logs/`)는 화면에서 내려받을 수 없다. 서버에서 직접 본다.
+`/daily-qa` 의 실행 목록·검토 대기열·Finding 결정·질문 화면은 없어졌다. 결과는 `/qa-agent` 대시보드와 상세 화면(REQ-QAINTEL-020)에서 보고, 승인·거절·근거 추가 필요 입력은 없다. 옛 `/daily-qa/*` 주소는 GET 이면 307 로 새 주소에 넘어가고, 결정 저장 요청은 받지 않는다. 개편 전 결정은 표에 그대로 남는다.
 
 ### REQ-DAILY-010 QA 규칙 판 확인
 
-**하는 일** Skill 은 QA 규칙의 특정 판에 맞춰 쓰였다. 서버 지식 사본의 규칙 판이 그 판과 다르면 AI 점검을 멈추고 사람에게 알린다. 예를 들어 규칙이 Rev1.18 로 바뀌었는데 Skill 기준이 Rev1.17 이면, AI 점검 세 가지가 `규칙 판 불일치` 로 남는다.
+**하는 일** 제품 규칙 Skill 은 그 제품 QA 규칙의 특정 판에 맞춰 쓰였다. 서버 지식 사본의 규칙 판이 그 판과 다르면 AI 분석을 멈추고 사람에게 알린다. 예를 들어 VXvue 규칙이 Rev1.18 로 바뀌었는데 제품 설정의 기준 판이 `1.17` 이면, 분석할 대상이 있는 AI 단계가 `규칙 판 불일치` 로 남는다.
 
 이유: 규칙이 바뀌었는데 Skill 이 그대로면 검증 관문 번호나 판정 기준이 어긋난 결과가 나온다.
 
@@ -4539,8 +4412,8 @@ Finding 목록 표의 열: 번호, 점검 이름(Skill 열), 대상과 제목, �
 
 1. 지식 사본에서 QA 규칙 종류의 파일들을 모은다. 파일 이름의 `Rev<숫자.숫자>` 로 판을 읽고, 판이 가장 높은 것 가운데 파일이 있는 것을 고른다. 지침 프롬프트도 같은 방법으로 고른다.
 2. 규칙 파일이 없으면 불일치로 본다.
-3. 고른 규칙 파일의 판이 `SUPPORTED_RULES_REV`(현재 `1.17`)와 다르면 불일치로 본다.
-4. 불일치면 작업 묶음이 있는 AI 점검(사양 변경 영향 검토, 이슈 수정확인 초안, 매뉴얼 누락 후보 점검)을 돌리지 않고, 그 단계를 `규칙 판 불일치` 로 남긴다. 작업 묶음이 없는 점검은 `건너뜀` 이다.
+3. 기준 판은 제품 설정 `config/products/<slug>.yaml` 의 `qa_intelligence.rules.supported_rev` 다(VXvue 는 `1.17`). 고른 규칙 파일의 판이 기준 판과 다르면 불일치로 본다. 기준 판이 비어 있으면 판은 보지 않고 규칙 파일이 있는지만 본다.
+4. 불일치면 분석 대상이 있는 AI 단계(다섯 가지 분석, 매뉴얼 누락 후보 점검)를 돌리지 않고, 그 단계를 `규칙 판 불일치` 로 남긴다. 분석 대상이 없는 단계는 `건너뜀` 이다. 분석하지 못한 이벤트는 `pending` 으로 남아 다음 실행에서 다시 분석한다(REQ-QAINTEL-006).
 5. AI 없는 계산(삭제된 SRS 를 가리키는 TC, 사양–TC 연결 점검)은 그대로 돈다.
 6. 사전 점검 단계는 `일부 실패` 가 되고 비고에 이유가 들어간다. 실행 결과는 `일부 실패` 다.
 
@@ -4557,11 +4430,11 @@ Finding 목록 표의 열: 번호, 점검 이름(Skill 열), 대상과 제목, �
 | 경우 | 문장 |
 |---|---|
 | 규칙 파일 없음 | "수집된 QA 규칙 파일이 없습니다. 지식 폴더 동기화를 확인하세요." |
-| 판 다름 | "QA 규칙 판이 Skill 기준과 다릅니다 (수집본 Rev<찾은 판> / Skill 기준 Rev<기준 판>). Skill 을 새 판에 맞춰 검토한 뒤 SUPPORTED_RULES_REV 를 올리세요." |
+| 판 다름 | "QA 규칙 판이 Skill 기준과 다릅니다 (수집본 Rev<찾은 판> / Skill 기준 Rev<기준 판>). 제품 규칙 Skill 을 새 판에 맞춰 검토한 뒤 제품 설정의 qa_intelligence.rules.supported_rev 를 올리세요." |
 
 **지킬 것**
 
-- `SUPPORTED_RULES_REV` 는 Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다.
+- 제품 설정의 `qa_intelligence.rules.supported_rev` 는 제품 규칙 Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다.
 - 규칙 원문은 저장소에 넣지 않는다. 실행마다 마스킹한 사본을 작업 폴더 `rules/` 로 옮긴다(REQ-DAILY-023).
 
 ### REQ-DAILY-011 수동 실행 명령과 종료 코드
@@ -4571,7 +4444,7 @@ Finding 목록 표의 열: 번호, 점검 이름(Skill 열), 대상과 제목, �
 **언제** 저장소 폴더에서 아래 명령을 쓴다.
 
 ```text
-python scripts/run_daily_qa.py [--dry-run] [--weekly] [--no-email] [--check]
+python scripts/run_daily_qa.py [--product <제품>] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--dry-run] [--weekly] [--no-email] [--check]
 ```
 
 **입력**
@@ -4579,6 +4452,9 @@ python scripts/run_daily_qa.py [--dry-run] [--weekly] [--no-email] [--check]
 | 옵션 | 뜻 |
 |---|---|
 | 없음 | 정식 실행 한 번 |
+| `--product` | 점검할 제품. 없으면 `daily_qa.products` 의 첫 제품 |
+| `--since`, `--until` | 기간을 정한 실행(REQ-QAINTEL-027) |
+| `--trigger` | 실행 기록에 남길 실행 방법(`scheduled`, `manual`, `manual_cli`, `catchup`). 예약·[지금 실행]이 넘긴다. 사람이 칠 때는 쓰지 않는다 |
 | `--dry-run` | Claude 를 부르지 않는 시험 실행(REQ-DAILY-013) |
 | `--weekly` | 오늘이 지정 요일이 아니어도 사양–TC 연결 점검과 매뉴얼 누락 후보 점검까지 돌린다 |
 | `--no-email` | 요약 메일을 보내지 않는다. 메일 칸에 `disabled` 가 남는다 |
@@ -4590,18 +4466,18 @@ python scripts/run_daily_qa.py [--dry-run] [--weekly] [--no-email] [--check]
 2. `--check` 면 설정 점검만 하고 끝낸다.
 3. `daily_qa.enabled` 가 false 면 "daily_qa.enabled 가 false 라 실행하지 않습니다." 를 쓰고 끝낸다.
 4. 점검을 한 번 돈다(REQ-DAILY-001).
-5. "실행 <실행 ID>: <실행 결과 값> · 메일 <메일 결과>" 와, 단계마다 "- <단계 키>: <상태 값> <비고>" 를 쓴다.
+5. "실행 <실행 ID>: <실행 결과 값> · 메일 <메일 결과>" 와, 단계마다 "- <단계 키>: <상태 값> <비고>" 를 쓴다. 이어서 Claude 호출 수와 이벤트 종류별 건수를 쓰고, 사용량 한도가 걸렸으면 한도 설명을 쓴다.
 
 **결과** 끝날 때 아래 종료 코드를 돌려준다.
 
 | 코드 | 뜻 |
 |---|---|
-| 0 | 실행 결과 `성공`. 또는 `enabled` 가 false 라 실행하지 않음. 또는 `--check` 가 문제없음 |
+| 0 | 실행 결과 `성공`, `변경사항 없음`, `기준 스냅샷 생성`. 또는 `enabled` 가 false 라 실행하지 않음. 또는 `--check` 가 문제없음 |
 | 1 | 실행 결과 `일부 실패` 또는 `실패` |
 | 2 | 설정 오류. 또는 `--check` 에 문제 줄이 있음 |
-| 3 | 다른 실행이 진행 중 |
+| 3 | 같은 제품의 다른 실행이 진행 중 |
 
-> **참고** 화면 출력의 단계 이름은 내부 키(`collect_srs`, `B` 등)와 상태 값(`ok`, `failed` 등)이 그대로 나온다. 서버 관리자용 출력이다.
+> **참고** 화면 출력의 단계 이름은 내부 키(`collect_srs`, `E` 등)와 상태 값(`ok`, `failed` 등)이 그대로 나온다. 서버 관리자용 출력이다.
 
 ### REQ-DAILY-012 설정 점검
 
@@ -4613,15 +4489,17 @@ python scripts/run_daily_qa.py [--dry-run] [--weekly] [--no-email] [--check]
 python scripts/run_daily_qa.py --check
 ```
 
-**순서** 아래 일곱 줄을 차례로 쓴다. 통과한 줄은 `[OK]`, 아닌 줄은 문제 표시와 이유가 붙는다.
+**순서** 아래 아홉 줄을 차례로 쓴다. 통과한 줄은 `[OK]`, 아닌 줄은 문제 표시와 이유가 붙는다. `--product` 로 제품을 고를 수 있다.
 
 1. `daily_qa.enabled` 가 참인가
-2. Polarion 설정(주소, 토큰, 프로젝트)이 다 있는가
-3. `CLAUDE_CODE_OAUTH_TOKEN` 이 있는가
-4. Claude CLI(`daily_qa.claude_command`)를 실행 경로에서 찾을 수 있는가
-5. 작업 폴더 위치가 규칙에 맞는가(NFR-SEC-001). 맞으면 위치를, 아니면 이유를 쓴다
-6. QA 규칙 판이 Skill 기준과 같은가(REQ-DAILY-010). 같으면 `Rev<판>` 을 쓴다
-7. 요약 메일 수신자가 있는가. 몇 명인지 쓴다
+2. 제품 설정에 Polarion 프로젝트가 있는가. 프로젝트 이름을 쓴다
+3. Polarion 설정(주소, 토큰, 프로젝트)이 다 있는가
+4. `CLAUDE_CODE_OAUTH_TOKEN` 이 있는가
+5. Claude CLI(`daily_qa.claude_command`)를 실행 경로에서 찾을 수 있는가
+6. 작업 폴더 위치가 규칙에 맞는가(NFR-SEC-001). 맞으면 위치를, 아니면 이유를 쓴다
+7. QA 규칙 판이 제품 설정의 기준 판과 같은가(REQ-DAILY-010). 같으면 `Rev<판>` 을 쓴다
+8. 남아 있는 Claude 사용량 한도가 없는가(REQ-QAINTEL-025). 있으면 한도 설명을 쓴다
+9. 요약 메일 수신자가 있는가. 몇 명인지 쓴다
 
 **결과** 모든 줄이 `[OK]` 면 종료 코드 0, 하나라도 아니면 2 다.
 
@@ -4646,14 +4524,14 @@ python scripts/run_daily_qa.py --dry-run
 3. AI 점검은 작업 묶음을 만들고 마스킹해 작업 폴더와 실행 폴더 `sent/` 에 쓴다. Claude 는 부르지 않는다.
 4. AI 점검 단계는 `건너뜀` "dry-run: 입력 묶음만 만들고 AI 는 부르지 않았습니다" 로 남는다.
 5. 아래 값은 바꾸지 않는다. 비교 결과만 실행 폴더 `srs_diff.json` 에 쓴다.
-   - 이슈 기준 시각, 처리한 이슈 기록, 넘어온 사양 변경 목록, 매뉴얼 지문
-   - SRS 스냅샷과 Finding(저장하지 않는다)
+   - 상태 값(매뉴얼 지문, 매뉴얼 점검 미룸 표시, Claude 사용량 한도)
+   - SRS·이슈 스냅샷, 변경 이벤트, Finding(저장하지 않는다)
 
 **결과**
 
 - 실행 기록에 dry-run 표시가 붙고, 실행 목록에 `dry-run` 딱지가 보인다.
 - `audit.json` 에 작업마다 "dry-run: AI 를 부르지 않았습니다" 오류와 `failed` 상태가 남는다. 단계 상태는 `건너뜀` 이다.
-- SRS 수집 비고에 "dry-run: 스냅샷을 저장하지 않았습니다", 사양–TC 연결 점검 비고에 "dry-run: Finding 을 저장하지 않았습니다" 가 붙는다.
+- SRS 수집·이슈 수집 비고에 "dry-run: 스냅샷을 저장하지 않았습니다", 사양–TC 연결 점검 비고에 "dry-run: Finding 을 저장하지 않았습니다" 가 붙는다.
 
 > **참고** 시험 실행은 스냅샷을 남기지 않는다. 그래서 여러 번 돌려도 다음 정식 실행의 비교 결과가 달라지지 않는다.
 
@@ -4693,12 +4571,12 @@ python scripts/run_daily_qa.py --dry-run
 
 ### REQ-DAILY-015 AI 작업 묶음 만들기
 
-**하는 일** Claude 에게 무엇을 보낼지 코드가 정한다. 바뀐 SRS 나 새 이슈를 몇 건씩 묶어 작업 하나로 만든다. 예를 들어 바뀐 SRS 가 12건이고 묶음 크기가 5면 `B-001`(5건), `B-002`(5건), `B-003`(2건) 세 작업이 생긴다.
+**하는 일** Claude 에게 무엇을 보낼지 코드가 정한다. 바뀐 SRS 나 새 이슈를 몇 건씩 묶어 작업 하나로 만든다. 예를 들어 Coverage 분석할 SRS 변경이 12건이고 묶음 크기가 5면 `COV-001`(5건), `COV-002`(5건), `COV-003`(2건) 세 작업이 생긴다.
 
 **순서**
 
 1. 후보 TC 를 고른다. SRS 번호로 찾은 TC 행을 먼저, Legacy 번호로 찾은 행을 다음에 넣는다. 같은 행은 한 번만 넣고 `tc_candidate_limit` 개에서 자른다.
-2. 점검별로 항목을 만들고 `batch_size` 건씩 나눈다. 작업 ID 는 `<내부 키>-<세 자리 번호>` 다.
+2. 분석·점검별로 항목을 만들고 `batch_size` 건씩 나눈다. 작업 ID 는 `<머리>-<세 자리 번호>` 다. 머리는 다섯 가지 분석이 `NEW`, `FIX`, `SPC`, `CMT`, `COV` 이고, 매뉴얼 누락 후보 점검이 `F` 다.
 3. 모든 작업 입력에 그 점검의 질문에 사람이 남긴 답(최근 100건)을 함께 넣는다.
 
 | 점검 | 항목 하나에 들어가는 것 |
@@ -4706,6 +4584,8 @@ python scripts/run_daily_qa.py --dry-run
 | 사양 변경 영향 검토 | 변경 종류(`added`·`modified`). 신규면 SRS 전체(번호, Legacy 번호, 제목, 상태, 본문 등). 변경이면 SRS 번호·Legacy 번호·제목과 바뀐 필드, 변경 전 값, 변경 후 값. 후보 TC 목록 |
 | 이슈 수정확인 초안 | 이슈 전체(REQ-DAILY-002), 이슈가 연결한 SRS 가운데 오늘 SRS 에 있는 것의 본문, 그 SRS 들의 후보 TC 를 합쳐 `tc_candidate_limit` 개까지 |
 | 매뉴얼 누락 후보 점검 | 바뀐 SRS(번호, Legacy 번호, 제목, 오늘 본문, 바뀐 필드). 묶음마다 매뉴얼 파일 이름 목록 전체 |
+
+> **참고** 다섯 가지 분석의 항목과 후보(과거 이슈·사양·사양서 조각·TC·매뉴얼 문단)는 REQ-QAINTEL-011 이 정한다. 표의 첫 두 줄은 개편 전 점검(REQ-DAILY-003, REQ-DAILY-004)의 입력이다.
 
 **설정**
 
@@ -4729,7 +4609,8 @@ python scripts/run_daily_qa.py --dry-run
 3. 이전 결과 파일을 지우고 Claude 를 부른다. 작업 폴더에서 `claude -p` 를 실행하고, 표준입력으로 아래 안내문을 넘긴다.
    - 첫 줄: `/<Skill 이름> runs/<실행 ID>/in/<작업 ID>.json`
    - 실행 ID, 작업 ID, 결과 파일 위치(`runs/<실행 ID>/out/<작업 ID>.json`), 전체 색인 위치
-   - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 vxvue-qa-rules 의 references/output-contract.md 를 따른다."
+   - 제품 설정에 제품 규칙 Skill 이 있으면 "제품 규칙 Skill `<이름>` 을 먼저 읽는다."(VXvue 는 `vxvue-qa-rules`)
+   - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
 4. 실행 옵션과 환경은 NFR-SEC-001 을 따른다. 제한 시간(`task_timeout_seconds`)을 넘기면 멈추고 실패로 본다.
 5. CLI 가 남긴 도구 호출 기록을 실행 폴더 `claude_logs/<작업 ID>.attempt<N>.claude.json` 으로 복사한다.
 6. 결과 파일을 검사한다(REQ-DAILY-007). 맞으면 끝낸다.
@@ -4749,7 +4630,9 @@ python scripts/run_daily_qa.py --dry-run
 
 - 버린 Finding 이 있으면 "규칙 위반으로 버린 Finding N건"
 - 상한 때문에 미룬 묶음이 있으면 "상한 초과로 N개 묶음 다음 실행으로 미룸"(NFR-DAILY-001)
-- 사양 변경 영향 검토에서 실패한 묶음이 있으면 " · 실패한 N개 묶음은 다음 실행에 다시 넣음"
+- 사용량 한도로 멈췄으면 단계 상태가 `Claude 사용량 한도` 이고 비고가 "<한도 설명> 남은 분석은 대기로 남깁니다." 다(REQ-QAINTEL-025)
+
+실패한 분석 작업의 이벤트는 `failed` 로 남아 다음 실행에서 다시 분석한다. `daily_qa.intelligence.event_max_attempts`(기본 3)번 실패하면 `abandoned` 로 바꾸고 더 시도하지 않는다(REQ-QAINTEL-006).
 
 단계 건수: 작업 수, 끝난 수, 실패 수, 저장한 Finding 수, 버린 Finding 수.
 
@@ -4766,52 +4649,33 @@ python scripts/run_daily_qa.py --dry-run
 |---|---|---|
 | 제한 시간 초과 | 그 시도 실패, 한 번 더 | `audit.json` "제한 시간 900초 초과" |
 | CLI 를 찾을 수 없음 | 그 시도 실패 | "Claude CLI 를 찾을 수 없습니다: <명령>" |
-| 사용량 한도 초과 등 CLI 오류 | 그 시도 실패. 오류 문장을 기록한다 | 단계 비고와 메일의 "첫 실패 이유", `audit.json` 과 `claude_logs/` 의 `error_text` |
+| 사용량 한도·인증 실패 | 다시 돌리지 않고 그 실행의 남은 AI 작업도 멈춘다. 이벤트는 `pending` 으로 남고 실패 횟수를 올리지 않는다(REQ-QAINTEL-025) | 단계 `Claude 사용량 한도`, 메일 첫 줄의 한도 문장, `audit.json` 과 `claude_logs/` 의 `error_text` |
+| 그 밖의 CLI 오류 | 그 시도 실패. 오류 문장을 기록한다 | 단계 비고와 메일의 "첫 실패 이유", `audit.json` 과 `claude_logs/` 의 `error_text` |
 
 ### REQ-DAILY-017 AI 질문과 사람 답변
 
-**하는 일** AI 는 판정에 필요한데 자료에 없는 것을 질문으로 남긴다. 사람이 화면에서 답하면 그 답이 다음 실행의 작업 입력에 들어간다. 예를 들어 "4번째 항목은 Admin 계정에서만 보이는가?" 에 "Admin 전용" 이라고 답하면, 다음 날 사양 변경 영향 검토 작업마다 그 답이 들어간다.
+**상태** deprecated — REQ-QAINTEL-019 가 대신한다.
 
-**순서**
-
-1. 사람 없이 도는 실행이라 AI 는 대화로 묻지 않는다. 질문을 결과 파일 `open_questions` 에 적고, 그 질문에 걸리는 판정은 `사양 확인 요청` 으로 둔다. 질문이 필요한 곳에 추측으로 Expected 를 쓰지 않는다.
-2. 결과에 영향을 주지 않는 것(버전, 환경, 장비 등)은 묻지 않는다. QA 규칙 68절(질문 최소화)을 따른다.
-3. 코드는 질문마다 실행 ID, 점검, 대상, 질문, 이유, 만든 시각을 질문 표(`daily_qa_questions`)에 저장한다.
-4. 사람이 `/daily-qa/questions` 에서 답변자 이름과 답을 저장한다. 답변 시각도 남는다.
-5. 다음 실행에서 코드는 그 점검의 답이 있는 질문을 최근 것부터 100건까지 모아 작업 입력 `answered_questions` 에 넣는다.
-6. AI 는 이미 답이 있는 질문을 다시 묻지 않고, 그 답을 근거(종류 `user_answer`)로 쓴다.
-
-사람이 답한 내용이 지침 프롬프트, QA 규칙 가이드, Skill 과 부딪치면 사람의 답을 따른다.
-
-**결과**
-
-- 메일 제목과 본문의 "질문 N건" 은 이번 실행에서 새로 저장한 질문 수다.
-- 실행 목록 위쪽 "답이 필요한 질문" 은 답이 없는 전체 질문 수다.
-
-**안 될 때**
-
-| 경우 | 동작 | 사용자에게 보이는 것 |
-|---|---|---|
-| 답변자 없음 | 거부(400) | "답변자 이름을 입력하세요." |
-| 답이 비었다 | 거부(400) | "답변이 비어 있습니다." |
-| 없는 질문 | 거부(404) | "질문이 없습니다." |
+화면의 질문 목록과 답변 입력(`/daily-qa/questions`)은 없어졌다. AI 가 결과 파일에 남긴 질문(`open_questions`)은 질문 표에 계속 저장하고, 메일의 "질문 N건" 으로 센다. 개편 전에 사람이 남긴 답은 계속 작업 입력(`answered_questions`)에 들어간다.
 
 ### REQ-DAILY-018 Finding 저장과 중복 방지
 
-**하는 일** 검사를 통과한 Finding 을 검토 대기 상태로 저장한다. 사양 변경 영향 검토와 사양–TC 연결 점검은 같은 것이 이미 열려 있으면 다시 저장하지 않는다.
+**하는 일** 검사를 통과한 Finding 을 검토 대기 상태로 저장한다. 사양 변경 Coverage 분석과 사양–TC 연결 점검은 같은 것이 이미 열려 있으면 다시 저장하지 않는다.
 
 **순서**
 
-1. Finding 표(`daily_qa_findings`)에 실행 ID, 점검(Skill 이름), 작업 ID, 대상, 대상 제목, 판정, 요약, 상세, 신뢰도, 이슈 유형, 근거, 대상 TC 위치, TC 초안, 만든 시각을 저장한다. 검토 상태는 `검토 대기` 다.
-2. 사양 변경 영향 검토(AI 결과와 삭제 SRS 계산 모두)와 사양–TC 연결 점검은 저장 전에 같은 기록인지 본다. 아래가 모두 같은 Finding 이 `검토 대기`, `승인`, `근거 추가 필요` 상태로 남아 있으면 저장하지 않는다.
+1. Finding 표(`daily_qa_findings`)에 실행 ID, 제품, 점검(Skill 이름), 작업 ID, 대상, 대상 제목, 판정, 요약, 상세, 신뢰도, 이슈 유형, 근거, 대상 TC 위치, TC 초안, 만든 시각을 저장한다. 다섯 가지 분석은 분석 종류, 이벤트 번호, 구획, 관련 번호도 저장한다(REQ-QAINTEL-012 ~ REQ-QAINTEL-016). 검토 상태는 `검토 대기` 다.
+2. 사양 변경 Coverage 분석(AI 결과와 삭제 SRS 계산 모두)과 사양–TC 연결 점검은 저장 전에 같은 기록인지 본다. 같은 제품의 Finding 만 본다. 아래가 모두 같은 Finding 이 `검토 대기`, `승인`, `근거 추가 필요` 상태로 남아 있으면 저장하지 않는다.
    - 같은 점검
    - 같은 대상
    - 같은 판정
    - 같은 대상 TC(통합문서·시트·TC 번호. TC 번호가 없으면 행)
+   - 같은 초안 제목(초안이 있을 때)
+   - 이름을 바꾸기 전 Skill(`vxvue-spec-change-impact`, `vxvue-trace-gap`)의 Finding 도 같은 점검으로 본다
 
    > **예시** VP-10 을 가리키는 TC 세 개가 모두 `수정 필수` 면 Finding 세 개가 저장된다. 다음 날 같은 세 TC 로 다시 나오면 저장하지 않는다.
 
-3. 이슈 수정확인 초안과 매뉴얼 누락 후보 점검은 이 검사를 하지 않는다.
+3. 신규 이슈·수정 완료 이슈·Spec 판정 이슈·새 댓글 분석과 매뉴얼 누락 후보 점검은 이 검사를 하지 않는다. 같은 변경을 두 번 분석하지 않는 것은 이벤트 저장(REQ-QAINTEL-006)이 맡는다.
 4. 시험 실행은 Finding 을 저장하지 않는다(REQ-DAILY-013).
 
 > **예시** 월요일 사양–TC 연결 점검이 `VP-12 TC 없음` 을 냈고 아직 검토 대기면, 다음 주 월요일에는 같은 Finding 을 새로 만들지 않는다. 사람이 거절했다면 다음 주에 다시 만든다.
@@ -4820,11 +4684,13 @@ python scripts/run_daily_qa.py --dry-run
 
 ### REQ-DAILY-019 초안 Excel 파일 형식
 
-**하는 일** 이슈 수정확인 초안의 TC 초안을 새 Excel 파일로 만든다. 열 순서는 변경사항 영향성평가 Checklist 와 같다. AI 판단과 근거는 같은 파일의 다른 시트에 따로 둔다.
+**하는 일** 이번 실행의 검증 TC 초안을 새 Excel 파일로 만든다. 열 순서는 변경사항 영향성평가 Checklist 와 같다. AI 판단과 근거는 같은 파일의 다른 시트에 따로 둔다.
+
+> **참고** 개편 뒤에는 수정 완료 이슈 분석의 초안과 사양 변경 Coverage 분석의 신규 TC 초안을 담고, `Coverage` 시트가 더해진다. 넓힌 형식은 REQ-QAINTEL-018 에 있다. 이 카드는 두 문서가 함께 쓰는 열·서식·원본 보존 규칙을 정한다.
 
 이유: QA 규칙 75절은 실행용 TC 시트에는 등록·수행할 수 있는 열과 문구만 두고, AI 판정 근거 같은 분석 정보는 `Review` 시트에 따로 두라고 정한다.
 
-**언제** 이번 실행에 이슈 수정확인 초안 Finding 이 하나라도 저장됐을 때. 파일은 실행 폴더의 `impact_checklist_draft.xlsx` 다.
+**언제** 이번 실행에 초안이나 Coverage Finding 이 하나라도 저장됐을 때(REQ-QAINTEL-018). 파일은 실행 폴더의 `impact_checklist_draft.xlsx` 다.
 
 **결과**
 
@@ -4855,7 +4721,7 @@ python scripts/run_daily_qa.py --dry-run
 | 요약 | AI 요약 |
 | 근거 위치 | 근거 위치들을 줄바꿈으로 이은 것 |
 | 신뢰도 | 신뢰도 |
-| Finding 번호 | 검토 화면의 Finding 번호 |
+| Finding 번호 | 대시보드 분석 상세(`/qa-agent/findings/<번호>`)의 Finding 번호 |
 
 서식은 이렇게 정한다.
 
@@ -4883,16 +4749,17 @@ python scripts/run_daily_qa.py --dry-run
 | `sent/<작업 ID>.json` | AI 작업마다 | Claude 에게 보낸 작업 입력(마스킹 후 그대로) | 안 된다 |
 | `claude_logs/<작업 ID>.attempt<N>.claude.json` | CLI 가 기록을 남긴 시도마다 | REQ-DAILY-021 | 안 된다 |
 | `<작업 ID>.json` | 결과 파일이 검사를 통과한 작업마다 | Claude 가 쓴 결과 사본 | 된다 |
-| `impact_checklist_draft.xlsx` | 이슈 수정확인 초안 Finding 이 있을 때 | REQ-DAILY-019 | 된다 |
+| `change_events.json` | 실행마다(예상 못 한 오류로 멈춘 실행 제외) | 이번 실행에서 만든 변경 이벤트 전체(REQ-QAINTEL-006) | 된다 |
+| `impact_checklist_draft.xlsx` | 초안이나 Coverage Finding 이 있을 때 | REQ-DAILY-019, REQ-QAINTEL-018 | 된다 |
 | `audit.json` | 실행마다(예상 못 한 오류로 멈춘 실행 제외) | REQ-DAILY-021 | 된다 |
 
 서버 쪽 다른 저장 위치:
 
 | 위치 | 내용 |
 |---|---|
-| `data/daily_qa/snapshots/<날짜>.json` | 날짜별 SRS 스냅샷 |
-| `data/daily_qa/run.lock` | 실행 중 잠금 파일 |
-| `data/app.db` 의 `daily_qa_runs`, `daily_qa_findings`, `daily_qa_questions`, `daily_qa_state` | 실행 기록, Finding, 질문, 상태 값 |
+| `data/daily_qa/snapshots/<slug>/srs/<날짜>.json`, `data/daily_qa/snapshots/<slug>/issues/<날짜>.json` | 제품별·날짜별 SRS·이슈 스냅샷. 개편 전 SRS 스냅샷은 `data/daily_qa/snapshots/<날짜>.json` 에 그대로 있고, `daily_qa.product` 제품의 비교 기준으로만 읽는다 |
+| `data/daily_qa/<slug>/run.lock` | 제품별 실행 중 잠금 파일 |
+| `data/app.db` 의 `daily_qa_runs`, `daily_qa_findings`, `daily_qa_questions`, `daily_qa_state`, `qa_change_events` | 실행 기록, Finding, 질문, 상태 값, 변경 이벤트 |
 | `output/logs/daily_qa.out` | 예약 실행 프로세스의 화면 출력 |
 
 ### REQ-DAILY-021 감사 기록 내용
@@ -4946,10 +4813,15 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 | `collect_srs` | SRS 수집 |
 | `collect_issues` | 이슈 수집 |
 | `tc_index` | TC 색인 |
-| `B` | 사양 변경 영향 검토 |
-| `C` | 이슈 수정확인 초안 |
+| `events` | 변경 감지 |
+| `NEW_ISSUE` | 신규 이슈 분석 |
+| `FIXED_ISSUE` | 수정 완료 이슈 분석 |
+| `SPEC_DECISION` | Spec 판정 이슈 분석 |
+| `COMMENT` | 새 댓글 분석 |
+| `SPEC_COVERAGE` | 사양 변경 Coverage 분석 |
 | `E` | 사양–TC 연결 점검 |
 | `F` | 매뉴얼 누락 후보 점검 |
+| `B`, `C` | 사양 변경 영향 검토, 이슈 수정확인 초안(개편 전 실행 기록에만 있다) |
 
 | 상태 값 | 화면 이름 | 뜻 |
 |---|---|---|
@@ -4958,21 +4830,26 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 | `failed` | 실패 | 실패했다 |
 | `skipped` | 건너뜀 | 설정이 없거나 입력이 없어 돌지 않았다 |
 | `rules` | 규칙 판 불일치 | REQ-DAILY-010 |
-| `not_due` | 오늘은 대상 아님 | 주 1회 점검의 지정 요일이 아니다 |
+| `not_due` | 오늘은 대상 아님 | 주 1회 점검의 지정 요일이 아니거나, 변경이 없는 실행이라 매뉴얼 누락 후보 점검을 미뤘다(REQ-DAILY-006) |
+| `limit` | Claude 사용량 한도 | 사용량 한도·인증 실패로 AI 분석을 멈췄다. 이벤트는 대기로 남는다(REQ-QAINTEL-025) |
 
 단계마다 비고 한 줄과 건수(있을 때)를 저장한다.
 
 **결과 (실행)** 위에서부터 차례로 맞춰 보고 처음 맞는 것으로 정한다.
 
 1. `오늘은 대상 아님`·`건너뜀` 을 뺀 나머지가 모두 `실패` 이고 `실패` 가 하나 이상이면 `실패`(`FAILED`).
-2. 아니면 `실패`·`일부 실패`·`규칙 판 불일치` 가 하나라도 있으면 `일부 실패`(`PARTIAL`).
-3. 아니면 `성공`(`SUCCESS`).
+2. 아니면 `실패`·`일부 실패`·`규칙 판 불일치`·`Claude 사용량 한도` 가 하나라도 있으면 `일부 실패`(`PARTIAL`).
+3. 아니면 SRS 수집이나 이슈 수집이 `완료` 가 아니면(건너뜀 포함) `일부 실패`(`PARTIAL`). 변경을 확인하지 못했기 때문이다(REQ-QAINTEL-007).
+4. 아니면 이번 실행에 새 변경 이벤트도, 다시 분석한 대기 이벤트도 없을 때(이미 저장돼 있던 이벤트는 새 이벤트가 아니다):
+   - 기준 스냅샷을 하나라도 새로 만들었으면 `기준 스냅샷 생성`(`BASELINE`, REQ-QAINTEL-008)
+   - 아니면 `변경사항 없음`(`NO_CHANGE`, REQ-QAINTEL-007). 이 실행의 Claude 호출 수는 0이다.
+5. 아니면 `성공`(`SUCCESS`).
 
-실행 중에는 `실행 중`(`RUNNING`)이다. 실행 기록 요약에는 새 Finding 수, 점검별 건수, 점검·판정별 건수, 새 질문 수, 규칙 상태가 들어간다.
+실행 중에는 `실행 중`(`RUNNING`)이다. 실행 기록 요약에는 제품, 새 Finding 수, 점검별 건수, 점검·판정별 건수, 새 질문 수, 규칙 상태, 이벤트 종류별 건수, Claude 호출 수, 토큰 사용량(REQ-QAINTEL-026), 실행 방법, 걸린 사용량 한도가 들어간다.
 
 ### REQ-DAILY-023 격리 작업 폴더 구성
 
-**하는 일** Claude 가 읽고 쓰는 폴더를 실행마다 같은 모양으로 준비한다.
+**하는 일** Claude 가 읽고 쓰는 폴더를 실행마다 같은 모양으로 준비한다. 작업 폴더는 제품마다 따로다(`<workspace_dir>/<slug>/`, REQ-QAINTEL-023).
 
 **순서**
 
@@ -4985,7 +4862,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
    - 이슈 종료·TC 원본 수정·결과 삭제를 제안하지 않는다.
    - 작업 폴더 밖 읽기는 거부되니 다시 시도하지 않는다.
 3. 도구 허용 설정 `.claude/settings.json` 을 매번 새로 쓴다. 허용·금지 도구 목록, 묻지 않고 거부, 원격 측정·오류 보고 끄기, 폴더 안 MCP 설정 쓰지 않기가 들어간다.
-4. 저장소의 `app/modules/daily_qa/skills/` 를 `.claude/skills/` 로 통째로 다시 복사한다. 전에 있던 것은 지운다.
+4. 저장소의 공통 Skill 폴더 `app/modules/daily_qa/skills/` 를 `.claude/skills/` 로 통째로 다시 복사한다. 전에 있던 것은 지운다. 이어서 제품 Skill 폴더(`config/products/<slug>/skills/`, VXvue 는 `config/products/vxvue/skills/`)가 있으면 그 위에 복사한다. 이름이 겹치면 제품 것을 쓴다.
 5. QA 규칙 가이드와 지침 프롬프트를 마스킹해 `rules/qa-guide.md`, `rules/instruction-prompt.txt` 로 쓴다. 지식 사본에 없으면 전에 있던 사본을 지운다.
 6. `runs/<실행 ID>/` 아래에 `in/`, `out/`, `context/` 를 만든다.
 7. 처음 AI 작업 바로 전에 `context/` 에 아래를 모두 마스킹해 쓴다.
@@ -4999,7 +4876,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 |---|---|
 | `CLAUDE.md` | 사람 없이 도는 실행의 규칙 |
 | `.claude/settings.json` | 도구 허용 범위 |
-| `.claude/skills/<Skill>/` | Skill 다섯 개 사본 |
+| `.claude/skills/<Skill>/` | 공통 Skill 여덟 개(`qa-common-rules`, 다섯 가지 분석 Skill, `qa-manual-completeness`, `qa-trace-gap`)와 제품 규칙 Skill(VXvue 는 `vxvue-qa-rules`) 사본 |
 | `rules/qa-guide.md`, `rules/instruction-prompt.txt` | QA 규칙 사본(마스킹) |
 | `runs/<실행 ID>/in/` | 작업 입력(마스킹) |
 | `runs/<실행 ID>/context/` | 전체 SRS·TC 색인·매뉴얼(마스킹) |
@@ -5010,29 +4887,36 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `daily_qa.workspace_dir` | 빈 값이면 사용자 홈의 `.qa-daily-workspace` | 작업 폴더 위치 |
+| `daily_qa.workspace_dir` | 빈 값이면 사용자 홈의 `.qa-daily-workspace` | 작업 폴더 위치. 제품마다 그 아래 `<slug>/` 폴더를 쓴다 |
 
 ### REQ-DAILY-024 공통 규칙 Skill
 
-**하는 일** 무인 점검 Skill 세 개와 대화형 Skill 하나가 먼저 읽는 공통 규칙이다. 규칙 원문을 옮겨 적지 않고, 원문의 어느 절을 읽을지 가리킨다.
+**하는 일** 무인 점검 Skill 과 대화형 Skill 이 먼저 읽는 규칙이다. 규칙은 두 층이다. 공통 규칙 Skill 은 모든 제품에 같고, 제품 규칙 Skill 은 그 제품 QA 규칙의 절 번호와 검증 관문을 적는다. 두 Skill 모두 규칙 원문을 옮겨 적지 않고, 원문의 어느 절을 읽을지 가리킨다.
 
-Skill `vxvue-qa-rules`.
+| Skill | 위치 | 담는 것 |
+|---|---|---|
+| `qa-common-rules` (공통) | `app/modules/daily_qa/skills/qa-common-rules/SKILL.md`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | 규칙 층과 우선순위, 입력과 자료 범위, 근거 규칙, 하지 않는 일, 사람 없이 도는 실행의 질문 방법, 결과 파일 형식 |
+| `vxvue-qa-rules` (VXvue 제품) | `config/products/vxvue/skills/vxvue-qa-rules/SKILL.md`, `config/products/vxvue/skills/vxvue-qa-rules/references/gates.md` | 기준 판, 검증 관문 G1~G7, 분석 Skill 마다 먼저 읽을 규칙 절, VXvue 고유 관점, TC·이슈 문구 규칙 절 |
+
+제품 규칙 Skill 의 이름은 제품 설정의 `qa_intelligence.rules.product_skill` 이다. 코드는 작업마다 안내문에 그 이름을 적는다(REQ-DAILY-016).
 
 **순서 (Skill 이 지키는 것)**
 
 1. 규칙 원문은 작업 폴더 `rules/` 에서 읽는다. 가이드 파일이 없으면 Finding 을 비우고, 검증 관문 G2 를 `FAIL` 로 두고, 질문 "QA 규칙 파일 없음" 하나만 쓰고 끝낸다. 기억으로 규칙을 대신하지 않는다.
-2. 점검 Skill 은 공통 규칙을 읽지 못했으면 판정하지 않는다. Finding 을 비우고 질문 "vxvue-qa-rules 를 읽지 못함" 하나만 쓴다.
-3. 사람 없이 도는 실행이므로 질문은 결과 파일에 적는다(REQ-DAILY-017).
-4. 근거 규칙:
-   - Finding 마다 찾아갈 수 있는 위치가 있는 근거를 하나 이상 둔다.
+2. 점검 Skill 은 공통 규칙 Skill 과 제품 규칙 Skill 을 읽지 못했으면 판정하지 않는다. Finding 을 비우고 질문 하나만 쓰고 끝낸다.
+3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 지침 프롬프트, 제품 규칙, 공통 규칙 순서로 따른다.
+4. 사람 없이 도는 실행이므로 질문은 결과 파일 `open_questions` 에 적는다.
+5. 근거 규칙:
+   - Finding 마다 찾아갈 수 있는 위치가 있는 근거를 하나 이상 둔다. 위치는 작업 입력에 있는 번호·위치만 쓴다(REQ-QAINTEL-017).
+   - 과거 이슈와의 관계(재발, 재등록, 판정 충돌)는 후보로만 쓴다.
    - Expected·Precondition·Step 의 근거는 현재 유효한 사양이다. 삭제·취소선·폐기 사양은 유효 여부를 `Deleted` 등으로 적고 Expected 근거로 쓰지 않는다.
    - 일부 파일만 찾아보고 "사양 없음", "전수조사 완료" 라고 쓰지 않는다. 오늘 SRS 전체를 찾아봤을 때만 없다고 쓴다.
    - 연구소 Comment·Resolution 은 단서일 뿐이고, Expected 의 유일한 근거가 될 수 없다.
-5. 하지 않는 일: 이슈 종료 제안, 기존 TC 원본 수정·덮어쓰기, TC 결과·이력 삭제 제안, 입력·`context/`·`rules/` 밖 자료 조회, 결과 파일 밖 쓰기.
-6. TC·이슈 문구를 쓰기 전에 규칙의 아래 절을 읽는다. TC 설계 원칙, Step–Expected 번호, Title 분류 머리말 금지, QA 현업 문체, 내부 구현 추정 금지다. Expected 는 볼 수 있는 화면·API 응답·로그·데이터 결과로 쓴다.
-7. 결과 파일을 쓰기 바로 전에 `references/output-contract.md` 를 읽는다(REQ-DAILY-007).
+6. 하지 않는 일: 이슈 종료 제안, 기존 TC 원본 수정·덮어쓰기, TC 결과·이력 삭제 제안, 입력·`context/`·`rules/` 밖 자료 조회, 결과 파일 밖 쓰기.
+7. TC·이슈 문구를 쓰기 전에 제품 규칙 Skill 이 가리키는 절을 읽는다. VXvue 는 TC 설계 원칙, Step–Expected 번호, Title 분류 머리말 금지, QA 현업 문체, 내부 구현 추정 금지 절이다. Expected 는 볼 수 있는 화면·API 응답·로그·데이터 결과로 쓴다.
+8. 결과 파일을 쓰기 바로 전에 공통 규칙 Skill 의 `references/output-contract.md` 를 읽는다(REQ-DAILY-007).
 
-**검증 관문** QA 규칙 76절이 정한 일곱 관문만 쓴다. 44절의 다섯 관문 번호는 옛 번호라 쓰지 않는다. 점검마다 해당하는 관문만 `gate_status` 에 적는다(`references/gates.md`).
+**검증 관문** VXvue 제품 규칙 Skill 은 QA 규칙 76절이 정한 일곱 관문만 쓴다. 44절의 다섯 관문 번호는 옛 번호라 쓰지 않는다. 점검마다 해당하는 관문만 `gate_status` 에 적는다(`config/products/vxvue/skills/vxvue-qa-rules/references/gates.md`).
 
 | 관문 | 이름 | 사람 없이 도는 실행에서 보는 것 |
 |---|---|---|
@@ -5061,13 +4945,13 @@ Skill `vxvue-qa-rules`.
 
 **하는 일** 사양–TC 연결 점검이 `TC 없음` 으로 낸 SRS 를, 사람이 "이 SRS 가 정말 TC 가 없는지 봐 줘" 라고 요청할 때 확인해 준다. 번호가 달라서 번호로 못 찾은 TC 를 제목·기능명으로 찾는다.
 
-Skill `vxvue-trace-gap`.
+Skill `qa-trace-gap`(`app/modules/daily_qa/skills/qa-trace-gap/SKILL.md`, 개편 전 이름 `vxvue-trace-gap`).
 
 **언제** 사람이 Claude Code 와 대화할 때만 쓴다. 사람 없이 도는 실행에서는 쓰지 않는다. 사양–TC 연결 점검 자체는 코드가 계산한다(REQ-DAILY-005).
 
 **순서**
 
-1. 공통 규칙 Skill 을 먼저 읽는다.
+1. 공통 규칙 Skill 과 제품 규칙 Skill 을 먼저 읽는다.
 2. 대상 SRS 의 제목, 본문 핵심어, 메뉴 경로를 뽑는다.
 3. TC 전체 색인(또는 사람이 준 TC 파일)에서 Title·Step 에 그 말이 있는 TC 를 찾는다.
 4. 찾은 TC 가 그 SRS 의 동작을 검사하는지 본다. 기준은 QA 규칙 3.3절(TC 검출 범위 검토)과 61.1절(기존 TC 의미 비교)이다.
@@ -5080,19 +4964,9 @@ Skill `vxvue-trace-gap`.
 
 ### REQ-DAILY-026 사용법 화면
 
-**하는 일** 일일 점검이 무엇을 하고 어떻게 검토하는지 QA 담당자에게 알려 주는 화면이다.
+**상태** deprecated — REQ-QAINTEL-019 가 대신한다.
 
-**언제** `/daily-qa/guide` 화면, 또는 위쪽 메뉴의 `사용법`.
-
-**결과** 화면은 세 부분으로 되어 있다.
-
-1. "무엇을 하나요": 한 문단 설명과 네 가지 점검 표(구분, 언제, 하는 일, 결과). 구분 열에는 사양 변경 영향 검토, 이슈 수정확인 초안, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 그대로 보인다.
-2. "검토하는 법": 메일 링크나 검토 대기열로 들어오기, 근거 위치를 원본과 대조하기, 세 가지 결정(근거 추가 필요는 메모 필수), 승인한 초안은 사람이 직접 반영하기, 질문에 답하면 다음 날 반영되기.
-3. "상태가 이상할 때": 규칙 판 불일치, 건너뜀, 실패 각각의 뜻과 볼 곳.
-
-**지킬 것**
-
-- 화면·메일에 점검의 알파벳 약칭(`B 사양`, `E 추적` 같은 표기)을 쓰지 않는다. 내부 키는 실행 기록에만 쓴다.
+일일 점검 전용 사용법 화면(`/daily-qa/guide`)은 없어졌다. 옛 주소는 307 로 `/qa-agent/guide` 에 넘어간다. 점검 결과를 보는 법은 `/qa-agent` 대시보드가 맡는다. 화면·메일에 점검의 알파벳 약칭을 쓰지 않는 규칙은 REQ-DAILY-008 의 단계 이름 규칙이 이어받는다.
 
 ### NFR-SEC-001 AI 실행 격리
 
@@ -5123,15 +4997,17 @@ Skill `vxvue-trace-gap`.
 
 ### NFR-DAILY-001 실행 비용·시간 상한
 
-**하는 일** 실행 한 번이 AI 에 보내는 양과 걸리는 시간에 상한을 둔다. 예를 들어 상한이 30일 때 사양 변경 영향 검토가 25개, 이슈 수정확인 초안이 10개 묶음을 만들면, 이슈 수정확인 초안은 5개만 돌고 나머지 5개는 미룬다.
+**하는 일** 실행 한 번이 AI 에 보내는 양과 걸리는 시간에 상한을 둔다. 예를 들어 상한이 30일 때 신규 이슈 분석이 25개, 수정 완료 이슈 분석이 10개 묶음을 만들면, 수정 완료 이슈 분석은 5개만 돌고 나머지 5개의 이벤트는 다음 실행으로 넘어간다.
 
 **순서**
 
-1. 실행당 AI 작업 묶음 수 상한(`max_tasks_per_run`)을 사양 변경 영향 검토, 이슈 수정확인 초안, 매뉴얼 누락 후보 점검 차례로 나눠 쓴다.
+1. 실행당 AI 작업 묶음 수 상한(`max_tasks_per_run`)을 다섯 가지 분석(신규 이슈 → 수정 완료 이슈 → Spec 판정 이슈 → 새 댓글 → 사양 변경 Coverage, REQ-QAINTEL-010)과 매뉴얼 누락 후보 점검 차례로 나눠 쓴다.
 2. 남은 상한을 넘는 묶음은 돌리지 않고, 단계 비고에 "상한 초과로 N개 묶음 다음 실행으로 미룸" 을 적는다.
-   - 사양 변경 영향 검토에서 미룬 묶음과 두 번 다 실패한 묶음의 SRS 변경은 상태 값(`spec_change_pending`)에 남겨, 다음 실행의 작업에 다시 넣는다.
-   - 규칙 판 불일치·토큰 없음으로 돌지 않은 날의 변경도 같다.
-3. 이슈 수정확인 초안에서 묶음을 미뤘으면 이슈 기준 시각을 옮기지 않는다. 다음 실행이 같은 이슈를 다시 새 이슈로 읽는다.
+   - 미룬 묶음의 변경 이벤트는 `pending` 으로 남아 다음 실행의 분석 대상에 다시 오른다(REQ-QAINTEL-006).
+   - 규칙 판 불일치·토큰 없음·사용량 한도로 돌지 않은 날의 이벤트도 같다.
+3. 두 번 다 실패한 묶음의 이벤트는 `failed` 로 남아 다음 실행에서 다시 분석한다. `daily_qa.intelligence.event_max_attempts`(기본 3)번 실패하면 더 시도하지 않는다.
+
+> **참고** 개편 전의 미뤄 둔 사양 변경(`spec_change_pending`)은 첫 실행에서 대기 이벤트로 바뀐다(REQ-QAINTEL-006).
 
 **설정**
 
@@ -5147,7 +5023,7 @@ Skill `vxvue-trace-gap`.
 | 항목 | 상한 |
 |---|---|
 | 이슈당 댓글 | 20개, 댓글 하나 2000자 |
-| 댓글을 읽는 이슈 수 | `batch_size × max_tasks_per_run` |
+| 댓글을 읽는 이슈 수 | `daily_qa.intelligence.comment_fetch_limit`(기본 300, REQ-QAINTEL-004) |
 | 작업 입력에 넣는 답변 | 100건 |
 | 잠금 파일을 오래된 것으로 보는 시간 | 6시간 |
 
@@ -5193,7 +5069,9 @@ Skill `vxvue-trace-gap`.
   - 토큰 기록, 하루 한도, 할당량 소진 알림, 비용 추정: REQ-USAGE-001 ~ REQ-USAGE-004
 - 메일: 발송 공통, 정기 보고 메일, 설정 확인과 시험 발송. REQ-MAIL-001 ~ REQ-MAIL-003
 - Knowledge
-  - 화면에서 문서 다루기(화면, 제품 추가, 사양서 등록, TC 등록, 내려받기·지우기): REQ-KNOW-001 ~ REQ-KNOW-005
+  - 제품마다 자료가 어디서 들어오는지와 무엇이 꼭 있어야 하는지(출처 프로필): REQ-KNOW-018
+  - 제품별 상태 판정(정상·주의·오류): REQ-KNOW-019
+  - 화면(현황판, 제품 상세, 설정된 제품만 쓰기, 파일 등록·교체, TC 열 지정, 내려받기·지우기): REQ-KNOW-001 ~ REQ-KNOW-005, REQ-KNOW-020
   - 등록 문서를 분석에 넘기기와 파싱 결과 저장: REQ-KNOW-006, REQ-KNOW-007
   - 지식 폴더 읽기(분류, 파일명 읽기, 하나만 고르기, 수집, 등록과 옛 판 정리): REQ-KNOW-008 ~ REQ-KNOW-012
   - 죽은 등록 정리, 스캔 결과 보기, 깨진 한글 파일명 바로잡기: REQ-KNOW-013 ~ REQ-KNOW-015
@@ -5207,14 +5085,17 @@ Skill `vxvue-trace-gap`.
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
   - 공개 저장소에 사내 정보 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: NFR-PRIV-002, NFR-OPS-001, NFR-OPS-002
 
-문서가 분석에 쓰이기까지 세 갈래가 있다. 지식 폴더 업로드, ALM 사양서 동기화, 사람이 화면에서 올리기다. 어느 길이든 문서 표에 등록돼야 분석이 검색한다.
+문서가 분석에 쓰이기까지 세 갈래가 있다. 지식 폴더 업로드, ALM 사양서 동기화, 사람이 화면에서 올리기다. 어느 길이든 문서 표에 등록돼야 분석이 검색한다. 어느 제품의 어느 자료가 어느 길로 들어오는지는 제품 설정의 출처 프로필(REQ-KNOW-018)이 정한다.
 
 ```flow
 지식 폴더(담당자 PC) -> 수집(분류·최신 판 고르기) -> 서버로 업로드(바뀐 파일만) -> 서버에서 텍스트 추출 -> 문서 표에 등록 -> 분석이 검색
 ALM 크롤러 output(담당자 PC) -> 사양서 동기화 -> /knowledge/specification 등록 -> 문서 표
-사람 -> /knowledge 화면에서 파일 올리기 -> 문서 표
+사람 -> 제품 상세 화면에서 새 문서 등록·현재 문서 교체(출처가 manual 일 때만) -> 문서 표
 문서 표 -> 파싱 저장본 -> Regression 분석·QA Agent·매뉴얼 검증
+문서 표·수집 기록·동기화 기록 -> 상태 판정 -> /knowledge 현황판
 ```
+
+같은 논리 문서는 분석 대상에 한 판만 남긴다. 서로 다른 논리 문서(예: Operation Manual 과 Service Manual)는 각자 최신 판 하나씩 남는다. 이전 판을 화면에서 보관하거나 되돌리는 기능은 두지 않는다. 리비전은 어느 판이 최신인지 고르는 데만 쓴다.
 
 AI 를 한 번 부를 때 거치는 길:
 
@@ -5248,6 +5129,10 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 동기화 기록 | 동기화 한 번의 시작·끝·상태를 적는 DB 표(`sync_log`)다 |
 | 파싱 저장본 | 등록 문서를 한 번 읽어 만든 Chunk·TC 목록을 저장해 둔 파일(`storage.index_dir/<문서 번호>.json`, `.text`)이다 |
 | 죽은 등록 | 문서 표에는 있는데 원본 파일이 디스크에 없는 등록이다 |
+| 출처(`source`) | 한 제품의 한 자료 종류가 들어오는 길이다. `alm_crawler`(ALM 자동 수집), `manual`(사람이 화면에서 등록), `knowledge_folder`(지식 폴더 수집), `external_sync`(다른 자동화가 보냄) 네 가지다 |
+| 출처 프로필 | 제품 설정 파일에 적은 자료 종류별 출처와 꼭 있어야 하는지(`required`)의 묶음이다 |
+| 상태 판정(Health) | 제품의 자료가 분석에 쓸 수 있는 상태인지 코드 규칙으로 정한 결과다. `READY`(정상), `ATTENTION`(주의), `ERROR`(오류) 셋이다 |
+| 교체 | 같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다 |
 | sha256 | 파일 내용으로 계산한 64자리 지문으로, 내용이 한 바이트만 달라도 값이 바뀐다 |
 | 가리기(마스킹) | 외부로 보내는 글에서 환자 이름·IP·경로 같은 값을 `[PATIENT_NAME]` 같은 자리표로 바꾸는 일이다 |
 | 응답 저장본(AI 캐시) | 같은 입력에 대한 AI 응답을 DB 표(`ai_cache`)에 저장해 두고 다시 쓰는 것이다 |
@@ -5258,112 +5143,133 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 멈춘 작업(stale) | `RUNNING` 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다 |
 | 운영 점검 | `scripts/monitor_health.py` 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다 |
 
-### REQ-KNOW-001 공용 Knowledge 화면
+### REQ-KNOW-001 Knowledge 현황판
 
-**하는 일** 여러 기능이 함께 쓰는 제품별 사양서·TC·매뉴얼·QA 규칙을 한 화면에서 관리한다.
+**하는 일** 제품마다 Knowledge 가 분석에 쓸 수 있는 상태인지 카드 한 장으로 보여 준다. 운영자는 이 화면에서 어떤 제품이 정상인지, 어떤 자료가 없는지, 어떤 자료가 자동으로 들어오는지, 언제 마지막으로 갱신됐는지를 바로 본다.
 
-> **예시** QA 가 `/knowledge` 를 열면 VXvue 의 지식 폴더 마지막 수집 시각과 QA 규칙 Rev, 등록된 사양서·TC·매뉴얼 목록이 제품·버전별로 보인다.
+> **예시** `/knowledge` 를 열면 `VXvue` 카드에 상태 `정상`, 사양서 6개 `ALM 자동`, Test Case 4개 `사람이 등록`, Manual / Protocol 6개 `지식 폴더`, QA 규칙 1개가 보인다. `Bellalun Viewer` 카드에 QA 규칙이 없으면 카드 상태가 `주의`, QA 규칙 줄이 `자료 없음` 이다.
 
-이유: 기능마다 다른 문서를 보면 같은 변경에 다른 결론이 나온다. 그래서 문서는 한 곳에서만 관리한다.
+이유: 기능마다 다른 문서를 보면 같은 변경에 다른 결론이 나온다. 그래서 문서는 한 곳에서만 관리하고, 그 한 곳의 상태를 먼저 보여 준다.
 
 **언제** Knowledge 화면(`GET /knowledge`). 화면 위 내비게이션에 `QA 홈`, `Knowledge`, `QA Agent`, `Regression 분석`, `매뉴얼 검증`, `비용 대시보드`, `사용법` 링크가 있다.
 
-**결과** 화면은 위에서부터 다음 구역으로 되어 있다.
+**결과**
 
-| 구역 | 보이는 것 |
+1. 제품 설정 파일(`config/products/*.yaml`)이 있는 제품마다 카드 하나를 그린다. 카드 순서는 설정 파일 이름 순서다.
+2. 카드 머리에 제품 이름과 상태 판정 결과(REQ-KNOW-019)가 `정상`·`주의`·`오류` 로 보인다.
+3. 카드 안에는 자료 종류마다 한 줄이 있다. 줄마다 종류 이름, 개수, 출처 이름, 상태 문구가 보인다.
+4. 카드 아래에 마지막 Knowledge 갱신 시각과 `상세보기` 링크(`/knowledge/products/<slug>`, REQ-KNOW-020)가 있다.
+5. 문서 표에는 문서가 있지만 설정 파일이 없는 제품은 카드로 그리지 않는다. 화면 아래에 "설정 파일이 없는 제품" 으로 이름과 문서 수만 적고 `docs/PRODUCT_ONBOARDING.md` 를 안내한다.
+6. 화면 맨 아래 `고급 정보` 를 펼치면 `죽은 등록 정리` 버튼(REQ-KNOW-013)이 있다.
+
+| 종류 | 화면 이름 |
 |---|---|
-| 제품별로 보기 | 제품을 고르면 아래 문서 목록에 그 제품만 남는다 |
-| 새 제품 추가 | REQ-KNOW-002 |
-| 제품 지식 폴더 수집 | 제품마다 한 줄. 무엇이 보이는지는 아래 목록 |
-| ALM 사양서 동기화 상태 | VXvue 사양서의 마지막 동기화 시각·상태·상세. 없으면 "없음 (수동 등록만 사용됨)" |
-| 사양서 등록 | REQ-KNOW-003 양식과 등록된 사양서 목록(제품·버전별) |
-| Test Case 등록 | REQ-KNOW-004 양식과 등록된 TC 목록 |
-| 매뉴얼 / Protocol | 지식 폴더에서 수집한 매뉴얼 목록과 리비전 표시 |
+| `specification` | 사양서 |
+| `testcase` | Test Case / Checklist |
+| `manual` | Manual / Protocol |
+| `qa_rules` | QA 규칙 |
+| `instruction_prompt` | 지침 프롬프트 |
 
-제품 지식 폴더 수집 줄에 보이는 것:
-
-- 폴더 경로가 설정됐는지, 이 서버에서 폴더에 접근할 수 있는지
-- 수집 대기 건수(종류별), 마지막 수집 시각, 마지막 동기화 상태·상세
-- QA 규칙 Rev. 없으면 빨간 `미수집`
-- 구버전 제외 건수
-- `지금 수집` 버튼(폴더에 접근할 수 있을 때만), `스캔 결과 보기` 링크, `죽은 등록 정리` 버튼
-
-화면에 보이는 안내:
-
-- 폴더 경로가 없으면 "지식 폴더 경로가 설정되지 않았습니다"를 보인다.
-- 폴더에 접근할 수 없으면 경로와 함께 PC 에서 돌릴 명령(`python scripts/sync_product_knowledge.py --product "<제품>"`)을 보인다.
-- 시각은 UTC 로 저장한다. 화면 스크립트가 보는 사람의 시간대로 바꿔 보인다(`data-utc-time`).
+| 출처 | 화면 이름 | 관리 방식 |
+|---|---|---|
+| `alm_crawler` | ALM 자동 | 자동 관리 |
+| `external_sync` | 외부 자동화 | 자동 관리 |
+| `knowledge_folder` | 지식 폴더 | 수동 관리(담당자가 폴더에 넣음) |
+| `manual` | 사람이 등록 | 수동 관리(이 화면에서 등록·교체) |
 
 **지킬 것**
 
+- 현황판에는 파일 목록, 업로드 양식, 제품 추가 양식을 두지 않는다. 파일을 다루는 일은 제품 상세 화면(REQ-KNOW-020)에서 한다.
+- 폴더 경로, 접근 가능 여부, 수집 대기 건수 같은 기술 값을 카드에 그대로 보이지 않는다. 그런 값은 제품 상세의 `고급 정보` 에 둔다.
+- 카드와 줄은 제품 이름이나 자료 이름으로 나뉜 템플릿 없이 한 템플릿이 반복해 그린다. 새 제품 설정 파일을 더하면 템플릿을 고치지 않아도 카드가 생긴다.
 - 이 화면은 원본 지식 폴더에 쓰지 않는다.
 - 각 기능의 분석 화면으로 가는 링크는 이 모듈의 내비게이션에만 둔다. 공용 골격(`base.html`)에는 넣지 않는다(REQ-WEB-006).
-- 화면 스크립트는 문법 검사를 통과해야 한다. 스크립트가 하나라도 깨지면 삭제 확인 창, `지금 수집` 결과 알림, `죽은 등록 정리`, 제품 필터, 버전 자동 완성이 모두 멈춘다.
+- 화면 스크립트는 문법 검사를 통과해야 한다. 스크립트가 깨지면 `죽은 등록 정리` 와 시각 표시가 멈춘다.
+- 시각은 UTC 로 저장하고, 화면 스크립트가 보는 사람의 시간대로 바꿔 보인다(`data-utc-time`).
 
-### REQ-KNOW-002 제품 추가
+### REQ-KNOW-002 설정된 제품만 Knowledge 제품으로 쓰기
 
-**하는 일** 제품 이름을 제품 목록에 더한다. 더한 제품은 Regression 분석·매뉴얼 개정 검증·QA Agent 의 제품 목록에도 함께 나온다.
+**하는 일** Knowledge 가 다루는 제품은 제품 설정 파일이 있는 제품이다. 이름만 적어 DB 에 제품을 더하는 양식은 두지 않는다.
 
-**언제** `/knowledge` 의 `새 제품 추가` 양식(`POST /knowledge/products`).
-
-**입력**
-
-| 값 | 뜻 | 꼭 필요한가 |
-|---|---|---|
-| 제품 이름(`product`) | 글자. 앞뒤 공백은 지운다 | 예 |
+이유: 지식 수집·출처 판단·상태 판정은 모두 제품 설정 파일을 읽는다. 설정 없이 이름만 더한 제품은 목록에는 보이지만 아무 자동화도 돌지 않아 정상 등록된 제품처럼 오해된다.
 
 **순서**
 
-1. 앞뒤 공백을 지운다.
-2. 비어 있으면 "제품명을 입력하세요."로 거절한다(400).
-3. 제품 표(`products`)에 없으면 더한다. 이미 있으면 아무것도 하지 않는다.
-4. `/knowledge` 로 돌아간다(303).
+1. 앱이 시작할 때 설정 파일이 있는 제품을 제품 표(`products`)에 더한다. 이미 있으면 아무것도 하지 않는다. 그래서 새 설정 파일을 배포하고 앱을 다시 띄우면 Regression 분석·매뉴얼 개정 검증·QA Agent 의 제품 목록에도 나온다.
+2. `POST /knowledge/products`(`product`) 는 호환을 위해 남긴다. 그 제품의 설정 파일이 있을 때만 제품 표에 더하고 `/knowledge` 로 돌아간다(303).
 
-**결과** 제품 표에 한 줄이 생긴다. DB 를 처음 만들 때 `VXvue`, `Bellalun Viewer` 두 제품은 자동으로 들어간다.
+**안 될 때**
+
+| 경우 | 사용자에게 보이는 것 |
+|---|---|
+| 제품 이름이 비어 있음 | "제품명을 입력하세요."(400) |
+| 설정 파일이 없음 | "'<제품>' 제품 설정(config/products/)이 없습니다. docs/PRODUCT_ONBOARDING.md 순서로 먼저 설정 파일을 추가하세요."(400) |
+
+**결과** DB 를 처음 만들 때 `VXvue`, `Bellalun Viewer` 두 제품은 자동으로 들어간다.
 
 **지킬 것**
 
 - 제품을 지우는 기능은 없다.
-- 지식 폴더 수집을 하려면 제품 설정 파일(REQ-CONF-003)을 따로 만들어야 한다.
+- 새 제품을 더하는 절차는 `docs/PRODUCT_ONBOARDING.md` 한 곳에 둔다.
 
-### REQ-KNOW-003 사양서·매뉴얼 파일 한 건 등록
+### REQ-KNOW-003 사양서·매뉴얼 새 문서 등록과 현재 문서 교체
 
-**하는 일** 지식 폴더에 없는 문서 한 건을 손으로 올려 분석 대상으로 만든다.
+**하는 일** 출처가 `manual` 인 사양서·매뉴얼을 사람이 올려 분석 대상으로 만든다. 같은 논리 문서가 이미 있으면 새 파일로 교체한다. 새 파일이 문제없이 등록된 뒤에만 이전 등록을 뺀다.
 
-**언제** `/knowledge` 의 `사양서 등록` 양식(`POST /knowledge/specification`). 사양서 동기화(REQ-SYNC-001)도 이 주소를 쓴다.
+> **예시** Bellalun Viewer 사양서 출처가 `manual` 이다. `(사양서) Bellalun Viewer 사양서1(260930).pdf` 를 올리면 새 판이 등록되고 `사양서1(260710)` 등록이 분석 대상에서 빠진다. `사양서2(260710)` 는 다른 문서이므로 그대로 남는다.
+
+> **예시** VXvue 사양서 출처는 `alm_crawler` 이다. 사람이 `POST /knowledge/specification` 을 직접 불러도 409 로 거절된다. ALM 사양서 동기화(REQ-SYNC-001)만 등록할 수 있다.
+
+**언제**
+
+| 길 | 주소 |
+|---|---|
+| 제품 상세 화면의 `새 문서 등록`, `교체` | `POST /knowledge/products/<slug>/documents`(`kind`, `file`, 교체할 때 `replace_id`) |
+| 예전 주소(사양서 동기화도 쓴다) | `POST /knowledge/specification`(`product`, `file`, 선택 `version`·`source`·`replace_id`) |
 
 **입력**
 
 | 값 | 뜻 | 꼭 필요한가 |
 |---|---|---|
 | 파일(`file`) | `.pdf` 또는 `.docx` | 예 |
-| 제품(`product`) | 제품 이름. 목록에 없으면 새로 만든다 | 예 |
-| 버전(`version`) | 제품 버전 글자 | 아니오. 비어도 된다 |
+| 종류(`kind`) | `specification` 또는 `manual` | 새 주소에서 예 |
+| 교체 대상(`replace_id`) | 이 파일로 바꿀 등록의 문서 번호. 같은 제품·같은 종류여야 한다 | 아니오 |
+| 출처(`source`) | 부르는 쪽이 자신을 밝히는 값. 사양서 동기화는 `alm_crawler` 를 보낸다. 화면은 보내지 않는다 | 아니오 |
+| 버전(`version`) | 비우면 제품 설정의 `version` 을 쓴다. 화면에는 이 칸이 없다 | 아니오 |
 
 **순서**
 
-1. 제품과 버전을 목록에 더한다(없을 때만).
+1. 제품 설정을 찾는다. 출처 규칙(REQ-KNOW-018)으로 이 등록을 받을 수 있는지 먼저 본다. 받을 수 없으면 파일을 저장하지 않는다.
 2. 파일을 사양서 폴더(`storage.specification_dir`)에 `<무작위 32자>.<확장자>` 이름으로 저장한다. 사람이 준 파일 이름은 경로에 쓰지 않는다.
-3. 파일을 Chunk 로 나누고(`parse_document`) 전문 텍스트를 뽑는다.
-4. 문서 표에 종류 `specification` 으로 등록한다. 표시 이름은 올린 파일 이름이고, 부가 정보에 Chunk 수(`chunk_count`)를 적는다.
-5. Chunk 목록과 전문 텍스트를 파싱 저장본으로 남긴다(REQ-KNOW-007).
-6. `/knowledge` 로 돌아간다(303).
+3. 파일을 Chunk 로 나누고(`parse_document`) 전문 텍스트를 뽑는다. Chunk 가 하나도 없으면 읽지 못한 것으로 본다.
+4. 교체할 이전 등록을 고른다. `replace_id` 로 고른 등록과, 같은 제품·같은 종류에서 논리 문서(REQ-KNOW-009)가 같은 등록이 대상이다.
+5. 문서 표에 등록한다. 표시 이름은 올린 파일 이름이다. 부가 정보에 출처, 논리 문서 이름, 리비전 표기, 언어, 문서번호, sha256, Chunk 수(`chunk_count`)를 적는다.
+6. Chunk 목록과 전문 텍스트를 파싱 저장본으로 남긴다(REQ-KNOW-007).
+7. 5·6단계가 끝난 뒤에 4단계에서 고른 이전 등록과 그 파싱 저장본을 지운다. 이전 등록의 원본 파일이 사람이 올린 파일 폴더(`storage.specification_dir`, `storage.testcase_dir`) 안에 있고 다른 등록이 같은 파일을 쓰지 않으면 원본 파일도 지운다.
+8. 화면에서 왔으면 제품 상세 화면으로 돌아간다(303). 결과 문구에 "등록 1건, 교체 N건"이 보인다.
 
 **안 될 때**
 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
+| 제품 설정이 없음 | 저장하지 않는다 | "'<제품>' 제품 설정(config/products/)이 없습니다."(400) |
+| 출처가 자동이거나 지식 폴더 전용 | 저장하지 않는다 | "<제품> <종류>는 <출처 이름>으로 관리하는 자료라 여기서 등록할 수 없습니다."(409) |
 | 확장자가 `.pdf`·`.docx` 가 아님 | 저장하지 않는다 | "지원하지 않는 파일 형식입니다: <확장자>"(400) |
-| 파일을 읽지 못함 | 처리 중 예외가 난다 | 오류 화면(500). 사용자용 안내 문구는 아직 없다(미정, 13절 참조) |
+| 파일을 읽지 못함(Chunk 0개 포함) | 저장한 새 파일을 지운다. 기존 등록은 그대로 둔다 | "파일을 읽지 못해 등록하지 않았습니다. 기존 문서는 그대로 분석에 쓰입니다: <이유>"(422) |
+| 같은 논리 문서의 더 최신 판이 이미 등록됨(교체 대상을 고르지 않았을 때) | 저장한 새 파일을 지운다 | "같은 문서의 더 최신 판이 이미 등록돼 있습니다: <이름>. 이 파일로 바꾸려면 그 문서의 교체를 쓰세요."(409) |
+| `replace_id` 가 없는 번호이거나 다른 제품·종류 | 저장하지 않는다 | "교체할 문서를 찾을 수 없습니다."(400) |
+| 등록·파싱 저장본 쓰기 중 오류 | 새 등록과 새 파일을 지운다. 기존 등록은 그대로 둔다 | "등록 중 오류가 나 되돌렸습니다: <이유>"(500) |
 
 **지킬 것**
 
-- 같은 제품·버전에 새 문서를 올려도 이전 문서를 대체하지 않는다. 등록된 문서는 모두 검색 대상이다(REQ-KNOW-006).
-- 여기서 올린 파일은 사양서(`specification`)로 등록된다. 매뉴얼은 지식 폴더 수집으로만 등록한다. 양식에도 이 안내가 보인다.
+- 새 파일 등록이 실패하면 기존 정상 문서가 분석 대상에서 빠지지 않는다.
+- 서로 다른 논리 문서는 서로 교체하지 않는다. 사양서1 을 올려도 사양서2 는 남는다(REQ-KNOW-006).
+- 출처 확인은 화면의 버튼을 숨기는 것으로 끝내지 않고 이 주소에서 다시 한다.
+- `source` 값은 부르는 쪽이 스스로 밝히는 값이다. 사람이 실수로 자동 자료를 덮어쓰지 않게 막는 장치이고, 인증을 대신하지 않는다(접속 범위는 NFR-SEC-004).
 
-### REQ-KNOW-004 TC Excel 등록과 열 지정 화면
+### REQ-KNOW-004 TC Excel 등록·교체와 열 지정 화면
 
-**하는 일** TC Excel 을 등록한다. TC ID 열을 자동으로 찾지 못하면 QA 가 시트·제목 행·열을 직접 고르는 화면으로 보낸다.
+**하는 일** 출처가 `manual` 인 TC Excel 을 등록하거나 현재 TC 파일을 교체한다. TC ID 열을 자동으로 찾지 못하면 QA 가 시트·제목 행·열을 직접 고르는 화면으로 보낸다.
 
 > **예시** 제목 행이 3행에 있고 열 이름이 "시험 ID" 인 파일은 자동 탐지에 실패한다. 열 지정 화면에서 시트 `TC`, 제목 행 3, TC ID 열 "시험 ID" 를 고르면 등록된다. 그 선택은 저장돼 다음 분석에도 쓰인다.
 
@@ -5371,8 +5277,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 | 단계 | 주소 |
 |---|---|
-| 올리기 | `/knowledge` 의 `Test Case 등록` → `POST /knowledge/testcase` |
-| 열 지정 미리보기 | `GET /knowledge/testcase/map?filename=&product=&version=&original_name=&sheet=&header_row=&error=` |
+| 올리기 | 제품 상세 화면의 `새 문서 등록`·`교체`(`POST /knowledge/products/<slug>/documents`, `kind=testcase`). 예전 주소 `POST /knowledge/testcase` 도 같은 일을 한다 |
+| 열 지정 미리보기 | `GET /knowledge/testcase/map?filename=&product=&version=&original_name=&replace_id=&sheet=&header_row=&error=` |
 | 열 지정 확정 | `POST /knowledge/testcase/map` |
 
 **입력**
@@ -5380,21 +5286,23 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 값 | 뜻 | 꼭 필요한가 |
 |---|---|---|
 | 파일(`file`) | `.xlsx` 만 받는다 | 예 |
-| 제품(`product`) | 제품 이름 | 예 |
-| 버전(`version`) | 버전 글자 | 아니오 |
+| 제품(`product`) | 예전 주소에서 제품 이름 | 예전 주소에서 예 |
+| 교체 대상(`replace_id`) | 이 파일로 바꿀 TC 등록 번호 | 아니오 |
+| 버전(`version`) | 비우면 제품 설정의 `version`. 화면에는 이 칸이 없다 | 아니오 |
 | (열 지정) 시트(`sheet`) | 시트 이름 | 예 |
 | (열 지정) 제목 행(`header_row`) | 제목 행 번호(1부터) | 예 |
 | (열 지정) 항목별 열 | 각 항목에 해당하는 열 이름. 항목은 `tc_id`, `category`, `feature`, `precondition`, `step`, `expected_result`, `result`, `remark` 이고, 화면에는 TC ID (필수), 분류, 기능명, 사전조건, 시험절차, 예상결과, 결과, 비고로 보인다 | `tc_id` 만 사실상 필수 |
 
 **순서**
 
-1. 파일을 TC 폴더(`storage.testcase_dir`)에 무작위 이름으로 저장한다.
-2. TC 를 자동으로 읽는다(`parse_testcases`). 모든 시트를 보고 TC ID 열이 있는 시트만 쓴다.
-3. 성공하면 종류 `testcase` 로 등록하고 TC 목록을 파싱 저장본으로 남긴다.
-4. 실패하면 파일을 지우지 않고 열 지정 화면으로 보낸다(303).
-5. 열 지정 화면은 시트 목록과 앞부분 행을 보여 준다. 제목 행을 넣으면 그 행의 칸 이름으로 항목을 추천한다.
-6. 확정하면 고른 열로 다시 읽는다. 성공하면 등록하고, 부가 정보에 열 선택(`column_mapping`)·시트(`sheet_name`)·제목 행(`header_row`)을 저장한다.
-7. 다시 실패하면 오류 문구를 붙여 열 지정 화면으로 돌아간다.
+1. 출처 규칙(REQ-KNOW-018)으로 이 등록을 받을 수 있는지 먼저 본다.
+2. 파일을 TC 폴더(`storage.testcase_dir`)에 무작위 이름으로 저장한다.
+3. TC 를 자동으로 읽는다(`parse_testcases`). 모든 시트를 보고 TC ID 열이 있는 시트만 쓴다.
+4. 성공하면 REQ-KNOW-003 의 4~7단계처럼 등록하고, 등록이 끝난 뒤 이전 등록을 뺀다.
+5. 실패하면 파일을 지우지 않고 열 지정 화면으로 보낸다(303). 교체 대상 번호도 함께 넘긴다. 이 단계에서는 기존 등록을 건드리지 않는다.
+6. 열 지정 화면은 시트 목록과 앞부분 행을 보여 준다. 제목 행을 넣으면 그 행의 칸 이름으로 항목을 추천한다.
+7. 확정하면 고른 열로 다시 읽는다. 성공하면 4단계처럼 등록·교체하고, 부가 정보에 열 선택(`column_mapping`)·시트(`sheet_name`)·제목 행(`header_row`)을 저장한다. 제품 상세 화면으로 돌아간다.
+8. 다시 실패하면 오류 문구를 붙여 열 지정 화면으로 돌아간다.
 
 **결과** 문서 표에 한 줄이 생긴다. TC 마다 파일 이름·시트 이름·Excel 행 번호가 남는다. 같은 TC ID 가 여러 번 나오면 처음 것만 쓴다.
 
@@ -5402,6 +5310,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
+| 출처가 `manual` 이 아님 | 저장하지 않는다 | REQ-KNOW-003 과 같은 문구(409) |
 | `.xlsx` 가 아님 | 저장하지 않는다 | "지원하지 않는 파일 형식입니다"(400) |
 | 열 지정 화면의 `filename` 에 경로 조각이 있음 | 거절한다 | "잘못된 파일명입니다."(400) |
 | 올린 파일이 없어짐 | 거절한다 | "업로드된 파일을 찾을 수 없습니다. TC 파일을 다시 첨부하세요."(404) |
@@ -5413,14 +5322,14 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-005 등록 문서 내려받기·지우기·목록 조회
 
-**하는 일** 등록 문서의 원본을 내려받거나 등록을 지운다. 다른 프로그램이 제품별 문서 목록을 읽을 수도 있다.
+**하는 일** 등록 문서의 원본을 내려받거나 사람이 올린 등록을 지운다. 다른 프로그램이 제품별 문서 목록을 읽을 수도 있다.
 
 **언제**
 
 | 동작 | 주소 | 결과 |
 |---|---|---|
 | 내려받기 | `GET /knowledge/download/{문서 번호}` | 원본 파일. 내려받는 이름은 등록 표시 이름 |
-| 지우기 | `POST /knowledge/delete/{문서 번호}` | 문서 표 줄, 파싱 저장본, 원본 파일을 모두 지우고 `/knowledge` 로 돌아간다(303) |
+| 지우기 | `POST /knowledge/delete/{문서 번호}`(선택 `source`, `next`) | 문서 표 줄, 파싱 저장본, 원본 파일을 모두 지운다. `next` 가 `/knowledge` 로 시작하면 그리로, 아니면 `/knowledge` 로 돌아간다(303) |
 | 목록 조회 | `GET /knowledge/documents?kind=&product=` | `[{"id":…, "name":…}]` |
 
 **안 될 때**
@@ -5429,10 +5338,13 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|
 | 없는 문서 번호 | "문서를 찾을 수 없습니다."(404) |
 | 내려받기에서 원본 파일이 없음 | "원본 파일을 찾을 수 없습니다."(404) |
+| 그 제품·종류의 출처가 `manual` 이 아니고, 보낸 `source` 가 설정의 출처와 다름 | "자동으로 관리하는 자료는 여기서 지울 수 없습니다. <출처 이름>에서 관리하세요."(409) |
 
 **지킬 것**
 
 - 지우기는 되돌릴 수 없다. 화면은 지우기 전에 "<이름> 파일을 삭제할까요? 되돌릴 수 없습니다."로 확인을 받아야 한다.
+- 화면은 출처가 `manual` 인 자료에만 `삭제` 를 보인다. 교체가 기본 동작이고 삭제는 잘못 올린 문서를 뺄 때만 쓴다.
+- 제품 설정이 없는 옛 등록은 출처를 판단할 수 없으므로 지우기를 막지 않는다.
 - 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보낸다.
 
 이유: REQ-SYNC-002 에서 서버가 가진 파일 목록은 디스크에 있는 파일을 기준으로 만든다.
@@ -5649,6 +5561,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
    - 사본 경로가 이미 등록돼 있고 sha256 이 같으면 "미변경"이다.
    - sha256 이 다르면 파싱 저장본을 지우고 부가 정보를 새로 적는다(REQ-KNOW-007).
    - 등록돼 있지 않으면 새로 등록한다. 부가 정보에 출처(`product_knowledge`)·이름·리비전 표기·언어·문서번호·sha256 을 적는다.
+   - 다만 같은 종류에 같은 논리 문서의 확실히 더 최신인 판이 이미 등록돼 있으면 등록하지 않는다. 결과에 "등록된 판이 더 최신이라 건너뜀 N건"과 그 목록이 남는다.
+
+> **예시** 사람이 화면에서 `사양서1(260930)` 으로 교체했는데 지식 폴더에는 아직 `사양서1(260710)` 이 있다. 다음 업로드 확정 때 260710 은 등록되지 않는다. 옛 판이 되살아나 두 판이 함께 검색되는 일을 막는다.
 4. 같은 제품의 기존 등록(세 종류 모두)을 논리 문서 이름으로 맞춰 본다. 아래 표에서 지움이 "예"인 조건이면 파싱 저장본까지 함께 지운다.
 
 | 조건 | 지움 | 기록 문구 |
@@ -5658,7 +5573,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 등록의 원본 파일이 없음 | 예 | 원본 파일 없음 |
 | 그 밖(종류가 다름, 리비전 비교 불가 등) | 아니오 | 중복 확인 요청 목록에 더함 |
 
-**결과** "등록 N건, 미변경 N건, 이전 리비전 정리 N건, 중복 확인 요청 N건"과 그 목록.
+**결과** "등록 N건, 미변경 N건, 이전 리비전 정리 N건, 중복 확인 요청 N건"과 그 목록. 건너뛴 것이 있으면 ", 등록된 판이 더 최신이라 건너뜀 N건"이 붙는다.
 
 이유: 이 시스템은 "어느 것이 최신인가"에 답해야 한다. 옛 판이 남으면 옛 사양이 검색된다. 반대로 사람이 다른 기준으로 올린 문서를 자동으로 지우면 그 판단 근거가 사라진다.
 
@@ -5670,7 +5585,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 원본 파일이 없어진 등록을 한 번에 지운다.
 
-**언제** `/knowledge` 의 `죽은 등록 정리` 버튼을 누르면 확인 창 "원본 파일이 없는 등록을 정리할까요? 파일이 이미 없으므로 잃는 것은 없습니다."가 뜨고, 확인하면 돈다(`POST /knowledge/cleanup/missing`).
+**언제** `/knowledge` 의 `고급 정보` 에 있는 `죽은 등록 정리` 버튼을 누르면 확인 창 "원본 파일이 없는 등록을 정리할까요? 파일이 이미 없으므로 잃는 것은 없습니다."가 뜨고, 확인하면 돈다(`POST /knowledge/cleanup/missing`).
 
 **순서**
 
@@ -5685,7 +5600,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 지식 폴더를 스캔해 무엇을 고르고 무엇을 왜 뺐는지 JSON 으로 보여 준다. 아무것도 쓰지 않는다.
 
-**언제** `/knowledge` 의 `스캔 결과 보기` 링크(`GET /knowledge/source/{제품}`).
+**언제** 제품 상세 화면 `고급 정보` 의 `스캔 결과 JSON` 링크(`GET /knowledge/source/{제품}`).
 
 **결과**
 
@@ -5695,6 +5610,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 불가 | `product`, `available: false`, `source_dir`, 마지막 수집 기록(`manifest`) |
 
 **안 될 때** 제품 설정이 없으면 "'<제품>' 제품 설정이 없습니다."를 보인다(404).
+
+> **참고** 이 주소는 감사와 다른 프로그램을 위한 것이다. 운영자는 제품 상세 화면(REQ-KNOW-020)의 `수집 제외` 표로 같은 내용을 본다.
 
 ### REQ-KNOW-015 깨지거나 분해된 한글 파일명 바로잡기
 
@@ -5746,22 +5663,142 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-017 Knowledge 사용법 화면
 
-**하는 일** Knowledge 사용법을 앱 안에서 보여 준다.
+**하는 일** Knowledge 를 처음 쓰는 운영자가 알아야 할 것만 앱 안에서 보여 준다.
 
 **언제** 내비게이션의 `사용법`(`GET /knowledge/guide`).
 
-**결과** 화면에 다음 내용이 들어 있다.
+**결과** 화면은 아래 여섯 부분으로 되어 있다.
 
-- 무엇이 들어가는가(종류·쓰임·근거 수준 표)
-- 지식 폴더 수집 방법, 파일명 규약 표, 리비전 읽는 법, 하나만 고르는 규칙, 구버전 정리 규칙 표
-- 서버에서 폴더에 접근할 수 없을 때의 CLI
-- 개별 등록, TC Excel 읽는 방식, 등록 후 확인 방법
-- 새 제품 추가, 사내 문서 저장 위치
+1. Knowledge 란 무엇인가: 여러 기능이 함께 쓰는 최신 자료 한 곳이며, 문서 판 보관소가 아니다.
+2. 제품 상태 확인: 현황판의 `정상`·`주의`·`오류` 와 줄마다 보이는 상태 문구의 뜻.
+3. 자동 자료와 수동 자료의 차이: 출처 네 가지와, 어느 자료에 등록·교체 버튼이 나오는지.
+4. 파일 교체 방법: 제품 상세에서 `교체` 또는 `새 문서 등록`, 실패하면 기존 문서가 그대로 쓰인다는 점, 지식 폴더 자료를 바꾸는 담당자 PC 명령.
+5. 문제 상태 확인 방법: `자료 없음`, `파싱 실패`, `수집 실패`, `업데이트 필요`, `중복 확인 요청` 가 보일 때 할 일과 `수집 제외` 표 보는 법.
+6. 새 제품 추가: 설정 파일을 먼저 만든다는 것과 `docs/PRODUCT_ONBOARDING.md` 안내.
 
 **지킬 것**
 
 - 사용법은 문서 파일이 아니라 이 화면에 둔다. 화면이 바뀌면 사용법도 같이 고친다.
+- 리비전 정규식, 논리 문서를 가리는 방법, 네트워크 마운트 절차 같은 개발·운영 기술 설명은 이 화면에 두지 않는다. 그런 설명은 `docs/PRODUCT_ONBOARDING.md` 와 이 SPEC 에 한 번만 둔다.
 - CLI 예시는 운영 방식(`--upload-to http://<서버 주소>:24357`, 평일 10:00)을 보인다(REQ-SYNC-002).
+
+### REQ-KNOW-018 제품별 자료 출처 프로필
+
+**하는 일** 제품마다 자료 종류별로 어디서 들어오는지와 꼭 있어야 하는지를 제품 설정 파일에 적는다. 공통 코드는 제품 이름이 아니라 이 값으로 등록 허용·화면 버튼·상태 판정을 정한다.
+
+> **예시** `vxvue.yaml` 의 `specification.source` 가 `alm_crawler` 라서 VXvue 사양서에는 업로드 버튼이 없고 업로드 주소도 409 로 거절한다. `bellalun-viewer.yaml` 은 `manual` 이라서 `새 문서 등록` 과 `교체` 가 보인다. 코드에는 두 제품 이름이 나오지 않는다.
+
+**입력** 제품 설정 파일(REQ-CONF-003)의 다섯 키다. 모두 같은 모양(`source`, `required`)이다.
+
+| 키 | 자료 종류 | `source` 기본값 | `required` 기본값 |
+|---|---|---|---|
+| `specification` | 사양서 | `manual` | 예 |
+| `testcase` | Test Case / Checklist | `manual` | 예 |
+| `manual` | Manual / Protocol | `knowledge_folder` | 아니오 |
+| `qa_rules` | QA 규칙 | `knowledge_folder` | 예 |
+| `instruction_prompt` | 지침 프롬프트 | `knowledge_folder` | 아니오 |
+
+이유: QA Agent 는 사양서·TC·QA 규칙이 없으면 판정을 막는다(REQ-QAAGENT-005 의 관문 G1). 매뉴얼과 지침 프롬프트는 없는 제품도 있다.
+
+`source` 값과 그 값이 정하는 동작:
+
+| `source` | 화면 등록·교체 | 등록 주소가 받는 요청 | 지우기 | 상태 판정이 보는 동기화 기록 |
+|---|---|---|---|---|
+| `manual` | 보인다(사양서·매뉴얼·TC 만) | `source` 를 보내지 않았거나 `manual` 인 요청 | 된다 | 그 종류가 수집 기록에 있을 때 지식 폴더 기록 |
+| `alm_crawler` | 없다 | `source=alm_crawler` 를 보낸 요청(사양서 동기화)만 | `source=alm_crawler` 일 때만 | 그 종류 이름의 동기화 기록과, 수집 기록에 그 종류가 있으면 지식 폴더 기록 |
+| `external_sync` | 없다 | `source=external_sync` 를 보낸 요청만 | `source=external_sync` 일 때만 | 위와 같다 |
+| `knowledge_folder` | 없다 | 받지 않는다(지식 폴더 업로드 확정만 등록한다) | 되지 않는다 | 지식 폴더 기록(`product_knowledge`) |
+
+**순서**
+
+1. `source` 값은 앞뒤 공백을 지우고 소문자로 본다. `alm` 은 `alm_crawler` 와 같게 본다.
+2. 표에 없는 값은 "알 수 없는 출처" 로 보고 화면 등록을 막는다. 상태 판정은 `주의` 로 한다.
+3. `qa_rules`, `instruction_prompt` 는 `source` 가 `manual` 이어도 화면 등록을 두지 않는다. 규칙 로더(REQ-RULE-001)는 수집 기록만 읽기 때문이다. 화면에는 "지식 폴더로 관리합니다"를 보인다.
+4. 공통 함수 `can_manual_upload(설정, 종류)` 가 화면 버튼과 등록 주소의 판단을 함께 맡는다.
+
+**지킬 것**
+
+- 공통 Knowledge 코드(`app/core/knowledge_*.py`, `app/core/product_knowledge.py`, `app/modules/knowledge/`)에 제품 이름으로 나뉘는 조건문을 두지 않는다.
+- 같은 뜻의 값을 두 곳에 적지 않는다. 사양서 출처는 예전부터 있던 `specification.source` 를 그대로 쓴다.
+- 지식 폴더 수집(REQ-KNOW-011, REQ-SYNC-002)은 출처와 관계없이 폴더에 있는 자료를 등록한다. VXvue 사양서처럼 ALM 산출물이 지식 폴더를 거쳐 오는 경우도 자동 경로로 본다.
+- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서·매뉴얼은 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
+
+### REQ-KNOW-019 제품별 Knowledge 상태 판정
+
+**하는 일** 제품마다 자료가 분석에 쓸 수 있는 상태인지 코드 규칙으로 정한다. AI 를 쓰지 않는다. 결과는 현황판·제품 상세와 판정 이유 문구에 쓰인다.
+
+> **예시** Bellalun Viewer 에 QA 규칙이 수집되지 않았으면 QA 규칙 줄이 `자료 없음`, 제품이 `주의` 다. VXvue 의 마지막 사양서 동기화 기록이 `FAILED` 이고 그 뒤에 성공한 수집이 없으면 사양서 줄이 `수집 실패`, 제품이 `오류` 다.
+
+**입력**
+
+- 출처 프로필(REQ-KNOW-018)
+- 문서 표의 그 제품 등록(`specification`, `testcase`, `manual`)
+- 수집 기록(`manifest.json`)의 자산(`qa_rules`, `instruction_prompt`, 그리고 읽지 못한 자산 표시 `error`)
+- 동기화 기록(REQ-KNOW-016)의 마지막 줄
+
+**순서** 자료 종류마다 아래 표를 위에서부터 보고 처음 맞는 줄로 정한다.
+
+| 순서 | 조건 | 상태 문구 | 단계 |
+|---|---|---|---|
+| 1 | 등록이 0개이고, 관련 동기화의 마지막 기록이 `FAILED` | 수집 실패 | 오류 |
+| 2 | 등록이 0개이고 꼭 있어야 하는 자료 | 자료 없음 | 주의 |
+| 3 | 등록이 0개이고 없어도 되는 자료 | 없음 | 정상 |
+| 4 | 관련 동기화 가운데 가장 최근 기록이 `FAILED` | 수집 실패 | 오류 |
+| 5 | 등록이 모두 쓸 수 없음(파일 없음, 읽지 못함, Chunk 0개) | 파싱 실패 | 꼭 있어야 하면 오류, 아니면 주의 |
+| 6 | 등록 일부를 쓸 수 없음, 또는 수집 기록에 "새 판을 읽지 못해 이전 판 유지"가 있음 | 파싱 실패 | 주의 |
+| 7 | 자동 출처(`alm_crawler`, `external_sync`)의 마지막 기록이 `PARTIAL` | 수집 실패(일부) | 주의 |
+| 8 | 같은 논리 문서가 두 개 이상 등록됨 | 중복 확인 요청 | 주의 |
+| 9 | 출처 값을 알 수 없음 | 출처 확인 요청 | 주의 |
+| 10 | 가장 최근 성공 수집이 `sync.stale_after_days`(기본 14일)보다 오래됨. 자동 출처인데 성공 기록이 하나도 없는 경우도 같다 | 업데이트 필요 | 주의 |
+| 11 | 위에 해당하지 않음 | 정상 | 정상 |
+
+- "관련 동기화"는 REQ-KNOW-018 표의 마지막 열이다. 종류가 여럿이면 가장 최근 기록 하나로 판단한다. 그래서 오래전 ALM 동기화 실패 뒤에 지식 폴더 수집이 성공했으면 실패로 보지 않는다.
+- 사람이 등록하는 자료(`manual`)는 지식 폴더 기록이 없으면 10번을 보지 않는다. 언제 바꿔야 하는지 시스템이 알 수 없기 때문이다.
+- 제품 단계는 자료 줄 가운데 가장 나쁜 단계다. `정상` < `주의` < `오류` 순이다.
+- 마지막 갱신 시각은 등록 시각(지식 폴더 자료는 수집 시각)과 성공 동기화 시각 가운데 가장 늦은 값이다.
+
+**결과** 제품마다 단계(`READY`·`ATTENTION`·`ERROR`), 화면 문구(`정상`·`주의`·`오류`), 마지막 갱신 시각, 자료 줄 목록(종류·출처·꼭 필요한지·개수·상태 문구·단계·이유·문서 목록·가능한 동작)을 만든다.
+
+**지킬 것**
+
+- 제품마다 따로 판정 함수를 두지 않는다. 새 제품 설정을 더하면 같은 코드가 판정한다.
+- 판정할 때 원본 파일을 다시 파싱하지 않는다. 등록 때 적은 부가 정보, 수집 기록, 파일이 있는지만 본다. 현황판을 열 때마다 몇 초씩 걸리지 않게 하려는 것이다.
+- 모든 조회는 제품 이름으로 거른다. 한 제품의 문서·수집 기록·동기화 기록이 다른 제품 판정에 섞이지 않는다.
+
+### REQ-KNOW-020 제품 Knowledge 상세 화면
+
+**하는 일** 한 제품의 자료를 종류별로 나눠 지금 분석에 쓰는 문서와 할 수 있는 동작을 보여 준다.
+
+**언제** 현황판의 `상세보기`(`GET /knowledge/products/<slug>`). `<slug>` 는 설정 파일 이름이다(`bellalun-viewer`). 제품 표시 이름으로 불러도 찾는다.
+
+**결과**
+
+1. 화면 머리에 제품 이름, 상태, 마지막 갱신 시각이 있다.
+2. 자료 종류마다 한 구역이 있다. 구역마다 출처 이름, 관리 방식, 상태 문구, 판정 이유, 마지막 갱신이 보인다.
+3. 구역 안의 문서 표는 문서명, 종류, 출처(`ALM 자동`, `지식 폴더`, `사람이 등록`), 상태(`정상`, `파일 없음`, `읽지 못함`), 마지막 갱신을 보인다. 리비전은 표에 따로 열로 두지 않는다.
+4. 구역 아래 동작은 출처로 정한다.
+
+| 출처 | 보이는 동작 |
+|---|---|
+| `manual`(사양서·매뉴얼·TC) | 문서마다 `교체`·`삭제`·`다운로드`, 구역 아래 `새 문서 등록` |
+| `alm_crawler` | "ALM 에서 자동으로 수집합니다. 여기서 올릴 수 없습니다." 와 마지막 동기화 시각·결과. 업로드 버튼 없음 |
+| `external_sync` | "다른 자동화가 보내는 자료입니다." 와 마지막 동기화 결과 |
+| `knowledge_folder` | "담당자 PC 의 지식 폴더에서 수집합니다." 와 마지막 수집 시각. 이 서버가 폴더에 접근할 수 있으면 `지금 수집` 버튼(REQ-KNOW-011) |
+
+5. 지식 폴더 수집에서 뺀 파일이 있으면 "수집 제외 N건" 과 `자세히` 가 보인다. 펼치면 파일명, 분류 결과, 제외 이유, 대신 쓰는 파일을 표로 보인다. 값은 수집 기록(`manifest.json`)에서 읽는다.
+6. 화면 아래 `고급 정보` 를 펼치면 폴더 경로, 이 서버에서 폴더 접근 가능 여부, 업로드한 PC, 마지막 동기화 상세 문구, QA 규칙 판, 스캔 결과 JSON 링크(REQ-KNOW-014)가 보인다.
+7. 등록·교체 결과는 화면 위 알림 줄에 보인다. 실패하면 서버가 준 이유를 그대로 보인다.
+
+**안 될 때**
+
+| 경우 | 사용자에게 보이는 것 |
+|---|---|
+| 설정 파일이 없는 제품 | "'<제품>' 제품 설정이 없습니다."(404) |
+
+**지킬 것**
+
+- 제품마다 다른 템플릿을 두지 않는다. 한 템플릿이 상태 판정 결과(REQ-KNOW-019)만 읽어 그린다.
+- 업로드 양식은 받을 수 있는 확장자만 고르게 한다(`accept`). 서버가 한 번 더 확인한다.
 
 ### REQ-CONF-001 설정 파일 읽기
 
@@ -5864,7 +5901,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-CONF-003 제품 설정 파일
 
-**하는 일** 제품 하나의 지식 폴더, 사양서 출처, 이슈 출처, 동기화 시각을 YAML 한 장에 둔다. 새 제품은 코드를 고치지 않고 이 파일만 더하면 된다.
+**하는 일** 제품 하나의 지식 폴더, 자료 종류별 출처 프로필(REQ-KNOW-018), 이슈 출처, 동기화 시각을 YAML 한 장에 둔다. 새 제품은 코드를 고치지 않고 이 파일만 더하면 된다.
 
 **입력** 제품마다 `config/products/<slug>.yaml` 한 장이다. 지금 `vxvue.yaml`, `bellalun-viewer.yaml` 이 있다.
 
@@ -5875,12 +5912,16 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `manual_types` | 빈 목록 | 매뉴얼 종류 이름 목록 |
 | `knowledge_source.dir` | 빈 값 | 지식 폴더 경로. `${환경변수}`·`${환경변수:-기본값}` 을 쓸 수 있다 |
 | `knowledge_source.classify` / `extensions` / `ignore` | REQ-KNOW-008 | 분류 규약 바꾸기·확장자·제외 패턴 |
-| `specification.source` | `manual` | `alm_crawler` 이면 사양서 동기화 대상(REQ-SYNC-001) |
+| `specification.source` / `required` | `manual` / 예 | 사양서 출처와 꼭 있어야 하는지(REQ-KNOW-018). `alm_crawler` 이면 사양서 동기화 대상(REQ-SYNC-001) |
 | `specification.crawler_output_dir` | 빈 값 | ALM 크롤러 output 폴더 |
 | `specification.filename_patterns` | 빈 목록 | 사양서로 볼 PDF 이름 패턴 |
-| `testcase.source` | `manual` | TC 출처 표시 |
+| `testcase.source` / `required` | `manual` / 예 | TC 출처와 꼭 있어야 하는지 |
+| `manual.source` / `required` | `knowledge_folder` / 아니오 | Manual / Protocol 출처 |
+| `qa_rules.source` / `required` | `knowledge_folder` / 예 | QA 규칙 출처 |
+| `instruction_prompt.source` / `required` | `knowledge_folder` / 아니오 | 지침 프롬프트 출처 |
 | `issue_source.source` / `export_dir` / `id_prefix` | `manual` / 빈 값 / 빈 값 | Polarion 이슈 Export 폴더와 이슈 번호 앞글자(REQ-ISSUE-001) |
 | `sync.day_of_week` / `sync.schedule_time` | `*` / `07:00` | 앱 안 예약 실행 요일·시각(한국 시간). VXvue 는 `mon-fri` / `09:40` |
+| `sync.stale_after_days` | `14` | 마지막 성공 수집이 이 날수보다 오래되면 상태 판정이 `업데이트 필요` 로 본다(REQ-KNOW-019) |
 
 **순서**
 
@@ -6186,6 +6227,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 **결과**
 
 - `Storage.tokens_used_since(시각)` 은 그 시각 이후 만들어진 `DONE`·`FAILED` 분석의 `total_tokens` 합이다. 실패한 분석은 결과에 토큰 기록이 있을 때만 들어간다.
+- 같은 합계에 그 시각 이후 시작해 끝난 QA Agent 점검 실행의 Claude 토큰(실행 요약의 `token_usage`)도 더한다(REQ-QAINTEL-026).
 - `/cost-dashboard` 는 최근 N일(기본 30)의 날짜별·기능별 토큰, 저장본 적중률, 최근 50건을 보인다.
 
 **지킬 것**
@@ -6385,7 +6427,8 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 |---|---|---|---|
 | `sync_vxvue_specification` | `vxvue.yaml` `sync` (평일 09:40). 설정이 없으면 월 07:30 | 사양서 동기화(REQ-SYNC-001)를 자기 자신의 주소로 부른다 | 크롤러 output 폴더 없음, 이미 진행 중 |
 | `sync_product_knowledge_<slug>` | 제품별 `sync` (VXvue 평일 09:40). 없으면 월 07:45 | 지식 폴더 수집·등록(REQ-KNOW-011) | 폴더 경로 없음(등록 안 함), 폴더 접근 불가, 이미 진행 중 |
-| `daily_qa_vxvue` | `daily_qa.schedule` (평일 07:30). 늦게 깨어나도 1시간 안이면 돈다 | 일일 QA 점검을 별도 프로세스로 띄운다 | `daily_qa.enabled` 꺼짐, Polarion 설정 없음 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
+| `qa_agent_<slug>` | `daily_qa.schedule` (평일 07:30). 늦게 깨어나도 1시간 안이면 돈다. `daily_qa.products` 의 제품마다 하나 | QA Agent 점검(REQ-QAINTEL-001)을 별도 프로세스로 띄운다 | 공휴일(`daily_qa.schedule.skip_holidays`), `daily_qa.enabled` 꺼짐, Polarion 설정 없음, 그 제품의 다른 실행이 진행 중 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
+| `qa_agent_limit_catchup` | 10분마다 | 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
 
 **지킬 것** 운영 서버에서는 앞의 두 작업이 폴더를 볼 수 없어 늘 건너뛴다. 이 두 작업의 자동 실행은 담당자 PC 의 작업 스케줄러가 맡는다(REQ-SYNC-001, REQ-SYNC-002).
 
@@ -6399,8 +6442,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 
 | 카드 | 주소 |
 |---|---|
-| QA Agent — Issue 검증 범위 | `/qa-agent` |
-| VXvue 일일 QA 점검 | `/daily-qa` |
+| QA Agent — 변경 탐지 기반 QA 분석 | `/qa-agent` |
 | Regression 영향 분석 | `/impact-analyzer` |
 | 매뉴얼 개정 검증 | `/manual-review` |
 | Knowledge — 사양서·TC·규칙 관리 | `/knowledge` |
@@ -6772,8 +6814,8 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 5. 바뀐 파일마다 차례로 다음을 한다.
    1. 원본을 `data/specifications/vxvue/original/<날짜>/` 에 복사한다.
    2. 텍스트를 뽑아 `normalized/<날짜>/<이름>.md` 로 쓴다.
-   3. 서버 `POST /knowledge/specification` 으로 등록한다(제품 `VXvue`, 버전은 제품 설정의 `version`, 제한 60초). 200 또는 303 이면 성공이다.
-   4. 서버 `GET /knowledge/documents?kind=specification&product=VXvue` 로 목록을 받는다. 이름에서 `(YYMMDD)` 만 뺀 부분이 같고 이름 전체는 다른 등록을 `POST /knowledge/delete/{번호}` 로 지운다.
+   3. 서버 `POST /knowledge/specification` 으로 등록한다(제품 `VXvue`, 버전은 제품 설정의 `version`, 출처 `source=alm_crawler`, 제한 60초). 200 또는 303 이면 성공이다. 서버는 새 판을 등록한 뒤 같은 논리 문서의 옛 판을 스스로 뺀다(REQ-KNOW-003).
+   4. 서버 `GET /knowledge/documents?kind=specification&product=VXvue` 로 목록을 받는다. 이름에서 `(YYMMDD)` 만 뺀 부분이 같고 이름 전체는 다른 등록이 남아 있으면 `POST /knowledge/delete/{번호}`(`source=alm_crawler`) 로 지운다. 옛 서버와도 동작하도록 남긴 단계다.
    5. 상태 파일에 그 파일의 크기·수정 시각을 적는다.
 6. 상태 파일을 저장한다.
 7. 결과를 서버 `POST /knowledge/sync-log` 로 보고한다(`kind=specification`, `source=alm_crawler`).
@@ -8568,6 +8610,14 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 - 이 서비스 아래(`services/qa-manual-hub/`)에 `akela.json`이나 `knowledge/`를 따로 만들지 않는다. 지식 파일은 저장소 루트 `knowledge/manual-hub-*.md`에 둔다.
 - 테스트와 CI는 따로 돈다(`.github/workflows/manual-hub.yml`). 이 서비스 파일이 바뀔 때만 백엔드 테스트와 두 가지 화면 빌드를 확인한다.
 
+<!-- spec-index: v1 -->
+
+| 기능 | 사양 문서 | 상태 |
+|---|---|---|
+| QA Intelligence Agent | [specs/qa-intelligence.md](specs/qa-intelligence.md) | draft |
+
+<!-- spec-index: end -->
+
 ## 9. 오류 처리 정책
 
 모든 기능이 따르는 공통 원칙이다. 기능별 경우와 화면 문구는 각 요구사항 카드의 "안 될 때" 칸에 있다.
@@ -9269,18 +9319,12 @@ REQ-COST-004 확인. `tests/test_cost_dashboard.py::test_guide_does_not_claim_on
 
 ### TEST-DAILY-005
 
-`tests/test_daily_qa_router.py` 로 검토 화면을 본다.
+`tests/test_daily_qa_router.py` 로 옛 `/daily-qa` 주소가 새 화면으로 이어지고, 검토·답변 입력이 없어졌는지 본다. 개편 전의 검토 화면 테스트는 화면과 함께 없어졌다.
 
 | 테스트 함수 | 확인하는 것 | 요구사항 |
 |---|---|---|
-| `test_index_and_run_pages_show_counts_and_files` | 실행 목록·상세의 건수와 결과 파일 | REQ-DAILY-009 |
-| `test_file_download_is_limited_to_run_outputs` | 실행 폴더 밖 파일은 내려받을 수 없다 | REQ-DAILY-009 |
-| `test_queue_filters_by_skill_and_status` | 대기열 거르기 | REQ-DAILY-009 |
-| `test_decision_is_stored_with_reviewer` | 결정·검토자 저장 | REQ-DAILY-009 |
-| `test_need_evidence_requires_note_and_unknown_decision_is_refused` | 메모 필수, 알 수 없는 결정 거부 | REQ-DAILY-009 |
-| `test_answer_is_saved_and_feeds_next_run` | 답 저장과 다음 실행 입력 | REQ-DAILY-017 |
-| `test_guide_page_renders` | 사용법 화면이 열린다 | REQ-DAILY-026 |
-| `test_screens_and_mail_use_feature_names_not_letter_codes` | 화면·메일 이름이 네 점검 이름이고 알파벳 약칭이 없다 | REQ-DAILY-008, 009, 026 |
+| `test_old_links_in_sent_emails_keep_working` | `/daily-qa`, `/daily-qa/queue`, `/daily-qa/questions`, `/daily-qa/guide`, 실행 상세·파일·Finding 주소가 307 로 `/qa-agent` 쪽 주소에 넘어간다 | REQ-DAILY-009, REQ-DAILY-026, REQ-QAINTEL-019 |
+| `test_review_and_answer_workflow_is_not_exposed` | Finding 결정·질문 답변 저장 요청이 404 또는 405 다 | REQ-DAILY-009, REQ-DAILY-017 |
 
 ### TEST-DAILY-006
 
@@ -9334,10 +9378,10 @@ python -m pytest tests/test_daily_qa_pipeline.py tests/test_daily_qa_polarion.py
 
 자동 테스트 없음. Skill 내용(REQ-DAILY-024, REQ-DAILY-025)은 QA 규칙 판이 바뀔 때 사람이 검토한다. 자동 테스트(`test_prepare_writes_settings_skills_and_rules`)는 Skill 이 작업 폴더로 복사되는지만 본다.
 
-1. 새 판 규칙의 검증 관문·이슈 유형·판정 이름이 `vxvue-qa-rules` 와 `schema.py` 의 `VERDICTS`·`ISSUE_TYPES` 와 같은지 본다.
+1. 새 판 규칙의 검증 관문·판정 이름이 제품 규칙 Skill `vxvue-qa-rules`(`config/products/vxvue/skills/vxvue-qa-rules/`)와 `schema.py` 의 `VERDICTS` 와 같은지 본다.
 2. Skill 이 가리키는 절 번호가 새 판에도 같은 뜻인지 본다.
-3. 대화형 Skill `vxvue-trace-gap` 에 `TC 없음` SRS 하나를 주고, TC 위치나 찾아본 검색어를 알려 주는지, TC 파일을 고치지 않는지 본다.
-4. 다 맞으면 `SUPPORTED_RULES_REV` 를 올린다.
+3. 대화형 Skill `qa-trace-gap` 에 `TC 없음` SRS 하나를 주고, TC 위치나 찾아본 검색어를 알려 주는지, TC 파일을 고치지 않는지 본다.
+4. 다 맞으면 제품 설정의 `qa_intelligence.rules.supported_rev` 를 올린다.
 
 ### TEST-DAILY-010
 
@@ -9506,7 +9550,7 @@ REQ-MAIL-002, 003 은 자동 테스트가 없다. 사람이 확인하는 절차:
 
 ### TEST-SCHED-001
 
-REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/test_daily_qa_pipeline.py::test_scheduler_registers_weekday_job`, `test_scheduler_launches_detached_process_only_with_credentials`). 사람이 확인하는 절차: 앱을 띄운 뒤 `output/logs/app.log` 에 `scheduled_job_registered id=sync_vxvue_specification`, `id=sync_product_knowledge_vxvue`, `id=daily_qa_vxvue` 세 줄이 있는지 본다.
+REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/test_qa_intel_schedule.py::test_one_job_per_product_plus_catchup_watch`, `tests/test_daily_qa_pipeline.py::test_scheduler_launches_detached_process_only_with_credentials`). 사람이 확인하는 절차: 앱을 띄운 뒤 `output/logs/app.log` 에 `scheduled_job_registered id=sync_vxvue_specification`, `id=sync_product_knowledge_vxvue`, `id=qa_agent_vxvue`, `id=qa_agent_limit_catchup` 네 줄이 있는지 본다.
 
 ### TEST-WEB-001
 
@@ -9973,34 +10017,34 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-COST-003 | `app/modules/impact_analyzer/router.py`, `app/core/config.py`, `app/modules/impact_analyzer/templates/index.html`, `app/core/usage.py` | TEST-COST-003: `tests/test_secrets_file.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-COST-004 | `app/modules/cost_dashboard/templates/guide.html`, `app/modules/cost_dashboard/router.py`, `app/core/usage.py` | TEST-COST-004, `tests/test_cost_dashboard.py` | implemented |
 | REQ-COST-005 | `app/web/templates/hub.html`, `app/modules/manual_review/templates/module_base.html`, `app/modules/impact_analyzer/templates/module_base.html`, `app/modules/qa_agent/templates/module_base.html` | TEST-COST-002: `tests/test_cost_dashboard.py` | implemented |
-| REQ-DAILY-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `scripts/run_daily_qa.py`, `app/main.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-DAILY-012, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-002 | `app/modules/daily_qa/polarion.py`, `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-002: `tests/test_daily_qa_polarion.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-003 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/vxvue-spec-change-impact/SKILL.md`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-004 | `app/modules/daily_qa/skills/vxvue-issue-verification/SKILL.md`, `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/packages.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | implemented |
+| REQ-DAILY-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/holidays.py`, `app/modules/daily_qa/settings.py`, `scripts/run_daily_qa.py`, `app/main.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-DAILY-012, `tests/test_daily_qa_fixes.py`, TEST-QAINTEL-001: `tests/test_qa_intel_schedule.py` | implemented |
+| REQ-DAILY-002 | `app/modules/daily_qa/polarion.py`, `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/collector.py`, `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/product_adapter.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-002: `tests/test_daily_qa_polarion.py`, `tests/test_daily_qa_fixes.py`, TEST-QAINTEL-003: `tests/test_qa_intel_pipeline.py` | implemented |
+| REQ-DAILY-003 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | deprecated |
+| REQ-DAILY-004 | `app/modules/daily_qa/schema.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | deprecated |
 | REQ-DAILY-005 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
-| REQ-DAILY-006 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/vxvue-manual-completeness/SKILL.md` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py` | implemented |
-| REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/vxvue-qa-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
+| REQ-DAILY-006 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/qa-manual-completeness/SKILL.md` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | implemented |
+| REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
-| REQ-DAILY-009 | `app/modules/daily_qa/router.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/templates/daily_qa_index.html`, `app/modules/daily_qa/templates/daily_qa_run.html`, `app/modules/daily_qa/templates/daily_qa_queue.html`, `app/modules/daily_qa/templates/daily_qa_finding.html` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | implemented |
-| REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
+| REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
+| REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
 | REQ-DAILY-011 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
 | REQ-DAILY-012 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-014 | `app/modules/daily_qa/tc_index.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-015 | `app/modules/daily_qa/packages.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-016 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-017 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/router.py`, `app/modules/daily_qa/templates/daily_qa_questions.html`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | implemented |
+| REQ-DAILY-017 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | REQ-DAILY-018 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-019 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | implemented |
 | REQ-DAILY-020 | `app/modules/daily_qa/pipeline.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py` | implemented |
 | REQ-DAILY-021 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
-| REQ-DAILY-022 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py` | implemented |
-| REQ-DAILY-023 | `app/modules/daily_qa/workspace.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-024 | `app/modules/daily_qa/skills/vxvue-qa-rules/SKILL.md`, `app/modules/daily_qa/skills/vxvue-qa-rules/references/gates.md`, `app/modules/daily_qa/skills/vxvue-qa-rules/references/output-contract.md` | TEST-DAILY-009 | implemented |
-| REQ-DAILY-025 | `app/modules/daily_qa/skills/vxvue-trace-gap/SKILL.md` | TEST-DAILY-009 | implemented |
-| REQ-DAILY-026 | `app/modules/daily_qa/templates/daily_qa_guide.html`, `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | implemented |
+| REQ-DAILY-022 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | implemented |
+| REQ-DAILY-023 | `app/modules/daily_qa/workspace.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_daily_qa_fixes.py` | implemented |
+| REQ-DAILY-024 | `app/modules/daily_qa/skills/qa-common-rules/SKILL.md`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md`, `config/products/vxvue/skills/vxvue-qa-rules/SKILL.md`, `config/products/vxvue/skills/vxvue-qa-rules/references/gates.md` | TEST-DAILY-009, `tests/test_daily_qa_runner.py` | implemented |
+| REQ-DAILY-025 | `app/modules/daily_qa/skills/qa-trace-gap/SKILL.md` | TEST-DAILY-009 | implemented |
+| REQ-DAILY-026 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | NFR-SEC-001 | `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/workspace.py`, `app/core/security_filter.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| NFR-DAILY-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-011, TEST-DAILY-012, `tests/test_daily_qa_fixes.py` | implemented |
+| NFR-DAILY-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-011, TEST-DAILY-012, `tests/test_daily_qa_fixes.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | implemented |
 | NFR-DAILY-002 | `.gitignore`, `app/modules/daily_qa/workspace.py`, `app/core/retention.py`, `scripts/backup_data.py` | TEST-DAILY-010, `tests/test_backup.py` | implemented |
 | REQ-KNOW-001 | `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/knowledge.html`, `app/web/templates/knowledge_base.html` | TEST-KNOW-006, `tests/test_page_scripts.py`, `tests/test_knowledge_screens.py` | implemented |
 | REQ-KNOW-002 | `app/modules/knowledge/router.py`, `app/core/storage.py` | TEST-KNOW-006 | implemented |
@@ -10019,6 +10063,9 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-015 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-016 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/main.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006 | implemented |
+| REQ-KNOW-018 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
+| REQ-KNOW-019 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
+| REQ-KNOW-020 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
@@ -10217,17 +10264,14 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - 참고 문서를 올리지 않았을 때: A. 같은 제품 버전으로 등록된 문서만 다시 쓴다. 없으면 대조하지 않는다(REQ-MANUAL-002).
 - 실패한 분석의 토큰: 결과 요약 없이 토큰만 남겨 합산한다(REQ-COST-002, REQ-USAGE-001).
 
-### 13.4 VXvue 일일 QA 점검
+### 13.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)
 
-- (TBD) 새 이슈 조회식 `daily_qa.polarion.issue_query` 의 운영 값. 코드 기본값은 `type:issue`, 저장소 `config.yaml` 은 verified 상태 또는 연구소 검토 결과 `lab_fixed` 다. 실제 운영에서 쓰는 조회식은 확인 필요(기존 SPEC 13절 항목 유지).
-  - 제안(2026-09-30, 전면 개편 때 검토): 조회식을 넓게 두고 이슈 스냅샷을 날마다 비교해 신규 이슈와 업데이트된 이슈를 나눈다. 자세한 안은 [결정 대기 목록](OPEN_QUESTIONS.md) 5절에 있다.
+변경 감지·다섯 가지 분석·대시보드의 미확정 사항은 [기능 사양](specs/qa-intelligence.md) 13절에 있다. 아래는 5.4절 공통 부분의 것이다.
+
+- 결정됨 (2026-10-01): 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)는 기능 사양에 새 카드 REQ-QAINTEL-028 로 둔다(선택지 가). 아래는 결정 전 기록이다. 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)를 정하는 카드. 이 계산은 REQ-DAILY-003 의 일부였고, REQ-DAILY-003 은 deprecated 가 됐다. 코드는 계속 돌며 Finding 을 Skill 이름 `qa-spec-coverage-analysis`, 작업 ID `COV-removed`, 판정 `UPDATE_EXISTING` 으로 저장한다. REQ-QAINTEL-005 는 이 계산을 아직 REQ-DAILY-003 으로 가리킨다. 선택지: (가) 기능 사양에 새 카드를 더한다, (나) REQ-DAILY-005 에 넣는다. 추천: (가).
 - 결정됨 (2026-09-30): TC 옛 번호 → 새 번호 대응표는 만들지 않는다. 새 번호(`VP-…`)를 기준으로 삼는다. 사양–TC 연결 점검의 번호 맞추기(REQ-DAILY-005)는 지금 방식(VP 번호와 맞는 옛 번호)을 유지한다. VP 번호만으로 바꿀지는 확인 필요다(결정 대기 목록 5절의 수치).
 - 결정 필요: Claude 에게 보이는 자료 범위. 작업 폴더에 SRS·TC 전체를 둘지 후보만 둘지(보안 문서 3절의 결정 대기 항목). 선택지: (가) 전체(후보 밖 TC 찾기가 강하다, 나가는 양이 작업마다 다르다), (나) 후보만(양이 고정된다, 후보 밖 TC 를 못 찾는다). 추천: 첫 서버 실행의 `claude_logs/` 로 실제 읽은 양을 보고 정한다.
-- 결정 필요: 검토 결정 이력. 지금은 Finding 마다 마지막 결정 하나만 저장하고, 다시 결정하면 앞 결정이 사라진다. "누가 언제 남겼는지" 를 모든 결정에 대해 남길지 확인 필요.
-- 결정 필요: 매번 실패하는 이슈가 하나 있으면 이슈 기준 시각이 계속 멈춰 있고 처리한 이슈 기록이 커진다(REQ-DAILY-002). 몇 번 실패한 뒤 포기할지 정해야 한다.
 - 확인 필요: 초안 Excel 의 `버전` 열. 파이프라인이 버전 값을 넘기지 않아 늘 빈칸이다. 이슈의 목표 버전(`target_versions`)을 넣을지 사람이 채울지 정해야 한다.
-- 확인 필요: 이슈 수정확인 초안 Skill 은 이슈 유형을 필수라고 하지만 코드는 빈 이슈 유형을 거르지 않는다. 빈 값을 버릴지 정해야 한다.
-- 확인 필요: 한 이슈의 댓글 읽기가 실패하면 그 이슈는 댓글 없이 AI 에 넘어가고 어디에도 표시되지 않는다. 단계 비고에 건수를 남길지 정해야 한다.
 - 확인 필요: 작업 폴더 밖 읽기가 실제 Claude 에서 거부되는지(NFR-SEC-001). 자동 테스트는 넘기는 인자와 설정만 본다. 서버에서 시험용 파일로 한 번 확인하고 `claude_logs/` 의 `permission_denials` 를 본다. 같은 확인에서 작업 폴더 안 찾기·검색이 계속 되는지도 본다.
 
 **결정됨 (2026-09-30)**
@@ -10235,6 +10279,11 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - Claude 의 읽기·검색 도구 범위: (나) `Read(./**)`·`Glob(./**)`·`Grep(./**)` 로 작업 폴더 안으로 좁혔다(NFR-SEC-001, REQ-DAILY-023).
 - 오래된 파일 정리: 실행 폴더 365일, 작업 폴더 `runs/` 30일이 지나면 백업 작업이 지운다. 스냅샷은 지우지 않는다(NFR-DAILY-002, REQ-OPS-002).
 - 시험 실행(`--dry-run`)의 저장 범위: (나) 스냅샷·Finding 을 저장하지 않는다(REQ-DAILY-013).
+- 이슈 조회식: 조회식을 넓게 두고(VXvue 제품 설정 `alm.queries.issue` = `type:issue`) 이슈 전체를 날마다 스냅샷으로 비교해 신규·변경 이슈를 나눈다(REQ-DAILY-002, REQ-QAINTEL-004). `config.yaml` 의 `daily_qa.polarion.issue_query` 는 제품 설정에 `alm` 절이 없을 때만 쓴다.
+- 매번 실패하는 이슈: 이슈 기준 시각을 쓰지 않으므로 기준이 멈추지 않는다. 분석이 `daily_qa.intelligence.event_max_attempts`(기본 3)번 실패한 이벤트는 `abandoned` 로 바꾸고 더 시도하지 않는다(REQ-QAINTEL-006).
+- 한 이슈의 댓글 읽기 실패: 이슈 수집 단계 비고와 건수에 댓글 읽기 실패 수를 남기고, 그 이슈는 다음 실행에서 다시 읽는다(REQ-QAINTEL-004).
+- 검토 결정 이력: 1차 개편에서 화면의 결정 입력을 없앴으므로(REQ-DAILY-009 deprecated) 지금은 정할 것이 없다. 결정 입력을 다시 만들 때 함께 정한다.
+- 이슈 수정확인 초안 Skill 의 빈 이슈 유형: 그 Skill 이 없어졌으므로(REQ-DAILY-004 deprecated) 정할 것이 없다.
 
 ### 13.5 공통 기반: 설정·저장·AI 호출·Knowledge·배포·동기화
 

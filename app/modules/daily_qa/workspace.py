@@ -1,10 +1,11 @@
-"""Claude 가 읽고 쓰는 격리 작업 폴더 (SPEC NFR-SEC-001).
+"""Claude 가 읽고 쓰는 격리 작업 폴더 (SPEC NFR-SEC-001, REQ-QAINTEL-023).
 
-구조 (`daily_qa.workspace_dir`):
+구조 (`daily_qa.workspace_dir/<제품 slug>/`, 제품마다 따로 둔다 — 규칙 사본이 제품마다 다르다):
 
     CLAUDE.md                 무인 실행 규칙 (이 모듈이 매번 새로 쓴다)
     .claude/settings.json     도구 허용 범위 (이 모듈이 매번 새로 쓴다)
-    .claude/skills/<skill>/   저장소의 app/modules/daily_qa/skills 를 매번 그대로 복사
+    .claude/skills/<skill>/   공통 Skill(app/modules/daily_qa/skills)과 제품 규칙 Skill
+                              (config/products/<slug>/skills)을 매번 그대로 복사
     rules/qa-guide.md         수집된 QA 규칙 사본 (저장소에 커밋하지 않는 사내 자료)
     rules/instruction-prompt.txt
     runs/<실행ID>/in/         작업 입력 (마스킹 후)
@@ -51,9 +52,10 @@ DENIED_TOOLS = (
     "Agent",
 )
 
-CLAUDE_MD = """# 무인 실행 규칙 (VXvue 일일 QA 점검)
+CLAUDE_MD_MARKER = "# 무인 실행 규칙"
+CLAUDE_MD = """# 무인 실행 규칙 ({product} QA Agent 점검)
 
-이 폴더는 서버의 일일 점검이 만든 격리 작업 폴더다. 사람이 대화로 답할 수 없다.
+이 폴더는 서버의 QA Agent 점검이 만든 격리 작업 폴더다. 사람이 대화로 답할 수 없다.
 
 - 요청받은 Skill 하나만 수행하고, 결과는 지정된 `runs/<실행ID>/out/<작업ID>.json` 한 파일에만 쓴다.
 - 입력 파일, `context/`, `rules/` 밖의 자료를 찾지 않는다. 인터넷·명령 실행은 쓰지 않는다.
@@ -71,6 +73,7 @@ class WorkspaceError(RuntimeError):
 class RunWorkspace:
     root: Path
     run_id: str
+    product_skill: str = ""
 
     @property
     def run_dir(self) -> Path:
@@ -126,10 +129,23 @@ def _write_jsonl(path: Path, items: list[dict]) -> dict:
     return {"masked": total}
 
 
-def prepare(workspace_dir: Path, repo_root: Path, run_id: str, guide: Path | None, prompt: Path | None) -> RunWorkspace:
+def _remove_legacy_root(workspace_dir: Path) -> None:
+    """개편 전에는 작업 폴더 뿌리에 CLAUDE.md·.claude 를 썼다. 제품 폴더로 옮긴 뒤 뿌리에 남으면
+    제품 폴더의 상위 CLAUDE.md 로 읽혀 실행이 거부되므로, 이 모듈이 쓴 것일 때만 지운다."""
+    legacy = workspace_dir.expanduser() / "CLAUDE.md"
+    if legacy.is_file() and legacy.read_text(encoding="utf-8", errors="replace").startswith(CLAUDE_MD_MARKER):
+        legacy.unlink()
+        shutil.rmtree(workspace_dir.expanduser() / ".claude", ignore_errors=True)
+
+
+def prepare(workspace_dir: Path, repo_root: Path, run_id: str, guide: Path | None, prompt: Path | None,
+            product: str = "", product_skills_dir: Path | None = None, product_skill: str = "") -> RunWorkspace:
+    """`workspace_dir` 는 제품 작업 폴더(`<workspace_dir>/<slug>`)다."""
+    if workspace_dir.expanduser().parent.is_dir():
+        _remove_legacy_root(workspace_dir.expanduser().parent)
     root = validate_location(workspace_dir, repo_root)
     root.mkdir(parents=True, exist_ok=True)
-    (root / "CLAUDE.md").write_text(CLAUDE_MD, encoding="utf-8")
+    (root / "CLAUDE.md").write_text(CLAUDE_MD.format(product=product or "제품"), encoding="utf-8")
     settings = {
         "permissions": {"allow": list(ALLOWED_TOOLS), "deny": list(DENIED_TOOLS), "defaultMode": "dontAsk"},
         "env": {
@@ -146,6 +162,9 @@ def prepare(workspace_dir: Path, repo_root: Path, run_id: str, guide: Path | Non
     if skills_target.exists():
         shutil.rmtree(skills_target)
     shutil.copytree(SKILLS_SOURCE, skills_target)
+    if product_skills_dir and product_skills_dir.is_dir():
+        # 제품 규칙 Skill (예: vxvue-qa-rules). 공통 Skill 과 이름이 겹치면 제품 것이 이긴다.
+        shutil.copytree(product_skills_dir, skills_target, dirs_exist_ok=True)
     rules_dir = root / "rules"
     rules_dir.mkdir(exist_ok=True)
     for source, name in ((guide, GUIDE_NAME), (prompt, PROMPT_NAME)):
@@ -155,7 +174,7 @@ def prepare(workspace_dir: Path, repo_root: Path, run_id: str, guide: Path | Non
             target.write_text(text, encoding="utf-8")
         elif target.exists():
             target.unlink()
-    run = RunWorkspace(root=root, run_id=run_id)
+    run = RunWorkspace(root=root, run_id=run_id, product_skill=product_skill)
     for directory in (run.in_dir, run.out_dir, run.context_dir):
         directory.mkdir(parents=True, exist_ok=True)
     return run

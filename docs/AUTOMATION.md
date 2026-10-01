@@ -15,8 +15,8 @@ scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundSche
 지식 폴더 ──(scripts/sync_product_knowledge.py       ├─ SQLite: documents / analyses / sync_log
             --upload-to, 작업 스케줄러)──▶          │   /knowledge/product-knowledge/*
                                                      ├─ Gemini API (분석 1건당 호출 1회, 캐시)
-                                                     └─ 일일 QA 점검(평일 07:30, 분리 프로세스)
-                                                          → Polarion(GET) · Claude CLI
+                                                     └─ QA Agent 점검(제품마다 평일 07:30, 공휴일 제외, 분리 프로세스)
+                                                          → Polarion(GET) · Claude CLI · /qa-agent 대시보드
 [사용자 브라우저]
   분석 화면 ──POST /analyses──▶ BackgroundTasks ──▶ RegressionAnalyzer._execute (8단계)
        ◀──SSE (/analyses/{id}/stream)── 실제 단계·경과시간·실패 원인
@@ -137,7 +137,7 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 서버는 담당자 PC 의 지식 폴더(`projects/vxvue/VXvue 지식파일`)를 볼 수 없다. 그래서 PC 가 폴더를
 수집한 뒤 **서버가 갖고 있지 않은 파일만**(sha256 비교) 올리고, 서버가 등록까지 마친다
 (`app/core/knowledge_push.py` → `app/core/knowledge_upload.py`). TC Excel, 매뉴얼, QA 규칙,
-지침 프롬프트가 이 경로로 서버에 간다. 일일 QA 점검(`docs/modules/daily-qa.md`)도 이 사본을 쓴다.
+지침 프롬프트가 이 경로로 서버에 간다. QA Agent 점검(`docs/modules/daily-qa.md`)도 이 사본을 쓴다.
 
 2026-09-28 에 작업 스케줄러에 등록했다. 등록 직후 두 번 실행해 결과 0, 서버의 QA 규칙이
 Rev1.12 → Rev1.17 로 바뀐 것을 확인했다.
@@ -163,11 +163,11 @@ output 과 지식 폴더에 모두 배포하기 때문이다(2026-09-28 에 6건
 ### 7.2 하루 실행 순서 (평일)
 
 ```flow
-07:30 서버 일일 QA 점검(Polarion 직접 조회 + 전날까지 올라온 지식 사본) -> 요약 메일
+07:30 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
 09:00 PC ALM 통합 수집(SRS·이슈, 지식 폴더에 사양서 배포) -> 09:40 PC 사양서 동기화 -> 10:00 PC 지식 폴더 업로드
 ```
 
-서버의 일일 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. PC 쪽 작업이 멈추면 서버의
+서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않고, Claude 세션 한도에 걸리면 초기화 5분 뒤 한 번 다시 돈다(10분마다 확인하는 `qa_agent_limit_catchup`). PC 쪽 작업이 멈추면 서버의
 TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화면에 보인다.
 
 ## 8. 수동 동기화 방법

@@ -368,7 +368,29 @@ class Storage(DailyQaStorageMixin):
                 total += int(json.loads(row["result_json"]).get("token_usage", {}).get("total_tokens", 0))
             except (TypeError, ValueError, json.JSONDecodeError):
                 continue
+        # QA Agent 점검(예약·수동)의 Claude 사용량도 같은 하루 합계에 넣는다 (REQ-QAINTEL-026).
+        total += sum(item["tokens"] for item in self._qa_agent_run_usage(since_iso))
         return total
+
+    def _qa_agent_run_usage(self, since_iso: str) -> list[dict]:
+        """QA Agent 점검 실행별 Claude 사용량 (`daily_qa_runs.summary_json` 의 `token_usage`)."""
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT id, status, summary_json, started_at FROM daily_qa_runs WHERE started_at>=? AND finished_at IS NOT NULL",
+                (since_iso,),
+            ).fetchall()
+        items = []
+        for row in rows:
+            try:
+                summary = json.loads(row["summary_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                continue
+            usage = summary.get("token_usage") or {}
+            tokens = int(usage.get("total_tokens", 0) or 0)
+            if tokens:
+                items.append({"id": row["id"], "status": row["status"], "tokens": tokens, "created_at": row["started_at"],
+                              "product": summary.get("product"), "calls": int(summary.get("claude_calls", 0) or 0)})
+        return items
 
     @staticmethod
     def _cache_calls_from_audit(ai_audit: dict) -> tuple[int, int] | None:
@@ -446,6 +468,21 @@ class Storage(DailyQaStorageMixin):
                 "tokens": tokens, "cache_hits": cache_calls[0] if cache_calls else None,
                 "cache_calls": cache_calls[1] if cache_calls else None,
             })
+        for item in self._qa_agent_run_usage(cutoff):
+            # QA Agent 점검은 실행 한 번이 분석 한 건이다. Claude CLI 는 응답 캐시를 쓰지 않아 캐시 통계에서 뺀다.
+            day = kst_date(item["created_at"])
+            day_bucket = daily.setdefault(day, {"date": day, "tokens": 0, "count": 0})
+            day_bucket["tokens"] += item["tokens"]
+            day_bucket["count"] += 1
+            module_bucket = modules.setdefault("qa_agent_run", {"tokens": 0, "count": 0})
+            module_bucket["tokens"] += item["tokens"]
+            module_bucket["count"] += 1
+            if item["status"] == "FAILED":   # 일부 실패(PARTIAL)는 분석 일부가 끝난 실행이라 실패로 세지 않는다
+                module_bucket["failed"] = module_bucket.get("failed", 0) + 1
+            recent.append({"id": item["id"], "status": item["status"], "module": "qa_agent_run", "product": item["product"],
+                           "created_at": item["created_at"], "created_at_kst": kst_text(item["created_at"]),
+                           "tokens": item["tokens"], "cache_hits": None, "cache_calls": None})
+        recent.sort(key=lambda item: item["created_at"])
         return {
             "days": days,
             "daily": sorted(daily.values(), key=lambda item: item["date"]),

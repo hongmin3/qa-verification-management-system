@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core.claude_cli import PASSED_ENV, QUIET_ENV, build_env  # noqa: F401  (세 화면 기능의 Claude 호출과 같은 환경 규칙)
+from app.modules.daily_qa import claude_limits
 from app.modules.daily_qa.packages import Task
 from app.modules.daily_qa.workspace import ALLOWED_TOOLS, DENIED_TOOLS, RunWorkspace
 
@@ -36,16 +37,20 @@ class RunnerOutcome:
     seconds: float
     error: str = ""
     meta: dict = field(default_factory=dict)
+    #: 사용량 한도·인증 실패로 끝났으면 그 정보 (REQ-QAINTEL-025). 그 실행의 남은 AI 작업을 멈춘다.
+    limit: claude_limits.LimitInfo | None = None
 
 
 def build_prompt(task: Task, run: RunWorkspace) -> str:
+    product_rules = f"제품 규칙 Skill `{run.product_skill}` 을 먼저 읽는다.\n" if run.product_skill else ""
     return (
         f"/{task.skill} {run.rel(run.in_dir / f'{task.task_id}.json')}\n\n"
         f"실행 ID: {run.run_id}\n"
         f"작업 ID: {task.task_id}\n"
         f"결과 파일: {run.rel(run.out_dir / f'{task.task_id}.json')}\n"
         f"전체 색인: {run.rel(run.context_dir)}/\n"
-        "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 vxvue-qa-rules 의 references/output-contract.md 를 따른다."
+        f"{product_rules}"
+        "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
     )
 
 
@@ -152,7 +157,10 @@ class ClaudeRunner:
         except subprocess.TimeoutExpired:
             return RunnerOutcome(False, -1, time.monotonic() - started, f"제한 시간 {self.timeout_seconds}초 초과")
         except FileNotFoundError:
-            return RunnerOutcome(False, -1, 0.0, f"Claude CLI 를 찾을 수 없습니다: {self.claude_command}")
+            message = f"Claude CLI 를 찾을 수 없습니다: {self.claude_command}"
+            limit = claude_limits.LimitInfo(claude_limits.KIND_CLI_MISSING, "", message,
+                                            token_fingerprint=claude_limits.token_fingerprint(self.token))
+            return RunnerOutcome(False, -1, 0.0, message, limit=limit)
         meta, calls = parse_output(completed.stdout or "")
         log = {**meta, "tool_call_log": calls}
         (log_dir / f"{task.task_id}.claude.json").write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -161,8 +169,9 @@ class ClaudeRunner:
             # stderr 에 토큰이 찍히는 일은 없지만, 혹시 몰라 토큰 문자열은 지운다.
             tail = (completed.stderr or "")[-600:].replace(self.token, "***") if self.token else (completed.stderr or "")[-600:]
             error = f"exit={completed.returncode} {meta.get('error_text', '')} {tail}".strip()
-        return RunnerOutcome(completed.returncode == 0 and not meta.get("is_error"), completed.returncode,
-                             time.monotonic() - started, error, meta)
+        ok = completed.returncode == 0 and not meta.get("is_error")
+        limit = None if ok else claude_limits.classify(error, token=self.token, run_id=run.run_id)
+        return RunnerOutcome(ok, completed.returncode, time.monotonic() - started, error, meta, limit)
 
 
 class FakeRunner:
@@ -176,5 +185,6 @@ class FakeRunner:
         self.calls.append(task.task_id)
         if self.producer is None:
             return RunnerOutcome(False, 0, 0.0, "dry-run: AI 를 부르지 않았습니다")
-        self.producer(task, run)
-        return RunnerOutcome(True, 0, 0.0)
+        produced = self.producer(task, run)
+        # 테스트가 실패(예: 사용량 한도)를 흉내 내려면 producer 가 RunnerOutcome 을 돌려준다.
+        return produced if isinstance(produced, RunnerOutcome) else RunnerOutcome(True, 0, 0.0)

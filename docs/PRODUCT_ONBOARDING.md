@@ -253,6 +253,157 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 | 새로운 자산 종류 (예: Release Note를 별도 종류로) | `KIND_*` 상수 + `DEFAULT_CLASSIFIERS` |
 | 새로운 문서 형식 (예: `.pptx`) | `DEFAULT_EXTENSIONS` + `app/parsers/` |
 | 사양서 출처가 다른 크롤러 | `specification.source` 값 + 해당 출처 모듈 (`vxvue_spec_sync.py` 패턴) |
+| QA Agent 점검: 제품이 Polarion 이 아닌 다른 ALM 을 씀 | `app/modules/daily_qa/polarion.py` 와 같은 읽기 전용 클라이언트를 새로 두고 `collector.py` 가 고르게 한다 (§9) |
+| QA Agent 점검: 새 연구소 결과 종류 (공통 값 8개에 없는 뜻) | `product_adapter.py` 의 `RD_*` 와 `change_events.route_issue` 분석 표 (사양 REQ-QAINTEL-010 먼저) |
+| QA Agent 점검: 새 Regression 축 | `app/modules/qa_agent/schemas.py` 의 축 코드 (제품 설정은 있는 축을 고르기만 한다) |
+| QA Agent 점검: 초안 Excel 이 표 한 장이 아닌 형식 | `app/modules/daily_qa/checklist_xlsx.py` |
 
 리비전 정규식과 분류 규약은 **제품 무관 공통 규칙**으로 유지한다. 제품 이름으로 분기하는
 코드를 넣지 않는다 — 그러면 제품이 늘 때마다 코드가 늘어난다.
+
+---
+
+## 9. QA Agent 점검(QA Intelligence Agent)에 붙이기
+
+매일 아침 변경을 탐지해 분석하는 `/qa-agent` 대시보드에 제품을 올리는 절차다. 엔진은 제품 공통이고
+제품마다 다른 것은 아래 설정과 제품 규칙 Skill 뿐이다(NFR-QAINTEL-002). VXvue 설정
+(`config/products/vxvue.yaml` 끝의 `alm:`·`qa_intelligence:`)을 본보기로 쓴다.
+
+### 9.1 Polarion 연결
+
+서버 `secrets.txt` 의 `POLARION_HOST`·`POLARION_TOKEN` 은 제품 공통이다. 토큰 계정이 새 제품 프로젝트를
+**읽을 수 있는지**만 확인한다. 쓰기 권한은 주지 않는다(클라이언트에 GET 만 있다).
+
+```yaml
+alm:
+  project_id: "AcmeViewer"          # Polarion 프로젝트 ID
+```
+
+### 9.2 SRS·Issue 조회식
+
+```yaml
+alm:
+  queries:
+    srs: "type:srs"                 # SRS 전체
+    issue: "type:issue"             # 이슈 전체. 좁히지 않는다 — 스냅샷 비교가 새 이슈·바뀐 이슈를 가린다
+```
+
+조회식을 좁히면 조건에서 빠진 이슈가 "없어진 이슈"로 기록된다. 이슈 수가 어제의 절반 아래로 줄면
+(`daily_qa.intelligence.issue_drop_ratio`) 수집 실패로 보고 기준을 옮기지 않는다.
+
+### 9.3 필드 매핑
+
+공통 모델 이름 → 그 제품의 Polarion 필드 이름이다. 적지 않은 공통 필드(`id`, `title`, `status`,
+`updated`, `description`, `severity`, `created`)는 Polarion 표준 이름을 쓴다. 목록으로 적으면 앞에서부터
+값이 있는 첫 필드를 쓴다.
+
+```yaml
+alm:
+  fields:
+    srs:
+      legacy_id: oldId                       # 옛 SRS 번호. TC 가 이 번호를 쓰면 적는다
+      description: [descriptionKR, description]
+      is_category: isCategory
+    issue:
+      rd_result: rndReviewResult             # 연구소 검토 결과
+      reproduction_step: reproductionStep
+      occurrence_cause: occurrenceCause
+      action_details: actionDetails
+  relations:                                 # 공통 관계 이름 → Polarion relationships 이름
+    occurred_versions: occurredVersion
+    target_versions: targetVersion
+    linked_items: linkedWorkItems
+    comments: comments
+```
+
+### 9.4 연구소 결과(R&D) 매핑
+
+그 제품의 연구소 결과 원본 값 → 공통 값이다. 공통 값은 `FIXED`(수정 완료), `SPEC`(사양대로),
+`NOT_BUG`(결함 아님), `DUPLICATE`, `PENDING`, `NO_ACTION` 이다. 값이 비면 `UNSET`, 표에 없는 값은
+`OTHER` 가 되어 분석 대상에서 빠진다.
+
+```yaml
+alm:
+  rd_result_mapping:
+    fixed: FIXED
+    as_designed: SPEC
+    not_a_bug: NOT_BUG
+```
+
+> **주의** `FIXED` 로 매핑한 값만 수정 완료 이슈 분석과 TC 초안이 된다. `SPEC`·`NOT_BUG` 는 Spec 판정 이슈 분석이 된다.
+
+### 9.5 Knowledge
+
+TC·매뉴얼·(ALM 을 쓰지 않으면) 사양서는 §1~§6 의 지식 폴더 수집으로 서버에 올린다. 대시보드 맨 위
+"지식 문서 업로드 현황"에 이 문서들의 최신본과 업로드 날짜가 보인다. 등록된 사양서 문서 조각은
+분석 후보로도 쓴다(`daily_qa.intelligence.use_knowledge_documents`).
+
+### 9.6 QA Rules
+
+QA 규칙 `.md` 는 §5 의 규칙 문서 규약으로 지식 폴더에 둔다. 규칙이 없거나 판이 다르면 AI 단계가
+돌지 않는다.
+
+```yaml
+qa_intelligence:
+  rules:
+    supported_rev: "1.0"            # 제품 규칙 Skill 이 기준으로 삼는 판. 비우면 판을 검사하지 않는다
+    product_skill: "acme-qa-rules"
+```
+
+### 9.7 제품 규칙 Skill
+
+`config/products/<slug>/skills/<product_skill>/SKILL.md` 를 만든다. 공통 Skill(`qa-common-rules` 등)이
+모든 제품에 쓰는 결과 형식·금지 조치를 정하고, 제품 Skill 은 그 제품 규칙의 절 번호·검증 관문·용어만 담는다.
+본보기는 `config/products/vxvue/skills/vxvue-qa-rules/` 다. QA 규칙 원문은 저장소에 넣지 않는다.
+
+```yaml
+qa_intelligence:
+  regression_axes: [DIRECT, STATE, DATA, PERSISTENCE, INTEGRATION, PERMISSION, PRIOR_ISSUE]   # 비우면 공통 7축
+  comment_noise_patterns: []        # 진행 알림 댓글 정규식. 공통 기본 규칙에 더한다
+```
+
+### 9.8 TC·Checklist 형식
+
+수정 완료 이슈·사양 변경의 초안 Excel 은 제품의 영향성평가 Checklist 형식을 따른다.
+
+```yaml
+qa_intelligence:
+  checklist:
+    template_name_contains: "영향성평가"   # 지식 사본 TC 가운데 이 글자가 파일 이름에 있으면 본보기
+    category: "Changes Checklist"
+    headers: ["Category", "TC ID", "버전", "SRS No", "변경사항", "Title", "Precondition", "Test Step", "Expected Result"]
+```
+
+### 9.9 예약 켜기
+
+`config.yaml` 의 `daily_qa.products` 에 제품 이름을 더하고 앱을 재시작한다. 제품마다 예약
+`qa_agent_<slug>`(평일 07:30, 공휴일 제외)가 생기고 대시보드에 제품 선택이 나타난다.
+
+```yaml
+daily_qa:
+  products: ["VXvue", "Acme Viewer"]
+```
+
+제품만 끄려면 그 제품 설정의 `qa_intelligence.enabled: false` 를 쓴다.
+
+### 9.10 첫 실행(Baseline)
+
+```bash
+.venv/bin/python scripts/run_daily_qa.py --check --product "Acme Viewer"
+.venv/bin/python scripts/run_daily_qa.py --dry-run --no-email --product "Acme Viewer"
+.venv/bin/python scripts/run_daily_qa.py --no-email --product "Acme Viewer"
+```
+
+첫 정식 실행은 기준 스냅샷만 저장한다(`기준 스냅샷 생성`, Claude 0회). 스냅샷은
+`data/daily_qa/snapshots/<slug>/` 에, 잠금은 `data/daily_qa/<slug>/run.lock` 에 따로 생겨 다른 제품과 섞이지 않는다.
+
+### 9.11 동작 확인
+
+- `/qa-agent?product=Acme Viewer` — 마지막 실행 `기준 스냅샷 생성`, 다음 자동 실행 시각
+- `app.log` 의 `scheduled_job_registered id=qa_agent_acme-viewer`
+- 다음 평일 실행 뒤 대시보드의 오늘 변경 요약과 `/qa-agent/runs/<실행 ID>` 의 이벤트 목록
+- 설정만으로 붙는지는 `tests/test_qa_intel_products.py` 가 가짜 제품(FakeProduct)으로 확인한다
+
+### 9.12 공통 코드를 고쳐야 하는 경우
+
+§8 표의 "QA Agent 점검" 줄이다. 제품 이름으로 갈라지는 코드를 공통 엔진에 넣지 않는다.

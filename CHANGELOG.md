@@ -1,6 +1,54 @@
 # 변경 이력
 
+## 2026-10-01
+
+### QA Intelligence Agent 코드 리뷰 반영과 사용자 결정
+
+- REQ-QAINTEL-027: 종료일이 지난 날인 기간 실행이 최신 이슈의 대기·실패 이벤트를 포기(`abandoned`)로 바꾸던 것을 고쳤다. 이 실행은 이제 재시도 대기열을 다루지 않고 자기가 저장한 이벤트만 분석한다.
+- REQ-QAINTEL-027: 기간 실행이 이틀에 걸친 변경(제목과 본문, 연달아 달린 댓글, 신규 뒤 상태 변경)을 다시 만들던 것을 고쳤다. 필드마다 그 대상의 가장 최근 값과, 댓글은 번호로 비교한다.
+- REQ-QAINTEL-027: 종료일만 주면 시작일은 종료일 전날이다. 지난 날 기간의 사양–TC 연결 점검은 종료일 뒤 스냅샷을 쓰지 않는다.
+- REQ-QAINTEL-006: 한 이벤트가 분석 두 가지를 부를 때 분석마다 따로 끝난다. 실패한 분석만 다시 돌고, 한 실행에서 둘 다 실패해도 횟수는 1이다.
+- REQ-QAINTEL-006: 같은 전이가 다른 날 또 일어나면(수정됨 → 다시 열림 → 다시 수정됨) 새 이벤트로 본다. 같은 날 다시 돌리면 겹치지 않는다.
+- REQ-QAINTEL-007, REQ-DAILY-022: 수집을 건너뛰거나 실패한 실행은 `변경사항 없음` 이 아니라 `일부 실패` 다. 이미 저장돼 있던 이벤트는 새 이벤트로 세지 않는다. 매뉴얼 점검은 `BASELINE` 실행에서도 미룬다.
+- REQ-QAINTEL-005: 제품 `comment_noise_patterns` 는 기본 잡음 규칙에 더한다.
+- REQ-QAINTEL-025: 작업 결과 속 `HTTP 401` 같은 말을 인증 실패로 보지 않는다. 다른 실행 중이라 catch-up 을 못 띄우면 기록을 남겨 10분 뒤 다시 본다.
+- REQ-QAINTEL-028: 삭제된 SRS 를 가리키는 TC 찾기(AI 없음)를 기능 사양의 새 카드로 옮겼다(SPEC 13.4 결정).
+- REQ-QAINTEL-013: 댓글 읽기에 실패하거나 지난 날 기간 실행이면 수정 완료·Spec 판정 분석에 스냅샷의 댓글을 넣는다.
+- REQ-DAILY-009: 다음 실행에 넣는 답변을 제품별로 고르고, 이름을 바꾼 Skill 의 옛 답변도 넣는다.
+- REQ-QAINTEL-026: 실행이 도중에 멈춰도 그때까지 쓴 토큰을 실행 기록에 남긴다. 비용 대시보드는 `일부 실패` 실행을 실패로 세지 않는다.
+- NFR-DAILY-001: 매뉴얼 누락 점검이 분석이 쓰고 남은 작업 상한만 쓴다.
+- REQ-QAINTEL-020: 실행 파일 내려받기 주소의 실행 번호 자리로 실행 폴더 밖 파일을 읽을 수 있던 것을 막았다.
+- REQ-KNOW-011: 지식 폴더의 파일 하나를 읽지 못하면 스캔 전체가 멈추던 것을 고쳤다. 그 파일만 오류로 남는다.
+- REQ-KNOW-019, REQ-KNOW-017: 상태 이름 `확인 필요` 를 `주의` 로, `중복 확인 필요` 를 `중복 확인 요청` 으로 바꿨다. `run_daily_qa.py --check` 출력도 `[주의]` 다.
+- REQ-SCHED-002, REQ-USAGE-001, REQ-WEB-001: 예약 작업 표·하루 토큰 합계·허브 카드 표를 개편 뒤 구조에 맞췄다.
+- 검증: 전체 pytest 를 게이트로 등록했다(`botyard.json`).
+
 ## 2026-09-30
+
+### QA Agent · 일일 QA 점검 → QA Intelligence Agent 전면 개편
+
+- REQ-QAINTEL-001: 제품마다 평일 07:30 예약(`qa_agent_<slug>`)을 둔다. 공휴일(`config/holidays/kr.yaml`, 2025~2027)에는 띄우지 않는다.
+- REQ-QAINTEL-002, REQ-QAINTEL-023, NFR-QAINTEL-002: 제품 차이를 제품 설정(`alm:`·`qa_intelligence:`)과 제품 규칙 Skill 에만 둔다. 스냅샷·상태 값·잠금·작업 폴더·실행 ID 를 제품별로 나눈다. 개편 전 기록은 VXvue 것으로 읽는다.
+- REQ-QAINTEL-003, REQ-QAINTEL-004: SRS 와 이슈를 전부 읽어 제품별 스냅샷으로 저장한다. 이슈 조회식은 `type:issue` 다. 댓글은 바뀐 이슈만 읽고, 읽지 못하거나 상한으로 미룬 이슈는 전날 댓글을 옮겨 적은 뒤 다음 실행에서 다시 읽는다.
+- REQ-QAINTEL-005, REQ-QAINTEL-010: 변경 이벤트 11종을 `qa_change_events` 에 저장하고 이벤트마다 분석 종류를 정한다. 상태만 바뀐 이슈는 AI 없이 기록만 남긴다.
+- REQ-QAINTEL-006, REQ-QAINTEL-009: 분석 실패 이벤트는 다음 실행이 다시 분석하고 3회(`event_max_attempts`)면 포기한다. 수집·스냅샷·이벤트 저장이 실패하면 기준을 옮기지 않는다.
+- REQ-QAINTEL-007, NFR-QAINTEL-001: 분석할 변경이 없으면 Claude 를 부르지 않고 실행 결과를 `변경사항 없음`(`NO_CHANGE`)으로 남긴다. 첫 실행은 `기준 스냅샷 생성`(`BASELINE`)이다.
+- REQ-QAINTEL-011 ~ REQ-QAINTEL-016: 신규 이슈·수정 완료 이슈·Spec 판정·새 댓글·사양 변경 Coverage 분석 5종을 공통 Skill(`qa-*`)로 돌린다. 후보는 Exact → BM25 로 코드가 먼저 고른다.
+- REQ-QAINTEL-017: 결과의 번호·근거가 실제 자료에 없으면 코드가 뺀다.
+- REQ-QAINTEL-018: 수정 완료 이슈와 사양 변경 Coverage 결과를 제품 Checklist 형식 초안 Excel 에 넣는다.
+- REQ-QAINTEL-019 ~ REQ-QAINTEL-022, REQ-QAINTEL-024: `/qa-agent` 를 대시보드로 바꿨다. Finding·실행 상세, 기간 조회를 더했다. 승인·거절·질문 답변 화면은 없앴고 옛 `/daily-qa/*` 주소는 새 주소로 넘긴다. 단일 이슈 분석은 `/qa-agent/issue-analysis` 로 옮겼다.
+- REQ-QAINTEL-022: 지식 문서 목록에서 QA 규칙·지침 프롬프트를 뺐다(수집은 그대로 한다). 판(리비전)은 보이지 않고 같은 문서는 최신본 하나만 보인다. 종류 이름은 한 줄로 보인다.
+- REQ-QAINTEL-025: Claude 세션·주간 한도와 인증 실패를 읽어 초기화 시각을 화면·[지금 실행] 응답·메일에 알린다. 세션 한도는 초기화 5분 뒤 한 번 다시 돈다(`qa_agent_limit_catchup`).
+- REQ-QAINTEL-026: QA Agent 점검의 토큰 사용량을 비용 대시보드(`qa_agent_run`)와 하루 사용량에 더한다.
+- REQ-QAINTEL-027: [지금 실행]과 CLI(`--since`, `--until`)에서 기간을 골라 실행한다. 이미 분석한 끝 상태는 다시 분석하지 않는다.
+- REQ-QAINTEL-020: 실행 상세의 단계 상태 이름을 한 줄로 보인다.
+- REQ-QAAGENT-014: 사용법 화면에 대시보드·지금 실행·기간 조회·한도 안내를 더했다.
+- 버그 수정(REQ-QAINTEL-004): 댓글 읽기가 실패하거나 상한으로 미룬 이슈의 새 댓글을 다음 실행이 찾지 못하던 것을 고쳤다.
+- 버그 수정(REQ-QAINTEL-027): SRS 본문 변경은 더한·뺀 문장이 비교 기준에 따라 달라, 기간 실행이 이미 분석한 변경을 다시 분석하던 것을 고쳤다.
+- 버그 수정(REQ-QAINTEL-011): 읽지 못한 사양서 이름이 분석 단계 비고에 남지 않던 것을 고쳤다.
+- 버그 수정(REQ-QAINTEL-019): `/qa-agent` 가 기간 입력값을 넘기지 않아 500 오류가 나던 것을 고쳤다.
+- 화면: 모든 페이지 본문 최대 폭을 1100px 에서 1600px 로 넓혔다(넓은 화면 1800px). Regression 보고서도 1600px 다.
+- 문서: `docs/modules/daily-qa.md`, `docs/modules/qa-agent.md`, `docs/PRODUCT_ONBOARDING.md` 9절, `docs/QA_AGENT_ARCHITECTURE.md` 17절, `docs/AUTOMATION.md`, `docs/SECURITY_AI_AGENT.md`, `README.md`, `config.yaml` 주석을 새 구조로 고쳤다.
 
 ### 옛 SRS 번호 대응표를 만들지 않기로 결정
 

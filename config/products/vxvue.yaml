@@ -54,3 +54,53 @@ sync:
   # 같은 시각(평일 09:40)이다. 사양서가 바뀌지 않았으면 다시 올리지 않는다.
   day_of_week: "mon-fri"
   schedule_time: "09:40"
+
+# ALM(Polarion) 프로젝트와 필드 대응 (SPEC REQ-QAINTEL-002). QA Intelligence 엔진은 여기 적힌 원본
+# 필드 이름만 읽고, 공통 모델(id·title·rd_result·occurrence_cause…)로 바꾼 뒤에는 원본 이름을 모른다.
+# 적지 않은 공통 필드는 Polarion 표준 필드 이름(id, title, status, severity, description, created, updated)을 쓴다.
+alm:
+  project_id: "VXvue"
+  queries:
+    srs: "type:srs"
+    # 이슈 전체를 읽어 이슈 스냅샷으로 비교한다 (REQ-QAINTEL-004). 신규 여부는 스냅샷 비교로 정한다.
+    issue: "type:issue"
+  fields:
+    srs:
+      legacy_id: oldId
+      # 한국어 본문이 없으면 description 을 쓴다.
+      description: [descriptionKR, description]
+      is_category: isCategory
+    issue:
+      rd_result: rndReviewResult
+      reproduction_step: reproductionStep
+      occurrence_cause: occurrenceCause
+      action_details: actionDetails
+  relations:
+    occurred_versions: occurredVersion
+    target_versions: targetVersion
+    linked_items: linkedWorkItems
+    comments: comments
+  # 연구소 검토 결과 원본 값 → 공통 값. 공통 엔진은 오른쪽 값만 안다.
+  rd_result_mapping:
+    lab_fixed: FIXED
+    lab_inspec: SPEC
+    lab_nobug: NOT_BUG
+    lab_duplicate: DUPLICATE
+    lab_pending: PENDING
+    lab_noact: NO_ACTION
+
+# QA Intelligence Agent 제품 설정 (specs/qa-intelligence.md).
+qa_intelligence:
+  enabled: true
+  rules:
+    # 제품 규칙 Skill(config/products/vxvue/skills/vxvue-qa-rules)이 기준으로 삼는 QA 규칙 판.
+    # Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다 (REQ-DAILY-010).
+    supported_rev: "1.17"
+    product_skill: "vxvue-qa-rules"
+  # 수정 완료 이슈 분석의 Regression 축. GENERATOR(X-ray Generator 조건)는 VXvue 제품에만 있다.
+  regression_axes: [DIRECT, STATE, DATA, PERSISTENCE, INTEGRATION, PERMISSION, PRIOR_ISSUE, GENERATOR]
+  checklist:
+    # 지식 사본의 "(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx" 가 초안 Excel 의 본보기다.
+    template_name_contains: "영향성평가"
+    category: "Changes Checklist"
+    headers: ["Category", "TC ID", "버전", "SRS No", "변경사항", "변경사항 상세", "Title", "Precondition", "Test Step", "Expected Result", "Test Data"]
