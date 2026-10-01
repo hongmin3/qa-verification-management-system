@@ -19,10 +19,23 @@ settings = get_settings()
 storage = Storage()
 
 
+def _ensure_configured_products() -> None:
+    """설정 파일이 있는 제품을 제품 표에 더한다 (REQ-KNOW-002). 설정을 배포하고 다시 띄우면 각 기능의 제품 목록에 나온다."""
+    from app.core.product_config import list_product_configs
+
+    try:
+        configs = list_product_configs()
+    except Exception:  # 설정 파일 하나가 깨져도 앱 시작을 막지 않는다 (NFR-OPS-002).
+        return
+    for config in configs:
+        storage.ensure_product(config.product)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     storage.fail_running_analyses()
     storage.fail_running_syncs()
+    _ensure_configured_products()
     resume_queued_impact_jobs()
     resume_queued_manual_jobs()
     resume_queued_qa_agent_jobs()

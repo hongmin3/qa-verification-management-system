@@ -217,17 +217,37 @@ def test_start_analysis_requires_file_or_notes():
 
 def test_delete_document_removes_row_and_file(tmp_path, monkeypatch):
     storage = Storage(tmp_path / "app.db")
-    file_path = tmp_path / "spec.pdf"
-    file_path.write_bytes(b"%PDF-")
-    doc_id = storage.add_document("specification", "VXvue", "1.0", "Rev.1", "spec.pdf", file_path)
+    file_path = tmp_path / "tc.xlsx"
+    file_path.write_bytes(b"PK")
+    doc_id = storage.add_document("testcase", "VXvue", "1.0", "", "tc.xlsx", file_path)      # VXvue TC 출처는 manual
     monkeypatch.setattr(knowledge_routes, "storage", storage)
     monkeypatch.setattr(knowledge_routes.document_cache, "delete", lambda document_id: None)
 
-    response = TestClient(app).post(f"/knowledge/delete/{doc_id}", follow_redirects=False)
+    response = TestClient(app).post(f"/knowledge/delete/{doc_id}", data={"next": "/knowledge/products/vxvue"}, follow_redirects=False)
 
     assert response.status_code == 303
+    assert response.headers["location"] == "/knowledge/products/vxvue"
     assert storage.get_document(doc_id) is None
     assert not file_path.exists()
+
+
+def test_delete_automatic_source_document_is_refused_without_its_source(tmp_path, monkeypatch):
+    """Validates: REQ-KNOW-005 — ALM 자동 자료는 사람이 지울 수 없고, 동기화(source=alm_crawler)만 지운다."""
+    storage = Storage(tmp_path / "app.db")
+    file_path = tmp_path / "spec.pdf"
+    file_path.write_bytes(b"%PDF-")
+    doc_id = storage.add_document("specification", "VXvue", "1.0", "", "spec.pdf", file_path)
+    monkeypatch.setattr(knowledge_routes, "storage", storage)
+    monkeypatch.setattr(knowledge_routes.document_cache, "delete", lambda document_id: None)
+    client = TestClient(app)
+
+    refused = client.post(f"/knowledge/delete/{doc_id}", follow_redirects=False)
+    assert refused.status_code == 409
+    assert storage.get_document(doc_id) is not None and file_path.exists()
+
+    allowed = client.post(f"/knowledge/delete/{doc_id}", data={"source": "alm_crawler", "next": "https://evil.example"}, follow_redirects=False)
+    assert allowed.status_code == 303 and allowed.headers["location"] == "/knowledge"
+    assert storage.get_document(doc_id) is None
 
 
 def test_delete_missing_document_returns_404(monkeypatch, tmp_path):

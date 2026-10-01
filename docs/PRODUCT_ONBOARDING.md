@@ -11,12 +11,11 @@ VXvue와 Bellalun Viewer가 이미 같은 파일명 규약을 쓰고 있어 그�
 
 ## 1. 3단계
 
-### ① 제품 등록
+### ① 설정 파일 작성 (제품 등록은 이것으로 끝난다)
 
-`/knowledge` 화면의 **새 제품 추가**에 제품명을 넣는다. Regression 분석·매뉴얼 개정 검증·
-QA Agent의 제품 목록에 함께 표시된다.
-
-### ② 설정 파일 작성
+화면에서 이름만 적어 제품을 더하는 양식은 없다(REQ-KNOW-002). 설정 파일을 배포하고 앱을 다시
+띄우면 제품 표에 들어가고, `/knowledge` 현황판에 카드가 생기며, Regression 분석·매뉴얼 개정
+검증·QA Agent 의 제품 목록에도 나온다.
 
 `config/products/<slug>.yaml`을 만든다. `<slug>`는 제품명을 소문자·하이픈으로 바꾼 것이다
 (`Bellalun Viewer` → `bellalun-viewer`).
@@ -34,10 +33,19 @@ manual_types:
 knowledge_source:
   dir: "${QA_KNOWLEDGE_DIR_ACME:-C:/Users/<계정>/Documents/자동화/Acme Viewer/지식}"
 
+# 자료 종류별 출처 프로필 (REQ-KNOW-018). source: manual | alm_crawler | knowledge_folder | external_sync
+# required 를 비우면 종류별 기본값(사양서·TC·QA 규칙은 꼭 필요, 매뉴얼·지침 프롬프트는 없어도 됨).
 specification:
-  source: manual        # ALM 크롤러 연동이 있으면 alm_crawler
+  source: manual        # ALM 크롤러 연동이 있으면 alm_crawler (화면 업로드가 막힌다)
 testcase:
   source: manual
+manual:
+  source: knowledge_folder   # 기본값. manual 로 바꾸면 상세 화면에서 매뉴얼도 올릴 수 있다
+qa_rules:
+  source: knowledge_folder   # 규칙 자산은 화면 업로드가 없다(규칙 로더가 수집 기록만 읽는다)
+  required: true
+instruction_prompt:
+  source: knowledge_folder
 
 # Polarion Issue Export 폴더가 있으면 채운다. 없으면 QA Agent 화면에서 JSON을 업로드한다.
 issue_source:
@@ -46,9 +54,10 @@ issue_source:
 sync:
   day_of_week: "mon"
   schedule_time: "08:00"
+  stale_after_days: 14       # 마지막 성공 수집이 이보다 오래되면 상태가 '업데이트 필요'
 ```
 
-### ③ 수집
+### ② 수집
 
 지식 폴더가 있는 **담당자 PC에서** 실행한다. 먼저 무엇이 수집될지 확인하고,
 
@@ -63,8 +72,13 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to htt
 ```
 
 바뀐 파일만 전송한다 (sha256 비교). VXvue 실측으로 첫 회 106MB, 이후 변경 없으면 0MB다.
-서버가 폴더를 직접 볼 수 있는 환경이라면 `/knowledge` 화면의 **"지금 수집"** 버튼으로도
-같은 일을 할 수 있다 — 볼 수 없으면 버튼이 숨는다.
+서버가 폴더를 직접 볼 수 있는 환경이라면 제품 상세 화면(`/knowledge/products/<slug>`)의
+**"지금 수집"** 버튼으로도 같은 일을 할 수 있다 — 볼 수 없으면 버튼이 숨는다.
+
+### ③ 상태 확인
+
+`/knowledge` 의 카드가 `정상` 인지 본다. `주의`·`오류` 면 줄에 마우스를 올려 이유를 보고,
+`상세보기` 에서 자료별 상태와 수집 제외 목록을 확인한다(REQ-KNOW-019·020).
 
 ---
 
@@ -232,7 +246,8 @@ Environment=QA_KNOWLEDGE_DIR_ACME=/srv/knowledge/acme
 python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 ```
 
-- `/knowledge` — 수집 대기 건수, 마지막 수집 시각, QA 규칙 Rev
+- `/knowledge` — 제품 카드의 상태(정상·주의·오류)와 자료 종류별 개수·출처
+- `/knowledge/products/<slug>` — 자료별 상태, 수집 제외 목록, `고급 정보`(폴더 경로·접근 가능 여부·QA 규칙 Rev)
 - `/knowledge/source/<제품>` — 선택된 자산과 제외 이유 (JSON)
 - `/qa-agent/readiness?product=<제품>` — 사양서·TC 건수, `rules_available`
 - `/qa-agent/rules?product=<제품>` — Skill별 규칙 태깅과 주입량
@@ -253,6 +268,8 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 | 새로운 자산 종류 (예: Release Note를 별도 종류로) | `KIND_*` 상수 + `DEFAULT_CLASSIFIERS` |
 | 새로운 문서 형식 (예: `.pptx`) | `DEFAULT_EXTENSIONS` + `app/parsers/` |
 | 사양서 출처가 다른 크롤러 | `specification.source` 값 + 해당 출처 모듈 (`vxvue_spec_sync.py` 패턴) |
+| 다른 제품에 ALM 사양서 자동 수집을 붙임 | 지금 ALM 수집 어댑터(`app/modules/impact_analyzer/vxvue_spec_sync.py`, `impact_analyzer/scheduled_jobs.py`)는 `vxvue.yaml` 하나만 읽는다. 어댑터를 제품 설정 목록을 도는 형태로 일반화해야 한다. 공통 Knowledge 코드(현황판·상태 판정·등록)는 고치지 않는다 |
+| 새 출처 종류 (네 가지 밖) | `app/core/product_config.py` 의 `KNOWN_SOURCES`·`SOURCE_LABELS` 와 `app/core/knowledge_status.py` 의 문구 표 (SPEC REQ-KNOW-018 표 먼저) |
 | QA Agent 점검: 제품이 Polarion 이 아닌 다른 ALM 을 씀 | `app/modules/daily_qa/polarion.py` 와 같은 읽기 전용 클라이언트를 새로 두고 `collector.py` 가 고르게 한다 (§9) |
 | QA Agent 점검: 새 연구소 결과 종류 (공통 값 8개에 없는 뜻) | `product_adapter.py` 의 `RD_*` 와 `change_events.route_issue` 분석 표 (사양 REQ-QAINTEL-010 먼저) |
 | QA Agent 점검: 새 Regression 축 | `app/modules/qa_agent/schemas.py` 의 축 코드 (제품 설정은 있는 축을 고르기만 한다) |

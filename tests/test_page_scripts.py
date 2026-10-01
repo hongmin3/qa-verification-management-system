@@ -24,6 +24,8 @@ PAGES = [
     "/",
     "/knowledge",
     "/knowledge/guide",
+    "/knowledge/products/vxvue",
+    "/knowledge/products/bellalun-viewer",
     "/cost-dashboard",
     "/cost-dashboard/guide",
 ]

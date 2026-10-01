@@ -200,7 +200,7 @@ def _prune_orphans(base: Path, keep: set[tuple[str, str]]) -> list[str]:
     return removed
 
 
-def _forget_pruned_documents(base: Path, removed: list[str], storage=None) -> list[str]:
+def _forget_pruned_documents(base: Path, removed: list[str], storage=None, product: str = "") -> list[str]:
     """`_prune_orphans` 가 지운 파일을 가리키는 문서 등록과 파싱 저장본을 지운다.
 
     문서가 지식 폴더에서 통째로 빠지면 같은 이름의 수집본이 없어 `register_collected` 가 그 등록을
@@ -216,7 +216,8 @@ def _forget_pruned_documents(base: Path, removed: list[str], storage=None) -> li
     gone = {str((base / "original" / item).resolve()).casefold(): item for item in removed}
     forgotten: list[str] = []
     for kind in REGISTERABLE_KINDS:
-        for document in storage.list_documents(kind):
+        documents = storage.active_documents(kind, product) if product else storage.list_documents(kind)
+        for document in documents:
             key = str(Path(document["path"]).resolve()).casefold()
             if key in gone:
                 storage.delete_document(document["id"])
@@ -304,7 +305,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
     kept_previous = _keep_previous_readable(base, kept, previous_assets, missing_records)
     keep_keys = {(record["kind"], record["file_name"]) for record in kept}
     removed = _prune_orphans(base, keep_keys)
-    unregistered = _forget_pruned_documents(base, removed, storage)
+    unregistered = _forget_pruned_documents(base, removed, storage, config.product)
 
     payload = {
         "product": config.product,

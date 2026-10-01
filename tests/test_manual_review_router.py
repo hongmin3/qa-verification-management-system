@@ -70,17 +70,23 @@ def test_home_shows_registered_srs_sources(monkeypatch, tmp_path):
 
 
 def test_product_added_in_knowledge_appears_in_manual_review(monkeypatch, tmp_path):
+    """Validates: REQ-KNOW-002 — 설정 파일이 있는 제품만 더한다. 이름만 적은 제품은 400."""
     storage = Storage(tmp_path / "app.db")
+    with storage.connect() as db:
+        db.execute("DELETE FROM products")
     monkeypatch.setattr(knowledge_router, "storage", storage)
     monkeypatch.setattr(manual_review_router, "storage", storage)
     client = TestClient(app)
 
-    added = client.post("/knowledge/products", data={"product": "신규 장비"}, follow_redirects=False)
+    refused = client.post("/knowledge/products", data={"product": "신규 장비"}, follow_redirects=False)
+    added = client.post("/knowledge/products", data={"product": "bellalun-viewer"}, follow_redirects=False)
     response = client.get("/manual-review")
 
+    assert refused.status_code == 400 and "PRODUCT_ONBOARDING" in refused.json()["detail"]
     assert added.status_code == 303
-    assert '<option value="신규 장비">신규 장비</option>' in response.text
-    assert "Knowledge에서 제품을 추가" in response.text
+    assert '<option value="Bellalun Viewer">Bellalun Viewer</option>' in response.text
+    assert '<option value="신규 장비">' not in response.text
+    assert "PRODUCT_ONBOARDING" in response.text
 
 
 def test_vxvue_manual_types_are_suggested_and_custom_input_is_allowed(monkeypatch, tmp_path):

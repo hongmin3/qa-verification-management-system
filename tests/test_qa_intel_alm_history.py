@@ -113,6 +113,24 @@ def test_import_takes_only_reliable_days_and_is_idempotent(tmp_path):
     assert sorted((str(p), p.stat().st_mtime_ns) for p in source.rglob("*") if p.is_file()) == before   # 원본은 읽기만
 
 
+def test_file_whose_tail_repeats_its_own_end_is_restored(tmp_path):
+    source = tmp_path / "srs-spec" / "snapshots"
+    records = [_raw("VP-10", "목록", "<p>목록</p>"), _raw("VP-11", "검색", "<p>검색</p>")]
+    _day(source, "2026-09-21", records)
+    path = source / "2026-09-21" / "VXvue" / "VP-11.json"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text + text[-60:], encoding="utf-8")      # 짧은 쓰기 뒤에 긴 쓰기의 끝 60글자가 남았다
+    store = snapshots.SnapshotStore(root=tmp_path / "store")
+
+    result = import_history(source, store, "VXvue", VXVUE_PROFILE)
+    day = result.days[0]
+    assert (day.status, day.count, day.restored) == ("imported", 2, ["VP-11.json"])
+    assert day.line() == "2026-09-21 가져옴 2건 (되살린 파일 1개)"
+    data = json.loads((store.directory(snapshots.KIND_SRS) / "2026-09-21.json").read_text(encoding="utf-8"))
+    assert data["restored_files"] == ["VP-11.json"]
+    assert [item["title"] for item in data["items"]] == ["목록", "검색"]
+
+
 def test_import_does_not_overwrite_a_snapshot_the_daily_run_collected(tmp_path):
     source = _source(tmp_path)
     store = snapshots.SnapshotStore(root=tmp_path / "store")

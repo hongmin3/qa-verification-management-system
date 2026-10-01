@@ -47,7 +47,7 @@
 | `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간 조회·지금 실행·한도 안내, 단일 이슈 분석) |
 | `/impact-analyzer/guide` | Regression 영향 분석 사용법 |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
-| `/knowledge/guide` | Knowledge 사용법 (문서·규칙 관리, 파일명 규약) |
+| `/knowledge/guide` | Knowledge 사용법 (제품 상태 보기, 자동·수동 자료, 파일 교체, 문제 상태 대처, 새 제품 추가) |
 | `/cost-dashboard/guide` | 비용 대시보드 사용법 (지표 해석, 절감 기법) |
 | `/qa-agent/rules` | 규칙 절별 구현현황과 Skill별 규칙 주입량 |
 | `/manual-hub/` | 매뉴얼 서버 (하위 서비스) |
@@ -88,7 +88,7 @@
 | [modules/daily-qa.md](modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조, 분석 5종·Skill, 제품별 분리, 서버 설치, 설정, 운영 |
 | [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |
 | [QA_AGENT_ARCHITECTURE.md](QA_AGENT_ARCHITECTURE.md) | 구조 분석 · 목표 아키텍처 · RAG/DB/Metadata/Skill/Routing/Security/Audit 설계 · 변경 탐지 점검과 공유하는 것(17절) |
-| [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 파일명 규약, 리비전 판별, QA Agent 점검 연결(Polarion·필드·연구소 결과 매핑·예약·Baseline), 코드 변경 없이 편입 |
+| [PRODUCT_ONBOARDING.md](PRODUCT_ONBOARDING.md) | 새 제품 추가 — 설정 파일·출처 프로필, 파일명 규약, 리비전 판별, QA Agent 점검 연결(Polarion·필드·연구소 결과 매핑·예약·Baseline), 코드 변경 없이 편입 |
 | [POST_DEPLOY_TESTS.md](POST_DEPLOY_TESTS.md) | 실서버 반영 후 확인 항목 (로컬에서 확인 불가한 것만) |
 
 ### `docs/modules/` — 기능별 상세

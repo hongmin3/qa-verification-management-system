@@ -1,0 +1,150 @@
+{% extends "knowledge_base.html" %}
+{% block page_title %}{{ health.product }} Knowledge{% endblock %}
+{% block content %}
+<style>
+.kn-level{font-size:13px;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.kn-READY{background:#dcfce7;color:#166534}.kn-ATTENTION{background:#fef3c7;color:#92400e}.kn-ERROR{background:#fee2e2;color:#991b1b}
+.kn-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.kn-head h2{margin:0}
+.kn-meta{color:#57606a;font-size:14px;margin:6px 0}
+.kn-notice{padding:10px 12px;border-radius:8px;background:#e0f2fe;color:#075985;margin-bottom:12px}
+.kn-docs td,.kn-docs th{overflow-wrap:anywhere}
+.kn-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kn-actions form{margin:0}
+.kn-upload{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+</style>
+{% if notice %}<div class="kn-notice" id="kn-notice">{{ notice }}</div>{% endif %}
+<section>
+  <div class="kn-head">
+    <h2>{{ health.product }}</h2>
+    <span class="kn-level kn-{{ health.level }}">{{ health.label }}</span>
+  </div>
+  <p class="kn-meta">마지막 갱신: {% if health.last_updated %}<span data-utc-time="{{ health.last_updated }}">{{ health.last_updated[:16].replace('T', ' ') }} UTC</span>{% else %}기록 없음{% endif %} · <a href="/knowledge">현황판으로</a></p>
+</section>
+
+{% for asset in health.assets %}
+<section id="kind-{{ asset.kind }}">
+  <div class="kn-head">
+    <h2>{{ asset.label }}</h2>
+    <span class="kn-level kn-{{ asset.level }}">{{ asset.status }}</span>
+  </div>
+  <p class="kn-meta">
+    출처 {{ asset.source_label }} · {{ asset.managed }}{% if asset.required %} · 꼭 필요한 자료{% endif %}
+    · 마지막 갱신 {% if asset.last_updated %}<span data-utc-time="{{ asset.last_updated }}">{{ asset.last_updated[:16].replace('T', ' ') }} UTC</span>{% else %}기록 없음{% endif %}
+  </p>
+  {% if asset.reason %}<p class="hint">{{ asset.reason }}</p>{% endif %}
+  <p class="hint">{{ asset.message }}{% if asset.last_sync %} 마지막 동기화 <span data-utc-time="{{ asset.last_sync.synced_at }}">{{ asset.last_sync.synced_at[:16].replace('T', ' ') }} UTC</span> · {{ asset.last_sync.status }}{% endif %}</p>
+  {% if asset.documents %}
+  <div class="table-wrap">
+    <table class="history kn-docs">
+      <thead><tr><th>문서명</th><th>종류</th><th>출처</th><th>상태</th><th>마지막 갱신</th>{% if asset.can_upload %}<th>동작</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for doc in asset.documents %}
+        <tr>
+          <td>{% if doc.id %}<a href="/knowledge/download/{{ doc.id }}">{{ doc.name }}</a>{% else %}{{ doc.name }}{% endif %}</td>
+          <td>{{ doc.kind_label }}</td>
+          <td>{{ doc.source_label }}</td>
+          <td>{{ doc.status }}</td>
+          <td>{% if doc.updated_at %}<span data-utc-time="{{ doc.updated_at }}">{{ doc.updated_at[:16].replace('T', ' ') }} UTC</span>{% endif %}</td>
+          {% if asset.can_upload %}
+          <td class="kn-actions">
+            <form class="kn-upload-form" method="post" action="/knowledge/products/{{ health.slug }}/documents" enctype="multipart/form-data">
+              <input type="hidden" name="kind" value="{{ asset.kind }}">
+              <input type="hidden" name="replace_id" value="{{ doc.id }}">
+              <label class="btn-link">교체<input type="file" name="file" accept="{{ asset.accept }}" hidden></label>
+            </form>
+            <form method="post" action="/knowledge/delete/{{ doc.id }}" class="delete-form" data-confirm="{{ doc.name }} 파일을 삭제할까요? 되돌릴 수 없습니다.">
+              <input type="hidden" name="next" value="/knowledge/products/{{ health.slug }}">
+              <button type="submit" class="btn-danger-link">삭제</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if asset.can_upload %}
+  <form class="kn-upload kn-upload-form" method="post" action="/knowledge/products/{{ health.slug }}/documents" enctype="multipart/form-data">
+    <input type="hidden" name="kind" value="{{ asset.kind }}">
+    <label>새 문서 등록 <input type="file" name="file" accept="{{ asset.accept }}"></label>
+  </form>
+  {% elif asset.source == 'knowledge_folder' and health.advanced.folder_accessible %}
+  <form method="post" action="/knowledge/sync/product-knowledge" class="kn-upload knowledge-sync-form">
+    <input type="hidden" name="product" value="{{ health.product }}">
+    <button type="submit">지금 수집</button>
+  </form>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if health.excluded %}
+<section>
+  <details>
+    <summary>수집 제외 {{ health.excluded|length }}건 · 자세히</summary>
+    <div class="table-wrap">
+      <table class="history kn-docs">
+        <thead><tr><th>파일명</th><th>분류 결과</th><th>제외 이유</th><th>대신 쓰는 파일</th></tr></thead>
+        <tbody>
+          {% for item in health.excluded %}
+          <tr><td>{{ item.file_name }}</td><td>{{ item.kind }}</td><td>{{ item.reason }}</td><td>{{ item.superseded_by }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+{% endif %}
+
+<section>
+  <details>
+    <summary>고급 정보</summary>
+    <ul>
+      <li>지식 폴더: <code>{{ health.advanced.source_dir or '설정 없음' }}</code></li>
+      <li>이 서버에서 폴더 접근: {{ '가능' if health.advanced.folder_accessible else '불가(담당자 PC 가 업로드)' }}</li>
+      <li>업로드한 PC: {{ health.advanced.uploaded_from or '기록 없음' }}</li>
+      <li>마지막 수집 기록: {% if health.advanced.synced_at %}<span data-utc-time="{{ health.advanced.synced_at }}">{{ health.advanced.synced_at }}</span>{% else %}없음{% endif %}</li>
+      <li>마지막 동기화 상세: {{ health.advanced.last_sync_detail or '없음' }}</li>
+      <li>QA 규칙 판: {{ health.advanced.rule_revision or '수집되지 않음' }}</li>
+      <li><a href="/knowledge/source/{{ health.slug }}" target="_blank" rel="noopener">스캔 결과 JSON</a></li>
+    </ul>
+  </details>
+</section>
+<script>
+document.querySelectorAll('.kn-upload-form').forEach(form => {
+  const input = form.querySelector('input[type=file]');
+  input.addEventListener('change', async () => {
+    if (!input.files.length) return;
+    const replacing = form.querySelector('input[name=replace_id]');
+    if (replacing && !confirm(`${input.files[0].name} 으로 교체할까요? 새 파일이 등록된 뒤에 이전 문서가 빠집니다.`)) { input.value = ''; return; }
+    const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    if (response.ok || response.redirected) { location.href = response.url; return; }
+    const body = await response.json().catch(() => ({}));
+    alert(body.detail || `등록 실패 (HTTP ${response.status})`);
+    input.value = '';
+  });
+});
+document.querySelectorAll('.delete-form').forEach(form => {
+  form.addEventListener('submit', (event) => { if (!confirm(form.dataset.confirm)) event.preventDefault(); });
+});
+document.querySelectorAll('.knowledge-sync-form').forEach(form => {
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button');
+    button.disabled = true; button.textContent = '수집 중...';
+    try {
+      const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) { alert(body.detail || `수집 실패 (HTTP ${response.status})`); return; }
+      const notes = [body.detail];
+      if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 요청]\n' + body.duplicates.join('\n'));
+      alert(notes.join('\n'));
+      location.reload();
+    } finally {
+      button.disabled = false; button.textContent = '지금 수집';
+    }
+  });
+});
+</script>
+{% endblock %}

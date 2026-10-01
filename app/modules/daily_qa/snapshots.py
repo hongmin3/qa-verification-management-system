@@ -61,8 +61,9 @@ class SnapshotStore:
     def meta(self, path: Path | None) -> dict:
         return snapshot_meta(path) if path else {}
 
-    def save(self, kind: str, run_date: str, items: list[dict], collected_at: str = "", source: str = "") -> Path:
-        return save_snapshot(self.directory(kind), run_date, items, collected_at, source)
+    def save(self, kind: str, run_date: str, items: list[dict], collected_at: str = "", source: str = "",
+             extra: dict | None = None) -> Path:
+        return save_snapshot(self.directory(kind), run_date, items, collected_at, source, extra)
 
     def exists(self, kind: str, run_date: str) -> bool:
         """그 날짜 스냅샷이 이 제품 폴더에 있는가 (옛 위치는 보지 않는다)."""

@@ -8,17 +8,17 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.core import document_cache
+from app.core import document_cache, knowledge_status
 from app.core.config import app_self_url, get_settings
+from app.core.knowledge_registry import NeedsColumnMapping, RegistrationError, check_request, extensions_for, register_uploaded
 from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
-from app.core.product_knowledge import KIND_MANUAL, load_manifest, resolve_config, scan_source, source_available, sync_and_register
-from app.core.qa_rules import load_rule_set
+from app.core.product_config import SOURCE_LABELS, SOURCE_MANUAL, normalize_source
+from app.core.product_knowledge import REGISTERABLE_KINDS, load_manifest, resolve_config, scan_source, source_available, sync_and_register
 from app.core.storage import Storage
 from app.core.uploads import save_upload
-from app.parsers.document_parser import extract_document_text, parse_document
-from app.parsers.excel_parser import parse_testcases, preview_workbook, suggest_columns
+from app.parsers.excel_parser import preview_workbook, suggest_columns
 
 router = APIRouter()
 templates = Jinja2Templates(directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"])
@@ -37,66 +37,92 @@ def knowledge_guide(request: Request):
 
 @router.post("/knowledge/products")
 def register_product(product: str = Form(...)):
+    """호환용. 설정 파일이 있는 제품만 제품 표에 더한다 (REQ-KNOW-002)."""
     product = product.strip()
     if not product:
         raise HTTPException(400, "제품명을 입력하세요.")
-    storage.ensure_product(product)
+    config = resolve_config(product)
+    if config is None:
+        raise HTTPException(400, f"'{product}' 제품 설정(config/products/)이 없습니다. docs/PRODUCT_ONBOARDING.md 순서로 먼저 설정 파일을 추가하세요.")
+    storage.ensure_product(config.product)
     return RedirectResponse("/knowledge", status_code=303)
-
-
-def _versions_by_product() -> dict[str, list[str]]:
-    return {product: storage.list_versions(product) for product in storage.list_products()}
-
-
-def _grouped_by_product_version(kind: str) -> list[dict]:
-    groups: dict[tuple[str, str], list[dict]] = {}
-    for document in storage.list_documents(kind):
-        groups.setdefault((document["product"], document["version"]), []).append(document)
-    return [{"product": product, "version": version, "documents": documents} for (product, version), documents in groups.items()]
-
-
-def _knowledge_source_status() -> list[dict]:
-    """제품별 지식 폴더 상태. 이 호스트에서 폴더에 접근 가능한지와 마지막 수집 결과를 보여준다."""
-    rows: list[dict] = []
-    for product in storage.list_products():
-        config = resolve_config(product)
-        manifest = load_manifest(product)
-        rule_set = load_rule_set(product)
-        available = bool(config and source_available(config))
-        row = {
-            "product": product,
-            "configured": bool(config and config.knowledge_source.dir),
-            "source_dir": config.knowledge_source.dir if config else "",
-            "available": available,
-            "synced_at": manifest.get("synced_at", ""),
-            "counts": manifest.get("counts", {}),
-            "excluded": len(manifest.get("excluded", [])),
-            "rule_revision": rule_set.revision,
-            "rules_available": rule_set.available,
-            "last_sync": storage.latest_sync(product, "product_knowledge"),
-        }
-        if available and config is not None:
-            scan = scan_source(config)
-            row["pending"] = scan.counts()
-        rows.append(row)
-    return rows
 
 
 @router.get("/knowledge", response_class=HTMLResponse)
 def knowledge(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "knowledge.html",
-        {
-            "spec_groups": _grouped_by_product_version("specification"),
-            "testcase_groups": _grouped_by_product_version("testcase"),
-            "manual_groups": _grouped_by_product_version(KIND_MANUAL),
-            "products": storage.list_products(),
-            "versions_by_product": _versions_by_product(),
-            "spec_sync": storage.latest_sync("VXvue", "specification"),
-            "knowledge_sources": _knowledge_source_status(),
-        },
-    )
+    """제품 카드 현황판 (REQ-KNOW-001). 카드 내용은 모두 상태 판정 결과(REQ-KNOW-019)에서 온다."""
+    return templates.TemplateResponse(request, "knowledge.html", knowledge_status.overview(storage))
+
+
+def _config_or_404(slug: str):
+    config = resolve_config(slug)
+    if config is None:
+        raise HTTPException(404, f"'{slug}' 제품 설정이 없습니다.")
+    return config
+
+
+def _config_or_400(product: str):
+    config = resolve_config(product.strip())
+    if config is None:
+        raise HTTPException(400, f"'{product.strip()}' 제품 설정(config/products/)이 없습니다.")
+    return config
+
+
+def _detail_url(config, notice: str = "") -> str:
+    url = f"/knowledge/products/{config.slug}"
+    return f"{url}?{urlencode({'notice': notice})}" if notice else url
+
+
+@router.get("/knowledge/products/{slug}", response_class=HTMLResponse)
+def product_detail(request: Request, slug: str, notice: str = ""):
+    """제품 Knowledge 상세 (REQ-KNOW-020). 제품마다 다른 템플릿을 두지 않는다."""
+    config = _config_or_404(slug)
+    return templates.TemplateResponse(request, "product.html", {"health": knowledge_status.product_health(config, storage), "notice": notice})
+
+
+def _owned_dirs() -> list[Path]:
+    settings = get_settings()
+    return [settings.path("storage.specification_dir"), settings.path("storage.testcase_dir")]
+
+
+def _optional_id(value: str) -> int | None:
+    value = (value or "").strip()
+    if not value:
+        return None
+    if not value.isdigit():
+        raise HTTPException(400, "교체할 문서를 찾을 수 없습니다.")
+    return int(value)
+
+
+def _register(config, kind: str, file: UploadFile, replace_id: int | None, source: str = "", version: str = ""):
+    """등록·교체 공통 처리 (REQ-KNOW-003·004). 출처 확인은 파일을 저장하기 전에 한다. 성공하면 제품 상세로 303."""
+    if kind not in REGISTERABLE_KINDS:
+        raise HTTPException(400, f"등록할 수 없는 종류입니다: {kind}")
+    try:
+        target = check_request(storage, config, kind, source, replace_id)
+    except RegistrationError as exc:
+        raise HTTPException(exc.status, exc.message)
+    directory = get_settings().path("storage.testcase_dir" if kind == "testcase" else "storage.specification_dir")
+    path = save_upload(file, directory, extensions_for(kind))
+    original_name = file.filename or path.name
+    try:
+        outcome = register_uploaded(storage, config, kind, path, original_name, replace_target=target, declared_source=source,
+                                    version=version, owned_dirs=_owned_dirs())
+    except NeedsColumnMapping:
+        # 자동 탐지 실패 — 파일은 남겨 두고 열 지정 화면으로 보낸다. 기존 등록은 건드리지 않는다.
+        params = {"filename": path.name, "product": config.product, "version": version, "original_name": original_name}
+        if replace_id is not None:
+            params["replace_id"] = replace_id
+        return RedirectResponse(f"/knowledge/testcase/map?{urlencode(params)}", status_code=303)
+    except RegistrationError as exc:
+        raise HTTPException(exc.status, exc.message)
+    return RedirectResponse(_detail_url(config, outcome.summary()), status_code=303)
+
+
+@router.post("/knowledge/products/{slug}/documents")
+def upload_product_document(slug: str, kind: str = Form(...), file: UploadFile = File(...), replace_id: str = Form("")):
+    config = _config_or_404(slug)
+    return _register(config, kind.strip(), file, _optional_id(replace_id))
 
 
 @router.post("/knowledge/sync/product-knowledge")
@@ -118,9 +144,9 @@ def trigger_product_knowledge_sync(product: str = Form(...)):
             f"이 서버에서 지식 폴더에 접근할 수 없습니다: {config.knowledge_source.dir}. "
             "폴더가 있는 PC에서 scripts/sync_product_knowledge.py 를 실행하세요.",
         )
-    sync_id = storage.sync_start(product, "product_knowledge", "knowledge_folder")
+    sync_id = storage.sync_start(config.product, "product_knowledge", "knowledge_folder")
     try:
-        result = sync_and_register(product, storage=storage)
+        result = sync_and_register(config.product, storage=storage)
         storage.sync_finish(sync_id, result["status"], result["detail"])
         return result
     except Exception as exc:
@@ -200,7 +226,7 @@ def cleanup_missing_documents():
     지워도 잃는 것이 없다 — 무엇을 지웠는지는 반환값에 남긴다.
     """
     removed: list[dict] = []
-    for kind in ("specification", "testcase", KIND_MANUAL):
+    for kind in REGISTERABLE_KINDS:
         for document in storage.list_documents(kind):
             if Path(document["path"]).is_file():
                 continue
@@ -212,15 +238,15 @@ def cleanup_missing_documents():
 
 @router.get("/knowledge/source/{product}")
 def knowledge_source_detail(product: str):
-    """지식 폴더 스캔 결과(선택된 자산과 제외 이유). 무엇이 왜 빠졌는지 확인용."""
+    """지식 폴더 스캔 결과(선택된 자산과 제외 이유). 감사·다른 프로그램용 (REQ-KNOW-014)."""
     config = resolve_config(product)
     if config is None:
         raise HTTPException(404, f"'{product}' 제품 설정이 없습니다.")
     if not source_available(config):
-        return {"product": product, "available": False, "source_dir": config.knowledge_source.dir, "manifest": load_manifest(product)}
+        return {"product": config.product, "available": False, "source_dir": config.knowledge_source.dir, "manifest": load_manifest(config.product)}
     scan = scan_source(config)
     return {
-        "product": product,
+        "product": config.product,
         "available": True,
         "source_dir": scan.source_dir,
         "counts": scan.counts(),
@@ -230,36 +256,16 @@ def knowledge_source_detail(product: str):
 
 
 @router.post("/knowledge/specification")
-def register_specification(file: UploadFile = File(...), product: str = Form(...), version: str = Form("")):
-    settings = get_settings()
-    storage.ensure_product(product)
-    storage.ensure_version(product, version)
-    path = save_upload(file, settings.path("storage.specification_dir"), {".pdf", ".docx"})
-    chunks = parse_document(path, path.stem)
-    document_id = storage.add_document("specification", product, version, "", file.filename or path.name, path, {"chunk_count": len(chunks)})
-    # 분석/매뉴얼 검증이 매번 원본을 다시 파싱하지 않도록 지금 파싱한 결과를 바로 캐시해둔다
-    # (Rule 기반 diff가 쓰는 전체 원문도 함께 — 둘 다 원본 파일을 다시 여는 비용이 크다).
-    document_cache.save(document_id, chunks)
-    document_cache.save_text(document_id, extract_document_text(path))
-    return RedirectResponse("/knowledge", status_code=303)
+def register_specification(file: UploadFile = File(...), product: str = Form(...), version: str = Form(""),
+                           source: str = Form(""), replace_id: str = Form("")):
+    """예전 주소. ALM 사양서 동기화(`source=alm_crawler`)도 이 주소로 등록한다 (REQ-SYNC-001)."""
+    return _register(_config_or_400(product), "specification", file, _optional_id(replace_id), source, version)
 
 
 @router.post("/knowledge/testcase")
-def register_testcase(file: UploadFile = File(...), product: str = Form(...), version: str = Form("")):
-    storage.ensure_product(product)
-    storage.ensure_version(product, version)
-    path = save_upload(file, get_settings().path("storage.testcase_dir"), {".xlsx"})
-    original_name = file.filename or path.name
-    try:
-        cases = parse_testcases(path)
-    except ValueError:
-        # 자동 탐지 실패 — 파일은 이미 storage.testcase_dir에 저장돼 있으니 삭제하지 않고
-        # 수동 매핑 화면으로 보낸다. 사용자가 매핑을 확정해야 documents 테이블에 등록된다.
-        params = urlencode({"filename": path.name, "product": product, "version": version, "original_name": original_name})
-        return RedirectResponse(f"/knowledge/testcase/map?{params}", status_code=303)
-    document_id = storage.add_document("testcase", product, version, "", original_name, path)
-    document_cache.save(document_id, cases)
-    return RedirectResponse("/knowledge", status_code=303)
+def register_testcase(file: UploadFile = File(...), product: str = Form(...), version: str = Form(""),
+                      source: str = Form(""), replace_id: str = Form("")):
+    return _register(_config_or_400(product), "testcase", file, _optional_id(replace_id), source, version)
 
 
 def _testcase_upload_path(filename: str) -> Path:
@@ -274,11 +280,10 @@ def _testcase_upload_path(filename: str) -> Path:
 @router.get("/knowledge/testcase/map", response_class=HTMLResponse)
 def testcase_mapping_form(
     request: Request, filename: str, product: str, version: str = "", original_name: str = "",
-    sheet: str = "", header_row: int = 0, error: str = "",
+    replace_id: str = "", sheet: str = "", header_row: int = 0, error: str = "",
 ):
-    """`register_testcase`가 TC ID 컬럼을 자동으로 못 찾았을 때 QA가 시트/헤더 행/컬럼을
-    직접 지정하는 화면. 시트 선택·헤더 행 입력까지는 GET으로 미리보기만 갱신하고, 실제
-    등록은 아래 POST에서 확정한다."""
+    """TC ID 열을 자동으로 못 찾았을 때 QA 가 시트/제목 행/열을 직접 고르는 화면 (REQ-KNOW-004).
+    시트 선택·제목 행 입력까지는 GET 으로 미리보기만 갱신하고, 등록은 아래 POST 에서 확정한다."""
     path = _testcase_upload_path(filename)
     preview = preview_workbook(path)
     sheet_names = list(preview.keys())
@@ -293,7 +298,7 @@ def testcase_mapping_form(
         "testcase_mapping.html",
         {
             "filename": filename, "product": product, "version": version, "original_name": original_name,
-            "sheets": sheet_names, "selected_sheet": selected_sheet, "preview_rows": preview_rows,
+            "replace_id": replace_id, "sheets": sheet_names, "selected_sheet": selected_sheet, "preview_rows": preview_rows,
             "header_row": header_row, "fields": TC_FIELD_LABELS, "suggested": suggested, "error": error,
         },
     )
@@ -302,11 +307,12 @@ def testcase_mapping_form(
 @router.post("/knowledge/testcase/map")
 def register_testcase_with_mapping(
     filename: str = Form(...), product: str = Form(...), version: str = Form(""), original_name: str = Form(""),
-    sheet: str = Form(...), header_row: int = Form(...),
+    replace_id: str = Form(""), sheet: str = Form(...), header_row: int = Form(...),
     tc_id: str = Form(""), category: str = Form(""), feature: str = Form(""), precondition: str = Form(""),
     step: str = Form(""), expected_result: str = Form(""), result: str = Form(""), remark: str = Form(""),
 ):
     path = _testcase_upload_path(filename)
+    config = _config_or_400(product)
     mapping = {
         key: value for key, value in {
             "tc_id": tc_id, "category": category, "feature": feature, "precondition": precondition,
@@ -314,32 +320,40 @@ def register_testcase_with_mapping(
         }.items() if value
     }
     try:
-        cases = parse_testcases(path, mapping=mapping, sheet_name=sheet, header_row=header_row)
+        target = check_request(storage, config, "testcase", "", _optional_id(replace_id))
+        outcome = register_uploaded(storage, config, "testcase", path, original_name or filename, replace_target=target,
+                                    version=version, owned_dirs=_owned_dirs(),
+                                    tc_mapping={"mapping": mapping, "sheet": sheet, "header_row": header_row})
+    except RegistrationError as exc:
+        raise HTTPException(exc.status, exc.message)
     except ValueError as exc:
         params = urlencode({
             "filename": filename, "product": product, "version": version, "original_name": original_name,
-            "sheet": sheet, "header_row": header_row, "error": str(exc),
+            "replace_id": replace_id, "sheet": sheet, "header_row": header_row, "error": str(exc),
         })
         return RedirectResponse(f"/knowledge/testcase/map?{params}", status_code=303)
-    storage.ensure_product(product)
-    storage.ensure_version(product, version)
-    document_id = storage.add_document("testcase", product, version, "", original_name or filename, path)
-    storage.update_document_metadata(document_id, {"column_mapping": mapping, "sheet_name": sheet, "header_row": header_row})
-    document_cache.save(document_id, cases)
-    return RedirectResponse("/knowledge", status_code=303)
+    return RedirectResponse(_detail_url(config, outcome.summary()), status_code=303)
 
 
 @router.post("/knowledge/delete/{document_id}")
-def delete_document(document_id: int):
+def delete_document(document_id: int, source: str = Form(""), next: str = Form("")):
+    """지우기 (REQ-KNOW-005). 자동으로 관리하는 자료는 같은 출처를 밝힌 요청만 지운다."""
     document = storage.get_document(document_id)
     if not document:
         raise HTTPException(404, "문서를 찾을 수 없습니다.")
+    config = resolve_config(document["product"])
+    if config is not None and document["kind"] in REGISTERABLE_KINDS:
+        configured = config.source_of(document["kind"])
+        declared = normalize_source(source) if source.strip() else SOURCE_MANUAL
+        if configured != SOURCE_MANUAL and declared != configured:
+            raise HTTPException(409, f"자동으로 관리하는 자료는 여기서 지울 수 없습니다. {SOURCE_LABELS.get(configured, configured)}에서 관리하세요.")
     storage.delete_document(document_id)
     document_cache.delete(document_id)
     path = Path(document["path"])
     if path.exists():
         path.unlink()
-    return RedirectResponse("/knowledge", status_code=303)
+    target = next if next.startswith("/knowledge") and "//" not in next and "\\" not in next else "/knowledge"
+    return RedirectResponse(target, status_code=303)
 
 
 @router.get("/knowledge/documents")
@@ -356,10 +370,12 @@ def record_sync_log(product: str = Form(...), kind: str = Form(...), source: str
 
 @router.post("/knowledge/sync/specification")
 def trigger_specification_sync():
-    from app.modules.impact_analyzer.vxvue_spec_sync import is_available_on_this_host
+    from app.modules.impact_analyzer.vxvue_spec_sync import adapter_product, is_available_on_this_host
     from app.modules.impact_analyzer.vxvue_spec_sync import run as run_spec_sync
 
-    product = "VXvue"
+    product = adapter_product()
+    if not product:
+        raise HTTPException(400, "ALM 사양서 수집 어댑터의 제품 설정이 없습니다.")
     if storage.is_sync_running(product, "specification"):
         raise HTTPException(409, "이미 사양서 동기화가 진행 중입니다.")
     if not is_available_on_this_host():

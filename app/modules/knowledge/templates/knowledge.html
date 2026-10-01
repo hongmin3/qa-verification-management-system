@@ -1,149 +1,57 @@
 {% extends "knowledge_base.html" %}
 {% block content %}
-<datalist id="products-list">{% for p in products %}<option value="{{ p }}">{% endfor %}</datalist>
-<datalist id="versions-list"></datalist>
+<style>
+.kn-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.kn-card{border:1px solid #d0d7de;border-radius:10px;padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px;min-width:0}
+.kn-card h2{margin:0;font-size:18px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.kn-level{font-size:13px;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.kn-READY{background:#dcfce7;color:#166534}.kn-ATTENTION{background:#fef3c7;color:#92400e}.kn-ERROR{background:#fee2e2;color:#991b1b}
+.kn-rows{width:100%;border-collapse:collapse;font-size:14px}
+.kn-rows td{padding:5px 4px;border-top:1px solid #eef1f4;vertical-align:top;overflow-wrap:anywhere}
+.kn-rows td.kn-n{text-align:right;white-space:nowrap}
+.kn-foot{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;color:#57606a;flex-wrap:wrap}
+</style>
 <section>
-  <label>제품별로 보기<select id="product-filter"><option value="">전체 제품</option>{% for p in products %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select></label>
-  <form method="post" action="/knowledge/products" style="display:flex;gap:8px;align-items:end;margin-top:14px">
-    <label style="flex:1">새 제품 추가<input name="product" placeholder="제품명" required></label>
-    <button type="submit">제품 추가</button>
-  </form>
-  <p class="hint">여기서 추가한 제품은 Regression 분석과 매뉴얼 개정 검증의 제품 목록에 함께 표시됩니다.</p>
-</section>
-<section>
-  <h2>제품 지식 폴더 수집</h2>
-  <p class="hint">
-    제품마다 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 폴더를 읽어 프로젝트로 수집하고 <b>분석 대상으로 등록</b>합니다.
-    파일명 규약(<code>(사양서)</code>/<code>(매뉴얼)</code>/<code>(TC)</code>/<code>[QA 작성 규칙]</code>/<code>지침 프롬프트</code>)으로 분류하므로 제품별 설정은 폴더 경로뿐입니다.
-    같은 문서의 구버전은 자동으로 정리하고, 확실하지 않은 것은 지우지 않고 보고합니다.
-  </p>
-  {% for source in knowledge_sources %}
-  <div class="sync-status" style="margin-bottom:10px">
-    <div style="flex:1">
-      <b>[{{ source.product }}]</b>
-      {% if not source.configured %}
-        <span class="hint">지식 폴더 경로가 설정되지 않았습니다 (<code>config/products/</code>).</span>
-      {% elif not source.available %}
-        <span class="hint">이 서버에서 폴더에 접근할 수 없습니다: <code>{{ source.source_dir }}</code><br>
-        폴더가 있는 PC에서 <code>python scripts/sync_product_knowledge.py --product "{{ source.product }}"</code> 를 실행하세요.</span>
-      {% else %}
-        수집 대기: {% for kind, count in (source.pending or {}).items() %}<span class="badge">{{ kind }} {{ count }}</span> {% endfor %}
-      {% endif %}
-      <br>
-      마지막 수집: {% if source.synced_at %}<span data-utc-time="{{ source.synced_at }}">{{ source.synced_at }}</span>{% else %}없음{% endif %}
-      {% if source.last_sync %} · 상태 {{ source.last_sync.status }}{% endif %}
-      · QA 규칙 {% if source.rules_available %}{{ source.rule_revision or '수집됨' }}{% else %}<b style="color:#991b1b">미수집</b>{% endif %}
-      {% if source.excluded %} · 구버전 제외 {{ source.excluded }}건{% endif %}
-      {% if source.last_sync and source.last_sync.detail %}<br><small>{{ source.last_sync.detail }}</small>{% endif %}
-    </div>
-    {% if source.available %}
-    <form method="post" action="/knowledge/sync/product-knowledge" class="inline-form knowledge-sync-form">
-      <input type="hidden" name="product" value="{{ source.product }}">
-      <button type="submit">지금 수집</button>
-    </form>
-    {% endif %}
-    <a href="/knowledge/source/{{ source.product }}" target="_blank" rel="noopener">스캔 결과 보기</a>
+  <h2>제품별 Knowledge 상태</h2>
+  <p class="hint">QA Agent · Regression 분석 · 매뉴얼 검증 · 일일 QA 점검이 함께 쓰는 제품 자료입니다. 제품 카드의 <b>상세보기</b>에서 자료를 확인하고 교체합니다.</p>
+  <div class="kn-cards">
+    {% for product in products %}
+    <article class="kn-card" data-product="{{ product.slug }}">
+      <h2>{{ product.product }} <span class="kn-level kn-{{ product.level }}">{{ product.label }}</span></h2>
+      <table class="kn-rows">
+        <tbody>
+          {% for asset in product.assets %}
+          <tr title="{{ asset.reason }}">
+            <td>{{ asset.label }}</td>
+            <td class="kn-n">{{ asset.count }}개</td>
+            <td>{{ asset.source_label }}</td>
+            <td><span class="kn-level kn-{{ asset.level }}">{{ asset.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="kn-foot">
+        <span>마지막 갱신: {% if product.last_updated %}<span data-utc-time="{{ product.last_updated }}">{{ product.last_updated[:16].replace('T', ' ') }} UTC</span>{% else %}기록 없음{% endif %}</span>
+        <a href="/knowledge/products/{{ product.slug }}">상세보기</a>
+      </div>
+    </article>
+    {% endfor %}
   </div>
-  {% endfor %}
-  {% if not knowledge_sources %}<p class="hint">등록된 제품이 없습니다.</p>{% endif %}
-  <p class="hint">
-    원본 파일이 사라진 등록이 남아 있으면 검색에 기여하지 못하면서 “사양 없음” 오판을 만듭니다.
+  {% if not products %}<p class="hint">제품 설정 파일(<code>config/products/*.yaml</code>)이 없습니다. <code>docs/PRODUCT_ONBOARDING.md</code> 순서로 추가하세요.</p>{% endif %}
+</section>
+{% if unconfigured %}
+<section>
+  <h2>설정 파일이 없는 제품</h2>
+  <p class="hint">문서는 등록돼 있지만 제품 설정 파일이 없어 상태를 판정하지 않습니다. 계속 쓰려면 <code>docs/PRODUCT_ONBOARDING.md</code> 순서로 설정 파일을 먼저 추가하세요.</p>
+  <ul>{% for item in unconfigured %}<li>{{ item.name }} · 문서 {{ item.documents }}개</li>{% endfor %}</ul>
+</section>
+{% endif %}
+<section>
+  <details>
+    <summary>고급 정보</summary>
+    <p class="hint">원본 파일이 사라진 등록은 검색에 쓰이지 못하면서 “사양 없음” 오판을 만듭니다.</p>
     <button type="button" id="cleanup-missing" style="padding:6px 10px;font-size:13px;background:#0f4c64">죽은 등록 정리</button>
-  </p>
-</section>
-<section>
-  <h2>ALM 사양서 동기화 상태</h2>
-  <div class="sync-status">
-    <div>
-      <b>[VXvue 사양서]</b>
-      마지막 동기화: {% if spec_sync %}<span data-utc-time="{{ spec_sync.synced_at }}">{{ spec_sync.synced_at }}</span>{% else %}없음 (수동 등록만 사용됨){% endif %}
-      · 상태: {{ spec_sync.status if spec_sync else '-' }}
-      {% if spec_sync and spec_sync.detail %}<br><small>{{ spec_sync.detail }}</small>{% endif %}
-    </div>
-    <p class="hint">담당자 Windows PC의 작업 스케줄러가 평일 09:40(한국 시간)에 <code>scripts/sync_vxvue_spec.py</code>를 자동 실행합니다. 지금 바로 실행하려면 그 PC에서 같은 명령을 직접 실행하세요.</p>
-  </div>
-</section>
-<div class="grid">
-  <section>
-    <h2>사양서 등록</h2>
-    <p class="hint">여기서 올린 파일은 사양서로 등록됩니다. 매뉴얼은 지식 폴더 수집으로 등록하세요.</p>
-    <form method="post" action="/knowledge/specification" enctype="multipart/form-data">
-      <label>제품명<input name="product" list="products-list" placeholder="제품명 선택 또는 새로 입력" required></label>
-      <label>Version<input name="version" list="versions-list" placeholder="버전 선택 또는 새로 입력"></label>
-      <label>PDF 또는 Word (.docx)
-        <div class="dropzone" id="spec-dropzone" data-for="spec-file" data-placeholder="클릭하여 선택하거나 파일을 끌어놓으세요">클릭하여 선택하거나 파일을 끌어놓으세요</div>
-        <input type="file" id="spec-file" name="file" accept=".pdf,.docx" required hidden>
-      </label>
-      <button>등록</button>
-    </form>
-    <p class="hint">사양서1~5처럼 서로 다른 문서를 같은 제품·버전에 여러 개 등록해도 이전 문서를 대체하지 않고 모두 분석 대상에 포함됩니다.</p>
-    {% for group in spec_groups %}
-    <div class="doc-group" data-product="{{ group.product }}">
-      <h3>{{ group.product }} · {{ group.version }}</h3>
-      <ul>
-        {% for doc in group.documents %}
-        <li>
-          {{ doc.name }} <small>(<span data-utc-time="{{ doc.created_at }}">{{ doc.created_at[:19].replace('T', ' ') }} UTC</span>)</small>
-          <a href="/knowledge/download/{{ doc.id }}">다운로드</a>
-          <form method="post" action="/knowledge/delete/{{ doc.id }}" class="inline-form delete-form" data-confirm="{{ doc.name }} 파일을 삭제할까요? 되돌릴 수 없습니다.">
-            <button type="submit" class="btn-danger-link">삭제</button>
-          </form>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endfor %}
-  </section>
-  <section>
-    <h2>Test Case 등록</h2>
-    <form method="post" action="/knowledge/testcase" enctype="multipart/form-data">
-      <label>제품명<input name="product" list="products-list" placeholder="제품명 선택 또는 새로 입력" required></label>
-      <label>Version<input name="version" list="versions-list" placeholder="버전 선택 또는 새로 입력"></label>
-      <label>XLSX
-        <div class="dropzone" id="tc-dropzone" data-for="tc-file" data-placeholder="클릭하여 선택하거나 파일을 끌어놓으세요">클릭하여 선택하거나 파일을 끌어놓으세요</div>
-        <input type="file" id="tc-file" name="file" accept=".xlsx" required hidden>
-      </label>
-      <button>등록</button>
-    </form>
-    <p class="hint">사양서1~5처럼 서로 다른 문서를 같은 제품·버전에 여러 개 등록해도 이전 문서를 대체하지 않고 모두 분석 대상에 포함됩니다.</p>
-    {% for group in testcase_groups %}
-    <div class="doc-group" data-product="{{ group.product }}">
-      <h3>{{ group.product }} · {{ group.version }}</h3>
-      <ul>
-        {% for doc in group.documents %}
-        <li>
-          {{ doc.name }} <small>(<span data-utc-time="{{ doc.created_at }}">{{ doc.created_at[:19].replace('T', ' ') }} UTC</span>)</small>
-          <a href="/knowledge/download/{{ doc.id }}">다운로드</a>
-          <form method="post" action="/knowledge/delete/{{ doc.id }}" class="inline-form delete-form" data-confirm="{{ doc.name }} 파일을 삭제할까요? 되돌릴 수 없습니다.">
-            <button type="submit" class="btn-danger-link">삭제</button>
-          </form>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endfor %}
-  </section>
-</div>
-<section>
-  <h2>매뉴얼 / Protocol (지식 폴더에서 수집)</h2>
-  <p class="hint">사양 근거 검색의 보조 근거로 쓰입니다 (규칙 §7 근거 수준 4단). 사양서보다 낮은 근거 수준으로 취급합니다.</p>
-  {% for group in manual_groups %}
-  <div class="doc-group" data-product="{{ group.product }}">
-    <h3>{{ group.product }} · {{ group.version }}</h3>
-    <ul>
-      {% for doc in group.documents %}
-      <li>
-        <a href="/knowledge/download/{{ doc.id }}">{{ doc.name }}</a>
-        {% if doc.revision %}<span class="badge">{{ doc.revision }}</span>{% endif %}
-        <form method="post" action="/knowledge/delete/{{ doc.id }}" class="inline-form delete-form" data-confirm="{{ doc.name }} 등록을 삭제할까요?">
-          <button type="submit" class="btn-danger-link">삭제</button>
-        </form>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endfor %}
-  {% if not manual_groups %}<p class="hint">수집된 매뉴얼이 없습니다. 위 “지금 수집”을 실행하세요.</p>{% endif %}
+  </details>
 </section>
 <script>
 const cleanupButton = document.getElementById('cleanup-missing');
@@ -154,48 +62,6 @@ if (cleanupButton) cleanupButton.addEventListener('click', async () => {
   if (!response.ok) { alert(body.detail || '정리 실패'); return; }
   alert(body.removed ? `${body.removed}건 정리:\n` + body.documents.map(d => `${d.product} · ${d.name}`).join('\n') : '정리할 등록이 없습니다.');
   if (body.removed) location.reload();
-});
-
-document.querySelectorAll('.knowledge-sync-form').forEach(form => {
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const button = form.querySelector('button');
-    const original = button.textContent;
-    button.disabled = true; button.textContent = '수집 중...';
-    try {
-      const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) { alert(body.detail || `수집 실패 (HTTP ${response.status})`); return; }
-      const notes = [body.detail];
-      if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 요청]\n' + body.duplicates.join('\n'));
-      alert(notes.join('\n'));
-      location.reload();
-    } finally {
-      button.disabled = false; button.textContent = original;
-    }
-  });
-});
-const versionsByProduct = {{ versions_by_product | tojson }};
-const versionList = document.querySelector('#versions-list');
-function refreshVersions(product) {
-  versionList.innerHTML = (versionsByProduct[product] || []).map(v => `<option value="${v}">`).join('');
-}
-document.querySelectorAll('input[name=product]').forEach(inp => inp.addEventListener('input', () => refreshVersions(inp.value)));
-
-const productFilter = document.querySelector('#product-filter');
-function applyProductFilter() {
-  const selected = productFilter.value;
-  document.querySelectorAll('.doc-group').forEach(group => {
-    group.style.display = (!selected || group.dataset.product === selected) ? '' : 'none';
-  });
-}
-productFilter.addEventListener('change', applyProductFilter);
-applyProductFilter();
-
-document.querySelectorAll('.delete-form').forEach(form => {
-  form.addEventListener('submit', (e) => {
-    if (!confirm(form.dataset.confirm)) e.preventDefault();
-  });
 });
 </script>
 {% endblock %}

@@ -98,7 +98,7 @@ def _register_specification(client: httpx.Client, target_url: str, path: Path, p
     with path.open("rb") as handle:
         response = client.post(
             f"{target_url}/knowledge/specification",
-            data={"product": product, "version": version},
+            data={"product": product, "version": version, "source": "alm_crawler"},
             files={"file": (path.name, handle, "application/pdf")},
             follow_redirects=False,
             timeout=60,
@@ -127,12 +127,18 @@ def _replace_stale_revisions(client: httpx.Client, target_url: str, product: str
         if _base_name(doc["name"]) != target_base:
             continue
         try:
-            client.post(f"{target_url}/knowledge/delete/{doc['id']}", timeout=15, follow_redirects=False)
+            client.post(f"{target_url}/knowledge/delete/{doc['id']}", data={"source": "alm_crawler"}, timeout=15, follow_redirects=False)
             removed += 1
             logger.info("이전 리비전 삭제: %s (id=%s)", doc["name"], doc["id"])
         except httpx.HTTPError as exc:
             logger.warning("이전 리비전 삭제 실패: %s (%s)", doc["name"], exc)
     return removed
+
+
+def adapter_product() -> str:
+    """이 ALM 수집 어댑터가 맡는 제품의 표시 이름 (REQ-KNOW-018). 공통 Knowledge 코드는 제품 이름을 적지 않고 이 값을 쓴다."""
+    config = load_product_config("vxvue")
+    return config.product if config else ""
 
 
 def report_sync_log(target_url: str, product: str, kind: str, source: str, status: str, detail: str, logger: logging.Logger | None = None) -> None:

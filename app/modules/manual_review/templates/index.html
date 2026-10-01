@@ -14,7 +14,7 @@
     </details>{% endfor %}
   </div>
   <form id="revision-form">
-    <label>제품<select name="product" required><option value="">선택</option>{% for p in products %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select><span class="hint">목록에 없으면 <a href="/knowledge">Knowledge에서 제품을 추가</a>하세요.</span></label>
+    <label>제품<select name="product" required><option value="">선택</option>{% for p in products %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select><span class="hint">목록에 없으면 제품 설정을 먼저 추가하세요(<code>docs/PRODUCT_ONBOARDING.md</code>). <a href="/knowledge">Knowledge</a></span></label>
     <label>매뉴얼 종류<input type="text" name="manual_name" list="manual-types-list" placeholder="목록에서 선택하거나 직접 입력" autocomplete="off" required><datalist id="manual-types-list"></datalist><span class="hint">VXvue의 실제 매뉴얼 이름을 제안하며 다른 이름도 입력할 수 있습니다.</span></label>
     <label>제품 버전<input type="text" name="target_version" list="product-versions-list" placeholder="예: 1.1.0" autocomplete="off" required><datalist id="product-versions-list"></datalist><span class="hint">Knowledge 등록 버전을 선택하거나 직접 입력하세요. V는 자동으로 붙습니다.</span></label>
     <label>이전 검증<select name="parent_revision_id"><option value="">없음 (새 검증 계보)</option>{% for r in revisions %}<option value="{{ r.id }}" data-product="{{ r.product }}" data-manual="{{ r.manual_name }}" data-version="{{ r.target_version or '' }}" data-round="{{ r.round_number }}">#{{ r.id }} · {{ r.product }} · {{ r.manual_name }} · {{ r.revision_label }}</option>{% endfor %}</select><span class="hint">같은 제품·매뉴얼·제품 버전의 후속 검증일 때만 선택하세요.</span></label>

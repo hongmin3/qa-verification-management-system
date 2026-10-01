@@ -18,7 +18,7 @@ class _FakeSettings:
         self._testcase_dir = testcase_dir
 
     def path(self, dotted: str) -> Path:
-        assert dotted == "storage.testcase_dir"
+        assert dotted in ("storage.testcase_dir", "storage.specification_dir")
         return self._testcase_dir
 
 
@@ -36,6 +36,10 @@ def _use_fake_testcase_dir(monkeypatch, tmp_path) -> Path:
     testcase_dir = tmp_path / "testcases"
     testcase_dir.mkdir()
     monkeypatch.setattr(knowledge_router, "get_settings", lambda: _FakeSettings(testcase_dir))
+    # 파싱 저장본도 tmp 에 쓴다. 실제 data/indexes 를 건드리지 않는다.
+    from app.core import document_cache
+    monkeypatch.setattr(document_cache, "_cache_path", lambda document_id: tmp_path / "indexes" / f"{document_id}.json")
+    monkeypatch.setattr(document_cache, "_text_cache_path", lambda document_id: tmp_path / "indexes" / f"{document_id}.text")
     return testcase_dir
 
 
@@ -53,7 +57,7 @@ def test_register_testcase_with_recognized_headers_registers_directly(monkeypatc
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/knowledge"
+    assert response.headers["location"].startswith("/knowledge/products/vxvue")   # 등록 뒤 제품 상세로 (REQ-KNOW-004)
     docs = storage.active_documents("testcase", "VXvue")
     assert len(docs) == 1
     assert docs[0]["name"] == "tc.xlsx"
@@ -140,7 +144,7 @@ def test_submit_mapping_registers_document_with_stored_mapping(monkeypatch, tmp_
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/knowledge"
+    assert response.headers["location"].startswith("/knowledge/products/vxvue")   # 등록 뒤 제품 상세로 (REQ-KNOW-004)
     docs = storage.active_documents("testcase", "VXvue")
     assert len(docs) == 1
     metadata = json.loads(docs[0]["metadata_json"])

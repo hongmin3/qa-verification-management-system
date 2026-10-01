@@ -16,11 +16,13 @@ def _page(path: str) -> str:
     return response.text
 
 
-# Validates: REQ-SYNC-001
-def test_knowledge_page_states_weekday_spec_sync_time():
-    text = _page("/knowledge")
+# Validates: REQ-SYNC-001, REQ-KNOW-020
+def test_alm_specification_shows_status_without_upload():
+    text = _page("/knowledge/products/vxvue")
     assert "매주 월요일 07:30" not in text
-    assert "평일 09:40" in text
+    assert "ALM 에서 자동으로 수집합니다" in text
+    section = text[text.index('id="kind-specification"'):text.index('id="kind-testcase"')]
+    assert "새 문서 등록" not in section and 'type="file"' not in section
 
 
 # Validates: REQ-SYNC-002, REQ-KNOW-017
@@ -33,12 +35,13 @@ def test_guide_shows_upload_command_and_schedule():
     assert "매주 자동 수집" not in text
 
 
-# Validates: REQ-KNOW-003
-def test_manual_form_is_named_specification_only():
-    """수동 양식으로 올린 파일은 종류가 사양서가 된다. 매뉴얼은 지식 폴더로만 받는다 (SPEC 13.5 추천 ②)."""
+# Validates: REQ-KNOW-001, REQ-KNOW-003
+def test_dashboard_has_no_upload_forms_and_manual_source_detail_has():
+    """현황판에는 업로드·제품 추가 양식이 없다. 출처가 manual 인 Bellalun 사양서 구역에만 등록 버튼이 있다."""
     page = _page("/knowledge")
-    guide = _page("/knowledge/guide")
-    assert "사양서 / Manual 등록" not in page
-    assert "<h2>사양서 등록</h2>" in page
-    assert "사양서/Manual 등록" not in guide
-    assert "사양서 등록" in guide
+    assert 'type="file"' not in page and 'action="/knowledge/products"' not in page
+    detail = _page("/knowledge/products/bellalun-viewer")
+    section = detail[detail.index('id="kind-specification"'):detail.index('id="kind-testcase"')]
+    assert "새 문서 등록" in section and 'accept=".pdf,.docx"' in section
+    manual = detail[detail.index('id="kind-manual"'):detail.index('id="kind-qa_rules"')]
+    assert 'type="file"' not in manual                       # 매뉴얼은 지식 폴더 자료 (SPEC 13.5)

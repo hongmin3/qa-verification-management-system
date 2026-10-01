@@ -1,5 +1,15 @@
 # 진행 상태
 
+## 2026-10-01 오후 Knowledge 현황판 재설계 · 깨진 SRS 날짜 되살리기 · Polarion 연결
+
+- 완료: 공용 Knowledge 재설계(REQ-KNOW-001~005·017~020). 인계 문서 `2026-09-30-knowledge-dashboard-redesign.md` 4절 1~8번을 끝냈다. 상태 판정은 `app/core/knowledge_status.py`, 안전 교체 등록은 `app/core/knowledge_registry.py` 다. 화면은 현황판, 제품 상세, 여섯 부분 사용법이다.
+- 검증: 새 테스트 23개(`tests/test_knowledge_profiles.py`, 가짜 제품 포함)와 전체 pytest 1177 passed · 1 skipped. 제품 이름 분기 검사와 "더 최신 판 거절"은 일부러 코드를 깨면 실패하는 것을 확인했다. 12000 포트 서버에서 `/knowledge`, `/knowledge/products/vxvue`, `/knowledge/products/bellalun-viewer`, `/knowledge/guide` 가 390·1920px 에서 가로 스크롤이 없고 콘솔 오류도 없다. 실제 파일 교체는 이 PC 의 DB 를 바꾸므로 자동 테스트로만 확인했다.
+- 이 PC 의 현황판 결과: Bellalun Viewer 는 `오류`, VXvue 사양서는 `수집 실패` 로 나온다. 판정 오류가 아니다. 이 PC DB 의 등록이 이동 전 폴더(`…\자동화\qa-verification-management-system\…`)를 가리켜 파일이 없다. 오늘 09:40 의 로컬 대상 사양서 동기화도 연결 거부로 실패했다(이어서 돈 서버 대상 동기화는 6건 성공). `고급 정보` 의 `죽은 등록 정리` 로 정리할 수 있다(사용자 결정).
+- 완료: 깨진 srs-spec 날짜 2개를 되살려 가져왔다(REQ-QAINTEL-029). 09-07 은 437건 중 10개 파일, 09-21 은 3개 파일이다. 꼬리 글자가 앞 JSON 의 끝과 같을 때만 되살린다.
+- 완료: Polarion 연결. 토큰은 이미 사용자 환경변수 `POLARION_TOKEN` 에 있었고 주소가 빠져 있었다. ALM-QA-Automation `apps/srs-spec/config/config.yaml` 의 주소를 `secrets.txt` 의 `POLARION_HOST` 로 옮겼다. `--check` 의 Polarion 설정이 `[OK]`, `--dry-run` 이 SRS·이슈를 모두 읽었다.
+- 대기: 대기 분석 72건. 11:06 실행이 Claude 세션(5시간) 한도에 걸려 13:00 이후 다시 돌린다.
+- 다음: 이슈 기록이 없는 기간의 "현재 상태 기준 이슈 정합성 점검"(사용자 결정: 전체 범위, 버튼 실행, 상한 없음과 토큰 절약 설계). SPEC 부터 쓴다.
+
 ## 2026-10-01 과거 SRS 가져오기 · 기간 실행 · Claude 로그인 (사용자 요청으로 Knowledge 재설계보다 먼저)
 
 - 완료: ALM-QA-Automation `srs-spec` 스냅샷 12개 날짜 가운데 10개를 이 PC 에 가져왔다(`data/daily_qa/snapshots/vxvue/srs/`, 날짜마다 437건). 2026-09-07·09-21 은 srs-spec 이 같은 날 두 번 동시에 돌아(정기 작업 + 부팅 만회 작업) JSON 13개 끝에 이전 쓰기의 꼬리가 붙어 깨졌다. 그래서 건너뛴다. srs-spec 은 09-21 커밋 `65f79cb` 에서 실행 잠금을 넣었고 그 뒤로는 깨진 날이 없다. 깨진 파일도 앞부분의 온전한 JSON 으로 되살릴 수 있다(사용자 결정 대기).

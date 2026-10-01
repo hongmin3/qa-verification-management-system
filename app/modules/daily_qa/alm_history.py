@@ -29,12 +29,15 @@ class DayResult:
     status: str            # imported | exists | skipped | would_import
     count: int = 0
     reason: str = ""
+    restored: list[str] = field(default_factory=list)
 
     def line(self) -> str:
         labels = {"imported": "가져옴", "exists": "이미 있음", "skipped": "건너뜀", "would_import": "가져올 예정(시험)"}
         text = f"{self.date} {labels[self.status]}"
         if self.count:
             text += f" {self.count}건"
+        if self.restored:
+            text += f" (되살린 파일 {len(self.restored)}개)"
         return text + (f" ({self.reason})" if self.reason else "")
 
 
@@ -82,27 +85,53 @@ def _generated_at(day_dir: Path) -> str:
         return ""
 
 
-def read_day(day_dir: Path, project_id: str, profile: ProductProfile) -> tuple[list[dict] | None, str]:
-    """그 날짜의 SRS 를 공통 모델로. 믿을 수 없으면 (None, 이유)."""
+def restore(text: str) -> dict | None:
+    """끝에 이전 쓰기의 꼬리가 남은 JSON 을 되살린다.
+
+    `srs-spec` 이 같은 파일을 동시에 두 번 쓰면 짧은 쓰기 뒤에 긴 쓰기의 끝이 남는다. 앞부분이 온전한
+    JSON 하나이고 남은 글자가 그 JSON 의 끝과 글자 그대로 같을 때만 앞 JSON 을 믿는다.
+    """
+    try:
+        value, end = json.JSONDecoder().raw_decode(text)
+    except ValueError:
+        return None
+    head, tail = text[:end].rstrip(), text[end:].rstrip()
+    if not isinstance(value, dict) or not tail or not head.endswith(tail):
+        return None
+    return value
+
+
+def read_day(day_dir: Path, project_id: str, profile: ProductProfile) -> tuple[list[dict] | None, str, list[str]]:
+    """그 날짜의 SRS 를 공통 모델로. 믿을 수 없으면 (None, 이유). 세 번째 값은 되살린 파일 이름."""
     project_dir = day_dir / project_id
     if not project_dir.is_dir():
-        return None, f"{project_id} 폴더 없음"
-    raws, broken = [], []
+        return None, f"{project_id} 폴더 없음", []
+    raws, broken, restored = [], [], []
     for path in sorted(project_dir.glob("*.json")):
         try:
-            raws.append(json.loads(path.read_text(encoding="utf-8")))
-        except (OSError, ValueError):
+            text = path.read_text(encoding="utf-8")
+        except OSError:
             broken.append(path.name)
+            continue
+        try:
+            raws.append(json.loads(text))
+        except ValueError:
+            value = restore(text)
+            if value is None:
+                broken.append(path.name)
+            else:
+                raws.append(value)
+                restored.append(path.name)
     if broken:
-        return None, f"읽지 못한 파일 {len(broken)}개: {', '.join(broken[:3])}" + (" 외" if len(broken) > 3 else "")
+        return None, f"읽지 못한 파일 {len(broken)}개: {', '.join(broken[:3])}" + (" 외" if len(broken) > 3 else ""), []
     if not raws:
-        return None, "SRS 파일 없음"
+        return None, "SRS 파일 없음", []
     expected = _expected_total(day_dir, project_id)
     if expected is not None and expected != len(raws):
-        return None, f"manifest 개수 {expected}건과 파일 {len(raws)}건이 다름"
+        return None, f"manifest 개수 {expected}건과 파일 {len(raws)}건이 다름", []
     items = [as_workitem(raw) for raw in raws]
     titles = srs_titles(items, profile)
-    return [normalize_srs(item, profile, titles) for item in items], ""
+    return [normalize_srs(item, profile, titles) for item in items], "", restored
 
 
 def import_history(source_dir: Path, store: snapshots.SnapshotStore, project_id: str, profile: ProductProfile,
@@ -114,13 +143,14 @@ def import_history(source_dir: Path, store: snapshots.SnapshotStore, project_id:
         if store.exists(snapshots.KIND_SRS, date):
             result.days.append(DayResult(date, "exists"))
             continue
-        items, reason = read_day(day_dir, project_id, profile)
+        items, reason, restored = read_day(day_dir, project_id, profile)
         if items is None:
             result.days.append(DayResult(date, "skipped", reason=reason))
             continue
         if dry_run:
-            result.days.append(DayResult(date, "would_import", len(items)))
+            result.days.append(DayResult(date, "would_import", len(items), restored=restored))
             continue
-        store.save(snapshots.KIND_SRS, date, items, _generated_at(day_dir), source=SOURCE)
-        result.days.append(DayResult(date, "imported", len(items)))
+        store.save(snapshots.KIND_SRS, date, items, _generated_at(day_dir), source=SOURCE,
+                   extra={"restored_files": restored} if restored else None)
+        result.days.append(DayResult(date, "imported", len(items), restored=restored))
     return result

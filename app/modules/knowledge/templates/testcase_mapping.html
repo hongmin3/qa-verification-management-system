@@ -13,6 +13,7 @@
     <input type="hidden" name="product" value="{{ product }}">
     <input type="hidden" name="version" value="{{ version }}">
     <input type="hidden" name="original_name" value="{{ original_name }}">
+    <input type="hidden" name="replace_id" value="{{ replace_id }}">
     <label>시트
       <select name="sheet">
         {% for s in sheets %}<option value="{{ s }}"{% if s == selected_sheet %} selected{% endif %}>{{ s }}</option>{% endfor %}
@@ -48,6 +49,7 @@
     <input type="hidden" name="product" value="{{ product }}">
     <input type="hidden" name="version" value="{{ version }}">
     <input type="hidden" name="original_name" value="{{ original_name }}">
+    <input type="hidden" name="replace_id" value="{{ replace_id }}">
     <input type="hidden" name="sheet" value="{{ selected_sheet }}">
     <input type="hidden" name="header_row" value="{{ header_row }}">
     <div class="grid">

@@ -9440,7 +9440,7 @@ python -m pytest tests/test_daily_qa_fixes.py -q
 실행 명령(프로젝트 루트):
 
 ```text
-python -m pytest tests/test_product_knowledge.py tests/test_knowledge_upload.py tests/test_knowledge_testcase_mapping.py tests/test_document_cache.py tests/test_persistent_analyses.py tests/test_secrets_file.py tests/test_product_config.py tests/test_security_filter.py tests/test_notifier.py tests/test_model_router.py tests/test_gemini_and_report.py tests/test_cost_dashboard.py tests/test_monitor_health.py tests/test_backup.py tests/test_serve_bind.py tests/test_web.py tests/test_knowledge_mount.py tests/test_vxvue_spec_sync.py tests/test_knowledge_sync_integrity.py tests/test_gemini_client_core.py tests/test_knowledge_screens.py tests/test_page_scripts.py tests/test_sync_vxvue_spec_cli.py -q
+python -m pytest tests/test_product_knowledge.py tests/test_knowledge_upload.py tests/test_knowledge_testcase_mapping.py tests/test_document_cache.py tests/test_persistent_analyses.py tests/test_secrets_file.py tests/test_product_config.py tests/test_security_filter.py tests/test_notifier.py tests/test_model_router.py tests/test_gemini_and_report.py tests/test_cost_dashboard.py tests/test_monitor_health.py tests/test_backup.py tests/test_serve_bind.py tests/test_web.py tests/test_knowledge_mount.py tests/test_vxvue_spec_sync.py tests/test_knowledge_sync_integrity.py tests/test_gemini_client_core.py tests/test_knowledge_screens.py tests/test_page_scripts.py tests/test_sync_vxvue_spec_cli.py tests/test_knowledge_profiles.py -q
 ```
 
 ### TEST-KNOW-001
@@ -9474,16 +9474,30 @@ REQ-KNOW-012 를 `tests/test_knowledge_upload.py` 로 확인한다: `test_the_sa
 
 ### TEST-KNOW-006
 
-REQ-KNOW-001, 002, 013, 014, 017 은 자동 테스트가 화면 제목과 링크(`tests/test_web.py::test_knowledge_is_presented_as_shared_workspace`), 화면 스크립트 문법(`tests/test_page_scripts.py`), 동기화 시각·업로드 명령·양식 이름(`tests/test_knowledge_screens.py`)을 본다. 사람이 확인하는 절차:
+REQ-KNOW-001, 013, 014, 017, 020 은 자동 테스트가 화면 스크립트 문법(`tests/test_page_scripts.py`, 현황판·사용법·두 제품 상세), 사용법의 업로드 명령, ALM 사양서 구역에 업로드가 없는 것, 현황판에 업로드 양식이 없는 것(`tests/test_knowledge_screens.py`)을 본다. 사람이 확인하는 절차:
 
-1. `/knowledge` 를 연다. 브라우저 개발자 도구 콘솔에 스크립트 오류가 없는지 본다.
-2. 제품 필터를 바꾸면 문서 목록이 그 제품만 남는지 본다.
-3. 문서 `삭제` 를 누르면 확인 창이 뜨고, 취소하면 지워지지 않는지 본다.
-4. 폴더에 접근할 수 있는 호스트에서 `지금 수집` 을 누르면 알림 창에 결과가 뜨고 화면이 새로고침되는지 본다.
-5. `죽은 등록 정리` 를 누르면 확인 창과 결과 알림이 뜨는지 본다.
-6. `스캔 결과 보기` 가 JSON 을 여는지 본다.
-7. `새 제품 추가` 에 이름을 넣으면 목록에 생기는지 본다.
-8. `/knowledge/guide` 의 CLI 예시가 `--upload-to` 와 운영 포트를 안내하는지 본다.
+1. `/knowledge` 를 연다. 설정 파일마다 카드가 있고, 카드 줄에 마우스를 올리면 상태 이유가 보이는지 본다. 개발자 도구 콘솔에 스크립트 오류가 없는지 본다.
+2. `상세보기` 로 `/knowledge/products/bellalun-viewer` 를 연다. 사양서 구역의 `교체` 로 파일을 고르면 확인 창이 뜨고, 확인하면 화면 위에 "등록 1건, 교체 N건"이 보이는지 본다.
+3. 읽지 못하는 파일(이름만 `.docx` 인 빈 파일)로 교체하면 서버가 준 이유가 알림으로 뜨고 기존 문서가 그대로인지 본다.
+4. `/knowledge/products/vxvue` 의 사양서 구역에 업로드 버튼이 없고 "ALM 에서 자동으로 수집합니다." 가 보이는지 본다.
+5. `수집 제외 N건 · 자세히` 를 펼치면 파일명·분류·이유·대신 쓰는 파일이 보이는지 본다.
+6. `고급 정보` 의 `스캔 결과 JSON` 이 JSON 을 여는지, 현황판 `고급 정보` 의 `죽은 등록 정리` 가 확인 창과 결과 알림을 띄우는지 본다.
+7. 1920px 와 390px 폭에서 가로 스크롤이 생기지 않는지 본다.
+
+### TEST-KNOW-007
+
+REQ-KNOW-002, 003, 005, 018, 019, 020 을 `tests/test_knowledge_profiles.py` 로 확인한다. 실제 두 제품 설정에 설정 파일만 더한 가짜 제품(`fake-product.yaml`: 사양서 `manual`, TC `knowledge_folder`, 매뉴얼 `manual`·없어도 됨, QA 규칙 꼭 필요)을 쓴다. DB·파싱 저장본·수집 기록·업로드 폴더는 모두 임시 폴더다.
+
+1. 출처: ALM 사양서 업로드는 409 이고 파일이 저장되지 않는다. `source=alm_crawler` 를 밝힌 동기화 요청은 등록된다. 지식 폴더 종류와 규칙 자산은 화면 등록이 없다.
+2. 교체: 같은 논리 문서의 새 파일만 남고 다른 문서는 남는다. 서로 다른 매뉴얼은 각자 최신 판이 남는다. 새 파일을 읽지 못하면 422 이고 기존 등록·파일이 그대로다. 더 최신 판이 있으면 409, 다른 제품의 `replace_id` 는 400, 파싱 저장본 쓰기 실패는 500 으로 되돌린다.
+3. 상태 판정: 꼭 필요한 자료가 다 있으면 `정상`, 없으면 `자료 없음`·`주의`, 등록 없이 마지막 수집이 실패면 `수집 실패`·`오류`. 뒤에 성공한 지식 폴더 수집이 있으면 옛 ALM 실패는 보지 않는다. 읽지 못함·일부 읽지 못함·중복·오래된 수집·알 수 없는 출처를 각각 판정한다.
+4. 격리: 한 제품의 등록이 다른 제품 판정과 분석 입력(`load_for_product`)에 섞이지 않는다. 등록한 문서를 분석 입력이 읽는다.
+5. 화면: 현황판이 설정마다 카드를 그리고(가짜 제품 포함), 설정 없는 제품은 이름·문서 수만 보인다. 기술 값(`configured`, `source_dir` 등)이 보이지 않는다. 상세 화면 동작이 출처를 따른다. 수집 제외 표가 수집 기록에서 나온다.
+6. 공통 Knowledge 코드에 제품 이름으로 비교·대입하는 줄이 없다.
+
+```text
+python -m pytest tests/test_knowledge_profiles.py -q
+```
 
 ### TEST-CONF-001
 
@@ -10049,11 +10063,11 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | NFR-SEC-001 | `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/workspace.py`, `app/core/security_filter.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | NFR-DAILY-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-011, TEST-DAILY-012, `tests/test_daily_qa_fixes.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | implemented |
 | NFR-DAILY-002 | `.gitignore`, `app/modules/daily_qa/workspace.py`, `app/core/retention.py`, `scripts/backup_data.py` | TEST-DAILY-010, `tests/test_backup.py` | implemented |
-| REQ-KNOW-001 | `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/knowledge.html`, `app/web/templates/knowledge_base.html` | TEST-KNOW-006, `tests/test_page_scripts.py`, `tests/test_knowledge_screens.py` | implemented |
-| REQ-KNOW-002 | `app/modules/knowledge/router.py`, `app/core/storage.py` | TEST-KNOW-006 | implemented |
-| REQ-KNOW-003 | `app/modules/knowledge/router.py`, `app/core/uploads.py`, `app/modules/knowledge/templates/knowledge.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
-| REQ-KNOW-004 | `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/testcase_mapping.html` | TEST-KNOW-002: `tests/test_knowledge_testcase_mapping.py` | implemented |
-| REQ-KNOW-005 | `app/modules/knowledge/router.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py` | implemented |
+| REQ-KNOW-001 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/knowledge.html`, `app/web/templates/knowledge_base.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_page_scripts.py`, `tests/test_knowledge_screens.py` | verified |
+| REQ-KNOW-002 | `app/modules/knowledge/router.py`, `app/main.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_manual_review_router.py`, `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-003 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/core/uploads.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_knowledge_screens.py` | verified |
+| REQ-KNOW-004 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/testcase_mapping.html` | TEST-KNOW-002: `tests/test_knowledge_testcase_mapping.py` | verified |
+| REQ-KNOW-005 | `app/modules/knowledge/router.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py` | verified |
 | REQ-KNOW-006 | `app/core/knowledge_documents.py`, `app/core/storage.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py` | implemented |
 | REQ-KNOW-007 | `app/core/document_cache.py`, `app/core/product_knowledge.py` | TEST-KNOW-004: `tests/test_document_cache.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-008 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
@@ -10065,13 +10079,13 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-014 | `app/modules/knowledge/router.py` | TEST-KNOW-006 | implemented |
 | REQ-KNOW-015 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-016 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/main.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
-| REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006 | implemented |
-| REQ-KNOW-018 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
-| REQ-KNOW-019 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
-| REQ-KNOW-020 | `app/core/product_config.py` | TEST-KNOW-006, `tests/test_product_config.py` | draft |
+| REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
+| REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/impact_analyzer/vxvue_spec_sync.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py` | verified |
+| REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
-| REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
+| REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
 | REQ-STORE-001 | `app/core/storage.py`, `app/core/config.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
 | REQ-STORE-002 | `app/core/storage.py`, `app/core/daily_qa_storage.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
 | REQ-STORE-003 | `app/core/storage.py`, `app/main.py`, `app/modules/impact_analyzer/router.py`, `app/modules/qa_agent/router.py`, `app/modules/manual_review/router.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
@@ -10212,7 +10226,6 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - REQ-MANUAL-005: 문단 아래 한 단계 깊이의 변경 표시만 본다. 하이퍼링크 등 다른 요소 안에 들어간 변경은 놓칠 수 있다(미정, 13절 참조).
 - REQ-MANUAL-009: 문서 형식이 예상과 달라 항목을 못 뽑음 | 항목 0건 | 누락 의심 없음. 사용자에게 알리지 않는다(미정, 13절 참조) |
 - REQ-MANUAL-014: QA 판정(`qa_decision`) | REQ-MANUAL-011 표의 8개 판정 값 가운데 하나. 빈 값이면 QA 재판정을 지운다(미정, 13절 참조) | 예 |
-- REQ-KNOW-003: 파일을 읽지 못함 | 처리 중 예외가 난다 | 오류 화면(500). 사용자용 안내 문구는 아직 없다(미정, 13절 참조) |
 - REQ-CONF-001: **주의** 미정: 코드상 `/config/reload` 는 `config.yaml` 도 다시 읽는다. 하지만 모듈이 시작 때 만든 객체는 옛 값을 쥐고 있다(13절 참조).
 - REQ-CONF-002: `APP_SECRET_KEY` | 읽기만 하고 쓰는 곳 없음(미정, 13절 참조) | 영향 없음 |
 - REQ-SCHED-001: 제품 설정의 시각이 `HH:MM` 숫자가 아님 | 등록 중 오류로 앱이 뜨지 않는다(미정, 13절 참조) |
