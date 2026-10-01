@@ -477,3 +477,33 @@ def test_guide_running_message_matches_run_now_conflict_response(world, launcher
     response = world["client"].post("/qa-agent/runs", data={"product": world["cfg"].product})
     assert response.status_code == 409
     assert response.json()["detail"] in world["client"].get("/qa-agent/guide").text
+
+
+# -- 현재 상태 점검 (REQ-QAINTEL-030) ---------------------------------------------------
+
+
+def test_issue_audit_launches_with_flag_and_warning(world, launcher):
+    """Validates: REQ-QAINTEL-030 — [현재 상태 점검]은 --issue-audit 로 띄우고 현재 상태 기준이라는 경고를 준다."""
+    today = datetime.now(dash.KST).date()
+    since = (today - timedelta(days=7)).isoformat()
+    response = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue", "since": since, "until": today.isoformat()})
+    assert response.status_code == 202
+    assert "현재 이슈 상태 기준" in response.json()["warning"]
+    command = launcher.commands[-1]
+    assert command[-1] == "--issue-audit" and ["--since", since] == command[-3:-1]
+
+
+def test_issue_audit_is_refused_for_past_day_without_issue_snapshot_and_while_locked(world, launcher):
+    response = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue", "since": "2026-09-01", "until": "2026-09-28"})
+    detail = response.json()["detail"]
+    assert response.status_code == 400
+    assert "이슈 스냅샷이 없어 현재 상태 점검을 할 수 없습니다" in detail or "SRS 스냅샷이 없어" in detail
+    world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
+    world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
+    locked = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue"})
+    assert locked.status_code == 409 and locked.json()["detail"] == "QA Agent가 이미 실행 중입니다."
+
+
+def test_dashboard_shows_issue_audit_button(world):
+    page = world["client"].get("/qa-agent").text
+    assert 'id="audit-now"' in page and "현재 상태 점검" in page

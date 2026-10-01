@@ -67,6 +67,13 @@ def _event_line(summary: dict) -> str:
     return ", ".join(f"{EVENT_LABELS.get(name, name)} {count}" for name, count in sorted(events.items()))
 
 
+def _audit_line(audit: dict) -> str:
+    parts = ", ".join(f"{name} {count}" for name, count in (audit.get("by_category") or {}).items())
+    return (f"{audit.get('since', '')} ~ {audit.get('until', '')} · 이슈 전체 {audit.get('issues_seen', 0)}건 · "
+            f"기간 안 생성 {audit.get('created_in_period', 0)}건 · 수정 {audit.get('updated_in_period', 0)}건 · "
+            f"점검 대상 {audit.get('targets', 0)}건({parts}) · 대상 아님 {audit.get('not_target', 0)}건")
+
+
 def build_email(run_id: str, status_label: str, stages: dict, summary: dict, review_url: str, rules_warning: str,
                 product: str = "") -> tuple[str, str, str]:
     prefix = f"[QA Agent] {product} " if product else "[QA Agent] "
@@ -77,6 +84,10 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
         text += [f"※ {rules_warning}", ""]
     if limit:
         text += [f"※ {limit.get('description', '')} 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.", ""]
+    audit = summary.get("issue_audit") or {}
+    if audit:
+        # 이슈 기록이 없어 현재 상태 기준으로 점검했다는 알림 (REQ-QAINTEL-030 결과).
+        text += [f"※ {audit.get('notice', '')}", _audit_line(audit), ""]
     text += [f"실행 ID: {run_id}", f"결과: {status_label}", f"오늘 변경: {_event_line(summary)}", "", "[단계]"]
     for label, status, note in _stage_lines(stages):
         text.append(f"- {label}: {status}" + (f" ({note})" if note else ""))
@@ -100,6 +111,8 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
     warning = f"<p style='color:#b00020'><b>※ {html.escape(rules_warning)}</b></p>" if rules_warning else ""
     if limit:
         warning += f"<p style='color:#b00020'><b>※ {html.escape(limit.get('description', ''))}</b></p>"
+    if audit:
+        warning += f"<p style='color:#92400e'><b>※ {html.escape(audit.get('notice', ''))}</b><br>{html.escape(_audit_line(audit))}</p>"
     body = (
         f"<div style='font-family:sans-serif'>{warning}<h3>QA Agent {html.escape(product)} {html.escape(run_id)} — {html.escape(status_label)}</h3>"
         f"<p>오늘 변경: {html.escape(_event_line(summary))}</p>"

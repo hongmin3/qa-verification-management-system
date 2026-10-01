@@ -7,6 +7,7 @@
     python scripts/run_daily_qa.py                 # 정식 실행 (daily_qa.products 의 첫 제품)
     python scripts/run_daily_qa.py --product VXvue # 제품을 지정한다
     python scripts/run_daily_qa.py --since 2026-09-25 --until 2026-09-30   # 기간의 변경을 분석한다 (REQ-QAINTEL-027)
+    python scripts/run_daily_qa.py --issue-audit --since 2026-08-31 --until 2026-09-22   # 이슈 기록 없는 기간의 현재 상태 점검 (REQ-QAINTEL-030)
     python scripts/run_daily_qa.py --dry-run       # Claude 를 부르지 않고 입력 묶음과 결정적 계산만 (스냅샷·Finding 은 저장하지 않는다)
     python scripts/run_daily_qa.py --weekly        # 오늘이 지정 요일이 아니어도 주 1회 단계(사양–TC 연결 점검, 매뉴얼 누락 후보 점검)까지 돌린다
     python scripts/run_daily_qa.py --no-email      # 메일을 보내지 않는다
@@ -75,6 +76,7 @@ def main() -> int:
     parser.add_argument("--trigger", default="manual_cli", choices=("scheduled", "manual", "manual_cli", "catchup"))
     parser.add_argument("--since", type=date.fromisoformat, default=None, help="기간 분석 시작일 YYYY-MM-DD (그날 또는 그 전 스냅샷이 기준)")
     parser.add_argument("--until", type=date.fromisoformat, default=None, help="기간 분석 종료일 YYYY-MM-DD (비우면 오늘, 새로 수집)")
+    parser.add_argument("--issue-audit", action="store_true", help="이슈 기록이 없는 기간을 현재 이슈 상태 기준으로 점검한다")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--weekly", action="store_true", help="E·F 를 오늘 강제로 돌린다")
     parser.add_argument("--no-email", action="store_true")
@@ -95,7 +97,7 @@ def main() -> int:
     sender = (lambda *_: {"status": "disabled"}) if args.no_email else None
     try:
         outcome = run_daily(cfg, dry_run=args.dry_run, force_weekly=args.weekly, send_email=sender, trigger=args.trigger,
-                            since=args.since, until=args.until)
+                            since=args.since, until=args.until, issue_audit=args.issue_audit)
     except RunLocked as exc:
         print(str(exc))
         return 3

@@ -2,6 +2,13 @@
 
 ## 2026-10-01
 
+### 이슈 기록이 없는 기간의 현재 상태 점검
+
+- REQ-QAINTEL-030: 대시보드에 [현재 상태 점검]을 더했다(`POST /qa-agent/issue-audit`, CLI `--issue-audit`). 이슈 스냅샷이 없는 기간에, 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 본다. 코드가 이슈를 연결 SRS 변경(수정 완료·Spec 판정·그 밖), SRS 그대로인 Spec 판정, 기간 안 신규로 나누고 나머지는 AI 에 보내지 않는다.
+- REQ-QAINTEL-030: 토큰을 아끼려고 SRS 하나와 그 SRS 의 이슈 요약 카드를 한 작업에 묶고, SRS 는 바뀐 문장과 가까운 문단만 넣는다. 점검 작업은 `daily_qa.intelligence.audit_model`(비우면 `ai.claude.models.light`)로 부른다. 같은 이슈·같은 상태·같은 SRS 변화는 다시 분석하지 않고, 한도에 걸린 대상은 다음 실행이 이어서 점검한다.
+- REQ-QAINTEL-030: 실행 상세·요약 메일 맨 위에 "이슈 변경 기록이 없어 현재 상태 기준 점검으로 대신했다"는 알림과 묶음별 건수가 보이고, 판정 카드에 `현재 상태 기준(기간 이력 없음)` 표시가 붙는다.
+- REQ-QAINTEL-030: 새 Skill `qa-issue-spec-audit` 은 QA 규칙 Rev1.17 의 §6·7·10·11·38·43 만 읽고 판정한다(일치·부분 일치·충돌·근거 부족). 수정 완료 이슈는 TC 영향(§43)을 더한다.
+
 ### 별도 Regression 영향 분석 제거 · 공용 기능 유지
 
 - REQ-IMPACT-001, REQ-CORE-001, REQ-WEB-001, REQ-WEB-006: 별도 Regression 영향 분석 화면·API·보고서 생성·추천 정답 평가를 없앴다. 관련 요구사항 번호는 추적성 표에 `deprecated`로 남겼다. 옛 `/impact-analyzer` 주소는 QA Agent로, `/guide`는 QA Agent 사용법으로 연결된다. 과거 DB 기록·평가 표·결과 파일은 보존한다.

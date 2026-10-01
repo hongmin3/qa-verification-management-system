@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from app.modules.daily_qa.change_events import (
     COMMENT,
     FIXED_ISSUE,
+    ISSUE_AUDIT,
     NEW_ISSUE,
     SPEC_COVERAGE,
     SPEC_DECISION,
@@ -33,14 +34,16 @@ SKILL_FIXED_ISSUE = "qa-fixed-issue-analysis"
 SKILL_SPEC_DECISION = "qa-spec-decision-analysis"
 SKILL_COMMENT = "qa-comment-analysis"
 SKILL_SPEC_COVERAGE = "qa-spec-coverage-analysis"
+SKILL_ISSUE_AUDIT = "qa-issue-spec-audit"
 ANALYSIS_SKILLS = {
     NEW_ISSUE: SKILL_NEW_ISSUE,
     FIXED_ISSUE: SKILL_FIXED_ISSUE,
     SPEC_DECISION: SKILL_SPEC_DECISION,
     COMMENT: SKILL_COMMENT,
     SPEC_COVERAGE: SKILL_SPEC_COVERAGE,
+    ISSUE_AUDIT: SKILL_ISSUE_AUDIT,
 }
-TASK_PREFIX = {NEW_ISSUE: "NEW", FIXED_ISSUE: "FIX", SPEC_DECISION: "SPC", COMMENT: "CMT", SPEC_COVERAGE: "COV"}
+TASK_PREFIX = {NEW_ISSUE: "NEW", FIXED_ISSUE: "FIX", SPEC_DECISION: "SPC", COMMENT: "CMT", SPEC_COVERAGE: "COV", ISSUE_AUDIT: "AUD"}
 
 #: 공통 Regression 축. 제품 설정이 비어 있으면 이것을 쓴다 (GENERATOR 같은 장비 축은 제품이 더한다).
 DEFAULT_AXES = ("DIRECT", "STATE", "DATA", "PERSISTENCE", "INTEGRATION", "PERMISSION", "PRIOR_ISSUE")
@@ -333,6 +336,10 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
     """분석 대상 하나의 입력. 대상이 오늘 스냅샷에 없으면 None (이벤트는 포기로 바뀐다)."""
     intel = cfg.intelligence
     kind = target.analysis_type
+    if kind == ISSUE_AUDIT:
+        from app.modules.daily_qa import issue_audit
+
+        return issue_audit.build_item(target, corpus, known)
     base = {"target": target.entity_id, "event_ids": target.event_ids,
             "events": [{"id": event.get("id"), "event_type": event["event_type"], "changed_fields": event.get("changed_fields") or [],
                         "before": event.get("before") or {}, "after": event.get("after") or {}} for event in target.events]}

@@ -51,6 +51,9 @@ class IntelligenceSettings:
     catchup_delay_minutes: int = 5
     #: Knowledge 에 등록된 사양서 조각도 검색할지. 끄면 SRS 스냅샷만 검색한다.
     use_knowledge_documents: bool = True
+    #: 현재 상태 기준 이슈 점검의 한 작업 이슈 수와 모델 (REQ-QAINTEL-030). 모델을 비우면 ai.claude.models.light.
+    audit_batch_size: int = 10
+    audit_model: str = ""
 
 
 @dataclass(frozen=True)
@@ -157,6 +160,9 @@ def _intelligence(get) -> IntelligenceSettings:
     for name, default in defaults.__dict__.items():
         raw = get(f"daily_qa.intelligence.{name}", default)
         values[name] = type(default)(raw if raw is not None else default)
+    if not values["audit_model"]:
+        values["audit_model"] = str(get("ai.claude.models.light", "") or "")
+    values["audit_batch_size"] = max(1, values["audit_batch_size"])
     return IntelligenceSettings(**values)
 
 

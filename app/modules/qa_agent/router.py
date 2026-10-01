@@ -215,6 +215,38 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
     return JSONResponse(result, status_code=202)
 
 
+@router.post("/issue-audit")
+def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """[현재 상태 점검]. 이슈 기록이 없는 기간을 지금 이슈 상태 기준으로 점검한다 (REQ-QAINTEL-030)."""
+    from app.modules.daily_qa import snapshots
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+
+    choice = _choice(product)
+    try:
+        since_day, until_day = dash.parse_run_period(since, until)
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    refusal, _ = dash.period_snapshot_check(choice.cfg, until_day)
+    if refusal:
+        return JSONResponse({"detail": refusal}, status_code=400)
+    if until_day and snapshots.for_settings(choice.cfg).at_or_before(snapshots.KIND_ISSUES, until_day) is None:
+        return JSONResponse({"detail": f"{until_day} 이전 이슈 스냅샷이 없어 현재 상태 점검을 할 수 없습니다. 종료일을 오늘로 고르세요."},
+                            status_code=400)
+    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day, issue_audit=True)
+    messages = {
+        "running": "QA Agent가 이미 실행 중입니다.",
+        "disabled": "QA Agent 가 꺼져 있습니다 (daily_qa.enabled).",
+        "not_configured": "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다.",
+    }
+    if result["status"] in messages:
+        return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
+    result["warning"] = "이슈 변경 기록이 없는 기간은 현재 이슈 상태 기준으로 점검합니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다."
+    limit = dash.limit_info(choice)
+    if limit:
+        result["warning"] += f" {limit['description']} AI 점검은 대기로 남고 한도가 풀리면 이어서 합니다."
+    return JSONResponse(result, status_code=202)
+
+
 @router.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_detail(request: Request, run_id: str):
     """실행 상세: 단계·이벤트·내려받을 파일 (REQ-QAINTEL-020)."""

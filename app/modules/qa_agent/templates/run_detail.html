@@ -31,6 +31,12 @@
   </div>
   <p class="rv-headline">{{ view.headline }}</p>
   <p class="rv-meta">실행 번호 {{ run.id }} · {{ view.trigger }} · 시작 {{ kst(run.started_at) }} · 종료 {{ kst(run.finished_at) or '진행 중' }} · {{ view.mail }}</p>
+  {% if view.audit %}
+  <div class="qa-banner"><b>현재 상태 기준 점검 · {{ view.audit.since }} ~ {{ view.audit.until }}</b><br>{{ view.audit.notice }}
+    <div class="rv-tiles" style="margin:10px 0 0">{% for name, count in view.audit.rows %}<div class="rv-tile"><span>{{ name }}</span><b>{{ count }}</b></div>{% endfor %}</div>
+    {% if view.audit_remaining %}<p class="hint">남은 점검 대상 {{ view.audit_remaining }}건은 다음 실행이 이어서 합니다.</p>{% endif %}
+  </div>
+  {% elif view.audit_remaining %}<p class="hint">앞선 현재 상태 점검의 남은 대상 {{ view.audit_remaining }}건을 이어서 점검 중입니다.</p>{% endif %}
   {% if run.summary.claude_limit %}<p class="qa-banner"><b>{{ run.summary.claude_limit.label }}</b> — {{ run.summary.claude_limit.description }}</p>{% endif %}
 
   <div class="rv-tiles">

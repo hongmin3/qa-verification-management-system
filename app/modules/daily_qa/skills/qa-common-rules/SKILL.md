@@ -1,6 +1,6 @@
 ---
 name: qa-common-rules
-description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-analysis, qa-spec-decision-analysis, qa-comment-analysis, qa-spec-coverage-analysis, qa-manual-completeness, qa-trace-gap)이 제품과 상관없이 공통으로 따르는 규칙과 결과 JSON 형식. 이 Skill 들을 수행할 때 항상 먼저 읽는다.
+description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-analysis, qa-spec-decision-analysis, qa-comment-analysis, qa-spec-coverage-analysis, qa-issue-spec-audit, qa-manual-completeness, qa-trace-gap)이 제품과 상관없이 공통으로 따르는 규칙과 결과 JSON 형식. 이 Skill 들을 수행할 때 항상 먼저 읽는다.
 ---
 
 # QA 공통 규칙 (무인 실행, 모든 제품)

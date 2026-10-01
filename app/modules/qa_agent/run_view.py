@@ -137,7 +137,11 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         parts.append(f"Polarion 에서 {read}을 읽었습니다." if read else "")
     elif (stages.get("collect_srs") or {}).get("status") == "skipped":
         parts.append("Polarion 을 새로 읽지 않고 저장된 스냅샷을 썼습니다.")
-    if ev:
+    if summary.get("issue_audit"):
+        audit_info = summary["issue_audit"]
+        parts.append(f"이슈 변경 기록이 없어 현재 상태 기준으로 점검 대상 {audit_info.get('targets', 0):,}건을 골랐습니다"
+                     f"(대상 아님 {audit_info.get('not_target', 0):,}건).")
+    elif ev:
         parts.append(f"바뀐 것 {ev.get('total', 0):,}건을 찾았고 AI 분석이 필요한 것은 {ev.get('analysis_required', 0):,}건입니다.")
     if dry_run:
         parts.append("시험 실행이라 저장·AI 분석·메일은 하지 않았습니다.")
@@ -146,6 +150,15 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     elif cards:
         parts.append(f"분석 결과 {len(cards)}건을 만들었습니다.")
     headline = " ".join(part for part in parts if part)
+    audit = summary.get("issue_audit") or {}
+    audit_box = None
+    if audit:
+        # 현재 상태 기준 점검 알림과 묶음별 수 (REQ-QAINTEL-030 결과).
+        audit_box = {"notice": audit.get("notice", ""), "since": audit.get("since", ""), "until": audit.get("until", ""),
+                     "rows": [("이슈 전체", audit.get("issues_seen", 0)), ("기간 안 생성", audit.get("created_in_period", 0)),
+                              ("기간 안 수정", audit.get("updated_in_period", 0)), ("기간 안 바뀐 SRS", audit.get("changed_srs", 0)),
+                              *[(name, count) for name, count in (audit.get("by_category") or {}).items()],
+                              ("대상 아님", audit.get("not_target", 0)), ("참고만(검증 전 상태)", audit.get("reference_only", 0))]}
 
     tiles = [
         _tile("읽은 SRS", srs.get("total")), _tile("바뀐 SRS", changed_srs),
@@ -160,4 +173,6 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         "mail": MAIL_LABELS.get(run.get("email_status") or "", run.get("email_status") or "-"),
         "trigger": TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
         "dry_run": dry_run,
+        "audit": audit_box,
+        "audit_remaining": summary.get("issue_audit_remaining"),
     }

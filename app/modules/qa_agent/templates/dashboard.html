@@ -41,9 +41,11 @@
     <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
     <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
     <button type="button" id="run-now" data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}지금 실행{% endif %}</button>
+    <button type="button" id="audit-now" title="이슈 변경 기록이 없는 기간을 지금 이슈 상태 기준으로 점검합니다" {% if status.running %}disabled{% endif %}>현재 상태 점검</button>
     {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">실행 상세</a>{% endif %}
   </div>
-  <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}</p>
+  <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}
+  <b>현재 상태 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
 
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}
@@ -121,21 +123,27 @@
     else if (data.running || (button.dataset.started && waited < 12)) setTimeout(poll, 5000);
   }
   let seenRunning = false, waited = 0;
-  button.addEventListener('click', async function () {
-    button.disabled = true;
+  const auditButton = document.getElementById('audit-now');
+  async function start(url, startedText) {
+    button.disabled = true; if (auditButton) auditButton.disabled = true;
     const body = new FormData(); body.append('product', product);
     body.append('since', document.getElementById('run-since').value);
     body.append('until', document.getElementById('run-until').value);
-    const response = await fetch('/qa-agent/runs', {method: 'POST', body});
-    const data = await response.json();
+    const response = await fetch(url, {method: 'POST', body});
+    const data = await response.json().catch(() => ({}));
     if (response.status === 202) {
-      message.textContent = '실행을 시작했습니다.' + (data.warning ? ' ' + data.warning : '');
+      message.textContent = startedText + (data.warning ? ' ' + data.warning : '');
       button.dataset.started = '1';
       setTimeout(poll, 3000);
     } else {
       message.textContent = data.detail || '실행하지 못했습니다.';
-      button.disabled = false;
+      button.disabled = false; if (auditButton) auditButton.disabled = false;
     }
+  }
+  button.addEventListener('click', () => start('/qa-agent/runs', '실행을 시작했습니다.'));
+  if (auditButton) auditButton.addEventListener('click', () => {
+    if (!confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) return;
+    start('/qa-agent/issue-audit', '현재 상태 점검을 시작했습니다.');
   });
   {% if status.running %}setTimeout(poll, 5000);{% endif %}
 })();

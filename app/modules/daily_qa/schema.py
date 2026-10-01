@@ -28,6 +28,7 @@ LEGACY_SKILL_F = "vxvue-manual-completeness"
 SKILL_E = "qa-trace-gap"
 SKILL_F = "qa-manual-completeness"
 SKILL_COVERAGE = "qa-spec-coverage-analysis"
+SKILL_ISSUE_AUDIT = "qa-issue-spec-audit"
 
 SKILL_LABELS = {
     SKILL_B: "사양 변경 영향 검토",
@@ -41,6 +42,7 @@ SKILL_LABELS = {
     "qa-spec-decision-analysis": "Spec 판정 이슈 분석",
     "qa-comment-analysis": "새 댓글 분석",
     SKILL_COVERAGE: "사양 변경 Coverage 분석",
+    SKILL_ISSUE_AUDIT: "이슈 정합성 점검(현재 상태 기준)",
 }
 
 #: 같은 Finding 인지 가릴 때 함께 보는 옛 Skill 이름 (이름을 바꾼 뒤 옛 Finding 과 겹치지 않게).
@@ -63,11 +65,13 @@ VERDICTS: dict[str, tuple[str, ...]] = {
     "qa-comment-analysis": ("ROOT_CAUSE_INFORMATION", "RESOLUTION_INFORMATION", "REPRODUCTION_INFORMATION", "SPEC_CLAIM",
                             "REQUIREMENT_INFORMATION", "QA_ACTION_REQUIRED", "OTHER_SIGNIFICANT_INFORMATION", "NOT_SIGNIFICANT"),
     SKILL_COVERAGE: ("FULLY_COVERED", "PARTIALLY_COVERED", "NOT_COVERED", "SPEC_REVIEW_REQUIRED"),
+    SKILL_ISSUE_AUDIT: ("CONSISTENT_WITH_SPEC", "PARTIALLY_CONSISTENT", "CONTRADICTS_SPEC", "INSUFFICIENT_EVIDENCE"),
 }
 
 #: 새 분석 Skill. 결과 검증은 `evidence_validation.py` 가 한다 (REQ-QAINTEL-017).
 ANALYSIS_SKILL_NAMES = frozenset(
-    {"qa-new-issue-analysis", "qa-fixed-issue-analysis", "qa-spec-decision-analysis", "qa-comment-analysis", SKILL_COVERAGE}
+    {"qa-new-issue-analysis", "qa-fixed-issue-analysis", "qa-spec-decision-analysis", "qa-comment-analysis", SKILL_COVERAGE,
+     SKILL_ISSUE_AUDIT}
 )
 
 ISSUE_TYPES = (

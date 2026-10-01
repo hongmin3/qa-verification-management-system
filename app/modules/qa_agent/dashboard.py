@@ -216,6 +216,12 @@ def badges(finding: dict) -> list[str]:
         if updates or finding.get("draft_tcs"):
             out.append(f"조치: 기존 TC 수정 {updates}건 · 신규 TC {len(finding.get('draft_tcs') or [])}건")
         out += [label(alert.get("type", "")) for alert in sections.get("alerts") or []]
+    if kind == "ISSUE_AUDIT":
+        # 이슈 기록 없이 지금 상태로 판정했다는 표시 (REQ-QAINTEL-030 결과).
+        out.append(sections.get("basis") or "현재 상태 기준(기간 이력 없음)")
+        decision = (sections.get("tc_impact") or {}).get("decision")
+        if decision:
+            out.append(f"TC 영향: {decision}")
     elif finding.get("draft_tcs"):
         out.append(f"검증 TC 초안 {len(finding['draft_tcs'])}건")
     if (sections.get("tc_hold") or {}).get("reason"):
@@ -290,6 +296,9 @@ def status(choice: ProductChoice) -> dict:
                      "started": kst(last["started_at"]), "finished": kst(last.get("finished_at"))} if last else None,
         "next_run": next_run_text(cfg),
         "claude_limit": limit_info(choice),
+        # 앞선 현재 상태 점검이 한도로 남긴 대상 (REQ-QAINTEL-030 순서 5).
+        "issue_audit_remaining": len(store.list_events(product=cfg.slug, statuses=("pending", "failed"),
+                                                       event_types=("ISSUE_AUDIT_TARGET",))),
     }
 
 

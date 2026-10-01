@@ -90,7 +90,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 - 언제 도는가: REQ-QAINTEL-001(예약·공휴일), REQ-QAINTEL-021(지금 실행), REQ-QAINTEL-027(기간을 정한 수동 실행)
 - 제품 차이 흡수: REQ-QAINTEL-002(제품 설정·공통 모델), REQ-QAINTEL-023(제품별 데이터 분리), NFR-QAINTEL-002
-- 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기)
+- 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기), REQ-QAINTEL-030(이슈 기록이 없는 기간의 현재 상태 기준 점검)
 - 무엇이 바뀌었나: REQ-QAINTEL-003(SRS), REQ-QAINTEL-004(이슈), REQ-QAINTEL-005(이벤트), REQ-QAINTEL-006(저장·재시도), REQ-QAINTEL-008(기준 스냅샷), REQ-QAINTEL-009(수집 실패), REQ-QAINTEL-028(삭제된 SRS 를 가리키는 TC)
 - AI 를 부를지: REQ-QAINTEL-007(변경 없음·상태만 바뀜), REQ-QAINTEL-010(분석 대상 고르기), REQ-QAINTEL-025(사용량 한도·실행 예외), NFR-QAINTEL-001
 - 분석하기: REQ-QAINTEL-011(후보 압축), REQ-QAINTEL-012 ~ REQ-QAINTEL-016(다섯 가지 분석)
@@ -1010,6 +1010,83 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 - 이슈 기록은 가져오지 않는다. ALM-QA-Automation 의 이슈 내보내기(`apps/issue-export`)는 요청한 이슈의 지금 상태만 남기고 날짜별 이슈 전체를 남기지 않는다. 이슈 스냅샷은 이 시스템의 첫 매일 실행부터 쌓인다(REQ-QAINTEL-008).
 - 서버에서 기간 실행을 하려면 가져온 스냅샷 파일을 서버의 같은 폴더에 둬야 한다(배포 절차는 `docs/modules/daily-qa.md`).
 
+### REQ-QAINTEL-030 이슈 기록이 없는 기간의 현재 상태 기준 점검
+
+**하는 일** 이슈 스냅샷이 없는 기간에도 사양 변화와 이슈가 맞는지 본다. 기간 동안 이슈가 어떻게 바뀌었는지는 알 수 없으므로, 지금 이슈 전체를 기간의 SRS 변화와 맞춰 본다. 결과에는 "이슈 변경 기록이 없어 현재 상태 기준으로 점검했다"는 알림이 붙는다.
+
+> **예시** 2026-08-31 ~ 2026-09-22 를 고르고 [현재 상태 점검]을 누른다. 그 기간에 SRS 96건이 바뀌었고 그 SRS 에 연결된 이슈가 371건이다. 이슈 371건과 Spec 판정 이슈 26건이 점검 대상이 된다.
+
+**언제** 대시보드 실행 구역의 [현재 상태 점검] 버튼(`POST /qa-agent/issue-audit`, `product`·`since`·`until`). CLI 는 `scripts/run_daily_qa.py --issue-audit --since YYYY-MM-DD --until YYYY-MM-DD` 다.
+
+이 절의 용어:
+
+| 용어 | 뜻 |
+|---|---|
+| 점검 대상 묶음 | 코드가 이슈 하나를 아래 표의 A·B·D 가운데 하나로 나눈 것 |
+| 요약 카드 | AI 에 보내는 이슈 요약. 제목·상태·연구소 결과·생성일·수정일·Expected·Actual·발생 원인·조치 내용(앞부분)과 의미 있는 마지막 댓글 2개 |
+
+**순서**
+
+1. 이슈 전체를 지금 상태로 읽는다. 종료일이 오늘이면 Polarion 에서 새로 읽어 오늘 스냅샷으로 저장하고, 지난 날이면 그날(또는 그 전 가장 가까운) 저장 이슈 스냅샷을 쓴다.
+2. 시작일 기준 SRS 스냅샷과 종료일 SRS 를 비교해 기간 안에 바뀐 SRS 를 찾는다(REQ-QAINTEL-027 과 같은 기준).
+3. 이슈마다 연결된 SRS 를 찾는다. 이슈의 연결 항목(`linked_ids`)과, 제목·본문·재현 절차에 정확히 적힌 SRS 번호만 쓴다. 제목이 비슷하다고 연결하지 않는다.
+4. 코드로 이슈를 나눈다. AI 를 쓰지 않는다. 위에서부터 처음 맞는 줄로 정한다.
+
+   | 묶음 | 조건 | 볼 것 |
+   |---|---|---|
+   | A-수정 | 연결 SRS 가 기간 안에 바뀌었고 연구소 결과가 `FIXED` | 수정 뒤 사양이 바뀌어 관련 TC 를 고쳐야 하는지(QA 규칙 §43) |
+   | A-사양 | 연결 SRS 가 기간 안에 바뀌었고 연구소 결과가 `SPEC`·`NOT_BUG` | 바뀐 사양이 연구소 판정을 뒷받침하는지 |
+   | A-기타 | 연결 SRS 가 기간 안에 바뀌었고 그 밖의 연구소 결과 | 바뀐 사양이 이슈의 Expected 와 맞는지 |
+   | B | 연결 SRS 가 바뀌지 않았고 연구소 결과가 `SPEC`·`NOT_BUG` | 지금 사양이 연구소 판정을 뒷받침하는지. SRS 마지막 수정이 이슈 마지막 수정보다 앞서면 "판정 뒤 SRS 가 바뀌지 않음" 신호를 붙인다(QA 규칙 §11) |
+   | D | 기간 안에 생성된 이슈(위에 해당하지 않음) | 관련 사양 후보와 맞는지 |
+   | 대상 아님 | 나머지 | AI 에 보내지 않고 건수만 남긴다 |
+
+5. 이슈마다 점검 이벤트(`ISSUE_AUDIT`) 하나를 저장한다. 바뀐 뒤 값에 묶음, 연결 SRS, 기간 안 SRS 변화(더한 문장·뺀 문장)를 적는다.
+
+   - 같은 이슈·같은 상태·같은 SRS 변화의 이벤트는 다시 넣지 않는다. 그래서 같은 기간을 다시 눌러도 바뀐 조합만 분석한다.
+   - 사용량 한도에 걸린 이벤트는 대기로 남고, 다음 실행(예약·[지금 실행]·한도 초기화 뒤 다시 실행)이 이어서 분석한다. 실행마다 남은 점검 이벤트 수를 단계 비고에 보인다.
+
+6. AI 분석(`qa-issue-spec-audit` Skill)은 토큰을 아끼려고 다음처럼 묶는다.
+
+   - SRS 하나와 그 SRS 에 연결된 이슈 요약 카드를 한 작업에 넣는다. SRS 내용은 작업마다 한 번만 넣는다. 한 작업의 이슈는 `daily_qa.intelligence.audit_batch_size`(기본 10)건까지다.
+   - SRS 는 바뀐 문장과 이슈 내용에 가까운 문단 3개만 넣는다. 바뀌지 않은 SRS 도 가까운 문단만 넣는다.
+   - A-수정 이슈가 있는 작업에만 그 SRS 의 TC 후보를 3개까지 넣는다.
+   - QA 규칙은 Skill 이 정한 절(§6·7·10·11·38·43)만 읽는다.
+   - 점검 작업은 `daily_qa.intelligence.audit_model` 모델로 부른다. 비우면 `ai.claude.models.light` 다.
+   - 결과가 `충돌`·`부분 일치` 인 이슈는 상세 화면에서 단일 이슈 분석(REQ-QAAGENT-001)으로 깊게 볼 수 있다.
+
+7. 판정은 이슈마다 하나다.
+
+   | 판정 값 | 화면 이름 |
+   |---|---|
+   | `CONSISTENT_WITH_SPEC` | 일치 |
+   | `PARTIALLY_CONSISTENT` | 부분 일치 |
+   | `CONTRADICTS_SPEC` | 충돌 |
+   | `INSUFFICIENT_EVIDENCE` | 근거 부족 |
+
+   A-수정 이슈는 TC 영향(`sections.tc_impact.decision`)을 더한다. 값은 QA 규칙 §43 의 TC 판정 여섯 가지(`유지`·`경미 수정`·`수정 필수`·`Issue Link 수정`·`신규 TC 필요`, 그리고 사양을 다시 봐야 한다는 판정)이고, 목록은 `app/modules/daily_qa/evidence_validation.py` 의 `AUDIT_TC_DECISIONS` 다.
+
+**결과**
+
+- 실행 상세와 요약 메일 맨 위에 알림 한 줄이 보인다. "이 기간에는 이슈 변경 기록이 없어 이슈 변화를 현재 상태 기준 점검으로 대신했습니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다."
+- 그 아래에 이슈 전체 수, 기간 안 생성 수, 기간 안 수정 수, 묶음별 수, 대상 아님 수가 보인다.
+- 판정 카드마다 `현재 상태 기준(기간 이력 없음)` 표시가 붙는다.
+
+**안 될 때**
+
+| 경우 | 사용자에게 보이는 것 |
+|---|---|
+| 기간에 SRS 스냅샷이 없음 | REQ-QAINTEL-027 과 같은 400 문구 |
+| 종료일이 오늘인데 Polarion 설정이 없음 | "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다."(409) |
+| 종료일이 지난 날인데 그날 이전 이슈 스냅샷이 없음 | "<종료일> 이전 이슈 스냅샷이 없어 현재 상태 점검을 할 수 없습니다. 종료일을 오늘로 고르세요."(400) |
+| 다른 실행 중 | "QA Agent가 이미 실행 중입니다."(409) |
+
+**지킬 것**
+
+- verified·closed 이슈가 판정 기준이다. `in_review`·`in_progress`·`open`·`reopened` 이슈는 카드에 "참고만" 표시를 붙이고 Expected 근거로 쓰지 않는다(지침 §6).
+- 연구소 댓글이나 조치 내용만으로 `일치` 를 내지 않는다(QA 규칙 §7). 실제로 전체를 보지 않았으면 "전수조사 완료"라고 쓰지 않는다(QA 규칙 §10).
+- 실행당 작업 상한(`daily_qa.max_tasks_per_run`)은 이 점검에도 적용된다. 넘은 묶음은 대기로 남아 다음 실행이 이어 간다. 점검 전체 건수에는 따로 상한을 두지 않는다.
+
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
 - 수집과 스냅샷 비교는 매 실행 한다. AI 는 `analysis_required` 가 참인 이벤트가 있을 때만 부른다.
@@ -1195,6 +1272,20 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 
 **기대 결과** 모든 테스트 통과. 실제 `srs-spec` 12개 날짜로 돌린 결과는 `progress.md` 에 적는다.
 
+### TEST-QAINTEL-017 현재 상태 기준 이슈 정합성 점검
+
+**목적** 이슈 기록이 없는 기간에 이슈를 코드로 나누고, SRS 단위로 묶어 AI 를 부르며, 알림이 붙는지 확인한다.
+
+**절차** `tests/test_qa_intel_issue_audit.py` 를 돌린다. 합성 이슈·SRS 스냅샷과 가짜 실행기(`FakeRunner`)를 쓴다.
+
+1. 묶음 나누기: A-수정·A-사양·A-기타·B·D·대상 아님이 표대로 나뉜다. 비슷한 제목만으로는 연결하지 않는다. 판정 뒤 SRS 가 바뀌지 않은 B 에 신호가 붙는다.
+2. 작업 묶기: 같은 SRS 의 이슈가 한 작업에 들어가고, SRS 내용은 작업에 한 번만 들어간다. A-수정이 없는 작업에는 TC 후보가 없다.
+3. 같은 기간을 다시 돌리면 새 점검 이벤트가 생기지 않고 Claude 호출이 0회다.
+4. 점검 작업은 점검 모델로 부른다. 결과 판정·TC 영향 값이 허용 목록 밖이면 버린다.
+5. 실행 상세에 알림 문장과 묶음별 수가 보인다. `POST /qa-agent/issue-audit` 은 202, 실행 중이면 409 다.
+
+**기대 결과** 모든 테스트 통과.
+
 ### TEST-QAINTEL-016 Claude CLI 로그인 사용
 
 **목적** 토큰이 없는 PC 에서 Claude CLI 로그인으로 AI 분석을 부르는지 확인한다.
@@ -1258,6 +1349,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-026 | `app/modules/daily_qa/pipeline.py`, `app/core/storage.py`, `app/modules/cost_dashboard/router.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py` | verified |
 | REQ-QAINTEL-027 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/snapshots.py`, `scripts/run_daily_qa.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/dashboard.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-029 | `app/modules/daily_qa/alm_history.py`, `scripts/import_alm_srs_history.py`, `app/modules/daily_qa/product_adapter.py` | TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
+| REQ-QAINTEL-030 | `app/modules/daily_qa/issue_audit.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/qa_agent/run_view.py`, `app/modules/daily_qa/skills/qa-issue-spec-audit/SKILL.md`, `app/modules/qa_agent/router.py` | TEST-QAINTEL-017: `tests/test_qa_intel_issue_audit.py`, `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-028 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | verified |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |

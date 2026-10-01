@@ -27,11 +27,13 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.claude_cli import login_status as claude_login_status
-from app.modules.daily_qa import claude_limits, packages, report, rules, snapshots
+from app.modules.daily_qa import claude_limits, issue_audit, packages, report, rules, snapshots
 from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
 from app.modules.daily_qa.change_events import (
     ANALYSIS_ORDER,
     ENTITY_SRS,
+    ISSUE_AUDIT,
+    ISSUE_AUDIT_TARGET,
     SPEC_COVERAGE,
     SRS_CREATED,
     SRS_REMOVED,
@@ -180,6 +182,7 @@ def run_daily(
     trigger: str = "scheduled",
     since: date | None = None,
     until: date | None = None,
+    issue_audit: bool = False,
 ) -> dict:
     """`since`·`until` 을 주면 그 기간의 변경을 분석한다 (REQ-QAINTEL-027).
 
@@ -194,7 +197,7 @@ def run_daily(
         run = None
         try:
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
-                       rules_state, spec_chunks_loader, trigger, since, until)
+                       rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit)
             outcome = run.execute()
         except Exception as exc:  # 예상 못 한 오류도 실행 기록과 메일에 남긴다
             logger.exception("daily_qa_crashed run=%s", run_id)
@@ -314,7 +317,7 @@ class _TaskOutcome:
 
 class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
-                 spec_chunks_loader, trigger, since=None, until=None):
+                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False):
         self.cfg: DailyQaSettings = cfg
         self.store: DailyQaStore = store
         self.run_id = run_id
@@ -360,11 +363,18 @@ class _Run:
         self.since: date | None = since
         self.until: date | None = until if until and until < local_today else None
         self.period = since is not None or self.until is not None
+        #: 현재 상태 기준 이슈 점검 (REQ-QAINTEL-030). 점검 작업은 따로 정한 모델로 부른다.
+        self.issue_audit = issue_audit
+        self.audit_runner = None
+        self.audit_summary: dict | None = None
+        self._audit_left: list[dict] | None = None
         if self.period:
             self.audit["period"] = {"since": since.isoformat() if since else "", "until": (until or local_today).isoformat()}
 
     # -- 흐름 --------------------------------------------------------------
     def execute(self) -> dict:
+        if self.issue_audit:
+            return self._execute_audit()
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self._preflight()
         client = self._client() if self.until is None else self._stored_only()
@@ -421,6 +431,11 @@ class _Run:
             self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)
         if self.runner is None:
             self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds)
+            if not self.dry_run:
+                # 이슈 정합성 점검은 요약 카드 판정이라 가벼운 모델로 부른다 (REQ-QAINTEL-030 순서 6).
+                self.audit_runner = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
+                                                 model=cfg.intelligence.audit_model)
+                self.audit["audit_model"] = cfg.intelligence.audit_model
 
     def _client(self):
         cfg = self.cfg
@@ -659,6 +674,12 @@ class _Run:
     def _target_events(self) -> list[dict]:
         if self.dry_run:
             return [{"id": None, **event.as_dict()} for event in self.new_events]
+        if self.issue_audit:
+            # 이번에 만든 점검 대상과, 앞선 점검이 한도에 걸려 남긴 대상을 함께 이어 간다.
+            events = self.store.list_events(ids=self.stored_event_ids) if self.stored_event_ids else []
+            seen = {event["id"] for event in events}
+            events += [event for event in self._remaining_audit(refresh=True) if event["id"] not in seen]
+            return events
         if self.until is not None:
             # 지난 날 기간 실행은 재시도 대기열을 다루지 않는다. 지난 스냅샷으로 오늘의 대기 이벤트를
             # 판단하면 최신 이슈가 포기로 바뀐다. 대기열은 다음 매일 실행이 오늘 스냅샷으로 처리한다.
@@ -711,7 +732,11 @@ class _Run:
             if self.ai_block or self.limit is not None:
                 self._blocked_stage(kind, len(items))
                 continue
-            tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents)
+            if kind == ISSUE_AUDIT:
+                tasks = issue_audit.build_tasks(items, corpus, self.cfg.intelligence.audit_batch_size, answers[kind],
+                                                corpus.unreadable_documents)
+            else:
+                tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents)
             selected = tasks[:max(self.budget, 0)]
             self.budget -= len(selected)
             overflow = len(tasks) - len(selected)
@@ -776,7 +801,8 @@ class _Run:
         limit = None
         for attempt in (1, 2):
             result_path.unlink(missing_ok=True)
-            outcome = self.runner.run(task, workspace)
+            runner = self.audit_runner if kind == ISSUE_AUDIT and self.audit_runner is not None else self.runner
+            outcome = runner.run(task, workspace)
             self.claude_calls += 0 if self.dry_run else 1
             self._add_usage(outcome.meta)
             entry[f"attempt{attempt}"] = {"ok": outcome.ok, "seconds": round(outcome.seconds, 1), "error": outcome.error[:300], "meta": outcome.meta}
@@ -1002,6 +1028,55 @@ class _Run:
         """SRS·이슈 수집이 모두 성공했는가. 건너뛴 수집은 변경을 확인하지 못한 것이다 (REQ-QAINTEL-007 순서 2)."""
         return all(self.stages.get(key, {}).get("status") == "ok" for key in ("collect_srs", "collect_issues"))
 
+    def _remaining_audit(self, refresh: bool = False) -> list[dict]:
+        """아직 끝나지 않은 점검 대상 (REQ-QAINTEL-030 순서 5)."""
+        if self.dry_run:
+            return []
+        if refresh or self._audit_left is None:
+            self._audit_left = self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed"),
+                                                      event_types=(ISSUE_AUDIT_TARGET,))
+        return self._audit_left
+
+    # -- 현재 상태 기준 이슈 점검 (REQ-QAINTEL-030) ------------------------------------
+    def _execute_audit(self) -> dict:
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        self._preflight()
+        client = self._client() if self.until is None else self._stored_only()
+        srs = self._collect_srs(client)
+        issues = self._collect_issues(client)
+        tc_rows = self._tc_index()
+        collected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        if not self.dry_run and self.until is None:
+            for kind, result in ((snapshots.KIND_SRS, srs), (snapshots.KIND_ISSUES, issues)):
+                if result is not None:
+                    self.snapshots.save(kind, self.run_date, result.items, collected_at)
+        srs_items = srs.items if srs else self._saved_srs()
+        issue_items = issues.items if issues else self._saved_issues()
+        if not issue_items:
+            self.stages["events"] = _stage("failed", "점검할 이슈 스냅샷이 없습니다.")
+            return self._finish()
+        base_path = self._baseline(snapshots.KIND_SRS)
+        diff = srs.diff if srs is not None else diff_snapshots(self.snapshots.load(base_path), srs_items)
+        local_today = self.today.astimezone(claude_limits.KST).date() if self.today.tzinfo else self.today.date()
+        start = self.since or local_today
+        end = self.until or local_today
+        plan = issue_audit.classify(issue_items, srs_items, diff, start, end)
+        self.audit_summary = plan.summary(start, end)
+        rows = [event.as_dict() for event in plan.events]
+        if not self.dry_run:
+            self.stored_event_ids = self.store.add_events(self.cfg.slug, self.run_id, rows)
+        self.new_events = [event for event, row in zip(plan.events, rows) if row.get("id") or self.dry_run]
+        self.detected_events = list(plan.events)
+        (self.out_dir / "change_events.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+        known = len(plan.events) - len(self.new_events)
+        note = plan.note() + (f" 이미 점검한 상태 {known}건은 다시 넣지 않았습니다." if known else "")
+        self.stages["events"] = _stage("ok", note, total=len(self.new_events), analysis_required=len(self.new_events),
+                                       detected=len(plan.events), **{f"type_{ISSUE_AUDIT_TARGET}": len(self.new_events)})
+        self.audit["events"] = {ISSUE_AUDIT_TARGET: len(self.new_events)}
+        self._analyses(client, srs_items, issue_items, tc_rows)
+        self._draft_excel()
+        return self._finish()
+
     def _finish(self) -> dict:
         statuses = [stage["status"] for stage in self.stages.values()]
         counted = [status for status in statuses if status not in ("not_due", "skipped")]
@@ -1022,6 +1097,11 @@ class _Run:
         summary["trigger"] = self.trigger
         if self.limit is not None:
             summary["claude_limit"] = self.limit.as_dict()
+        if self.audit_summary is not None:
+            summary["issue_audit"] = self.audit_summary
+        remaining = self._remaining_audit(refresh=True)
+        if self.issue_audit or remaining:
+            summary["issue_audit_remaining"] = len(remaining)
         (self.out_dir / "audit.json").write_text(json.dumps(self.audit, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
         return {"stages": self.stages, "status": status, "summary": summary,
                 "rules_warning": "" if self.rules_state.ok else self.rules_state.reason}

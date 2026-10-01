@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from app.modules.daily_qa.change_events import COMMENT, FIXED_ISSUE, NEW_ISSUE, SPEC_COVERAGE, SPEC_DECISION
+from app.modules.daily_qa.change_events import COMMENT, FIXED_ISSUE, ISSUE_AUDIT, NEW_ISSUE, SPEC_COVERAGE, SPEC_DECISION
 from app.modules.daily_qa.intelligence import DEFAULT_AXES, LEGACY_RE, KnownIds
 from app.modules.daily_qa.product_adapter import RD_FIXED
 from app.modules.daily_qa.schema import DRAFT_PERSPECTIVES, FORBIDDEN_ACTION_RE
@@ -34,6 +34,8 @@ ISSUE_RELATIONS = ("EXISTING_DEFECT", "PAST_FIXED", "PAST_SPEC", "SAME_FUNCTION_
 TC_DECISIONS = ("KEEP", "UPDATE_EXISTING")
 COVERAGE_ALERTS = ("ISSUE_WITHOUT_TC", "TC_EXPECTED_OUTDATED", "FIXED_ISSUE_WITHOUT_REGRESSION_TC", "SPEC_ISSUE_BEHAVIOR_CHANGED")
 DRAFT_HOLD = "Checklist TC 생성 보류"
+#: 이슈 정합성 점검의 TC 영향 판정 (QA 규칙 §43, REQ-QAINTEL-030).
+AUDIT_TC_DECISIONS = ("유지", "경미 수정", "수정 필수", "Issue Link 수정", "신규 TC 필요", "사양 확인 필요")
 CONFIDENCE_RANK = {"Unsupported": 0, "Review Needed": 1, "Confirmed": 2}
 
 
@@ -151,6 +153,26 @@ def _clean_tc_entries(entries, known: KnownIds, record: ValidationRecord, label:
     return kept
 
 
+def _clean_audit(sections: dict, known: KnownIds, record: ValidationRecord) -> None:
+    """TC 영향 판정은 허용 값만, TC 번호는 실제 TC 만 남긴다. 판정 근거가 현재 상태라는 표시를 붙인다."""
+    from app.modules.daily_qa.issue_audit import BASIS_TAG
+
+    impact = sections.get("tc_impact")
+    if isinstance(impact, dict):
+        decision = str(impact.get("decision") or "")
+        if decision and decision not in AUDIT_TC_DECISIONS:
+            record.drop("tc_impact", decision, "허용되지 않은 TC 영향 판정")
+            impact = None
+        else:
+            tc_ids = [value for value in impact.get("tc_ids") or [] if value in known.tc_ids]
+            for value in impact.get("tc_ids") or []:
+                if value not in known.tc_ids:
+                    record.drop("tc_impact", str(value), "입력에 없는 TC 번호")
+            impact = {**impact, "tc_ids": tc_ids}
+    sections["tc_impact"] = impact if isinstance(impact, dict) else {}
+    sections["basis"] = BASIS_TAG
+
+
 def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets: set[str],
                      axes: tuple[str, ...] = ()) -> tuple[dict | None, str]:
     """(검증을 마친 Finding 또는 None, 버린 이유). 이유가 `not_significant` 면 규칙 위반이 아니다."""
@@ -174,6 +196,8 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
         _clean_new_issue(sections, known, subject, record)
     elif analysis_type == SPEC_DECISION:
         _clean_history(sections, known, subject, record)
+    elif analysis_type == ISSUE_AUDIT:
+        _clean_audit(sections, known, record)
     elif analysis_type == FIXED_ISSUE:
         _clean_axes(sections, axes or DEFAULT_AXES, record)
         sections["tc_coverage"] = _clean_tc_entries(sections.get("tc_coverage"), known, record, "tc_coverage")

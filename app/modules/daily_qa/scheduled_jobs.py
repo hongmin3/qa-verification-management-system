@@ -53,7 +53,7 @@ def schedule_settings(settings=None) -> dict:
 
 
 def launch_detached(product: str | None = None, *, trigger: str = "scheduled", today: datetime | None = None,
-                    popen=subprocess.Popen, since: str = "", until: str = "") -> dict:
+                    popen=subprocess.Popen, since: str = "", until: str = "", issue_audit: bool = False) -> dict:
     """점검 프로세스를 띄우고 바로 돌아온다. 돌려주는 `status` 로 화면·로그가 이유를 안다.
 
     `holiday`·`running`·`disabled`·`not_configured` 이면 띄우지 않았다.
@@ -94,6 +94,8 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         command += ["--since", since]
     if until:
         command += ["--until", until]
+    if issue_audit:
+        command += ["--issue-audit"]
     with (log_dir / "daily_qa.out").open("a", encoding="utf-8") as log:
         process = popen(command, stdout=log, stderr=subprocess.STDOUT, **options)
     logger.info("daily_qa_launched pid=%s product=%s trigger=%s", process.pid, cfg.slug, trigger)

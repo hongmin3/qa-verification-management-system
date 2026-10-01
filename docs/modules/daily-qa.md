@@ -25,6 +25,7 @@ Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
 | 파일 | 역할 |
 |---|---|
 | `app/modules/daily_qa/pipeline.py` | 실행 순서, 기간 실행, 한도 중단, 단계 상태 (REQ-QAINTEL-006·027) |
+| `app/modules/daily_qa/issue_audit.py` | 이슈 기록이 없는 기간의 현재 상태 점검: 묶음 나누기, 요약 카드, SRS 단위 작업 묶기 (REQ-QAINTEL-030) |
 | `app/modules/daily_qa/product_adapter.py` | 제품 설정 → 공통 모델(`ProductProfile`), 필드 이름·연구소 결과 값 변환 (REQ-QAINTEL-002) |
 | `app/modules/daily_qa/polarion.py` | 읽기 전용 Polarion 클라이언트 — GET 만 있다 |
 | `app/modules/daily_qa/collector.py` | SRS·이슈 전체 수집, 이슈 댓글 읽기·미룸 (REQ-QAINTEL-003·004) |
@@ -186,6 +187,18 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 
 종료 코드: `0` 성공(변경사항 없음·기준 스냅샷 생성 포함), `1` 일부·전체 실패, `2` 설정 오류, `3` 다른 실행이 진행 중.
 Polarion 설정이 없어 수집을 건너뛴 실행은 변경을 확인하지 못했으므로 `변경사항 없음` 이 아니라 `일부 실패`(종료 코드 `1`)다(REQ-QAINTEL-007).
+
+## 이슈 기록이 없는 기간의 현재 상태 점검 (REQ-QAINTEL-030)
+
+이슈 스냅샷은 첫 매일 실행부터 쌓이므로 그 전 기간의 이슈 변화는 알 수 없다. 대시보드 [현재 상태 점검] 또는
+`scripts/run_daily_qa.py --issue-audit --since YYYY-MM-DD --until YYYY-MM-DD` 는 지금 이슈 전체를 그 기간의 SRS
+변화와 맞춰 본다. 판정 카드에는 "현재 상태 기준(기간 이력 없음)" 표시가 붙는다.
+
+- 점검 모델: `daily_qa.intelligence.audit_model`(비우면 `ai.claude.models.light`). 지금 설정은 세 등급이 모두
+  `claude-opus-5-5` 라 가벼운 모델로 바꿔야 사용량이 줄어든다(예: `claude-sonnet-5-5`).
+- 한 작업의 이슈 수: `daily_qa.intelligence.audit_batch_size`(기본 10). 실행당 작업 상한은 `daily_qa.max_tasks_per_run`.
+- 2026-10-01 실측(08-20 이후 비교): 이슈 647건 중 연결 SRS 가 바뀐 이슈 371건, SRS 그대로인 Spec 판정 26건,
+  SRS 단위 묶음 76개. 기간을 좁히면 대상이 줄어든다.
 
 ## 과거 SRS 스냅샷 가져오기 (REQ-QAINTEL-029)
 

@@ -241,3 +241,5 @@ daily_qa:
   #   catchup_max_hours: 12        # 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다
   #   catchup_delay_minutes: 5
   #   use_knowledge_documents: true  # 등록된 사양서 문서 조각도 후보로 찾는다
+  #   audit_batch_size: 10         # 현재 상태 점검(REQ-QAINTEL-030) 한 작업의 이슈 수
+  #   audit_model: ""              # 현재 상태 점검 모델. 비우면 ai.claude.models.light
