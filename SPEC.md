@@ -6525,6 +6525,18 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 3. 정적 파일은 `/static/app.css`, `/static/app.js` 둘이다. 빌드 도구를 쓰지 않는다.
 4. 기능별 사용법은 `/<기능>/guide` 화면에 둔다. `/guide` 는 `/impact-analyzer/guide` 로 이동시킨다(308).
 
+**화면 폭** 많은 내용이 한 줄에 들어가도록 본문은 브라우저 폭을 모두 쓴다.
+
+| 항목 | 규칙 |
+|---|---|
+| 본문(`main`) | 최대 폭 제한 없음. 좌우 여백 24px, 폭 700px 이하에서는 12px |
+| 공용 표(`.history`) | 열 폭을 내용에 맞춰 나눈다. 칸 안의 긴 글은 줄을 바꾸고, 한국어 낱말은 중간에서 끊지 않는다. 머리글과 표 안 링크는 한 줄로 둔다 |
+| 짧은 값만 드는 열 | 표마다 따로 정한다. 예: 실행 상세 이벤트 표의 대상·이벤트 열은 내용 폭, `AI 분석` 열 210px, `이유` 열 40% 이상 |
+| 폭 700px 이하의 표 | 최소 폭 640px 이다. 페이지 전체가 아니라 표 상자 안에서만 옆으로 밀어 본다 |
+| 입력칸 | 화면보다 넓어지지 않는다 |
+
+> **주의** `app.css`·`app.js` 를 고치면 `base.html` 의 주소 뒤 버전 표시(`?v=`)도 바꾼다. 바꾸지 않으면 사용자 브라우저가 예전 파일을 계속 쓴다.
+
 **지킬 것** 공용 골격에 모듈 전용 요소나 기능 사이 링크를 넣지 않는다.
 
 ### REQ-OPS-001 운영 상태 점검
@@ -10108,7 +10120,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-WEB-003 | `app/main.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
 | REQ-WEB-004 | `app/modules/impact_analyzer/router.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-WEB-005 | `app/main.py`, `app/core/storage.py` | TEST-WEB-002 | implemented |
-| REQ-WEB-006 | `app/web/templates/base.html`, `app/web/router.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
+| REQ-WEB-006 | `app/web/templates/base.html`, `app/web/static/app.css`, `app/web/router.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
 | REQ-OPS-001 | `scripts/monitor_health.py` | TEST-OPS-001: `tests/test_monitor_health.py` | implemented |
 | REQ-OPS-002 | `scripts/backup_data.py`, `app/core/retention.py` | TEST-OPS-002: `tests/test_backup.py` | implemented |
 | REQ-OPS-003 | `app/core/logger.py`, `deploy/systemd/qa-verification.service` | TEST-SCHED-001 | implemented |

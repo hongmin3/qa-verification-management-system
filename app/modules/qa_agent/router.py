@@ -30,6 +30,7 @@ from app.core.storage import Storage
 from app.core.uploads import save_upload
 from app.modules.qa_agent import approval_history
 from app.modules.qa_agent import dashboard as dash
+from app.modules.qa_agent import run_view
 from app.modules.qa_agent.analyzer import ANALYSIS_STAGES, QaAgentAnalyzer, valid_qa_issue_type
 from app.modules.qa_agent.gates import ExecutionContext
 from app.modules.qa_agent.rule_capability import (
@@ -227,8 +228,10 @@ def run_detail(request: Request, run_id: str):
     out_dir = choice.cfg.output_dir / run_id
     files = sorted(path.name for path in out_dir.glob("*") if path.suffix in DOWNLOADABLE_SUFFIXES) if out_dir.is_dir() else []
     findings = store.list_findings(run_id=run_id, limit=500)
+    events = store.list_events(run_id=run_id)
+    cards = [dash.card(item) for item in findings]
     return templates.TemplateResponse(request, "run_detail.html", _dash_context(
-        run=run, files=files, events=store.list_events(run_id=run_id), cards=[dash.card(item) for item in findings],
+        run=run, files=files, events=events, cards=cards, view=run_view.build(run, events, cards, files),
         stage_labels=STAGE_LABELS, status_labels=STATUS_LABELS, event_labels=dash.EVENT_LABELS))
 
 

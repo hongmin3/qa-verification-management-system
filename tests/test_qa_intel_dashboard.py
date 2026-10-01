@@ -288,7 +288,7 @@ def test_run_detail_stage_status_column_does_not_wrap(world):
              if ".history.qa-stages td:nth-child(2)" in selector]
     assert rules and "white-space:nowrap" in rules[-1]
     page = world["client"].get(f"/qa-agent/runs/{world['changed']['run_id']}").text
-    assert 'class="history qa-stages"' in page
+    assert 'class="history qa-stages' in page
 
 
 def test_run_detail_lists_events_files_and_cards(world):
@@ -298,6 +298,27 @@ def test_run_detail_lists_events_files_and_cards(world):
     assert f"/qa-agent/runs/{run_id}/files/impact_checklist_draft.xlsx" in page
     assert "VP-200" in page and "VP-11" in page
     assert world["client"].get("/qa-agent/runs/20000101-000000-vxvue").status_code == 404
+
+
+def test_run_detail_reads_as_plain_korean_for_first_time_users(world):
+    """Validates: REQ-QAINTEL-020 — 결과 한 줄, 숫자 카드, 4칸 흐름이 있고 내부 값이 그대로 보이지 않는다."""
+    page = world["client"].get(f"/qa-agent/runs/{world['changed']['run_id']}").text
+    for text in ("실행 결과", "읽은 SRS", "읽은 이슈", "① 자료 모으기", "② 바뀐 것 찾기", "③ AI 분석", "④ 결과", "단계별 설명"):
+        assert text in page
+    body = page[page.index("rv-headline"):]
+    for raw in ("type_SRS", "analysis_required ", "dry-run", "disabled", "매주 mon"):
+        assert raw not in body
+
+
+def test_plain_note_and_dry_run_task_sentence():
+    """시험 실행에서 AI 를 부르지 않은 작업은 실패로 보이지 않는다."""
+    from app.modules.qa_agent import run_view
+
+    assert run_view.plain_note("매주 mon 에만 돕니다.") == "매주 월요일에만 돕니다."
+    assert run_view.plain_note("dry-run: 입력 묶음만") == "시험 실행: 입력 묶음만"
+    stage = {"status": "skipped", "counts": {"tasks": 2, "done": 0, "failed": 2}}
+    assert run_view._sentence("F", stage, dry_run=True) == "작업 2개를 준비했습니다. 시험 실행이라 AI 를 부르지 않았습니다."
+    assert "실패" in run_view._sentence("F", stage, dry_run=False)
 
 
 def test_run_file_download_and_path_limits(world, tmp_path):

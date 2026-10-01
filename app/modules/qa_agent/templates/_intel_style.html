@@ -21,6 +21,11 @@ details summary{cursor:pointer;color:#075985}
 .history.qa-docs th:nth-child(5),.history.qa-docs td:nth-child(5){width:150px}
 /* 실행 상세 단계 표: 상태 이름('오늘은 대상 아님')은 한 줄로 (REQ-QAINTEL-020). */
 .history.qa-stages th:nth-child(2),.history.qa-stages td:nth-child(2){width:150px;white-space:nowrap}
+/* 실행 상세 이벤트 표: 짧은 값 열은 한 줄로 두고, 문장이 들어가는 'AI 분석'·'이유' 열이 남는 폭을 쓴다 (REQ-QAINTEL-020). */
+.history.qa-events th:nth-child(1),.history.qa-events td:nth-child(1),.history.qa-events th:nth-child(2),.history.qa-events td:nth-child(2){white-space:nowrap;width:1%}
+.history.qa-events th:nth-child(4),.history.qa-events td:nth-child(4){width:210px}
+.history.qa-events th:nth-child(5),.history.qa-events td:nth-child(5){width:40%;min-width:260px}
+@media(max-width:700px){.history.qa-events{min-width:760px}}
 @media(max-width:700px){.history.qa-docs{table-layout:auto;min-width:640px}}
 @media(max-width:700px){.qa-kv{grid-template-columns:1fr}}
 </style>

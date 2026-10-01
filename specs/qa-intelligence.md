@@ -690,7 +690,16 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 - 모든 상세 화면 아래에 이 Finding 을 만든 이벤트와 근거 검증 기록(뺀 항목과 이유)이 있다.
 - 개편 전 Finding 은 판정·요약·근거·초안만 보인다.
-- 실행 상세(`/qa-agent/runs/<실행 ID>`)는 단계 상태, 이번 실행의 이벤트, 실행 폴더의 `.xlsx`·`.json` 내려받기를 보인다.
+- 실행 상세(`/qa-agent/runs/<실행 ID>`)는 처음 보는 사람이 위에서부터 읽으면 무슨 일이 있었는지 알 수 있게 아래 순서로 보인다.
+
+  1. **결과 한 줄**: 결과 배지와 한두 문장 설명. 예: "Polarion 에서 SRS 437건·이슈 647건을 읽어 바뀐 SRS 1건을 찾았습니다. 시험 실행이라 저장·AI 분석·메일은 하지 않았습니다."
+  2. **숫자 카드**: 읽은 SRS, 바뀐 SRS, 읽은 이슈, TC 행, 새 변경, 분석 결과, Claude 호출·토큰. 값이 없는 카드는 `-` 다.
+  3. **진행 흐름**: `① 자료 모으기 → ② 바뀐 것 찾기 → ③ AI 분석 → ④ 결과` 네 칸. 칸마다 그 안 단계의 상태를 색(완료 초록, 주의 노랑, 실패 빨강, 건너뜀 회색)으로 보인다.
+  4. **단계별 설명**: 단계마다 상태와, 숫자를 풀어 쓴 문장 한 줄("SRS 437건을 읽었고 1건이 바뀌었습니다"). 내부 이름의 숫자(`total`, `type_SRS_UPDATED` 등)는 한국어 이름으로 바꿔 `자세히` 를 펼칠 때만 보인다.
+  5. 변경 이벤트, 분석 결과, 내려받기. 내려받을 파일은 뜻을 쓴다(예: `srs_diff.json` → "SRS 변경 내용").
+
+- 화면에 내부 값을 그대로 쓰지 않는다. `dry-run` 은 "시험 실행", 메일 상태 `disabled` 는 "메일 보내지 않음", 요일 `mon` 은 "월요일" 이다.
+- 시험 실행에서 AI 를 부르지 않은 작업은 "실패"가 아니라 "준비한 작업 N개(시험 실행이라 AI 를 부르지 않음)"로 보인다.
 - 실행 상세의 단계 상태 이름(`오늘은 대상 아님` 등)은 한 줄로 보인다.
 
 **안 될 때**
@@ -1240,7 +1249,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
+| REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |

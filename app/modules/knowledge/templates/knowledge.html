@@ -1,7 +1,7 @@
 {% extends "knowledge_base.html" %}
 {% block content %}
 <style>
-.kn-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.kn-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:16px}
 .kn-card{border:1px solid #d0d7de;border-radius:10px;padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px;min-width:0}
 .kn-card h2{margin:0;font-size:18px;display:flex;justify-content:space-between;gap:8px;align-items:center}
 .kn-level{font-size:13px;padding:2px 10px;border-radius:999px;white-space:nowrap}
