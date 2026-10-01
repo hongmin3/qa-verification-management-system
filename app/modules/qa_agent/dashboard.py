@@ -307,8 +307,33 @@ def dashboard(choice: ProductChoice) -> dict:
         "cards": [card(item) for item in findings],
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
-        "run_period": run_period_defaults(),
+        "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
     }
+
+
+def oldest_snapshot_day(cfg: DailyQaSettings, kind: str = "srs") -> str:
+    """가장 오래된 저장 스냅샷 날짜. 기간 입력 달력의 최솟값이다 (REQ-QAINTEL-027)."""
+    from app.modules.daily_qa import snapshots
+
+    path = snapshots.for_settings(cfg).oldest(kind)
+    return path.stem if path else ""
+
+
+def period_snapshot_check(cfg: DailyQaSettings, until: str) -> tuple[str, str]:
+    """종료일이 지난 날인 기간 실행을 띄우기 전에 저장 스냅샷을 본다. (거절 이유, 경고) (REQ-QAINTEL-027)."""
+    from app.modules.daily_qa import snapshots
+
+    if not until:
+        return "", ""
+    store = snapshots.for_settings(cfg)
+    if store.at_or_before(snapshots.KIND_SRS, until) is None:
+        oldest = oldest_snapshot_day(cfg)
+        if not oldest:
+            return "저장된 SRS 스냅샷이 없습니다.", ""
+        return f"{until} 이전에 저장된 SRS 스냅샷이 없어 이 기간은 분석할 수 없습니다. 가장 오래된 스냅샷: {oldest}", ""
+    if store.at_or_before(snapshots.KIND_ISSUES, until) is None:
+        return "", "이 기간에는 저장된 이슈 스냅샷이 없어 SRS 변경만 분석합니다."
+    return "", ""
 
 
 def _documents_storage(cfg: DailyQaSettings):
@@ -360,10 +385,11 @@ def parse_run_period(since: str, until: str, today: date | None = None) -> tuple
     return since_day.isoformat(), ("" if until_day == today else until_day.isoformat())
 
 
-def run_period_defaults(today: date | None = None) -> dict:
-    """실행 기간 입력칸의 기본값: 시작일 = 전날, 종료일 = 오늘."""
+def run_period_defaults(today: date | None = None, min_day: str = "") -> dict:
+    """실행 기간 입력칸의 기본값: 시작일 = 전날, 종료일 = 오늘. `min` 은 가장 오래된 스냅샷 날짜다."""
     today = today or datetime.now(KST).date()
-    return {"since": (today - timedelta(days=1)).isoformat(), "until": today.isoformat(), "max": today.isoformat()}
+    return {"since": (today - timedelta(days=1)).isoformat(), "until": today.isoformat(), "max": today.isoformat(),
+            "min": min_day}
 
 
 def _utc_bounds(start_day: date, end_day: date) -> tuple[str, str]:

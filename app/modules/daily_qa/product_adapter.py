@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import re
+from html import escape
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -185,11 +186,43 @@ def _first(attrs: dict, names: tuple[str, ...]) -> Any:
     return None
 
 
-def _text(attrs: dict, names: tuple[str, ...]) -> str:
+def _text(attrs: dict, names: tuple[str, ...], titles: dict[str, str] | None = None) -> str:
     from app.parsers.polarion_issue import html_to_text
 
-    value, _ = html_to_text(_rich_text(_first(attrs, names)))
+    html = _rich_text(_first(attrs, names))
+    if titles is not None:
+        html = resolve_rich_text(html, titles)
+    value, _ = html_to_text(html)
     return value.strip()
+
+
+_ICON_IMG_RE = re.compile(r"""<img\b[^>]*\bsrc\s*=\s*["']/polarion/[^>]*>""", re.IGNORECASE)
+_RTE_LINK_RE = re.compile(
+    r"""<span\b(?=[^>]*\bclass\s*=\s*["'][^"']*polarion-rte-link)[^>]*\bdata-item-id\s*=\s*["']([^"']+)["'][^>]*>(?:\s*</span>)?""",
+    re.IGNORECASE,
+)
+
+
+def resolve_rich_text(html: str, titles: dict[str, str]) -> str:
+    """SRS 본문의 Polarion 표시를 사양서 PDF·과거 스냅샷과 같은 글자로 바꾼다 (REQ-QAINTEL-003).
+
+    ALM-QA-Automation `srs-spec` 의 본문 정리와 같은 규칙이다. 그래야 그 도구가 남긴 과거 스냅샷
+    (REQ-QAINTEL-029)과 오늘 수집을 비교했을 때 바뀌지 않은 SRS 가 바뀐 것으로 보이지 않는다.
+
+    - 다른 Work Item 을 가리키는 표시(`polarion-rte-link`)는 `번호 - 제목` 으로 푼다. 제목을 모르면
+      `번호 (참조 대상 확인 불가)` 다. 제목은 같은 수집의 SRS 제목이다.
+    - Polarion 서버 경로를 가리키는 장식 아이콘(`/polarion/...` 이미지)은 지운다.
+    """
+    if not html:
+        return html
+    html = _ICON_IMG_RE.sub("", html)
+
+    def link(match: re.Match[str]) -> str:
+        item_id = match.group(1)
+        title = titles.get(item_id)
+        return escape(f"{item_id} - {title}" if title else f"{item_id} (참조 대상 확인 불가)")
+
+    return _RTE_LINK_RE.sub(link, html)
 
 
 def _relationship_ids(relationships: dict, name: str) -> list[str] | None:
@@ -212,8 +245,22 @@ def _short(raw: str) -> str:
     return raw.split("/")[-1]
 
 
-def normalize_srs(item: dict[str, Any], profile: ProductProfile) -> dict[str, Any]:
-    """SRS Work Item 하나를 공통 모델(스냅샷 항목)로 바꾼다. 본문은 HTML 을 걷어낸 텍스트다."""
+def srs_titles(items: list[dict[str, Any]], profile: ProductProfile) -> dict[str, str]:
+    """같은 수집의 SRS 번호 → 제목. 본문 링크를 푸는 데 쓴다(`resolve_rich_text`)."""
+    fields = profile.srs_fields
+    titles = {}
+    for item in items:
+        attrs = item.get("attributes") or {}
+        item_id = str(_first(attrs, fields.get("id", ("id",))) or _short(str(item.get("id") or "")))
+        titles[item_id] = str(_first(attrs, fields.get("title", ())) or "")
+    return titles
+
+
+def normalize_srs(item: dict[str, Any], profile: ProductProfile, titles: dict[str, str] | None = None) -> dict[str, Any]:
+    """SRS Work Item 하나를 공통 모델(스냅샷 항목)로 바꾼다. 본문은 HTML 을 걷어낸 텍스트다.
+
+    `titles`(같은 수집의 번호 → 제목)를 주면 본문의 Work Item 링크를 `번호 - 제목` 으로 푼다.
+    """
     attrs = item.get("attributes") or {}
     fields = profile.srs_fields
     item_id = str(_first(attrs, fields.get("id", ("id",))) or _short(str(item.get("id") or "")))
@@ -226,7 +273,7 @@ def normalize_srs(item: dict[str, Any], profile: ProductProfile) -> dict[str, An
         "status": _enum_text(_first(attrs, fields.get("status", ()))),
         "updated": str(_first(attrs, fields.get("updated", ())) or ""),
         "is_category": bool(category) or _enum_text(_first(attrs, fields.get("type", ()))) == "category",
-        "text": _text(attrs, fields.get("description", ())),
+        "text": _text(attrs, fields.get("description", ()), titles),
     }
 
 

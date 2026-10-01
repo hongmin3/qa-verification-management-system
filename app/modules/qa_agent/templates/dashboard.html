@@ -29,7 +29,7 @@
     <select name="product" onchange="this.form.submit()">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
   </label></form>
   {% endif %}
-  <h2>{{ selected }} 실행</h2>
+  <h2>분석 실행 <span class="hint">· {{ selected }}</span></h2>
   {% if status.claude_limit %}
   <p class="qa-banner" id="limit-banner"><b>{{ status.claude_limit.label }}</b> — {{ status.claude_limit.description }}
     그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.</p>
@@ -38,12 +38,12 @@
     <span>마지막 실행 <b id="last-run">{% if status.last_run %}{{ status.last_run.started }}{% else %}없음{% endif %}</b></span>
     <span>실행 결과 <span id="last-status" class="pill {{ status.last_run.status if status.last_run else '' }}">{{ status.last_run.status_label if status.last_run else '-' }}</span></span>
     <span>다음 자동 실행 <b>{{ status.next_run or '-' }}</b></span>
-    <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"></label>
-    <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"></label>
+    <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
+    <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
     <button type="button" id="run-now" data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}지금 실행{% endif %}</button>
     {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">실행 상세</a>{% endif %}
   </div>
-  <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.</p>
+  <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}</p>
 
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}

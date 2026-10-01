@@ -179,6 +179,24 @@ def request_structured(prompt: str, *, system_prompt: str, schema: dict, model: 
     return payload
 
 
+def login_status(command: str = DEFAULT_COMMAND, timeout: int = 20, runner: Runner | None = None) -> dict:
+    """이 PC 의 Claude CLI 가 로그인돼 있는가 (`claude auth status`, 모델을 부르지 않는다).
+
+    토큰(`CLAUDE_CODE_OAUTH_TOKEN`)이 없는 PC 에서 기존 로그인으로 부를 수 있는지 볼 때 쓴다
+    (SPEC REQ-DAILY-001 4번). 이메일·조직 번호는 돌려주지 않는다. 기록에 남기지 않기 위해서다.
+    """
+    try:
+        completed = (runner or _default_runner)([command, "auth", "status"], input="", env=build_env(""), cwd=None, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"logged_in": False, "method": "", "subscription": "", "error": type(exc).__name__}
+    text = completed.stdout or ""
+    data = _json_from_text(text[text.find("{"):]) if "{" in text else None
+    if not isinstance(data, dict):
+        return {"logged_in": False, "method": "", "subscription": "", "error": f"exit={completed.returncode}"}
+    return {"logged_in": bool(data.get("loggedIn")), "method": str(data.get("authMethod") or ""),
+            "subscription": str(data.get("subscriptionType") or ""), "error": ""}
+
+
 def status(settings) -> dict:
     """`/config/status` 용. 명령을 찾았는지와 토큰이 있는지만 알리고 값은 넣지 않는다."""
     command = str(settings.get("ai.claude.command", DEFAULT_COMMAND) or DEFAULT_COMMAND)

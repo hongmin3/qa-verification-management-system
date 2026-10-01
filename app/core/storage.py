@@ -572,6 +572,28 @@ class Storage(DailyQaStorageMixin):
             ).fetchone()
         return dict(row) if row else None
 
+    #: 끝난 동기화로 보는 상태. `RUNNING`·`DRY_RUN`·`NEEDS_CONFIG` 는 수집 결과가 아니다.
+    FINISHED_SYNC_STATUSES = ("SUCCESS", "PARTIAL", "FAILED")
+
+    def latest_finished_sync(self, product: str, kind: str) -> dict | None:
+        """그 제품·종류의 마지막으로 끝난 동기화 (REQ-KNOW-019). 진행 중인 줄은 건너뛴다."""
+        marks = ",".join("?" for _ in self.FINISHED_SYNC_STATUSES)
+        with self.connect() as db:
+            row = db.execute(
+                f"SELECT * FROM sync_log WHERE product=? AND kind=? AND status IN ({marks}) ORDER BY id DESC LIMIT 1",
+                (product, kind, *self.FINISHED_SYNC_STATUSES),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def latest_successful_sync(self, product: str, kind: str) -> dict | None:
+        """그 제품·종류의 마지막 성공(`SUCCESS`·`PARTIAL`) 동기화. 자료가 낡았는지 볼 때 쓴다."""
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM sync_log WHERE product=? AND kind=? AND status IN ('SUCCESS','PARTIAL') ORDER BY id DESC LIMIT 1",
+                (product, kind),
+            ).fetchone()
+        return dict(row) if row else None
+
     # ------------------------------------------------------------------
     # manual_review: 매뉴얼 개정 검증 (Revision Lineage / Track Changes / QA Comment)
     # ------------------------------------------------------------------

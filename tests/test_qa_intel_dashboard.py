@@ -110,7 +110,7 @@ def test_dashboard_renders_summary_cards_and_recent_runs(world):
     response = world["client"].get("/qa-agent")
     assert response.status_code == 200
     page = response.text
-    for heading in ("지식 문서 업로드 현황", "VXvue 실행", "최신 분석 결과", "최근 실행"):
+    for heading in ("지식 문서 업로드 현황", "분석 실행 <span class=\"hint\">· VXvue</span>", "최신 분석 결과", "최근 실행"):
         assert heading in page
     assert "[VP-200]" in page and "[VP-100]" in page
     assert f"/qa-agent/runs/{world['changed']['run_id']}" in page

@@ -42,11 +42,15 @@ COMPARED_FIELDS = ("old_id", "title", "status", "text")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?。])\s+|\n+|(?=\s\d+[.)]\s)")
 
 
-def save_snapshot(directory: Path, run_date: str, items: list[dict], collected_at: str = "") -> Path:
-    """임시 파일에 먼저 쓰고 이름을 바꾼다. 쓰다 끊겨도 반쪽 파일이 남지 않는다."""
+def save_snapshot(directory: Path, run_date: str, items: list[dict], collected_at: str = "", source: str = "") -> Path:
+    """임시 파일에 먼저 쓰고 이름을 바꾼다. 쓰다 끊겨도 반쪽 파일이 남지 않는다.
+
+    `source` 는 이 시스템이 직접 수집하지 않은 스냅샷의 출처다(예: `alm_qa_automation`, REQ-QAINTEL-029).
+    """
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{run_date}.json"
     payload = {"run_date": run_date, "collected_at": collected_at, "count": len(items),
+               **({"source": source} if source else {}),
                "items": sorted(items, key=lambda item: item["id"])}
     temporary = path.with_suffix(".json.tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -60,7 +64,8 @@ def load_snapshot(path: Path) -> list[dict]:
 
 def snapshot_meta(path: Path) -> dict:
     data = json.loads(path.read_text(encoding="utf-8"))
-    return {"run_date": data.get("run_date", path.stem), "collected_at": data.get("collected_at", ""), "count": data.get("count", 0)}
+    return {"run_date": data.get("run_date", path.stem), "collected_at": data.get("collected_at", ""), "count": data.get("count", 0),
+            "source": data.get("source", "")}
 
 
 def previous_snapshot(directory: Path, run_date: str) -> Path | None:

@@ -203,7 +203,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | 멈춘 곳 | 결과 |
 |---|---|
 | Polarion 조회 실패·0건·이슈 급감 | 그 수집 단계가 `실패` 다. 오늘 스냅샷과 이벤트를 저장하지 않아 다음 실행이 마지막 정상 스냅샷과 비교한다(REQ-QAINTEL-009). 사양–TC 연결 점검은 저장된 스냅샷으로 돈다 |
-| Claude 토큰 없음 | AI 단계 `건너뜀`, 이유가 메일과 `audit.json` 에 남는다. 이벤트는 대기로 남는다 |
+| Claude 토큰이 없고 Claude CLI 로그인도 없음 | AI 단계 `건너뜀`, 이유가 메일과 `audit.json` 에 남는다. 이벤트는 대기로 남는다. 토큰이 없어도 그 PC 의 Claude CLI 가 로그인돼 있으면 로그인으로 부른다 |
 | Claude 사용량 한도·인증 실패 | AI 단계 `Claude 사용량 한도`. 변경 감지는 계속하고 이벤트는 대기로 남는다. 초기화 시각이 메일·대시보드에 보이고, 세션 한도면 풀린 뒤 한 번 다시 돈다(REQ-QAINTEL-025) |
 | QA 규칙 판이 제품 설정의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
 | PC 가 꺼져 있음 | 서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다 |
@@ -4007,7 +4007,7 @@ Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 �
 | 같은 제품의 실행이 진행 중이라 띄우지 않음 | `qa_agent_skipped reason=running product=<slug>` |
 | 띄웠다 | `daily_qa_launched pid=<번호> product=<slug> trigger=<실행 방법>` |
 
-Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_claude_token` 을 남기고, AI 단계만 `건너뜀` 으로 남는다(사전 점검 비고와 메일에 이유).
+Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_claude_token` 을 남긴다. 사전 점검이 Claude CLI 로그인을 확인해, 로그인돼 있으면 그대로 부르고 아니면 AI 단계만 `건너뜀` 으로 남긴다(사전 점검 비고와 메일에 이유).
 
 **입력**
 
@@ -4027,7 +4027,10 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 1. 제품의 잠금 파일(`data/daily_qa/<slug>/run.lock`)을 만든다. 이미 있으면 새 실행은 바로 끝난다. 이때 실행 기록은 만들지 않는다(REQ-DAILY-011 의 종료 코드 3).
 2. 잠금 파일이 6시간보다 오래됐으면 멈춘 실행이 남긴 것으로 보고 지운 뒤 진행한다.
 3. 실행 ID(`YYYYMMDD-HHMMSS-<slug>`)를 정하고 실행 기록을 `실행 중` 으로 만든다. 실행 기록에 제품을 함께 적는다.
-4. 사전 점검을 한다. QA 규칙 판(REQ-DAILY-010), Claude 토큰, 남아 있는 Claude 사용량 한도(REQ-QAINTEL-025), 작업 폴더 위치(NFR-SEC-001)를 확인하고, 지식 사본에서 TC·매뉴얼·영향성평가 Checklist 위치를 읽는다.
+4. 사전 점검을 한다. QA 규칙 판(REQ-DAILY-010), Claude 인증, 남아 있는 Claude 사용량 한도(REQ-QAINTEL-025), 작업 폴더 위치(NFR-SEC-001)를 확인하고, 지식 사본에서 TC·매뉴얼·영향성평가 Checklist 위치를 읽는다.
+   - Claude 인증: 비밀 설정의 `CLAUDE_CODE_OAUTH_TOKEN` 이 있으면 그 토큰을 쓴다(서버). 없으면 `claude auth status` 로 그 PC 의 Claude CLI 로그인을 확인한다. 이 명령은 모델을 부르지 않는다. 로그인돼 있으면 토큰 없이 CLI 를 불러 기존 로그인을 쓰고, 사전 점검 비고에 "Claude CLI 로그인(<방식>)으로 부릅니다." 를 남긴다. 로그인도 없으면 AI 단계를 건너뛴다.
+   - 실행 기록(`audit.json` 의 `claude_auth`)에는 방식(`claude.ai` 등)과 요금제만 적는다. 이메일·조직 번호는 적지 않는다.
+
 5. SRS 전체를 읽는다(REQ-DAILY-002, REQ-QAINTEL-003).
 6. 이슈 전체를 읽는다(REQ-DAILY-002, REQ-QAINTEL-004).
 7. TC 색인을 만든다(REQ-DAILY-014).
@@ -4494,7 +4497,7 @@ python scripts/run_daily_qa.py --check
 1. `daily_qa.enabled` 가 참인가
 2. 제품 설정에 Polarion 프로젝트가 있는가. 프로젝트 이름을 쓴다
 3. Polarion 설정(주소, 토큰, 프로젝트)이 다 있는가
-4. `CLAUDE_CODE_OAUTH_TOKEN` 이 있는가
+4. Claude 인증이 되는가. `CLAUDE_CODE_OAUTH_TOKEN` 이 있거나, 없으면 Claude CLI 가 로그인돼 있는가(`claude auth status`). 어느 쪽인지 쓴다
 5. Claude CLI(`daily_qa.claude_command`)를 실행 경로에서 찾을 수 있는가
 6. 작업 폴더 위치가 규칙에 맞는가(NFR-SEC-001). 맞으면 위치를, 아니면 이유를 쓴다
 7. QA 규칙 판이 제품 설정의 기준 판과 같은가(REQ-DAILY-010). 같으면 `Rev<판>` 을 쓴다
@@ -10028,7 +10031,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
 | REQ-DAILY-011 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
-| REQ-DAILY-012 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
+| REQ-DAILY-012 | `scripts/run_daily_qa.py`, `app/core/claude_cli.py` | TEST-DAILY-007, `tests/test_qa_intel_login.py` | implemented |
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-014 | `app/modules/daily_qa/tc_index.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-015 | `app/modules/daily_qa/packages.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |

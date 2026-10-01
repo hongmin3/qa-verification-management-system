@@ -61,8 +61,16 @@ class SnapshotStore:
     def meta(self, path: Path | None) -> dict:
         return snapshot_meta(path) if path else {}
 
-    def save(self, kind: str, run_date: str, items: list[dict], collected_at: str = "") -> Path:
-        return save_snapshot(self.directory(kind), run_date, items, collected_at)
+    def save(self, kind: str, run_date: str, items: list[dict], collected_at: str = "", source: str = "") -> Path:
+        return save_snapshot(self.directory(kind), run_date, items, collected_at, source)
+
+    def exists(self, kind: str, run_date: str) -> bool:
+        """그 날짜 스냅샷이 이 제품 폴더에 있는가 (옛 위치는 보지 않는다)."""
+        return (self.directory(kind) / f"{run_date}.json").is_file()
+
+    def oldest(self, kind: str) -> Path | None:
+        """가장 오래된 스냅샷 (기간 입력의 최솟값, REQ-QAINTEL-027)."""
+        return self.oldest_before(kind, "9999-99-99")
 
     def discard(self, kind: str, run_date: str) -> None:
         """방금 저장한 오늘 스냅샷을 되돌린다 (이벤트 저장이 실패했을 때, REQ-QAINTEL-006)."""

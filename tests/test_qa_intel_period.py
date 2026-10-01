@@ -455,7 +455,7 @@ def test_parse_run_period_max_span_boundary():
 
 
 def test_run_period_defaults():
-    assert run_period_defaults(TODAY) == {"since": "2026-09-29", "until": "2026-09-30", "max": "2026-09-30"}
+    assert run_period_defaults(TODAY) == {"since": "2026-09-29", "until": "2026-09-30", "max": "2026-09-30", "min": ""}
 
 
 def test_period_error_is_value_error():

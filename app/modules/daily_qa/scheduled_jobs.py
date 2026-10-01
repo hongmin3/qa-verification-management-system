@@ -64,7 +64,8 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
     if not cfg.enabled:
         logger.info("qa_agent_skipped reason=disabled product=%s", cfg.slug)
         return {"status": "disabled", "product": cfg.slug}
-    if not cfg.polarion.configured:
+    # 종료일이 지난 날인 기간 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
+    if not cfg.polarion.configured and not until:
         logger.info("qa_agent_skipped reason=polarion_설정_없음 product=%s", cfg.slug)
         return {"status": "not_configured", "product": cfg.slug}
     if trigger == "scheduled":

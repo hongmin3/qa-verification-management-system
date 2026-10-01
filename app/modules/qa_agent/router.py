@@ -194,6 +194,9 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
         since_day, until_day = dash.parse_run_period(since, until)
     except dash.PeriodError as exc:
         return JSONResponse({"detail": str(exc)}, status_code=400)
+    refusal, period_warning = dash.period_snapshot_check(choice.cfg, until_day)
+    if refusal:
+        return JSONResponse({"detail": refusal}, status_code=400)
     result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day)
     messages = {
         "running": "QA Agent가 이미 실행 중입니다.",
@@ -206,6 +209,8 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
     if limit:
         # 한도 중에도 변경 감지는 돈다. 무엇이 대기로 남는지 먼저 알린다 (REQ-QAINTEL-025).
         result["warning"] = f"{limit['description']} 이번 실행은 변경 감지만 하고 AI 분석은 대기로 남습니다."
+    if period_warning:
+        result["warning"] = " ".join(text for text in (result.get("warning", ""), period_warning) if text)
     return JSONResponse(result, status_code=202)
 
 

@@ -187,6 +187,22 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 종료 코드: `0` 성공(변경사항 없음·기준 스냅샷 생성 포함), `1` 일부·전체 실패, `2` 설정 오류, `3` 다른 실행이 진행 중.
 Polarion 설정이 없어 수집을 건너뛴 실행은 변경을 확인하지 못했으므로 `변경사항 없음` 이 아니라 `일부 실패`(종료 코드 `1`)다(REQ-QAINTEL-007).
 
+## 과거 SRS 스냅샷 가져오기 (REQ-QAINTEL-029)
+
+ALM-QA-Automation 의 사양서 자동화(`apps/srs-spec`)가 날짜마다 남긴 SRS 스냅샷을 이 시스템 스냅샷으로 바꿔 넣는다.
+그러면 이 시스템을 쓰기 전 기간도 [지금 실행]의 기간 실행으로 분석할 수 있다. 그 도구가 있는 PC 에서 돌린다.
+
+```text
+.venv/Scripts/python.exe scripts/import_alm_srs_history.py --product VXvue --dry-run
+.venv/Scripts/python.exe scripts/import_alm_srs_history.py --product VXvue
+```
+
+- 원본 폴더는 `config.yaml` 의 `daily_qa.alm_history.srs_snapshot_dir`(이 프로젝트 기준 상대 경로)다. `--source` 로 바꿀 수 있다.
+- 읽지 못한 파일이 있거나 개수가 `manifest.json` 과 다른 날짜는 건너뛴다. 이미 있는 날짜는 덮어쓰지 않는다.
+- 2026-10-01 실측: 12개 날짜 가운데 10개를 가져왔다. 2026-09-07·09-21 은 srs-spec 이 같은 날 두 번 동시에 돌아(정기 작업과 부팅 만회 작업이 겹침) JSON 13개가 깨져 건너뛴다. srs-spec 에 실행 잠금이 들어간 09-22 부터는 깨진 날이 없다.
+- 이슈는 가져오지 않는다. `apps/issue-export` 는 요청한 이슈의 지금 상태만 남긴다. 이슈 스냅샷은 첫 매일 실행부터 쌓인다.
+- 서버에서 쓰려면 `data/daily_qa/snapshots/<slug>/srs/` 의 가져온 파일을 서버의 같은 폴더로 옮긴다.
+
 ## 알려진 제한
 
 - Polarion 이슈 응답에 댓글 관계(`relationships.comments`)의 번호가 실제로 오는지 서버에서 확인하지 않았다.

@@ -47,7 +47,14 @@ def check(cfg) -> int:
     line(cfg.enabled, "daily_qa.enabled")
     line(bool(cfg.profile and cfg.profile.project_id), f"제품 설정 ({cfg.product})", f"프로젝트 {cfg.polarion.project_id or '없음'}")
     line(cfg.polarion.configured, "Polarion 설정 (POLARION_HOST / POLARION_TOKEN / project_id)")
-    line(bool(cfg.claude_token), "CLAUDE_CODE_OAUTH_TOKEN")
+    if cfg.claude_token:
+        line(True, "Claude 인증", "CLAUDE_CODE_OAUTH_TOKEN")
+    else:
+        from app.core.claude_cli import login_status
+
+        login = login_status(cfg.claude_command)
+        line(login["logged_in"], "Claude 인증", f"CLI 로그인({login['method']})" if login["logged_in"]
+             else "CLAUDE_CODE_OAUTH_TOKEN 이 없고 Claude CLI 도 로그인돼 있지 않습니다")
     line(shutil.which(cfg.claude_command) is not None, f"Claude CLI ({cfg.claude_command})")
     try:
         validate_location(cfg.workspace_dir, cfg.root)

@@ -2,6 +2,14 @@
 
 ## 2026-10-01
 
+### 과거 SRS 기록 가져오기 · 기간 실행 고침
+
+- REQ-QAINTEL-029: ALM-QA-Automation 사양서 자동화(`apps/srs-spec`)의 날짜별 SRS 스냅샷을 가져오는 `scripts/import_alm_srs_history.py` 를 더했다. 깨진 날짜·개수가 맞지 않는 날짜는 건너뛰고 이미 있는 날짜는 덮어쓰지 않는다.
+- REQ-QAINTEL-003: SRS 본문의 Work Item 링크를 `번호 - 제목` 으로 풀고 장식 아이콘을 지운다. srs-spec 과 같은 규칙이라, 그 도구가 남긴 스냅샷과 비교해도 바뀌지 않은 SRS 가 바뀐 것으로 보이지 않는다. 예전 방식이면 서버 첫 실행이 SRS 181건을 잘못 "본문 변경"으로 잡았다.
+- REQ-QAINTEL-021, REQ-QAINTEL-027: 종료일이 지난 날인 기간 실행은 Polarion 설정이 없어도 띄운다. 저장 스냅샷이 없는 기간은 가장 오래된 스냅샷 날짜와 함께 400 으로 거절하고, 이슈 스냅샷이 없으면 SRS 변경만 분석한다고 알린다. 달력은 가장 오래된 스냅샷보다 앞을 고를 수 없다.
+- REQ-QAINTEL-019: 대시보드 실행 구역 제목을 `VXvue 실행` 에서 `분석 실행 · VXvue` 로 바꿨다.
+- REQ-DAILY-001, REQ-DAILY-012, REQ-QAINTEL-025: `CLAUDE_CODE_OAUTH_TOKEN` 이 없으면 그 PC 의 Claude CLI 로그인(`claude auth status`)을 확인해 로그인으로 부른다. 전에는 로그인돼 있어도 AI 단계를 건너뛰었다. 로그인이 다시 확인되면 남아 있던 인증 실패 기록을 푼다. `--check` 는 `Claude 인증 — CLI 로그인(claude.ai)` 처럼 방식을 보인다.
+
 ### QA Intelligence Agent 코드 리뷰 반영과 사용자 결정
 
 - REQ-QAINTEL-027: 종료일이 지난 날인 기간 실행이 최신 이슈의 대기·실패 이벤트를 포기(`abandoned`)로 바꾸던 것을 고쳤다. 이 실행은 이제 재시도 대기열을 다루지 않고 자기가 저장한 이벤트만 분석한다.

@@ -21,6 +21,18 @@ def _document_rows() -> int | None:
 
 
 @pytest.fixture(autouse=True)
+def _no_real_claude_login(monkeypatch):
+    """토큰 없이 도는 점검 테스트가 이 PC 의 실제 Claude 로그인을 보고 진짜 Claude 를 부르지 않게 한다.
+
+    로그인 방식을 시험하는 테스트는 `pipeline.claude_login_status` 를 다시 바꿔 끼운다.
+    """
+    from app.modules.daily_qa import pipeline
+
+    monkeypatch.setattr(pipeline, "claude_login_status",
+                        lambda command="claude", **_: {"logged_in": False, "method": "", "subscription": "", "error": "test"})
+
+
+@pytest.fixture(autouse=True)
 def _no_writes_to_the_real_database():
     """테스트가 개발용 `data/app.db` 의 `documents` 를 건드리면 그 자리에서 실패시킨다.
 

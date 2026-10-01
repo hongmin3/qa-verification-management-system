@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from app.modules.daily_qa.change_events import comments_unread
 from app.modules.daily_qa.polarion import PolarionError
-from app.modules.daily_qa.product_adapter import ProductProfile, normalize_comment, normalize_issue, normalize_srs
+from app.modules.daily_qa.product_adapter import ProductProfile, normalize_comment, normalize_issue, normalize_srs, srs_titles
 from app.modules.daily_qa.srs_snapshot import SrsDiff, diff_snapshots
 
 
@@ -44,7 +44,10 @@ class IssueCollection:
 
 
 def collect_srs(client, profile: ProductProfile, previous: list[dict] | None) -> SrsCollection:
-    items = [normalize_srs(item, profile) for item in client.iter_workitems(profile.srs_query)]
+    raw_items = list(client.iter_workitems(profile.srs_query))
+    # 본문의 Work Item 링크를 `번호 - 제목` 으로 풀려면 같은 수집의 제목이 먼저 필요하다 (REQ-QAINTEL-003 4번).
+    titles = srs_titles(raw_items, profile)
+    items = [normalize_srs(item, profile, titles) for item in raw_items]
     if not items:
         # 빈 결과를 스냅샷으로 저장하면 다음 날 모든 SRS 가 '삭제'로 보인다.
         raise CollectionError("SRS 조회 결과가 0건입니다. 조회식·권한을 확인하세요.")

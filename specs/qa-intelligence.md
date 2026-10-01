@@ -90,6 +90,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 - 언제 도는가: REQ-QAINTEL-001(예약·공휴일), REQ-QAINTEL-021(지금 실행), REQ-QAINTEL-027(기간을 정한 수동 실행)
 - 제품 차이 흡수: REQ-QAINTEL-002(제품 설정·공통 모델), REQ-QAINTEL-023(제품별 데이터 분리), NFR-QAINTEL-002
+- 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기)
 - 무엇이 바뀌었나: REQ-QAINTEL-003(SRS), REQ-QAINTEL-004(이슈), REQ-QAINTEL-005(이벤트), REQ-QAINTEL-006(저장·재시도), REQ-QAINTEL-008(기준 스냅샷), REQ-QAINTEL-009(수집 실패), REQ-QAINTEL-028(삭제된 SRS 를 가리키는 TC)
 - AI 를 부를지: REQ-QAINTEL-007(변경 없음·상태만 바뀜), REQ-QAINTEL-010(분석 대상 고르기), REQ-QAINTEL-025(사용량 한도·실행 예외), NFR-QAINTEL-001
 - 분석하기: REQ-QAINTEL-011(후보 압축), REQ-QAINTEL-012 ~ REQ-QAINTEL-016(다섯 가지 분석)
@@ -179,8 +180,15 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 1. REQ-DAILY-002 의 SRS 순서대로 읽는다. 조회식은 제품 프로필의 `queries.srs` 다.
 2. 비교 필드는 Legacy 번호, 제목, 상태, 본문이다. 수정 시각만 바뀐 것은 변경이 아니다.
 3. 값을 비교하기 전에 공백과 줄바꿈을 한 칸으로 줄인다. 공백·줄바꿈만 다른 것은 변경이 아니다.
-4. 본문이 바뀌었으면 문장 단위로 나눠 더해진 문장(`added_sentences`)과 빠진 문장(`removed_sentences`)을 남긴다.
-5. 스냅샷을 `data/daily_qa/snapshots/<slug>/srs/<날짜>.json` 에 저장한다(시험 실행은 저장하지 않는다).
+4. 본문은 ALM-QA-Automation `srs-spec` 이 사양서 PDF 를 만들 때와 같은 규칙으로 글자로 바꾼다. 그래야 그 도구의 과거 스냅샷(REQ-QAINTEL-029)과 비교해도 바뀌지 않은 SRS 가 바뀐 것으로 보이지 않는다.
+
+   - 다른 Work Item 을 가리키는 표시(`polarion-rte-link`)는 `번호 - 제목` 으로 푼다. 제목은 같은 수집의 SRS 제목이다. 찾지 못하면 `번호 (참조 대상 확인 불가)` 다.
+   - Polarion 서버 경로의 장식 아이콘(`/polarion/…` 이미지)은 지운다. 첨부 이미지는 `[이미지: <파일 이름>]` 으로 남긴다.
+
+   > **예시** 본문의 `<span class="polarion-rte-link" data-item-id="VP-678">` 는 `VP-678 - Status Bar` 가 된다.
+
+5. 본문이 바뀌었으면 문장 단위로 나눠 더해진 문장(`added_sentences`)과 빠진 문장(`removed_sentences`)을 남긴다.
+6. 스냅샷을 `data/daily_qa/snapshots/<slug>/srs/<날짜>.json` 에 저장한다(시험 실행은 저장하지 않는다).
 
 **결과** 변경마다 SRS 번호, 변경 종류(신규·변경·삭제), 바뀐 필드(`changed_fields`), 바뀌기 전·후 값, 바뀐 문장이다.
 
@@ -664,6 +672,8 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 - 승인·거절·근거 추가 필요·검토자 입력·질문 답변은 보이지 않는다.
 - 사람이 이슈 하나를 골라 돌리는 단일 이슈 분석은 `/qa-agent/issue-analysis` 에서 연다.
 
+> **참고** 실행 구역의 제목은 `분석 실행 · <제품>` 이다. 마지막 실행, 실행 결과, 다음 자동 실행, 분석 기간, [지금 실행]이 이 구역에 있다.
+
 ### REQ-QAINTEL-020 분석 상세 화면과 실행 상세 화면
 
 **하는 일** Finding 하나의 분석 내용을 분석 종류에 맞는 구획으로 보여 준다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
@@ -708,8 +718,10 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 |---|---|
 | 이미 실행 중 | 409 "QA Agent가 이미 실행 중입니다." |
 | `daily_qa.enabled` 가 false | 409 "QA Agent 가 꺼져 있습니다 (daily_qa.enabled)." |
-| Polarion 설정 없음 | 409 "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다." |
+| Polarion 설정 없음(종료일이 오늘인 실행) | 409 "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다." |
 | 모르는 제품 | 404 "등록된 제품이 아닙니다." |
+
+> **참고** 종료일이 지난 날인 기간 실행은 Polarion 을 읽지 않고 저장 스냅샷만 쓴다(REQ-QAINTEL-027). 그래서 Polarion 설정이 없어도 띄운다.
 
 **지킬 것**
 
@@ -835,6 +847,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 5. 세션 한도이고 초기화가 `daily_qa.intelligence.catchup_max_hours`(기본 12)시간 안이면, 초기화 `catchup_delay_minutes`(기본 5)분 뒤에 한 번 다시 돈다. 앱 안의 감시 예약(`qa_agent_limit_catchup`, 10분마다)이 시각이 지난 제품을 [지금 실행]과 같은 함수로 띄운다.
 
    - 그 제품의 다른 실행이 돌고 있어 띄우지 못하면 catch-up 기록을 지우지 않는다. 10분 뒤 감시 예약이 다시 띄운다.
+   - 토큰 없이 Claude CLI 로그인으로 부르는 PC 는 토큰 지문이 늘 같다. 그래서 사전 점검이 로그인을 다시 확인하면 남아 있던 인증 실패 기록을 지우고 분석을 이어 간다(REQ-DAILY-001 4번).
 6. 주간 한도는 다시 돌지 않는다. 평일 예약 실행이 그대로 돌며 변경 감지와 이벤트 저장만 하고, 초기화 뒤 첫 실행이 밀린 이벤트를 상한(NFR-DAILY-001) 안에서 분석한다. 상한을 넘은 것은 다음 실행으로 넘어간다.
 
 **결과**
@@ -922,7 +935,11 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | 날짜 모양이 틀림 | 400 "날짜는 YYYY-MM-DD 로 입력하세요." |
 | 종료일이 오늘보다 늦음 | 400 "종료일은 오늘보다 늦을 수 없습니다." |
 | 시작일이 종료일보다 늦음 | 400 "시작일이 종료일보다 늦습니다." |
-| 종료일 이전 저장 스냅샷이 없음 | 수집 단계 `실패` "<날짜> 이전 저장 스냅샷이 없습니다." |
+| 종료일이 지난 날인데 그날 이전 SRS 스냅샷이 없음 | 400 "<종료일> 이전에 저장된 SRS 스냅샷이 없어 이 기간은 분석할 수 없습니다. 가장 오래된 스냅샷: <날짜>" (스냅샷이 하나도 없으면 "저장된 SRS 스냅샷이 없습니다.") |
+| 종료일 이전 저장 스냅샷이 없음(CLI 로 직접 실행) | 수집 단계 `실패` "<날짜> 이전 저장 스냅샷이 없습니다." |
+
+- 이슈 스냅샷이 그 기간에 없으면 SRS 변경만 분석한다. 이슈 수집 단계는 `실패` 이고 실행 결과는 `일부 실패` 다. [지금 실행] 응답(202)의 `warning` 에 "이 기간에는 저장된 이슈 스냅샷이 없어 SRS 변경만 분석합니다." 를 붙인다.
+- 화면의 시작일 달력은 가장 오래된 SRS 스냅샷 날짜보다 앞을 고를 수 없다.
 
 ### REQ-QAINTEL-028 삭제된 SRS 를 가리키는 TC 찾기
 
@@ -941,6 +958,41 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 **지킬 것**
 
 - 이 계산은 개편 전 사양 변경 영향 검토(REQ-DAILY-003, deprecated)의 삭제 계산을 이어받은 것이다. 시험 실행(`--dry-run`)은 Finding 을 저장하지 않는다.
+
+### REQ-QAINTEL-029 ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기
+
+**하는 일** ALM-QA-Automation 의 사양서 자동화(`apps/srs-spec`)가 날짜마다 남긴 SRS 스냅샷을 이 시스템의 SRS 스냅샷으로 바꿔 넣는다. 그러면 이 시스템을 쓰기 전 기간도 기간 실행(REQ-QAINTEL-027)으로 분석할 수 있다.
+
+> **예시** `srs-spec/snapshots/2026-08-31/VXvue/VP-1277.json` 같은 파일 437개가 `data/daily_qa/snapshots/vxvue/srs/2026-08-31.json` 하나가 된다. 그 뒤 [지금 실행]에서 2026-08-31 ~ 2026-09-22 를 고르면 그 사이 SRS 변경을 분석한다.
+
+**언제** 담당자가 ALM-QA-Automation 이 있는 PC 에서 `scripts/import_alm_srs_history.py` 를 실행할 때. 여러 번 돌려도 결과가 같다.
+
+**입력**
+
+| 값 | 뜻 |
+|---|---|
+| `--source` | `srs-spec` 의 스냅샷 폴더. 날짜 폴더(`YYYY-MM-DD`) 아래에 ALM 프로젝트 폴더가 있다. 비우면 `daily_qa.alm_history.srs_snapshot_dir` |
+| `--product` | 제품 이름. 그 제품 설정의 `alm.project_id` 폴더만 읽는다 |
+| `--dry-run` | 쓰지 않고 날짜마다 무엇을 할지만 보인다 |
+
+**순서**
+
+1. 날짜 폴더마다 그 제품 프로젝트 폴더의 JSON(SRS 하나에 파일 하나)을 모두 읽는다.
+2. 원본 필드(`description_kr_raw`·`description_raw`·`old_id`·`title`·`status`·`updated`·`is_category`)를 Polarion 응답 모양으로 되돌린다. 그 뒤 매일 실행과 같은 함수로 공통 모델로 바꾼다(REQ-QAINTEL-002·003). 본문 링크 풀기도 같다.
+3. 그 날짜의 `manifest.json` 이 적은 개수(`expected_total`)와 읽은 개수가 다르거나, 읽지 못한 파일이 하나라도 있으면 그 날짜를 건너뛴다.
+
+   이유: 일부만 넣으면 빠진 SRS 가 그날 삭제된 것으로 보인다.
+
+4. 이 시스템에 그 날짜 스냅샷이 이미 있으면 덮어쓰지 않는다. 매일 실행이 직접 읽은 것을 먼저 믿는다.
+5. 수집 시각은 `manifest.json` 의 `generated_at` 이다. 스냅샷에 출처 `alm_qa_automation` 을 적는다.
+
+**결과** 날짜마다 `가져옴`·`이미 있음`·`건너뜀(<이유>)` 한 줄과 합계. 종료 코드는 건너뛴 날짜가 있어도 0, 설정·폴더 오류면 2 다.
+
+**지킬 것**
+
+- `srs-spec` 폴더에는 쓰지 않는다. 읽기만 한다.
+- 이슈 기록은 가져오지 않는다. ALM-QA-Automation 의 이슈 내보내기(`apps/issue-export`)는 요청한 이슈의 지금 상태만 남기고 날짜별 이슈 전체를 남기지 않는다. 이슈 스냅샷은 이 시스템의 첫 매일 실행부터 쌓인다(REQ-QAINTEL-008).
+- 서버에서 기간 실행을 하려면 가져온 스냅샷 파일을 서버의 같은 폴더에 둬야 한다(배포 절차는 `docs/modules/daily-qa.md`).
 
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
@@ -1113,6 +1165,31 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 3. 상한에 닿은 이벤트와 대상이 사라진 이벤트는 `abandoned` 가 된다.
 4. 인증 실패는 토큰이 바뀔 때까지 AI 를 막는다. 주간 한도는 catch-up 을 잡지 않고 초기화 뒤 이어서 분석한다. 상한을 넘은 이벤트는 `pending` 으로 남아 다음 실행이 처리한다. 옛 대기 상태는 대기 SRS 이벤트가 된다. 매뉴얼 점검은 다음 변경 실행으로 미뤄진다.
 
+### TEST-QAINTEL-015 과거 SRS 가져오기와 본문 링크
+
+**목적** 가져온 과거 스냅샷과 매일 실행이 같은 글자를 만드는지, 믿을 수 없는 날짜를 건너뛰는지 확인한다.
+
+**절차** `tests/test_qa_intel_alm_history.py` 를 돌린다. 합성 `srs-spec` 폴더(정상 날짜, 깨진 JSON 날짜, 개수가 모자란 날짜, 이미 있는 날짜)를 쓴다.
+
+1. 본문 링크가 `번호 - 제목` 으로, 모르는 번호는 `(참조 대상 확인 불가)` 로 풀린다. 장식 아이콘은 지워진다.
+2. 정상 날짜만 가져오고, 다시 돌려도 결과가 같고, 이미 있는 날짜는 덮어쓰지 않는다.
+3. 가져온 날짜를 기준으로 기간 실행이 SRS 변경을 찾는다. Polarion 설정 없이 지난 날 기간 실행을 띄울 수 있다.
+4. 스냅샷이 없는 기간은 400 으로 거절한다.
+
+**기대 결과** 모든 테스트 통과. 실제 `srs-spec` 12개 날짜로 돌린 결과는 `progress.md` 에 적는다.
+
+### TEST-QAINTEL-016 Claude CLI 로그인 사용
+
+**목적** 토큰이 없는 PC 에서 Claude CLI 로그인으로 AI 분석을 부르는지 확인한다.
+
+**절차** `tests/test_qa_intel_login.py` 를 돌린다. 실제 Claude 는 부르지 않는다(로그인 확인과 실행기를 가짜로 바꾼다).
+
+1. `claude auth status` 출력 앞에 다른 줄이 있어도 JSON 을 읽고, 이메일·조직 번호는 돌려주지 않는다.
+2. 로그인돼 있으면 토큰 없이 CLI 를 부르고 사전 점검 비고에 로그인 방식이 남는다.
+3. 로그인도 없으면 AI 단계를 건너뛴다. 로그인이 확인되면 남아 있던 인증 실패 기록을 푼다.
+
+**기대 결과** 모든 테스트 통과.
+
 ### TEST-QAINTEL-014 재시도·중복 제거·기간 실행 경계
 
 **목적** 코드 리뷰(2026-10-01)에서 찾은 결함과 사용자 결정 9가지가 고쳐진 채로 남는지 확인한다.
@@ -1138,7 +1215,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 |---|---|---|---|
 | REQ-QAINTEL-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/holidays.py`, `config/holidays/kr.yaml` | TEST-QAINTEL-001: `tests/test_qa_intel_schedule.py` | verified |
 | REQ-QAINTEL-002 | `app/core/product_config.py`, `app/modules/daily_qa/product_adapter.py`, `config/products/vxvue.yaml` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
-| REQ-QAINTEL-003 | `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-010: `tests/test_qa_intel_events.py` | verified |
+| REQ-QAINTEL-003 | `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/product_adapter.py`, `app/modules/daily_qa/collector.py` | TEST-QAINTEL-010: `tests/test_qa_intel_events.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-004 | `app/modules/daily_qa/collector.py`, `app/modules/daily_qa/snapshots.py` | TEST-QAINTEL-003: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | verified |
 | REQ-QAINTEL-005 | `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-004: `tests/test_qa_intel_events.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
 | REQ-QAINTEL-006 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-006: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
@@ -1156,13 +1233,14 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
+| REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-023 | `app/modules/daily_qa/settings.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/snapshots.py` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
-| REQ-QAINTEL-025 | `app/modules/daily_qa/claude_limits.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-011: `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
+| REQ-QAINTEL-025 | `app/modules/daily_qa/claude_limits.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/core/claude_cli.py` | TEST-QAINTEL-011: `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-016: `tests/test_qa_intel_login.py` | verified |
 | REQ-QAINTEL-026 | `app/modules/daily_qa/pipeline.py`, `app/core/storage.py`, `app/modules/cost_dashboard/router.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py` | verified |
-| REQ-QAINTEL-027 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/snapshots.py`, `scripts/run_daily_qa.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/dashboard.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
+| REQ-QAINTEL-027 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/snapshots.py`, `scripts/run_daily_qa.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/dashboard.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
+| REQ-QAINTEL-029 | `app/modules/daily_qa/alm_history.py`, `scripts/import_alm_srs_history.py`, `app/modules/daily_qa/product_adapter.py` | TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-028 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | verified |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |

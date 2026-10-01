@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from app.core.claude_cli import login_status as claude_login_status
 from app.modules.daily_qa import claude_limits, packages, report, rules, snapshots
 from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
 from app.modules.daily_qa.change_events import (
@@ -387,10 +388,21 @@ class _Run:
         self.ai_block = ""
         if not self.rules_state.ok:
             self.ai_block = "rules"
+        self.claude_login = None
         if not self.dry_run and not cfg.claude_token and self.runner is None:
-            self.ai_block = self.ai_block or "token"
+            # 토큰이 없으면 이 PC 의 Claude CLI 로그인을 쓴다(담당자 PC). 서버처럼 로그인이 없으면 AI 를 막는다.
+            login = claude_login_status(cfg.claude_command)
+            if login["logged_in"]:
+                self.claude_login = login
+                self.audit["claude_auth"] = {"mode": "login", "method": login["method"], "subscription": login["subscription"]}
+            else:
+                self.ai_block = self.ai_block or "token"
         if not self.dry_run:
             self.limit = active_limit(self.store, cfg, self.today)
+            if self.limit is not None and self.limit.kind == claude_limits.KIND_AUTH and self.claude_login:
+                # 로그인 방식은 토큰 지문이 늘 같아 인증 실패 기록이 풀리지 않는다. 로그인이 다시 확인되면 푼다.
+                self.store.set_state(cfg.state_key(STATE_CLAUDE_LIMIT), "")
+                self.limit = None
             if self.limit is not None:
                 self.ai_block = self.ai_block or "limit"
         try:
@@ -400,9 +412,13 @@ class _Run:
             self.ai_block = self.ai_block or "workspace"
             self.stages["preflight"] = _stage("failed", str(exc))
         if "preflight" not in self.stages:
-            notes = {"rules": self.rules_state.reason, "token": "CLAUDE_CODE_OAUTH_TOKEN 이 없어 AI 단계를 건너뜁니다.",
+            notes = {"rules": self.rules_state.reason,
+                     "token": "CLAUDE_CODE_OAUTH_TOKEN 이 없고 Claude CLI 도 로그인돼 있지 않아 AI 단계를 건너뜁니다.",
                      "limit": self.limit.describe() + " AI 분석은 대기로 남깁니다." if self.limit else ""}
-            self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", notes.get(self.ai_block, ""))
+            note = notes.get(self.ai_block, "")
+            if not self.ai_block and self.claude_login:
+                note = f"Claude CLI 로그인({self.claude_login['method'] or '로그인'})으로 부릅니다."
+            self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)
         if self.runner is None:
             self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds)
 
