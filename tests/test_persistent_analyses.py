@@ -1,32 +1,18 @@
-from datetime import datetime, timezone
-
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.storage import Storage
-from app.modules.impact_analyzer import router as routes
 from app.modules.knowledge import router as knowledge_routes
-from app.modules.impact_analyzer.schemas import AnalysisResult, ChangeAnalysis
 
 
 def _result(analysis_id: str) -> dict:
-    return AnalysisResult(
-        analysis_id=analysis_id,
-        created_at=datetime.now(timezone.utc),
-        change_file="change.docx",
-        specification_file="spec.pdf",
-        testcase_file="tc.xlsx",
-        change=ChangeAnalysis(changed_features=["Display"]),
-        total_tc=10,
-        candidate_tc=2,
-        decisions=[],
-    ).model_dump(mode="json")
-
+    """저장소 시험용 분석 결과. 기능마다 결과 모양이 달라 저장소는 내용을 해석하지 않는다."""
+    return {"analysis_id": analysis_id, "change_file": "change.docx", "decisions": []}
 
 def test_completed_analysis_survives_storage_recreation(tmp_path):
     db_path = tmp_path / "app.db"
     first = Storage(db_path)
-    first.create_analysis("job-1")
+    first.create_analysis("job-1", module="qa_agent")
     first.update_analysis("job-1", "DONE", result=_result("job-1"))
 
     restored = Storage(db_path).get_analysis("job-1")
@@ -37,47 +23,11 @@ def test_completed_analysis_survives_storage_recreation(tmp_path):
     assert restored["result"]["change_file"] == "change.docx"
 
 
-def test_analysis_evaluation_survives_storage_recreation(tmp_path):
-    db_path = tmp_path / "app.db"
-    storage = Storage(db_path)
-    storage.create_analysis("evaluated")
-    storage.update_analysis("evaluated", "DONE", result=_result("evaluated"))
-    storage.save_analysis_evaluation("evaluated", ["TC-1", "TC-2"], "QA 확인")
-
-    evaluation = Storage(db_path).get_analysis_evaluation("evaluated")
-
-    assert evaluation["expected_tc_ids"] == ["TC-1", "TC-2"]
-    assert evaluation["qa_note"] == "QA 확인"
-
-
-def test_completed_analysis_accepts_qa_gold_and_renders_metrics(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    result = _result("evaluated-web")
-    result["decisions"] = [{"tc_id": "TC-1", "recommended": True}]
-    persisted.create_analysis("evaluated-web")
-    persisted.update_analysis("evaluated-web", "DONE", result=result)
-    monkeypatch.setattr(routes, "storage", persisted)
-    client = TestClient(app)
-
-    response = client.post(
-        "/analyses/evaluated-web/evaluation",
-        data={"expected_tc_ids": "TC-1\nTC-2", "qa_note": "실행 결과 확정"},
-        follow_redirects=False,
-    )
-    detail = client.get("/analyses/evaluated-web/view")
-
-    assert response.status_code == 303
-    assert persisted.get_analysis_evaluation("evaluated-web")["expected_tc_ids"] == ["TC-1", "TC-2"]
-    assert "Precision 100.0%" in detail.text
-    assert "Recall 50.0%" in detail.text
-    assert "TC-2" in detail.text
-
-
 def test_incomplete_analyses_are_failed_after_restart(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("queued")
-    storage.create_analysis("running", status="RUNNING")
-    storage.create_analysis("done")
+    storage.create_analysis("queued", module="qa_agent")
+    storage.create_analysis("running", status="RUNNING", module="qa_agent")
+    storage.create_analysis("done", module="qa_agent")
     storage.update_analysis("done", "DONE", result=_result("done"))
 
     assert storage.fail_incomplete_analyses() == 2
@@ -88,28 +38,55 @@ def test_incomplete_analyses_are_failed_after_restart(tmp_path):
 
 def test_restart_failure_can_target_only_running_jobs(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("queued")
-    storage.create_analysis("running", status="RUNNING")
+    storage.create_analysis("queued", module="qa_agent")
+    storage.create_analysis("running", status="RUNNING", module="qa_agent")
     assert storage.fail_running_analyses() == 1
     assert storage.get_analysis("queued")["status"] == "QUEUED"
     assert storage.get_analysis("running")["status"] == "FAILED"
 
 
-def test_job_status_reads_persisted_analysis(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    persisted.create_analysis("restored")
-    persisted.update_analysis("restored", "DONE", result=_result("restored"))
-    monkeypatch.setattr(routes, "storage", persisted)
+def test_startup_releases_retired_queue_and_preserves_other_jobs(monkeypatch, tmp_path):
+    """Validates: REQ-STORE-003 — 없앤 기능의 대기가 현재 기능의 실행 자리를 막지 않는다."""
+    import asyncio
+    import app.main as main_module
 
-    response = TestClient(app).get("/analyses/restored")
+    storage = Storage(tmp_path / "app.db")
+    request = {"product": "VXvue", "change_files": ["old.pdf"]}
+    storage.create_analysis("retired", module="impact_analyzer", request=request)
+    storage.create_analysis("legacy", module="impact_analyzer", request=request)
+    with storage.connect() as db:
+        db.execute("UPDATE analyses SET module=NULL WHERE id='legacy'")
+    storage.create_analysis("old-done", module="impact_analyzer")
+    result = {"token_usage": {"total_tokens": 12}}
+    storage.update_analysis("old-done", "DONE", result=result)
+    storage.create_analysis("agent-queued", module="qa_agent")
+    storage.create_analysis("manual-queued", module="manual_review")
+    monkeypatch.setattr(main_module, "storage", storage)
+    # 다른 기능의 실제 대기 실행과 예약 작업은 이 임시 DB 시험에서 시작하지 않는다.
+    for name in ("_ensure_configured_products", "resume_queued_manual_jobs", "resume_queued_qa_agent_jobs", "stop_scheduler"):
+        monkeypatch.setattr(main_module, name, lambda: None)
+    monkeypatch.setattr(main_module, "start_scheduler", lambda callbacks: None)
 
-    assert response.status_code == 200
-    assert response.json()["result"]["analysis_id"] == "restored"
+    async def restart():
+        async with main_module.lifespan(None):
+            assert storage.active_analysis_count() == 2
+            for job_id in ("retired", "legacy"):
+                job = storage.get_analysis(job_id)
+                assert job["status"] == "FAILED"
+                assert "기능이 제거" in job["error"]
+                assert job["request"] == request
+            assert storage.get_analysis("old-done")["result"] == result
+            assert storage.get_analysis("old-done")["status"] == "DONE"
+            assert storage.get_analysis("agent-queued")["status"] == "QUEUED"
+            assert storage.get_analysis("manual-queued")["status"] == "QUEUED"
+
+    asyncio.run(restart())
+    asyncio.run(restart())  # 다시 시작해도 보관 내용과 현재 기능의 대기는 그대로다.
 
 
 def test_create_analysis_initializes_stage_tracking(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("job-stage", stage_total=8)
+    storage.create_analysis("job-stage", stage_total=8, module="qa_agent")
 
     job = storage.get_analysis("job-stage")
 
@@ -124,7 +101,7 @@ def test_analysis_request_snapshot_survives_storage_recreation(tmp_path):
     storage = Storage(db_path)
     storage.create_analysis(
         "audited",
-        request={"product": "VXvue", "user_notes": "로그인 변경 확인", "change_files": ["change.pdf"]},
+        request={"product": "VXvue", "user_notes": "로그인 변경 확인", "change_files": ["change.pdf"]}, module="qa_agent",
     )
 
     restored = Storage(db_path).get_analysis("audited")
@@ -135,7 +112,7 @@ def test_analysis_request_snapshot_survives_storage_recreation(tmp_path):
 
 def test_update_stage_advances_progress(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("job-stage-2", stage_total=8)
+    storage.create_analysis("job-stage-2", stage_total=8, module="qa_agent")
 
     storage.update_stage("job-stage-2", 3, "TC 후보 검색", 8)
     job = storage.get_analysis("job-stage-2")
@@ -171,9 +148,9 @@ def test_active_documents_keeps_multiple_distinct_documents(tmp_path):
 
 def test_active_analysis_count_tracks_queue_and_running(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("queued")
-    storage.create_analysis("running", status="RUNNING")
-    storage.create_analysis("done")
+    storage.create_analysis("queued", module="qa_agent")
+    storage.create_analysis("running", status="RUNNING", module="qa_agent")
+    storage.create_analysis("done", module="qa_agent")
     storage.update_analysis("done", "DONE", result=_result("done"))
     assert storage.active_analysis_count() == 2
 
@@ -192,7 +169,7 @@ def test_record_sync_log_endpoint(monkeypatch, tmp_path):
 def test_trigger_specification_sync_blocked_when_unavailable(monkeypatch, tmp_path):
     persisted = Storage(tmp_path / "app.db")
     monkeypatch.setattr(knowledge_routes, "storage", persisted)
-    import app.modules.impact_analyzer.vxvue_spec_sync as vxvue_spec
+    import app.modules.knowledge.vxvue_spec_sync as vxvue_spec
     monkeypatch.setattr(vxvue_spec, "is_available_on_this_host", lambda *a, **k: False)
 
     response = TestClient(app).post("/knowledge/sync/specification")
@@ -208,11 +185,6 @@ def test_trigger_specification_sync_blocked_when_already_running(monkeypatch, tm
     response = TestClient(app).post("/knowledge/sync/specification")
 
     assert response.status_code == 409
-
-
-def test_start_analysis_requires_file_or_notes():
-    response = TestClient(app).post("/analyses", data={"product": "VXvue"})
-    assert response.status_code == 400
 
 
 def test_delete_document_removes_row_and_file(tmp_path, monkeypatch):
@@ -265,49 +237,20 @@ def test_tokens_used_since_sums_done_analyses(tmp_path):
     old["token_usage"] = {"total_tokens": 100}
     new = _result("new")
     new["token_usage"] = {"total_tokens": 250}
-    storage.create_analysis("old")
+    storage.create_analysis("old", module="qa_agent")
     storage.update_analysis("old", "DONE", result=old)
-    storage.create_analysis("new")
+    storage.create_analysis("new", module="qa_agent")
     storage.update_analysis("new", "DONE", result=new)
-    storage.create_analysis("running", status="RUNNING")
+    storage.create_analysis("running", status="RUNNING", module="qa_agent")
 
     assert storage.tokens_used_since("1970-01-01T00:00:00+00:00") == 350
 
 
-def test_start_analysis_blocked_when_daily_token_limit_exceeded(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    used = _result("used-up")
-    used["token_usage"] = {"total_tokens": 999}
-    persisted.create_analysis("used-up")
-    persisted.update_analysis("used-up", "DONE", result=used)
-    monkeypatch.setattr(routes, "storage", persisted)
-    routes.get_settings().raw.setdefault("analysis", {})["daily_token_limit"] = 500
-    try:
-        response = TestClient(app).post("/analyses", files={"change_files": ("c.pdf", b"%PDF-", "application/pdf")}, data={"product": "VXvue"})
-        assert response.status_code == 429
-    finally:
-        routes.get_settings().raw["analysis"]["daily_token_limit"] = 0
-
-
-def test_analysis_history_renders_persisted_results(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    persisted.create_analysis("history-job")
-    persisted.update_analysis("history-job", "DONE", result=_result("history-job"))
-    monkeypatch.setattr(routes, "storage", persisted)
-
-    response = TestClient(app).get("/analyses")
-
-    assert response.status_code == 200
-    assert "history-job" in response.text
-    assert "XLSX" in response.text
-    assert f'/analyses/history-job/view' in response.text
-
-
 def test_list_analyses_filters_by_status(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("done-job")
+    storage.create_analysis("done-job", module="qa_agent")
     storage.update_analysis("done-job", "DONE", result=_result("done-job"))
-    storage.create_analysis("failed-job", status="FAILED")
+    storage.create_analysis("failed-job", status="FAILED", module="qa_agent")
 
     rows, total = storage.list_analyses(status="DONE")
 
@@ -317,9 +260,9 @@ def test_list_analyses_filters_by_status(tmp_path):
 
 def test_list_analyses_filters_by_product(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("vxvue-job", request={"product": "VXvue"})
+    storage.create_analysis("vxvue-job", request={"product": "VXvue"}, module="qa_agent")
     storage.update_analysis("vxvue-job", "DONE", result=_result("vxvue-job"))
-    storage.create_analysis("other-job", request={"product": "Bellalun Viewer"})
+    storage.create_analysis("other-job", request={"product": "Bellalun Viewer"}, module="qa_agent")
     storage.update_analysis("other-job", "DONE", result=_result("other-job"))
 
     rows, total = storage.list_analyses(product="VXvue")
@@ -332,11 +275,11 @@ def test_list_analyses_search_matches_id_or_change_file(tmp_path):
     storage = Storage(tmp_path / "app.db")
     matching = _result("job-a")
     matching["change_file"] = "release-note.pdf"
-    storage.create_analysis("job-a")
+    storage.create_analysis("job-a", module="qa_agent")
     storage.update_analysis("job-a", "DONE", result=matching)
     other = _result("job-b")
     other["change_file"] = "unrelated.pdf"
-    storage.create_analysis("job-b")
+    storage.create_analysis("job-b", module="qa_agent")
     storage.update_analysis("job-b", "DONE", result=other)
 
     by_id, _ = storage.list_analyses(search="job-a")
@@ -350,7 +293,7 @@ def test_list_analyses_paginates_with_limit_and_offset(tmp_path):
     storage = Storage(tmp_path / "app.db")
     for index in range(5):
         job_id = f"job-{index}"
-        storage.create_analysis(job_id)
+        storage.create_analysis(job_id, module="qa_agent")
         storage.update_analysis(job_id, "DONE", result=_result(job_id))
 
     first_page, total = storage.list_analyses(limit=2, offset=0)
@@ -360,92 +303,6 @@ def test_list_analyses_paginates_with_limit_and_offset(tmp_path):
     assert len(first_page) == 2
     assert len(second_page) == 2
     assert {row["id"] for row in first_page}.isdisjoint({row["id"] for row in second_page})
-
-
-def test_analysis_history_status_filter_excludes_other_statuses(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    persisted.create_analysis("done-job")
-    persisted.update_analysis("done-job", "DONE", result=_result("done-job"))
-    persisted.create_analysis("failed-job", status="FAILED")
-    monkeypatch.setattr(routes, "storage", persisted)
-
-    response = TestClient(app).get("/analyses?status=FAILED")
-
-    assert response.status_code == 200
-    assert "failed-job" in response.text
-    assert "done-job" not in response.text
-
-
-def test_analysis_history_pagination_shows_second_page(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    for index in range(30):
-        job_id = f"job-{index:02d}"
-        persisted.create_analysis(job_id)
-        persisted.update_analysis(job_id, "DONE", result=_result(job_id))
-    monkeypatch.setattr(routes, "storage", persisted)
-    client = TestClient(app)
-
-    first_page = client.get("/analyses")
-    second_page = client.get("/analyses?page=2")
-
-    assert "1 / 2 페이지" in first_page.text
-    assert "2 / 2 페이지" in second_page.text
-    assert first_page.text != second_page.text
-
-
-def test_analysis_detail_renders_documents_and_exact_prompt_audit(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    persisted.create_analysis(
-        "detail-job",
-        request={
-            "product": "VXvue",
-            "user_notes": "Viewer 로그인 회귀 확인",
-            "change_files": ["release-note.pdf"],
-            "knowledge_documents": [{"kind": "specification", "name": "VXvue SRS.pdf", "product": "VXvue", "version": "1.0", "revision": "R1", "created_at": "2026-09-01"}],
-        },
-    )
-    result = _result("detail-job")
-    result["ai_audit"] = {
-        "model": "gemini-test",
-        "prompt_name": "impact_analysis",
-        "prompt_version": 1,
-        "cache_hit": False,
-        "generation": {"temperature": 0.1, "max_output_tokens": 100, "thinking_budget": 0},
-        "system_instruction": "QA system instruction",
-        "user_prompt": '{"change":"로그인"}',
-        "response": {"decisions": [{"tc_id": "TC-LOGIN"}]},
-    }
-    persisted.update_analysis("detail-job", "DONE", result=result)
-    monkeypatch.setattr(routes, "storage", persisted)
-
-    response = TestClient(app).get("/analyses/detail-job/view")
-
-    assert response.status_code == 200
-    assert "Viewer 로그인 회귀 확인" in response.text
-    assert "release-note.pdf" in response.text
-    assert "VXvue SRS.pdf" in response.text
-    assert "QA system instruction" in response.text
-    assert "TC-LOGIN" in response.text
-
-
-def test_missing_analysis_detail_returns_404(monkeypatch, tmp_path):
-    monkeypatch.setattr(routes, "storage", Storage(tmp_path / "app.db"))
-    assert TestClient(app).get("/analyses/missing/view").status_code == 404
-
-
-def test_retry_analysis_creates_linked_job(monkeypatch, tmp_path):
-    persisted = Storage(tmp_path / "app.db")
-    persisted.create_analysis("failed", request={"product": "VXvue", "user_notes": "로그인 확인", "change_files": [], "change_paths": []})
-    persisted.update_analysis("failed", "FAILED", error="temporary")
-    monkeypatch.setattr(routes, "storage", persisted)
-    monkeypatch.setattr(routes, "_run_job", lambda *args, **kwargs: None)
-
-    response = TestClient(app).post("/analyses/failed/retry")
-
-    assert response.status_code == 200
-    retried = persisted.get_analysis(response.json()["job_id"])
-    assert retried["request"]["retry_of"] == "failed"
-    assert retried["status"] == "QUEUED"
 
 
 def test_analysis_history_is_separated_by_module(tmp_path):

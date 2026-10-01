@@ -1,4 +1,4 @@
-"""매뉴얼 개정 검증 파이프라인 오케스트레이터. RegressionAnalyzer(impact_analyzer)와 같은
+"""매뉴얼 개정 검증 파이프라인 오케스트레이터. 단계별
 구조(단계별 storage.update_stage로 SSE 진행 상태 갱신, 실패 시 예외 재전파)를 따른다."""
 
 from __future__ import annotations

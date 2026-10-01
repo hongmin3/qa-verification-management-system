@@ -38,7 +38,7 @@ cd /srv/qa-verification-management-system && git pull && ./scripts/deploy.ps1 -R
 | 1.2 | 새 라우트가 등록됐는가 | 브라우저에서 `/qa-agent`, `/qa-agent/guide`, `/qa-agent/rules`, `/knowledge/guide`, `/cost-dashboard/guide` | `git pull` 후 재시작 누락 |
 | 1.3 | nginx가 새 경로를 넘기는가 | 외부 PC에서 `http://<서버>/qa-agent` | nginx가 `/` 전체를 프록시하면 추가 설정 불필요 |
 | 1.4 | 정적 파일이 갱신됐는가 | `/qa-agent/analyses/<id>` 에서 Gate 색상 표시 확인 | 브라우저 캐시 → 강제 새로고침 |
-| 1.5 | 기존 기능이 그대로인가 | `/impact-analyzer`, `/manual-review`, `/analyses` 진입 | 공용 로더 추출(`knowledge_documents`) 회귀 |
+| 1.5 | 기존 기능이 그대로인가 | `/qa-agent`, `/manual-review` 진입, `/impact-analyzer`가 `/qa-agent`로 이동, `/analyses`는 404 | 공용 로더 추출(`knowledge_documents`) 회귀 |
 | 1.6 | 이력이 기능별로 분리됐는가 | `/analyses`에 QA Agent 분석이 섞이지 않는지 | `list_analyses(module=...)` 미적용 |
 
 **DB 스키마.** `qa_agent_approvals` 테이블과 `analyses.module` 컬럼이 기동 시 자동 생성된다

@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
 from app.core import document_cache
-from app.modules.impact_analyzer.regression_analyzer import RegressionAnalyzer
-from app.modules.impact_analyzer.schemas import SpecificationChunk, TestCase as SchemaTestCase
+from app.core.document_schemas import SpecificationChunk, TestCase as SchemaTestCase
+from app.core.knowledge_documents import load_for_product
 
 
 def _use_cache_dir(monkeypatch, tmp_path):
@@ -53,12 +53,10 @@ def test_product_analysis_uses_registered_document_cache(monkeypatch, tmp_path):
             return [{"id": 2, "path": str(tmp_path / "missing.xlsx"), "name": "TC.xlsx", "kind": kind,
                      "product": product, "version": "1", "revision": "", "created_at": "now", "metadata_json": "{}"}]
 
-    analyzer = RegressionAnalyzer(ai_client=SimpleNamespace(), storage=FakeStorage())
-    monkeypatch.setattr(analyzer, "_execute", lambda *args, **kwargs: (args, kwargs))
+    loaded = load_for_product("VXvue", storage=FakeStorage(), with_text=True)
 
-    args, kwargs = analyzer.run_for_product([], "VXvue")
-
-    assert args[1][0].text == "사양"
-    assert args[2][0].tc_id == "TC-1"
-    assert args[3] == "사양 전체"
-    assert kwargs == {}
+    # 원본 파일이 없어도 등록 문서의 캐시로 읽는다 (REQ-PARSE-009).
+    assert [chunk.text for chunk in loaded.chunks] == ["사양"]
+    assert [case.tc_id for case in loaded.cases] == ["TC-1"]
+    assert loaded.baseline_texts == ["사양 전체"]
+    assert loaded.failures == []

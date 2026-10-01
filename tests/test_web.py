@@ -14,7 +14,6 @@ def test_hub_links_to_qa_modules():
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert "<nav>" not in response.text
-    assert 'href="/impact-analyzer"' in response.text
     assert 'href="/manual-review"' in response.text
 
 
@@ -79,38 +78,34 @@ def test_relative_service_url_does_not_loop_on_default_port():
     assert "nginx" in response.json()["detail"]
 
 
-def test_impact_analyzer_has_dedicated_entry_route():
-    response = TestClient(app).get("/impact-analyzer")
-    assert response.status_code == 200
-    assert "<nav>" in response.text
-    assert 'href="/"' in response.text
-    assert 'href="/impact-analyzer/guide"' in response.text
-    assert 'href="/manual-review"' not in response.text
-    assert "Regression 분석" in response.text
-
-
-def test_impact_and_manual_guides_are_separate():
+def test_removed_impact_analyzer_addresses_redirect_to_qa_agent():
+    """Validates: REQ-WEB-006 — 없앤 Regression 영향 분석의 옛 주소는 QA Agent 로 간다."""
     client = TestClient(app)
-    impact = client.get("/impact-analyzer/guide")
-    manual = client.get("/manual-review/guide")
-
-    assert impact.status_code == 200
-    assert "Regression 영향 분석 사용법" in impact.text
-    assert "매뉴얼 개정 검증 사용법" not in impact.text
-    assert manual.status_code == 200
-    assert "매뉴얼 개정 검증 사용법" in manual.text
-    assert "Regression 영향 분석 사용법" not in manual.text
+    for path in ("/impact-analyzer", "/impact-analyzer/guide", "/impact-analyzer/anything"):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 308, path
+        assert response.headers["location"] == "/qa-agent"
+    for path in ("/analyses", "/reports/x.html", "/exports/x.xlsx", "/generated_tc/x.md"):
+        assert client.get(path, follow_redirects=False).status_code == 404, path
 
 
-def test_legacy_guide_redirects_to_impact_guide():
+def test_legacy_guide_redirects_to_qa_agent_guide():
     response = TestClient(app).get("/guide", follow_redirects=False)
     assert response.status_code == 308
-    assert response.headers["location"] == "/impact-analyzer/guide"
+    assert response.headers["location"] == "/qa-agent/guide"
+
+
+def test_no_screen_links_to_removed_impact_analyzer():
+    """Validates: REQ-WEB-006 — 허브와 각 기능 내비게이션에 없앤 기능 링크가 없다."""
+    client = TestClient(app)
+    for path in ("/", "/knowledge", "/knowledge/guide", "/qa-agent", "/qa-agent/guide", "/manual-review", "/cost-dashboard", "/cost-dashboard/guide"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert "/impact-analyzer" not in response.text, path
 
 
 def test_knowledge_is_presented_as_shared_workspace():
     response = TestClient(app).get("/knowledge")
     assert response.status_code == 200
     assert "공용 Knowledge" in response.text
-    assert 'href="/impact-analyzer"' in response.text
     assert 'href="/manual-review"' in response.text

@@ -3,7 +3,7 @@
 
 이 모듈은 특정 모듈(VXvue 사양서 동기화 등)의 job 내용을 알지 못한다 — 각 modules/* 패키지가
 자신의 job을 등록하는 콜백(`register_scheduled_jobs(scheduler)`)을 제공하고, `start_scheduler`가
-그 콜백들을 실행해 실제 job을 붙인다. 예: app/modules/impact_analyzer/scheduled_jobs.py.
+그 콜백들을 실행해 실제 job을 붙인다. 예: app/modules/knowledge/scheduled_jobs.py.
 """
 
 from __future__ import annotations

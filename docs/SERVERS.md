@@ -95,8 +95,7 @@ curl -k https://127.0.0.1/manual-hub/api/health      # QA Manual Hub
 파일 하나짜리 데이터베이스인 SQLite에 저장한다(별도 DB 서버가 필요 없음).
 
 **하는 일**: 이 프로젝트의 핵심 기능 전부.
-- Regression 영향 분석(`/impact-analyzer`) — SW 변경사항을 분석해 다시 검증해야 할 Test
-  Case를 추천
+- QA Agent(`/qa-agent`) — 변경 사양·이슈 점검과 단일 이슈의 검증 범위 분석
 - 매뉴얼 개정 검증(`/manual-review`) — Word/PDF 매뉴얼의 변경사항이 사양서와 맞는지 AI로
   1차 검토
 - Knowledge(`/knowledge`) — 사양서·TC 파일 등록/관리

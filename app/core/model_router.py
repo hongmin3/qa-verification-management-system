@@ -83,7 +83,7 @@ def ai_provider(settings=None) -> str:
 
 
 def ai_status(settings=None) -> dict:
-    """`/config/status` 의 `ai_provider` 항목 (REQ-IMPACT-021). 키·토큰 값은 넣지 않는다."""
+    """`/config/status` 의 `ai_provider` 항목 (REQ-WEB-004). 키·토큰 값은 넣지 않는다."""
     settings = settings or get_settings()
     provider = ai_provider(settings)
     cli = claude_cli.status(settings)

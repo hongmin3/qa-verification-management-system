@@ -34,7 +34,7 @@ macOS/Linux는 `.venv/bin/python`을 쓰고, `secrets.example.txt`를 `secrets.t
 ./scripts/run.sh         # Linux/macOS
 ```
 
-브라우저에서 `http://localhost:24357/health`가 `{"status":"ok"}`를 반환하는지, `/impact-analyzer/guide`와 `/manual-review/guide`에서
+브라우저에서 `http://localhost:24357/health`가 `{"status":"ok"}`를 반환하는지, `/qa-agent/guide`와 `/manual-review/guide`에서
 사용법이 보이는지 확인한다.
 
 ```powershell

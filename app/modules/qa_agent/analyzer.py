@@ -285,6 +285,7 @@ class QaAgentAnalyzer:
                 known_tc_ids={case.tc_id for case in tc_hits.values},
                 issue_steps=issue.steps,
                 issue_expected=issue.expected,
+                struck_chunk_ids={chunk.chunk_id for chunk in spec_chunks if any(mark in DEPRECATED_MARKS for mark in chunk.revision_marks)},
             )
             result.decision = validated.model_dump()
             result.validation = validation.as_dict()

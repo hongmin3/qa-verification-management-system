@@ -268,7 +268,7 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --dry-run
 | 새로운 자산 종류 (예: Release Note를 별도 종류로) | `KIND_*` 상수 + `DEFAULT_CLASSIFIERS` |
 | 새로운 문서 형식 (예: `.pptx`) | `DEFAULT_EXTENSIONS` + `app/parsers/` |
 | 사양서 출처가 다른 크롤러 | `specification.source` 값 + 해당 출처 모듈 (`vxvue_spec_sync.py` 패턴) |
-| 다른 제품에 ALM 사양서 자동 수집을 붙임 | 지금 ALM 수집 어댑터(`app/modules/impact_analyzer/vxvue_spec_sync.py`, `impact_analyzer/scheduled_jobs.py`)는 `vxvue.yaml` 하나만 읽는다. 어댑터를 제품 설정 목록을 도는 형태로 일반화해야 한다. 공통 Knowledge 코드(현황판·상태 판정·등록)는 고치지 않는다 |
+| 다른 제품에 ALM 사양서 자동 수집을 붙임 | 지금 ALM 수집 어댑터(`app/modules/knowledge/vxvue_spec_sync.py`, `knowledge/scheduled_jobs.py`)는 `vxvue.yaml` 하나만 읽는다. 어댑터를 제품 설정 목록을 도는 형태로 일반화해야 한다. 공통 Knowledge 코드(현황판·상태 판정·등록)는 고치지 않는다 |
 | 새 출처 종류 (네 가지 밖) | `app/core/product_config.py` 의 `KNOWN_SOURCES`·`SOURCE_LABELS` 와 `app/core/knowledge_status.py` 의 문구 표 (SPEC REQ-KNOW-018 표 먼저) |
 | QA Agent 점검: 제품이 Polarion 이 아닌 다른 ALM 을 씀 | `app/modules/daily_qa/polarion.py` 와 같은 읽기 전용 클라이언트를 새로 두고 `collector.py` 가 고르게 한다 (§9) |
 | QA Agent 점검: 새 연구소 결과 종류 (공통 값 8개에 없는 뜻) | `product_adapter.py` 의 `RD_*` 와 `change_events.route_issue` 분석 표 (사양 REQ-QAINTEL-010 먼저) |

@@ -14,7 +14,7 @@ AI가 QA를 판정하지 않는다 — QA가 반복적으로 수행하는 조사
 
 | 주소 | 화면 |
 |---|---|
-| `/qa-agent` | 대시보드: 오늘 변경 요약, 분석 5종 카드, 분석 대기 수, 지식 문서 목록, 다음 실행, Claude 한도 알림, [지금 실행](기간 선택) |
+| `/qa-agent` | 대시보드: 오늘 변경 요약, 분석 5종 카드, 분석 대기 수, 지식 문서 목록, 다음 실행, Claude 한도 알림, `지금 실행`(기간 선택) |
 | `/qa-agent/period` | 기간 조회: 시작일~종료일의 이벤트·Finding |
 | `/qa-agent/findings/<번호>` | Finding 상세: 요약, 근거, 관련 번호, 초안 TC, 원본 이벤트 |
 | `/qa-agent/runs/<실행 ID>` | 실행 상세: 단계 상태, 이벤트, 결과 파일 |
@@ -29,7 +29,7 @@ AI가 QA를 판정하지 않는다 — QA가 반복적으로 수행하는 조사
 
 ## 1. 왜 이 기능이 따로 있는가
 
-기존 [Regression 영향 분석](impact-analyzer.md)은 **변경 문서**를 입력으로 받는다. 하지만
+2026-10-01에 없앤 Regression 영향 분석은 **변경 문서**를 입력으로 받는다. 하지만
 QA 업무의 절반은 이미 등록된 Issue에서 시작한다. 그때 필요한 것은 다르다.
 
 | | Regression 영향 분석 | QA Agent |
@@ -161,8 +161,7 @@ exact 히트가 BM25 점수에 묻힌다.
 
 ### 3.6 모델이 만든 ID를 믿지 않는다
 
-`app/modules/qa_agent/validation.py`가 강제한다. 기존 `impact_analyzer/validation.py`와
-같은 원칙이다.
+`app/modules/qa_agent/validation.py`가 강제한다. 없앤 Regression 영향 분석의 ID 검사 원칙을 이어받는다. 취소선 사양에 기대는 판정도 사람 확인 대상으로 남긴다.
 
 - 응답의 `tc_id`가 실제 TC 목록에 없으면 그 판정을 **결과에서 제외**한다.
 - 근거 `chunk_id`는 실제 Chunk ID만 남긴다.
@@ -325,7 +324,7 @@ app/modules/qa_agent/
 app/core/                (공용)
   product_knowledge.py   제품 지식 폴더 수집·분류·리비전 판별
   qa_rules.py            규칙 문서 파싱·Skill 태깅·slice
-  knowledge_documents.py 문서 로딩 (impact_analyzer와 공유)
+  knowledge_documents.py 문서 로딩 (일일 QA 점검과 공유)
   security_filter.py     외부 전송 직전 마스킹
   model_router.py        모델 등급 선택 · 비용 추정
 

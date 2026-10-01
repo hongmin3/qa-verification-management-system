@@ -4,7 +4,7 @@
 프로젝트 AGENTS.md가 비공개로 지정)을 전혀 읽지 않고, 이미 공개된
 output/<YYYY-MM-DD>/pdf/ 폴더만 읽는다.
 
-`scripts/sync_vxvue_spec.py`(Windows 작업 스케줄러용 CLI)와 `app/modules/impact_analyzer/router.py`의
+`scripts/sync_vxvue_spec.py`(Windows 작업 스케줄러용 CLI)와 `app/modules/knowledge/router.py`의
 수동 "지금 동기화" 버튼이 동일하게 이 모듈의 run()을 호출한다 — 로직은 한 곳에만 있다.
 """
 

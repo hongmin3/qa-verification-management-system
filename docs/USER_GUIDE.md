@@ -9,7 +9,6 @@
 | 기능 | 주소 | 앱 안 사용법 |
 |---|---|---|
 | QA Agent — Issue 검증 범위 | `/qa-agent` | `/qa-agent/guide` |
-| Regression 영향 분석 | `/impact-analyzer` | `/impact-analyzer/guide` |
 | 매뉴얼 개정 검증 | `/manual-review` | `/manual-review/guide` |
 | Knowledge — 문서·규칙 관리 | `/knowledge` | `/knowledge/guide` |
 | 비용 대시보드 | `/cost-dashboard` | `/cost-dashboard/guide` |
@@ -20,24 +19,15 @@
 
 ## 0. 어느 기능을 쓸지 — 입력으로 고른다
 
-세 분석 기능은 **입력이 다르다.** 목적이 아니라 손에 있는 자료로 고르면 된다.
+이슈 하나의 검증 범위는 QA Agent 단일 이슈 분석에서 확인한다. 매일 바뀐 사양·이슈는 QA Agent 점검이 찾고, 개정 매뉴얼은 매뉴얼 개정 검증에서 확인한다.
 
-```text
-Issue 가 등록됐다              → QA Agent
-변경 문서(사양 변경·릴리스)가 있다 → Regression 영향 분석
-개정된 매뉴얼을 받았다          → 매뉴얼 개정 검증
-```
+| 기능 | 입력 | 결과 |
+|---|---|---|
+| QA Agent 단일 이슈 분석 | Polarion Issue 1건 | 이슈 분석·사양 근거·TC Coverage·Regression Matrix |
+| QA Agent 점검 | Polarion 사양·이슈의 변경 | 검토할 변경·누락·불일치와 근거 |
+| 매뉴얼 개정 검증 | 개정 매뉴얼(DOCX / PDF) | 변경별 판정·누락 의심·Word Comment 사본 |
 
-| | QA Agent | Regression 영향 분석 | 매뉴얼 개정 검증 |
-|---|---|---|---|
-| 입력 | Polarion Issue 1건 | 변경 문서(PDF/DOCX) 또는 요청 텍스트 | 개정 매뉴얼(DOCX Track Changes / PDF) |
-| 질문 | 이 Issue를 어디까지 검증해야 하는가 | 이 변경으로 어디까지 다시 검증해야 하는가 | 이 매뉴얼이 최신 사양을 반영했는가 |
-| 산출물 | Issue 분석 · 사양 근거 · TC Coverage 판정 · Regression Matrix | Regression TC 추천 · 신규 TC 초안 · HTML/XLSX 보고서 | 변경별 판정 · 누락 의심 · Word Comment 삽입본 |
-| AI 호출 | 1회 (Gate 통과 시). 막히면 0회 | 1회 | 변경별 quick, 필요 시 detail |
-| 공통 | 최종 판정은 QA. 근거 없는 항목은 확정하지 않는다 | | |
-
-**세 기능이 같은 문서를 본다.** Knowledge에 등록·수집된 사양서·TC·매뉴얼을 공유하므로,
-같은 제품에 대해 서로 다른 결론이 나오면 그 차이를 문서 집합 탓으로 돌릴 수 없다.
+제품 자료는 Knowledge에서 함께 읽는다. AI 판정은 QA가 확인한다.
 
 ---
 
@@ -148,21 +138,9 @@ Gate G3·G5          코드   Coverage · 모순 · 근거 없는 확정 검사
 
 ---
 
-## 3. Regression 영향 분석
+## 3. 옛 Regression 영향 분석 주소
 
-변경 문서를 등록된 사양서·TC와 대조해 다시 검증할 TC를 추천한다.
-
-- 제품만 고르면 등록된 사양서·TC 전체를 자동 검색한다. 변경 문서는 여러 개 첨부 가능하고,
-  문서 없이 요청 텍스트만으로도 분석된다.
-- 실제 백엔드 단계 기반 진행 상태(SSE) — 가짜 퍼센트가 없다.
-- 산출물: HTML 보고서 + XLSX + 신규 TC 초안(md)
-- 분석 상세 화면에서 요청·근거·System Instruction·Gemini 실제 입출력 JSON을 볼 수 있다.
-- QA가 정답 TC ID를 확정하면 precision/recall/F1이 집계된다 ([정확도 평가](EVALUATION.md)).
-
-**QA Agent와의 차이**: 이쪽은 Issue가 없는 단계에서 쓴다. 사양 변경이나 릴리스 변경사항
-문서를 받았을 때가 대표적이다.
-
-자세한 사용법: 앱 안 `/impact-analyzer/guide` · 설계: [impact-analyzer.md](modules/impact-analyzer.md)
+2026-10-01에 별도 화면을 없앴다. `/impact-analyzer`의 옛 북마크는 `/qa-agent`로 연결된다. 과거 기록은 DB에 남고 비용 대시보드에서 사용량을 볼 수 있다.
 
 ---
 

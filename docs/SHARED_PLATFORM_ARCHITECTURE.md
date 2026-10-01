@@ -15,7 +15,7 @@
 | URL | 같은 앱의 URL prefix (`/manual-review` 등) | nginx가 붙이는 경로 (`/manual-hub/`) |
 | 연결 방식 | `app/web/router.py`가 라우터를 취합 | URL 링크만 (`config.yaml` `services.*`) |
 | 배포 | 핵심 앱 배포에 포함 | 자기 배포 스크립트 |
-| 현재 예 | `impact_analyzer`, `manual_review`, `knowledge`, `cost_dashboard` | `qa-manual-hub` |
+| 현재 예 | `qa_agent`, `manual_review`, `knowledge`, `cost_dashboard` | `qa-manual-hub` |
 
 **기본값은 ①이다.** 새 QA 프로그램은 별도 웹서비스나 별도 DB부터 만들지 않는다. ②는 스택이
 근본적으로 다를 때만 선택한다 — QA Manual Hub가 그 경우다 (React SPA + PostgreSQL + 자체
@@ -28,7 +28,6 @@
 
 - `app/core/`: 설정, 저장소, 로깅, AI 호출, 스케줄러처럼 도메인에 독립적인 인프라
 - `app/web/`: 허브, 공용 HTML 골격·정적 파일, 모듈 라우터 취합
-- `app/modules/impact_analyzer/`: [Regression 영향 분석](modules/impact-analyzer.md)
 - `app/modules/manual_review/`: [매뉴얼 개정 검증](modules/manual-review.md)
 - `app/modules/knowledge/`: 두 기능이 함께 사용하는 제품 사양서·TC 등록·삭제·동기화
 - `app/modules/cost_dashboard/`: AI 호출·토큰·캐시 사용량 집계

@@ -13,22 +13,21 @@
 | 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |
 | 화면에서 사양서 읽기·목차와 요구사항 검색 | [HTML 사양서](SPEC.html) · 긴 표와 명령은 줄바꿈하며 작은 화면의 넓은 표는 세로 목록으로 표시 |
 | **기능별 사용법을 알기** | [사용 안내](USER_GUIDE.md) → 각 화면의 `사용법` 메뉴 |
-| **써 보기** — 로컬에 띄우고 분석 1건 돌려보기 | [배포 가이드 §2–3](DEPLOYMENT.md) → 앱 안 `/impact-analyzer/guide` |
+| **써 보기** — 로컬에 띄우고 분석 1건 돌려보기 | [배포 가이드 §2–3](DEPLOYMENT.md) → 앱 안 `/qa-agent/guide` |
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [Regression 영향 분석](modules/impact-analyzer.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
 | **할당량 소진 알림 설정** | [배포 후 테스트 §3.8](POST_DEPLOY_TESTS.md) → `scripts/test_notification.py` |
 | **모델을 바꿀지 판단하기** | [구조 §10](QA_AGENT_ARCHITECTURE.md) → `scripts/compare_models.py` |
-| **추천 정확도를 측정하기** | [Regression 추천 정확도 평가](EVALUATION.md) |
+| **옛 추천 평가의 보관 상태 확인** | [추천 평가 종료 안내](EVALUATION.md) |
 | **새 기능을 추가하기** | [공용 아키텍처](SHARED_PLATFORM_ARCHITECTURE.md) |
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |
 | **에이전트와 개발할 때 폴더·지식을 어떻게 관리하는지** | [Context Engineering](CONTEXT_ENGINEERING.md) |
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
-| **추천 정확도 측정** | [정확도 평가](EVALUATION.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
 | **운영 서버 주소·경로·재기동 절차(사내 정보)** | [운영 로컬 메모](local/OPERATIONS_LOCAL.md) · 2026-09-09 노출 사고 기록은 [보안 사고 메모](local/SECURITY_INCIDENT_2026-09-09.md). 비공개 저장소에만 있다 |
@@ -45,7 +44,6 @@
 |---|---|
 | `/` | 허브 — 기능 선택 |
 | `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간 조회·지금 실행·한도 안내, 단일 이슈 분석) |
-| `/impact-analyzer/guide` | Regression 영향 분석 사용법 |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
 | `/knowledge/guide` | Knowledge 사용법 (제품 상태 보기, 자동·수동 자료, 파일 교체, 문제 상태 대처, 새 제품 추가) |
 | `/cost-dashboard/guide` | 비용 대시보드 사용법 (지표 해석, 절감 기법) |
@@ -53,7 +51,7 @@
 | `/manual-hub/` | 매뉴얼 서버 (하위 서비스) |
 | `/config/status` | API Key 설정 여부와 일일 토큰 사용량 (Key 값은 반환하지 않음) |
 
-`/guide`는 하위 호환용으로 남아 있으며 `/impact-analyzer/guide`로 연결된다.
+`/guide`는 하위 호환용으로 남아 있으며 `/qa-agent/guide`로 연결된다.
 
 ## 전체 문서 목록
 
@@ -72,8 +70,8 @@
 
 | 문서 | 내용 |
 |---|---|
-| [REQUIREMENTS_AND_FUNCTIONAL_SPEC.md](REQUIREMENTS_AND_FUNCTIONAL_SPEC.md) | 요구사항·기능사양서 — 화면 단위 사양번호(`01-03` 등), 진입경로·버튼동작·스크린샷 포함 |
-| [REQUIREMENTS_AND_FUNCTIONAL_SPEC.html](REQUIREMENTS_AND_FUNCTIONAL_SPEC.html) | 위 사양서를 사이드바 목차·뱃지·스크린샷 프레임을 입혀 보기 좋게 렌더링한 정적 HTML (브라우저로 직접 열람). `.md`를 고친 뒤 `python scripts/build_spec_html.py`로 재생성 |
+| [REQUIREMENTS_AND_FUNCTIONAL_SPEC.md](REQUIREMENTS_AND_FUNCTIONAL_SPEC.md) | 과거 화면 사양 기록(현재 동작 기준은 SPEC) — 화면 단위 사양번호(`01-03` 등), 진입경로·버튼동작·스크린샷 포함 |
+| [REQUIREMENTS_AND_FUNCTIONAL_SPEC.html](REQUIREMENTS_AND_FUNCTIONAL_SPEC.html) | 위 과거 화면 기록을 사이드바 목차·뱃지·스크린샷 프레임을 입혀 보기 좋게 렌더링한 정적 HTML (브라우저로 직접 열람). `.md`를 고친 뒤 `python scripts/build_spec_html.py`로 재생성 |
 | [SPEC.html](SPEC.html) | 공통 키트 기준 사양(`../SPEC.md`)과 변경 이력을 사람이 읽기 쉽게 만든 페이지. `SPEC.md`나 `CHANGELOG.md`를 고친 뒤 `node .project-check/render-spec-html.js .`로 재생성 |
 | [SPEC_CODE_MISMATCH.md](SPEC_CODE_MISMATCH.md) | `SPEC.md` 와 코드가 다른 곳 목록. 항목마다 코드를 고칠지, 사양을 고칠지, 사용자가 정할지를 적는다. 고친 항목 아래에는 `해결 <날짜>:` 줄이 붙는다 |
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
@@ -82,7 +80,7 @@
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 하위 서비스 통합까지 |
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
-| [EVALUATION.md](EVALUATION.md) | precision·recall·F1 기반 추천 정확도 평가 |
+| [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서·지식 폴더 자동 동기화(PC 예약 작업), 하루 실행 순서, 보고서 구조 |
 | [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | QA Agent 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
 | [modules/daily-qa.md](modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조, 분석 5종·Skill, 제품별 분리, 서버 설치, 설정, 운영 |
@@ -96,7 +94,6 @@
 | 문서 | 내용 |
 |---|---|
 | [qa-agent.md](modules/qa-agent.md) | QA Agent — Issue 검증 범위, Gate, Evidence, 설계 결정 |
-| [impact-analyzer.md](modules/impact-analyzer.md) | Regression 영향 분석 — 흐름, 설계 결정, 설정 |
 | [manual-review.md](modules/manual-review.md) | 매뉴얼 개정 검증 — 흐름, Human Review Gate, 설정 |
 
 ### `services/` — 하위 서비스

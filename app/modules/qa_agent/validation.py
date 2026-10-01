@@ -1,10 +1,12 @@
 """모델이 만든 ID·번호를 믿지 않는다 (규칙 §14, §37 · 저장소 기존 원칙과 동일).
 
-`impact_analyzer/validation.py` 가 하는 것과 같은 검증을 Issue 기반 판정에 적용한다.
+없앤 Regression 영향 분석이 하던 검증을 Issue 기반 판정에 적용한다.
 
 - 응답의 `tc_id` 가 실제 TC 목록에 없으면 그 판정을 **결과에서 제외**한다.
 - 근거 `chunk_id` 는 실제 Chunk ID 만 남기고 걸러낸다.
 - 걸러낸 뒤 근거가 하나도 없으면 confidence 를 review 임계값 아래로 내리고 사람 확인으로 돌린다.
+- 취소선이 있는 사양 조각을 근거로 한 TC 판정도 사람 확인으로 돌린다 (규칙 §11). 취소선이 그 사양이
+  없어졌다는 뜻인지는 사람만 확정할 수 있다.
 - Regression 축은 코드가 고정한 목록에 없는 값을 버린다.
 - Step–Expected 번호 일치를 검사한다 (규칙 §14). LLM 출력에서 자주 어긋나는 지점이다.
 """
@@ -40,12 +42,14 @@ class ValidationReport:
     dropped_chunk_ids: list[str] = field(default_factory=list)
     dropped_axes: list[str] = field(default_factory=list)
     downgraded_tc_ids: list[str] = field(default_factory=list)
+    struck_evidence_tc_ids: list[str] = field(default_factory=list)
     step_number_mismatches: list[str] = field(default_factory=list)
 
     @property
     def has_findings(self) -> bool:
         return bool(
-            self.dropped_tc_ids or self.dropped_chunk_ids or self.dropped_axes or self.downgraded_tc_ids or self.step_number_mismatches
+            self.dropped_tc_ids or self.dropped_chunk_ids or self.dropped_axes or self.downgraded_tc_ids
+            or self.struck_evidence_tc_ids or self.step_number_mismatches
         )
 
     def as_dict(self) -> dict:
@@ -54,6 +58,7 @@ class ValidationReport:
             "dropped_chunk_ids": self.dropped_chunk_ids,
             "dropped_axes": self.dropped_axes,
             "downgraded_tc_ids": self.downgraded_tc_ids,
+            "struck_evidence_tc_ids": self.struck_evidence_tc_ids,
             "step_number_mismatches": self.step_number_mismatches,
         }
 
@@ -76,7 +81,8 @@ def validate_specification_relevance(
 
 
 def validate_tc_coverage(
-    entries: list[TcCoverageDecision], known_tc_ids: set[str], known_chunk_ids: set[str], report: ValidationReport
+    entries: list[TcCoverageDecision], known_tc_ids: set[str], known_chunk_ids: set[str], report: ValidationReport,
+    struck_chunk_ids: set[str] | None = None,
 ) -> list[TcCoverageDecision]:
     validated: list[TcCoverageDecision] = []
     for entry in entries:
@@ -88,6 +94,10 @@ def validate_tc_coverage(
 
         judgment = entry.judgment if entry.judgment in TC_JUDGMENTS else TC_SPEC_REVIEW
         confidence = entry.confidence
+        if struck_chunk_ids and any(chunk_id in struck_chunk_ids for chunk_id in kept_chunks):
+            # 취소선 근거로 확정하지 않는다. 임계값 바로 아래로 내려 사람 확인 대상이 되게 한다 (규칙 §11).
+            confidence = min(confidence, round(_review_threshold() - 0.01, 4))
+            report.struck_evidence_tc_ids.append(entry.tc_id)
         if not kept_chunks:
             # 근거 없는 판정을 추천으로 올리지 않는다. 임계값 바로 아래로 내려 사람 확인 대상이 되게 한다.
             capped = round(_review_threshold() - 0.01, 4)
@@ -157,13 +167,14 @@ def validate_decision(
     known_tc_ids: set[str],
     issue_steps: list[str] | None = None,
     issue_expected: list[str] | None = None,
+    struck_chunk_ids: set[str] | None = None,
 ) -> tuple[QaAgentDecision, ValidationReport]:
     """모델 응답 전체를 검증한 사본과 검증 리포트를 돌려준다."""
     report = ValidationReport()
     validated = decision.model_copy(
         update={
             "specification_relevance": validate_specification_relevance(decision.specification_relevance, known_chunk_ids, report),
-            "tc_coverage": validate_tc_coverage(decision.tc_coverage, known_tc_ids, known_chunk_ids, report),
+            "tc_coverage": validate_tc_coverage(decision.tc_coverage, known_tc_ids, known_chunk_ids, report, struck_chunk_ids),
             "regression_areas": validate_regression_areas(decision.regression_areas, known_chunk_ids, known_tc_ids, report),
         }
     )

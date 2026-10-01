@@ -202,7 +202,7 @@ class Storage(DailyQaStorageMixin):
         with self.connect() as db:
             db.execute("UPDATE documents SET metadata_json=? WHERE id=?", (json.dumps(metadata, ensure_ascii=False), document_id))
 
-    def create_analysis(self, analysis_id: str, status: str = "QUEUED", stage_total: int = 0, request: dict | None = None, module: str = "impact_analyzer") -> None:
+    def create_analysis(self, analysis_id: str, status: str = "QUEUED", stage_total: int = 0, request: dict | None = None, *, module: str) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self.connect() as db:
             db.execute(
@@ -270,39 +270,6 @@ class Storage(DailyQaStorageMixin):
         else:
             value.pop("result_json")
         return value
-
-    def save_analysis_evaluation(self, analysis_id: str, expected_tc_ids: list[str], qa_note: str = "") -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        with self.connect() as db:
-            db.execute(
-                "INSERT INTO analysis_evaluations(analysis_id,expected_tc_ids_json,qa_note,created_at,updated_at) "
-                "VALUES(?,?,?,?,?) ON CONFLICT(analysis_id) DO UPDATE SET "
-                "expected_tc_ids_json=excluded.expected_tc_ids_json,qa_note=excluded.qa_note,updated_at=excluded.updated_at",
-                (analysis_id, json.dumps(expected_tc_ids, ensure_ascii=False), qa_note, now, now),
-            )
-
-    def get_analysis_evaluation(self, analysis_id: str) -> dict | None:
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM analysis_evaluations WHERE analysis_id=?", (analysis_id,)).fetchone()
-        if not row:
-            return None
-        value = dict(row)
-        value["expected_tc_ids"] = json.loads(value.pop("expected_tc_ids_json"))
-        return value
-
-    def list_evaluated_analyses(self) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute(
-                "SELECT a.id,a.result_json,e.expected_tc_ids_json,e.qa_note,e.updated_at "
-                "FROM analysis_evaluations e JOIN analyses a ON a.id=e.analysis_id "
-                "WHERE a.status='DONE' AND a.result_json IS NOT NULL ORDER BY e.updated_at DESC"
-            ).fetchall()
-        return [
-            {"analysis_id": row["id"], "result": json.loads(row["result_json"]),
-             "expected_tc_ids": json.loads(row["expected_tc_ids_json"]),
-             "qa_note": row["qa_note"], "updated_at": row["updated_at"]}
-            for row in rows
-        ]
 
     def list_analyses(
         self, limit: int = 100, offset: int = 0,
@@ -396,7 +363,7 @@ class Storage(DailyQaStorageMixin):
     def _cache_calls_from_audit(ai_audit: dict) -> tuple[int, int] | None:
         """(hit 수, 전체 호출 수)를 ai_audit 형태에 상관없이 계산한다.
 
-        impact_analyzer는 분석당 Gemini 호출이 1회뿐이라 `cache_hit`(bool) 하나만 기록한다.
+        없앤 impact_analyzer 의 과거 행은 분석당 호출이 1회뿐이라 `cache_hit`(bool) 하나만 기록돼 있다.
         manual_review는 변경 건마다 여러 번 호출하므로 `cache_hit_count`/`request_count`
         누적치를 기록한다(request_count는 캐시 미스=실제 호출 수만 센다, gemini_client.py 참고).
         둘 다 없으면 이 분석은 캐시 통계에서 제외한다(None)."""
@@ -507,6 +474,17 @@ class Storage(DailyQaStorageMixin):
         with self.connect() as db:
             cursor = db.execute(
                 "UPDATE analyses SET status='FAILED',error=?,updated_at=? WHERE status='RUNNING'", (error, now)
+            )
+            return cursor.rowcount
+
+    def fail_retired_queued_analyses(self) -> int:
+        """없앤 Regression 기능의 대기를 종료해 현재 기능의 실행 자리를 막지 않게 한다."""
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connect() as db:
+            cursor = db.execute(
+                "UPDATE analyses SET status='FAILED',error=?,updated_at=? "
+                "WHERE status='QUEUED' AND (module='impact_analyzer' OR module IS NULL)",
+                ("Regression 영향 분석 기능이 제거되어 대기 작업을 실행하지 않습니다. 기존 기록은 보존됩니다.", now),
             )
             return cursor.rowcount
 

@@ -1,6 +1,6 @@
 import fitz
 
-from app.modules.impact_analyzer.schemas import RevisionMark
+from app.core.document_schemas import RevisionMark
 from app.parsers.pdf_parser import parse_specification
 
 

@@ -185,7 +185,7 @@ def test_reviewer_result_includes_ai_audit_for_cost_dashboard(tmp_path):
 
 def test_reviewer_records_stage_progress_when_analysis_id_given(tmp_path):
     storage = Storage(tmp_path / "app.db")
-    storage.create_analysis("job-1", stage_total=6)
+    storage.create_analysis("job-1", stage_total=6, module="manual_review")
     revision_path = tmp_path / "revised.docx"
     _write_revision_docx(revision_path)
 

@@ -1,8 +1,8 @@
 """product의 기존 등록 사양서(SRS) 문서를 로컬에서 청크·BM25 검색해 매뉴얼 변경사항별
 근거 후보를 찾는다.
 
-impact_analyzer가 이미 관리하는 'specification' 문서
-(`app/modules/impact_analyzer/vxvue_spec_sync.py`로 최신화됨)를 그대로 재사용한다.
+Knowledge 가 관리하는 'specification' 문서
+(`app/modules/knowledge/vxvue_spec_sync.py`로 최신화됨)를 그대로 재사용한다.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from app.core import document_cache
 from app.core.storage import Storage
-from app.modules.impact_analyzer.schemas import SpecificationChunk
+from app.core.document_schemas import SpecificationChunk
 from app.parsers.document_parser import parse_document
 from app.retrieval.bm25_retriever import BM25Retriever
 

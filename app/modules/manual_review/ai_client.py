@@ -13,7 +13,7 @@ from collections.abc import Callable
 from app.core.gemini_client import GeminiClient
 from app.core.prompt_manager import load_prompt
 from app.core.storage import Storage
-from app.modules.impact_analyzer.schemas import SpecificationChunk
+from app.core.document_schemas import SpecificationChunk
 from app.modules.manual_review.docx_track_changes import TrackedChange
 from app.modules.manual_review.schemas import DetailJudgmentResponse, ManualChangeJudgment, ManualJudgment, QuickJudgmentResponse
 

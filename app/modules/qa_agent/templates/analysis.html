@@ -230,7 +230,7 @@
   {% endif %}
   {% endfor %}
 
-  {% if validation and (validation.dropped_tc_ids or validation.dropped_chunk_ids or validation.dropped_axes or validation.downgraded_tc_ids or validation.step_number_mismatches) %}
+  {% if validation and (validation.dropped_tc_ids or validation.dropped_chunk_ids or validation.dropped_axes or validation.downgraded_tc_ids or validation.struck_evidence_tc_ids or validation.step_number_mismatches) %}
   <h3>ID 교차검증에서 걸러낸 것</h3>
   <p class="hint">모델이 만든 ID를 그대로 믿지 않습니다. 걸러낸 항목을 숨기지 않고 남깁니다.</p>
   <ul>
@@ -238,6 +238,7 @@
     {% if validation.dropped_chunk_ids %}<li>존재하지 않는 근거 Chunk ID {{ validation.dropped_chunk_ids|length }}건</li>{% endif %}
     {% if validation.dropped_axes %}<li>정의되지 않은 Regression 축: <code>{{ validation.dropped_axes|join(', ') }}</code></li>{% endif %}
     {% if validation.downgraded_tc_ids %}<li>근거가 없어 confidence를 내린 TC: <code>{{ validation.downgraded_tc_ids|join(', ') }}</code></li>{% endif %}
+    {% if validation.struck_evidence_tc_ids %}<li>취소선이 있는 사양을 근거로 써서 사람 확인으로 돌린 TC: <code>{{ validation.struck_evidence_tc_ids|join(', ') }}</code></li>{% endif %}
     {% for message in validation.step_number_mismatches %}<li>{{ message }} (규칙 §14)</li>{% endfor %}
   </ul>
   {% endif %}

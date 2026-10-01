@@ -10,8 +10,7 @@
 
 > **판단이 꼭 필요한 지점에서만, 최소한의 근거로 LLM을 부른다.**
 
-파싱·검색·후보 압축·1차 필터링은 전부 결정적인 Python Rule Engine이 처리하고, Gemini는 의미적
-판단이 꼭 필요한 마지막 단계에서 구조화된 입력으로 단 한 번(또는 조건부로 그 이하) 호출된다.
+파싱·검색·후보 압축·1차 필터링은 전부 결정적인 Python Rule Engine이 처리하고, AI는 판단이 필요한 단계에서 압축한 근거를 받는다. 단일 이슈 분석은 관문을 통과하면 한 번 호출하고, 매뉴얼 검증은 변경마다 quick 판정 뒤 필요할 때 detail 판정을 부른다.
 
 부수 효과가 하나 더 있다. Rule Engine이 처리하는 구간은 **매번 같은 입력에 같은 출력**을
 내므로, 결과가 흔들리는 범위 자체가 좁아진다.
@@ -25,25 +24,22 @@
 AI 분석 대상에서 제외한다.
 `app/modules/manual_review/change_filter.py::is_functional_change`
 
-**2. 기준 사양서 Diff**
-변경 문서 전체에서 키워드를 뽑는 대신 등록된 기준 사양서와 실제 diff해 "진짜 변경된 줄"만
-분석 대상으로 삼는다. 미변경 문장을 변경으로 오인해 불필요한 AI 판정을 만드는 문제를
-근본적으로 막는다.
-`app/modules/impact_analyzer/regression_analyzer.py`
+**2. SRS 스냅샷 비교**
+QA Agent 점검은 날짜별 SRS 스냅샷을 비교해 바뀐 항목과 필드만 분석 후보로 남긴다.
+`app/modules/daily_qa/srs_snapshot.py`
 
 **3. BM25/RAG Top-K 후보 압축**
 사양서 근거는 BM25로 상위 `retrieval.specification_top_k`(기본 8)건만, TC 후보는
-`retrieval.candidate_limit`(기본 150)건까지만 골라 LLM 입력에 포함한다. 전체 사양서·전체 TC를
+`qa_agent.tc_candidate_limit`(기본 40)건까지만 골라 LLM 입력에 포함한다. 전체 사양서·전체 TC를
 매번 통째로 보내지 않는다.
 
-**4. 변경 문서 관련 줄 축소**
-사용자 요청 사항이 있으면 변경 문서 전체 대신 요청과 관련성 높은 줄만 BM25로 추려 보낸다
-(`retrieval.change_text_top_lines`, 기본 60줄). 문서가 이보다 짧으면 그대로 전체를 사용한다.
-`app/modules/impact_analyzer/change_analyzer.py::trim_by_relevance`
+**4. 정확한 식별자와 검색 후보 압축**
+단일 이슈 분석은 식별자 정확 일치를 앞에 두고, 남은 자리를 BM25 후보로 채운다. 입력 길이 상한에 맞춰 근거를 고른다.
+`app/retrieval/hybrid.py`
 
-**5. Structured Output 단일 호출**
-Gemini는 JSON Schema로 강제된 Structured Output을 반환하며, Regression 분석 1건당 정확히 1회만
-호출한다. 재파싱·재질의 왕복이 없다.
+**5. 구조화된 응답**
+공용 AI 통로는 JSON Schema에 맞춘 응답을 받는다. TC·근거 ID를 코드로 검증한 뒤 사람이 확인한다.
+`app/core/gemini_client.py`, `app/modules/qa_agent/validation.py`
 
 **6. 매뉴얼 quick/detail 2단계 + PASS short-circuit**
 매뉴얼 개정 변경은 먼저 짧은 quick 판정만 수행하고, 결과가 PASS면 비용이 큰 detail 호출을
@@ -51,12 +47,12 @@ Gemini는 JSON Schema로 강제된 Structured Output을 반환하며, Regression
 `app/prompts/manual_revision_{quick,detail}.yaml`
 
 **7. SHA-256 응답 캐시**
-모든 Gemini 호출은 `sha256(model + prompt명 + prompt버전 + prompt내용)`을 키로 캐시된다. 동일
+공용 AI 호출은 `sha256(model + prompt명 + prompt버전 + prompt내용)`을 키로 캐시된다. 동일
 입력으로 재분석·재검증하면 API 호출 없이 캐시 응답을 그대로 재사용한다.
 `app/core/gemini_client.py`, `analysis.cache_enabled`
 
-**8. `thinking_budget=0`**
-이 서비스의 모든 AI 호출은 근거 기반 구조화 추출·판정이라 별도의 내부 추론이 필요 없다.
+**8. Gemini의 `thinking_budget=0`**
+Gemini의 구조화 호출은 근거 기반 구조화 추출·판정이라 별도의 내부 추론이 필요 없다.
 `thinking_config.thinking_budget=0`으로 내부 reasoning 토큰 소비를 비활성화해 같은
 `max_output_tokens` 예산을 응답 생성에 온전히 쓴다.
 `app/prompts/*.yaml`

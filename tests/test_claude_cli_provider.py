@@ -258,7 +258,7 @@ def test_claude_errors_get_their_own_notification_kinds():
     assert classify_error("429 RESOURCE_EXHAUSTED") == KIND_QUOTA_EXHAUSTED
 
 
-# Validates: REQ-IMPACT-021, REQ-AICALL-005
+# Validates: REQ-WEB-004, REQ-AICALL-005
 def test_config_status_reports_ai_provider_without_secret_values(monkeypatch):
     from app.core.config import get_settings
     from app.main import app

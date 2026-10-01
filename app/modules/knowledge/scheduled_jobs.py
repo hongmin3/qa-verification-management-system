@@ -21,10 +21,10 @@ logger = logging.getLogger("regression_analyzer")
 
 
 def _sync_specification_job() -> None:
-    from app.modules.impact_analyzer.vxvue_spec_sync import is_available_on_this_host, run
+    from app.modules.knowledge.vxvue_spec_sync import adapter_product, is_available_on_this_host, run
 
     storage = Storage()
-    product = "VXvue"
+    product = adapter_product()  # 제품 이름은 어댑터의 제품 설정에서 읽는다 (REQ-KNOW-018).
     if not is_available_on_this_host():
         logger.info("scheduled_sync_skipped product=%s reason=크롤러_output_폴더_접근_불가", product)
         return

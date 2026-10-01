@@ -20,7 +20,8 @@ qa-verification-management-system/
 │  ├─ parsers/              pdf · docx · excel
 │  ├─ retrieval/            base.py(Protocol) + bm25_retriever.py
 │  └─ modules/
-│     ├─ impact_analyzer/   변경 문서 → Regression TC 추천
+│     ├─ qa_agent/          대시보드 · 단일 이슈 검증 범위 분석
+│     ├─ daily_qa/          사양·이슈 변경 점검 엔진
 │     ├─ manual_review/     매뉴얼 개정 검증
 │     ├─ knowledge/         사양서·TC 등록
 │     └─ cost_dashboard/    토큰·캐시 집계
@@ -75,8 +76,8 @@ qa-verification-management-system/
 | `core/product_config.py` | `knowledge_source`·`issue_source` 스키마, `${ENV}` 치환 | 제품 공통화 |
 | `core/document_schemas.py` | `TestCase.workbook/sheet/row` | 규칙 §9.3이 요구하는 근거 위치가 없었다 |
 | `parsers/excel_parser.py` | 실제 Excel 행 번호 기록 | 같은 이유 |
-| `impact_analyzer/regression_analyzer.py` | 문서 로딩을 `core/knowledge_documents.py`로 추출 | 두 기능이 같은 문서 집합을 봐야 한다 |
-| `impact_analyzer/router.py` | 이력 조회에 `module` 필터 | 이력이 섞이는 것을 막는다 |
+| 옛 `impact_analyzer/regression_analyzer.py` (2026-10-01 제거) | 문서 로딩을 `core/knowledge_documents.py`로 추출 | 두 기능이 같은 문서 집합을 봐야 한다 |
+| 옛 `impact_analyzer/router.py` (2026-10-01 제거) | 이력 조회에 `module` 필터 | 이력이 섞이는 것을 막는다 |
 | `knowledge/router.py` | 지식 폴더 수집·스캔·죽은 등록 정리 | 실서버 웹에서 실행 가능해야 한다 |
 | `web/router.py`, `main.py` | 라우터·스케줄러 등록 | prefix만 결정하는 얇은 계층 유지 |
 | `config.yaml` | `security`/`models`/`qa_agent` 섹션 | 값을 코드에 하드코딩하지 않는다 |

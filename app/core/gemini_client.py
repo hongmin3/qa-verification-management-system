@@ -135,7 +135,7 @@ class GeminiClient:
         try:
             payload = json.loads(response.text or "{}")
         except json.JSONDecodeError as exc:
-            hint = " (MAX_TOKENS로 잘렸을 가능성이 높습니다 — retrieval.candidate_limit을 낮춰보세요.)" if str(finish_reason) == "MAX_TOKENS" else ""
+            hint = " (MAX_TOKENS로 잘렸을 가능성이 높습니다 — 보내는 사양·TC 후보 수를 줄여 보세요.)" if str(finish_reason) == "MAX_TOKENS" else ""
             raise RuntimeError(f"Gemini 응답이 완전한 JSON이 아닙니다{hint}: {exc}") from exc
         payload["token_usage"] = token_usage
         return payload

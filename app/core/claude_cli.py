@@ -1,6 +1,6 @@
 """Claude Code CLI(`claude -p`) 로 구조화 판정 한 번 받기 (SPEC REQ-AICALL-005).
 
-Regression 영향 분석·QA Agent·매뉴얼 개정 검증의 AI 호출은 `app/core/gemini_client.py` 한
+QA Agent·매뉴얼 개정 검증의 AI 호출은 `app/core/gemini_client.py` 한
 통로를 지난다. `ai.provider` 가 `claude_cli` 이면 그 통로가 이 모듈을 부른다. 가리기·응답
 저장본·토큰 합산은 통로가 하고, 여기서는 CLI 를 안전하게 한 번 실행하고 결과를 읽기만 한다.
 

@@ -237,7 +237,7 @@ def test_startup_closes_sync_rows_left_running(tmp_path, monkeypatch) -> None:
     stuck = storage.sync_start(PRODUCT, "product_knowledge", "upload")
     assert storage.is_sync_running(PRODUCT, "product_knowledge")
     monkeypatch.setattr(main, "storage", storage)
-    for name in ("resume_queued_impact_jobs", "resume_queued_manual_jobs", "resume_queued_qa_agent_jobs", "stop_scheduler"):
+    for name in ("resume_queued_manual_jobs", "resume_queued_qa_agent_jobs", "stop_scheduler"):
         monkeypatch.setattr(main, name, lambda: None)
     monkeypatch.setattr(main, "start_scheduler", lambda registrars: None)
 

@@ -19,7 +19,7 @@ from app.core.console import configure_stdout  # noqa: E402
 configure_stdout()
 
 from app.core.config import app_bind  # noqa: E402
-from app.modules.impact_analyzer.vxvue_spec_sync import acquire_lock, release_lock, report_sync_log, run  # noqa: E402
+from app.modules.knowledge.vxvue_spec_sync import acquire_lock, release_lock, report_sync_log, run  # noqa: E402
 
 
 def main() -> None:

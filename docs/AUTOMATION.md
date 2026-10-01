@@ -14,35 +14,22 @@ ALM 사양서 최신화 크롤링(Polarion REST API)         FastAPI 앱 (uvicor
 scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundScheduler (앱 내부, 신규 systemd 없음)
 지식 폴더 ──(scripts/sync_product_knowledge.py       ├─ SQLite: documents / analyses / sync_log
             --upload-to, 작업 스케줄러)──▶          │   /knowledge/product-knowledge/*
-                                                     ├─ Gemini API (분석 1건당 호출 1회, 캐시)
+                                                     ├─ 공용 AI 호출 (Claude CLI 기본, Gemini 선택, 응답 캐시)
                                                      └─ QA Agent 점검(제품마다 평일 07:30, 공휴일 제외, 분리 프로세스)
                                                           → Polarion(GET) · Claude CLI · /qa-agent 대시보드
 [사용자 브라우저]
-  분석 화면 ──POST /analyses──▶ BackgroundTasks ──▶ RegressionAnalyzer._execute (8단계)
-       ◀──SSE (/analyses/{id}/stream)── 실제 단계·경과시간·실패 원인
+  단일 이슈 분석 ──POST /qa-agent/analyses──▶ 작업 스레드 ──▶ QA Agent
+  매뉴얼 검증 ──POST /manual-review/revisions──▶ 작업 스레드 ──▶ 매뉴얼 검증
+       ◀──SSE (/manual-review/jobs/{id}/stream)── 실제 단계·경과시간·실패 원인
 ```
 
-## 2. AI 분석 Flow (8단계, 가짜 % 없음)
+## 2. AI 분석과 진행 상태
 
-`app/modules/impact_analyzer/regression_analyzer.py::RegressionAnalyzer._execute`가 아래 8단계를 순서대로
-지나가며, 각 단계 시작 시점에 `Storage.update_stage(job_id, index, name)`로 SQLite `analyses`
-테이블에 실제 진행 상태를 기록한다. 프론트엔드는 `stage_index/stage_total`로 퍼센트를 **계산**할
-뿐, AI 응답 여부와 무관하게 임의로 증가시키지 않는다.
+2026-10-01에 별도 Regression 영향 분석과 `/analyses` API를 없앴다. 단일 이슈 분석은 QA Agent, 매일 바뀐 사양·이슈 점검은 QA Agent 점검 엔진이 맡는다.
 
-1. 입력 문서 분석 — 변경 문서(여러 개 첨부 가능) 텍스트 추출·병합. 사용자 요청 사항(notes)이
-   있으면 BM25로 요청과 관련 높은 줄만 추려 이후 단계에 넘기는 RAG 토큰 절약 적용
-   (`trim_by_relevance`, `retrieval.change_text_top_lines`로 상한 조절, 문서가 짧으면 생략)
-2. 변경사항 추출 — 기준 사양서 diff + 사용자 요청 텍스트 반영
-3. 최신 사양서 조회 — BM25로 관련 사양 Chunk 검색
-4. TC 후보 검색 — BM25로 관련 TC 후보 축소
-5. AI 영향도 분석 — Gemini Structured Output 1회 호출 (`change_items`/`decisions`/`draft_test_cases` 동시 반환)
-6. Regression TC 선정 — TC ID/Chunk ID 교차검증, 사람이 읽는 `specification_reference` 조립
-7. 신규 TC 초안 검증 — 근거 Chunk ID 재검증
-8. HTML 결과 생성 — `report.html` 렌더링, XLSX/TC 초안 저장
-
-진행 상태는 `GET /analyses/{job_id}/stream`(SSE, `text/event-stream`)으로 push되며, 기존
-`GET /analyses/{job_id}`(단발성 JSON)도 하위 호환을 위해 그대로 유지된다. 실패 시 `stage`
-필드에 실패 당시 단계명이, `error`에 실제 예외 메시지가 남는다.
+- 단일 이슈 분석은 `app/modules/qa_agent/analyzer.py`에서 근거 조회·관문 검사·AI 판정·ID 검증·결과 저장을 수행한다. `Storage.update_stage`로 기록한 단계가 화면에 표시된다.
+- 매뉴얼 검증은 `/manual-review/jobs/{job_id}/stream`의 SSE로 단계·경과시간·실패 원인을 보낸다. 변경마다 quick 판정 뒤 필요한 경우에만 detail 판정을 부른다.
+- 예약·수동 점검은 `app/modules/daily_qa/pipeline.py`를 사용한다. 실행 단계와 결과는 `/qa-agent` 대시보드와 실행 상세에서 본다.
 
 ## 3. VXvue 사양서 자동 동기화 구조
 
@@ -53,9 +40,9 @@ VXvue 최신 사양서는 별도 프로젝트 ALM-QA-Automation 의 srs-spec 앱
 (`output/<날짜>/pdf/`)만 읽는다.
 
 ```text
-app/modules/impact_analyzer/vxvue_spec_sync.py   ← 실제 로직 (run, is_available_on_this_host, report_sync_log)
+app/modules/knowledge/vxvue_spec_sync.py   ← 실제 로직 (run, is_available_on_this_host, report_sync_log)
   ├─ scripts/sync_vxvue_spec.py   (Windows 작업 스케줄러용 CLI, 위 모듈을 그대로 호출)
-  └─ app/modules/impact_analyzer/router.py            (POST /knowledge/sync/specification, 같은 프로세스에서 직접 호출)
+  └─ app/modules/knowledge/router.py            (POST /knowledge/sync/specification, 같은 프로세스에서 직접 호출)
 ```
 
 동작:
@@ -184,7 +171,7 @@ TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화
   생략).
 - 같은 문서의 이전 리비전(파일명에서 `(YYMMDD)` 날짜 부분만 다른 동일 문서, 예:
   `VXvue 사양서2(260824).pdf` → `VXvue 사양서2(260831).pdf`)이 Knowledge에 남아 있으면, 신규
-  파일 업로드 성공 직후 자동으로 삭제된다(`app/modules/impact_analyzer/vxvue_spec_sync.py::_replace_stale_revisions`).
+  파일 업로드 성공 직후 자동으로 삭제된다(`app/modules/knowledge/vxvue_spec_sync.py::_replace_stale_revisions`).
   삭제는 신규 등록이 성공한 뒤에만 실행되므로 업로드가 실패하면 기존 리비전은 그대로 남는다.
 
 ## 9. 로그 위치
@@ -220,9 +207,9 @@ TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화
 
 1. `config/products/<product>.yaml`을 새로 만든다(`vxvue.yaml` 구조 그대로 복사).
 2. 그 제품의 사양서 출처가 다르면 `specification.source`를 바꾸고(예: 다른 크롤러, 다른
-   폴더), `app/modules/impact_analyzer/`에 그 출처 전용 모듈을 하나 추가한다(`vxvue_spec.py`와 같은 패턴 —
+   폴더), `app/modules/knowledge/`에 그 출처 전용 모듈을 하나 추가한다(`vxvue_spec.py`와 같은 패턴 —
    `run()`/`is_available_on_this_host()`/`report_sync_log()` 인터페이스만 맞추면 됨).
 3. `app/core/scheduler.py`의 `start_scheduler()`에 그 제품의 sync job을 추가한다.
-4. `app/modules/impact_analyzer/router.py`의 `/knowledge/sync/{kind}` 계열 엔드포인트와 `/knowledge` 페이지의
+4. `app/modules/knowledge/router.py`의 `/knowledge/sync/{kind}` 계열 엔드포인트와 `/knowledge` 페이지의
    동기화 상태 카드는 제품명을 매개변수화하면 재사용 가능하다(현재는 VXvue 하드코딩 — 확장
    시 가장 먼저 손볼 지점).

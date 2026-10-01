@@ -1,6 +1,6 @@
 """제품 지식 폴더 수집 cron job 등록.
 
-`impact_analyzer/scheduled_jobs.py` 와 같은 방식이다 — `core/scheduler.py` 는 이 모듈의
+`knowledge/scheduled_jobs.py` 와 같은 방식이다 — `core/scheduler.py` 는 이 모듈의
 존재를 모르고, `app/main.py` 가 콜백으로 넘긴다.
 
 지식 폴더는 QA 담당자 PC 에 있고 운영 서버에는 없다. 서버에서 이 job 이 시각에 깨어나도

@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from app.core.storage import Storage
 from app.main import app
 from app.modules.cost_dashboard import router as cost_dashboard_router
-from app.modules.impact_analyzer import router as impact_analyzer_router
 
 
 def _impact_result(total_tokens: int, cache_hit: bool | None) -> dict:
@@ -124,7 +123,6 @@ def test_cost_dashboard_route_renders_module_and_cache_summary(monkeypatch, tmp_
     storage.create_analysis("impact-1", module="impact_analyzer", request={"product": "VXvue"})
     storage.update_analysis("impact-1", "DONE", result=_impact_result(100, cache_hit=True))
     monkeypatch.setattr(cost_dashboard_router, "storage", storage)
-    monkeypatch.setattr(impact_analyzer_router, "storage", storage)
 
     response = TestClient(app).get("/cost-dashboard")
 
@@ -137,7 +135,6 @@ def test_cost_dashboard_route_renders_module_and_cache_summary(monkeypatch, tmp_
 def test_cost_dashboard_route_respects_days_query_param(monkeypatch, tmp_path):
     storage = Storage(tmp_path / "app.db")
     monkeypatch.setattr(cost_dashboard_router, "storage", storage)
-    monkeypatch.setattr(impact_analyzer_router, "storage", storage)
 
     response = TestClient(app).get("/cost-dashboard?days=7")
 
@@ -147,7 +144,7 @@ def test_cost_dashboard_route_respects_days_query_param(monkeypatch, tmp_path):
 
 def test_cost_dashboard_linked_from_other_modules():
     client = TestClient(app)
-    for path in ("/impact-analyzer", "/manual-review", "/knowledge"):
+    for path in ("/qa-agent", "/manual-review", "/knowledge"):
         assert 'href="/cost-dashboard"' in client.get(path).text
 
 
@@ -221,7 +218,7 @@ def test_dashboard_groups_days_by_korea_time(tmp_path):
     assert stats["recent"][0]["created_at_kst"].startswith(expected_day)
 
 
-def test_dashboard_labels_qa_agent_and_explains_all_three_features(monkeypatch, tmp_path):
+def test_dashboard_labels_qa_agent_and_explains_the_features_in_use(monkeypatch, tmp_path):
     # Validates: REQ-COST-001
     storage = Storage(tmp_path / "app.db")
     storage.create_analysis("agent-1", module="qa_agent", request={"product": "VXvue"})
@@ -232,8 +229,9 @@ def test_dashboard_labels_qa_agent_and_explains_all_three_features(monkeypatch, 
 
     assert "QA Agent" in text
     assert "<b>qa_agent</b>" not in text
-    assert "두 기능의 사용량을 합산" not in text
-    assert "세 기능의 사용량을 합산" in text
+    # Regression 영향 분석을 없앤 뒤(2026-10-01) 지금 쓰는 기능은 QA Agent 와 매뉴얼 개정 검증 둘이다.
+    assert "세 기능의 사용량을 합산" not in text
+    assert "두 기능의 사용량을 합산" in text
     assert "한국 시간" in text
 
 

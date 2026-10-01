@@ -370,8 +370,8 @@ def record_sync_log(product: str = Form(...), kind: str = Form(...), source: str
 
 @router.post("/knowledge/sync/specification")
 def trigger_specification_sync():
-    from app.modules.impact_analyzer.vxvue_spec_sync import adapter_product, is_available_on_this_host
-    from app.modules.impact_analyzer.vxvue_spec_sync import run as run_spec_sync
+    from app.modules.knowledge.vxvue_spec_sync import adapter_product, is_available_on_this_host
+    from app.modules.knowledge.vxvue_spec_sync import run as run_spec_sync
 
     product = adapter_product()
     if not product:

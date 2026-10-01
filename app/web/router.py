@@ -12,7 +12,6 @@ from fastapi.templating import Jinja2Templates
 from app.core.config import get_settings
 from app.modules.cost_dashboard.router import router as cost_dashboard_router
 from app.modules.daily_qa.router import router as daily_qa_router
-from app.modules.impact_analyzer.router import router as impact_analyzer_router
 from app.modules.knowledge.router import router as knowledge_router
 from app.modules.manual_review.router import router as manual_review_router
 from app.modules.qa_agent.router import router as qa_agent_router
@@ -96,9 +95,22 @@ def hub(request: Request):
     )
 
 
+def removed_impact_analyzer_redirect():
+    """없앤 Regression 영향 분석 주소(옛 북마크)를 QA Agent 로 보낸다 (REQ-WEB-006)."""
+    return RedirectResponse("/qa-agent", status_code=308)
+
+
+def legacy_guide_redirect():
+    """옛 `/guide` 북마크를 QA Agent 사용법으로 보낸다 (REQ-WEB-006)."""
+    return RedirectResponse("/qa-agent/guide", status_code=308)
+
+
 def build_router() -> APIRouter:
     api = APIRouter()
     api.add_api_route("/", hub, methods=["GET"], response_class=HTMLResponse, name="hub")
+    api.add_api_route("/guide", legacy_guide_redirect, methods=["GET"], name="legacy_guide_redirect")
+    api.add_api_route("/impact-analyzer", removed_impact_analyzer_redirect, methods=["GET"], name="removed_impact_analyzer")
+    api.add_api_route("/impact-analyzer/{rest:path}", removed_impact_analyzer_redirect, methods=["GET"], name="removed_impact_analyzer_paths")
     for segment in relative_service_urls():
         # 이 앱은 하위 서비스를 실제로 서비스하지 않는다. 앱 포트로 직접 들어온 요청만
         # nginx origin 으로 되돌려 보낸다.
@@ -109,7 +121,6 @@ def build_router() -> APIRouter:
             name=f"service_fallback_{segment}",
         )
     api.include_router(knowledge_router)
-    api.include_router(impact_analyzer_router)
     api.include_router(manual_review_router, prefix="/manual-review")
     api.include_router(qa_agent_router, prefix="/qa-agent")
     api.include_router(cost_dashboard_router)

@@ -2,8 +2,8 @@
 
 원본 스펙 §18-23 판정/근거 스키마를 그대로 따른다. AI에게는 QuickJudgmentResponse/
 DetailJudgmentResponse처럼 좁은 스키마만 강제하고, 사람이 읽는 화면/저장용 모델
-(ManualChangeJudgment 등)은 서버 코드가 두 응답을 합쳐 조립한다 (impact_analyzer의
-"AI는 ID만 인용, 서버가 표시 텍스트를 조립" 패턴과 동일 — 환각 방지).
+(ManualChangeJudgment 등)은 서버 코드가 두 응답을 합쳐 조립한다 ("AI는 ID만 인용,
+서버가 표시 텍스트를 조립" 패턴 — 환각 방지).
 """
 
 from __future__ import annotations

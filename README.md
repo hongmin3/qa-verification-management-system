@@ -42,7 +42,6 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 | 질문 | 담당 기능 |
 |---|---|
 | 이 **Issue**를 어디까지 검증해야 하는가 | [QA Agent](docs/modules/qa-agent.md) |
-| 이 **변경**으로 어디까지 다시 검증해야 하는가 | [Regression 영향 분석](docs/modules/impact-analyzer.md) |
 | 매뉴얼이 최신 사양을 반영했는가 | [매뉴얼 개정 검증](docs/modules/manual-review.md) |
 | 매뉴얼의 최신본이 어느 것인가 | [QA Manual Hub](services/qa-manual-hub/README.md) |
 | 어제 바뀐 사양·이슈 가운데 **오늘 검토할 것**은 무엇인가 | [QA Agent 점검](docs/modules/daily-qa.md) |
@@ -50,10 +49,7 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 QA Agent 점검은 사람이 자료를 넣지 않습니다. 서버가 평일 아침마다 Polarion 을 직접 읽어 바뀐 것만 분석하고,
 사람은 아침 메일과 `/qa-agent` 대시보드에서 결과를 봅니다.
 
-세 분석 기능은 **입력이 다릅니다.** 목적이 아니라 손에 있는 자료로 고릅니다 —
-Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영향 분석, 개정 매뉴얼을
-받았으면 매뉴얼 개정 검증입니다. 셋 다 같은 문서 집합을 보므로 결론이 갈릴 때 그 차이를
-자료 탓으로 돌릴 수 없습니다.
+이슈 하나를 검증하려면 QA Agent 단일 이슈 분석을, 매일 바뀐 사양·이슈를 보려면 QA Agent 점검을 씁니다. 개정 매뉴얼은 매뉴얼 개정 검증에서 확인합니다. Knowledge에 등록한 제품 자료를 함께 사용합니다.
 
 ---
 
@@ -75,8 +71,7 @@ Issue가 등록됐으면 QA Agent, 변경 문서를 받았으면 Regression 영�
   값 자체는 반환하지 않습니다 ([SECURITY.md](SECURITY.md)).
 - 무엇이 실제로 전송됐는지는 분석 상세 화면에서 **전송된 입력 JSON 원문 그대로** 확인할 수
   있습니다. 추정이 아니라 실제 payload를 봅니다.
-- AI 판정은 기본으로 회사 Claude Team 계정의 Claude CLI(`claude -p`)로 받습니다. 화면 기능(Regression
-  분석·QA Agent·매뉴얼 개정 검증)의 호출에는 도구를 하나도 주지 않고, 저장소 밖 빈 폴더에서 실행합니다.
+- AI 판정은 기본으로 회사 Claude Team 계정의 Claude CLI(`claude -p`)로 받습니다. 화면 기능(QA Agent 단일 이슈 분석·매뉴얼 개정 검증)의 호출에는 도구를 하나도 주지 않고, 저장소 밖 빈 폴더에서 실행합니다.
   `config.yaml` 의 `ai.provider: gemini` 로 바꾸면 예전처럼 Gemini API 를 씁니다.
 - **예외: QA Agent 점검**도 같은 Claude CLI 를 쓰지만 방식이 다릅니다. 격리된 작업 폴더에 마스킹한
   SRS·TC 색인을 두고 Claude 가 필요한 부분을 검색해 읽으므로, 나가는 양이 작업마다 다릅니다. 보낸 입력과
@@ -124,7 +119,6 @@ qa-verification-management-system/
 │  ├─ retrieval/            Exact(식별자) → BM25 단계 검색
 │  ├─ modules/
 │  │  ├─ qa_agent/          Issue 검증 범위 (Skill·Gate)  → /qa-agent
-│  │  ├─ impact_analyzer/   Regression 영향 분석          → /impact-analyzer
 │  │  ├─ manual_review/     매뉴얼 개정 검증              → /manual-review
 │  │  ├─ knowledge/         문서·규칙 관리 (전 기능 공유)  → /knowledge
 │  │  ├─ daily_qa/          QA Agent 점검 엔진 (변경 탐지·Claude Skill) → /qa-agent 대시보드
@@ -230,19 +224,6 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 
 → [상세 문서](docs/modules/qa-agent.md) · [구조 분석](docs/QA_AGENT_ARCHITECTURE.md) ·
 사용법: 앱 안 `/qa-agent/guide`
-
-### Regression 영향 분석 — `/impact-analyzer`
-
-제품만 선택하면 등록된 사양서·TC 전체를 자동 검색해 분석합니다. 변경 문서는 여러 개 동시
-첨부할 수 있고, 문서 없이 요청 텍스트만으로도 분석됩니다.
-
-- PDF / Word(`.docx`) 사양서, 다중 시트 TC Excel 자동 파싱
-- 실제 백엔드 단계 기반 실시간 진행 상태(SSE) — 가짜 퍼센트 없음
-- 사용자 관점으로 재구성한 HTML 보고서 + XLSX + 신규 TC 초안(md)
-- TC ID·Chunk ID 교차검증, Confidence 기반 Manual Review 분류
-- 분석 상세 감사 화면 (요청 / 근거 / System Instruction / AI 실제 입출력 JSON)
-
-→ [상세 문서](docs/modules/impact-analyzer.md)
 
 ### 매뉴얼 개정 검증 — `/manual-review`
 
@@ -521,10 +502,10 @@ Copy-Item secrets.example.txt secrets.txt -Force   # 서버는 CLAUDE_CODE_OAUTH
 
 AI 판정에는 Claude CLI 가 필요합니다. 개발 PC 는 `claude` 를 설치하고 회사 Team 계정으로 한 번 로그인해 두면
 됩니다. 서버는 로그인 대신 `claude setup-token` 으로 발급한 토큰을 `secrets.txt` 의 `CLAUDE_CODE_OAUTH_TOKEN=` 에
-넣습니다([QA Agent 점검 서버 설치](docs/modules/daily-qa.md) 1~2단계와 같습니다). Regression 분석 화면 위쪽 표시줄이
-"AI: Claude CLI · 명령 claude …" 이면 준비된 것입니다.
+넣습니다([QA Agent 점검 서버 설치](docs/modules/daily-qa.md) 1~2단계와 같습니다). `/config/status`의
+`ai_provider`에서 제공자와 실행 파일을 확인할 수 있습니다. 실제 인증 상태는 아래 점검 명령으로 확인합니다.
 
-띄운 뒤 `/impact-analyzer/guide`, `/manual-review/guide`, `/qa-agent/guide`에서 각 기능의 사용법을 볼 수 있습니다.
+띄운 뒤 `/manual-review/guide`, `/qa-agent/guide`에서 각 기능의 사용법을 볼 수 있습니다.
 
 ### QA Agent 점검 시험 실행
 
