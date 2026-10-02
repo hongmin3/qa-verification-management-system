@@ -178,6 +178,10 @@ class DailyQaStorageMixin:
 
     # -- Finding -----------------------------------------------------------
     def daily_qa_add_finding(self, run_id: str, skill: str, task_id: str, finding: dict, product: str = "") -> int:
+        # 표에 `action` 칸이 없다. QA 할 일은 화면 카드에 보여야 하므로 구획에 함께 남긴다 (REQ-QAINTEL-033).
+        sections = dict(finding.get("sections") or {})
+        if finding.get("action") and not sections.get("action"):
+            sections["action"] = finding["action"]
         with self.connect() as db:
             cursor = db.execute(
                 """INSERT INTO daily_qa_findings (run_id, skill, task_id, subject, subject_title, verdict,
@@ -193,7 +197,7 @@ class DailyQaStorageMixin:
                     json.dumps(finding.get("draft_tcs") or [], ensure_ascii=False),
                     now_iso(), product, finding.get("analysis_type", ""),
                     json.dumps(finding.get("event_ids") or [], ensure_ascii=False),
-                    json.dumps(finding.get("sections") or {}, ensure_ascii=False),
+                    json.dumps(sections, ensure_ascii=False),
                     json.dumps(finding.get("related_ids") or {}, ensure_ascii=False),
                 ),
             )

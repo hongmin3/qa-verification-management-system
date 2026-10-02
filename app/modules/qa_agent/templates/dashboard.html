@@ -5,6 +5,7 @@
 
 <section>
   <h2>지식 문서 업로드 현황 <span class="hint">담당자가 직접 올려야 하는 문서: {{ knowledge.kinds|join(', ') }}</span></h2>
+  <p class="qa-banner" id="knowledge-latest-notice">정확한 분석을 위해 매뉴얼과 TC 가 최신이 아니라면 최신 버전을 업로드해 주세요.</p>
   {% if knowledge.available %}
   <p class="hint">마지막 수집 {{ knowledge.synced_at or '-' }} (한국 시간)</p>
   <div class="table-wrap"><table class="history qa-docs">
@@ -45,6 +46,7 @@
     {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">실행 상세</a>{% endif %}
   </div>
   <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}
+  자동 실행은 TC·매뉴얼을 보지 않습니다.
   <b>현재 상태 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
 
   <h3>오늘 변경 요약</h3>
@@ -64,19 +66,28 @@
     <input type="hidden" name="product" value="{{ selected }}">
     기간 조회 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
-  <div class="qa-cards">
-  {% for item in cards %}
+  {% macro result_card(item) %}
     <div class="qa-card">
-      <h4>[{{ item.subject }}] {{ item.kind }} <small>{{ item.created }}</small></h4>
-      {% if item.title %}<div class="hint" style="margin:0">{{ item.title }}</div>{% endif %}
-      <div class="tags"><span class="pill">{{ item.verdict_label }}</span>{% for badge in item.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>
-      <div>{{ item.summary }}</div>
+      <div class="qa-card-head"><span class="level {{ item.level_class }}">{{ item.level }}</span>
+        <span class="hint" style="margin:0">{{ item.kind }} · {{ item.created }}</span></div>
+      <h4>[{{ item.subject }}] {{ item.title }}</h4>
+      <div class="qa-summary">{{ item.summary }}</div>
+      {% if item.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
       <a href="/qa-agent/findings/{{ item.id }}">상세보기</a>
     </div>
-  {% else %}
-    <p class="hint">아직 분석 결과가 없습니다.</p>
-  {% endfor %}
+  {% endmacro %}
+  {% set open_cards = cards | rejectattr("level", "equalto", "문제 없음") | list %}
+  {% set ok_cards = cards | selectattr("level", "equalto", "문제 없음") | list %}
+  <div class="qa-cards">
+  {% for item in open_cards %}{{ result_card(item) }}{% endfor %}
   </div>
+  {% if not cards %}<p class="hint">아직 분석 결과가 없습니다.</p>
+  {% elif not open_cards %}<p class="hint">확인이 필요한 결과가 없습니다.</p>{% endif %}
+  {% if ok_cards %}
+  <details class="qa-ok-cards"><summary>문제 없음 {{ ok_cards | length }}건</summary>
+    <div class="qa-cards">{% for item in ok_cards %}{{ result_card(item) }}{% endfor %}</div>
+  </details>
+  {% endif %}
 </section>
 
 <section class="qa-section">

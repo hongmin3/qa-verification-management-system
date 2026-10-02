@@ -34,10 +34,10 @@ DAY2 = DAY1 + timedelta(days=1)
 #: 분석 종류마다 상세 화면에만 있는 구획 제목 (REQ-QAINTEL-020).
 SECTIONS = {
     "NEW_ISSUE": ["Duplicate Analysis", "Specification Analysis", "Historical Analysis", "QA Recommendation"],
-    "FIXED_ISSUE": ["Root Cause Review", "Resolution Review", "Specification Consistency", "Regression Risk", "Verification TC"],
+    "FIXED_ISSUE": ["Root Cause Review", "Resolution Review", "Specification Consistency", "Regression Risk"],
     "SPEC_DECISION": ["R&amp;D Claim", "Specification Evidence", "Historical Decisions", "QA Analysis"],
     "COMMENT": ["New Comment"],
-    "SPEC_COVERAGE": ["Specification Change", "Historical Issue Coverage", "Checklist Coverage", "Coverage Gap"],
+    "SPEC_COVERAGE": ["관련 과거 이슈"],
 }
 REVIEW_WORDS = ("승인", "거절", "근거 추가 필요", "검토자", "질문 답변")
 
@@ -291,8 +291,17 @@ def test_run_detail_stage_status_column_does_not_wrap(world):
     assert 'class="history qa-stages' in page
 
 
-def test_run_detail_lists_events_files_and_cards(world):
+def _draft_file(world) -> str:
+    """자동 실행은 초안 Excel 을 만들지 않는다. 내려받기 화면을 보려고 요청 실행이 남기는 파일을 둔다."""
+    from openpyxl import Workbook
+
     run_id = world["changed"]["run_id"]
+    Workbook().save(world["cfg"].output_dir / run_id / "impact_checklist_draft.xlsx")
+    return run_id
+
+
+def test_run_detail_lists_events_files_and_cards(world):
+    run_id = _draft_file(world)
     page = world["client"].get(f"/qa-agent/runs/{run_id}").text
     assert "impact_checklist_draft.xlsx" in page
     assert f"/qa-agent/runs/{run_id}/files/impact_checklist_draft.xlsx" in page
@@ -321,8 +330,19 @@ def test_plain_note_and_dry_run_task_sentence():
     assert "실패" in run_view._sentence("F", stage, dry_run=False)
 
 
+def test_on_demand_limit_run_does_not_promise_automatic_resume():
+    """Validates: REQ-QAINTEL-020, REQ-QAINTEL-032. 요청 실행은 한도 뒤 다시 눌러야 한다."""
+    from app.modules.qa_agent import run_view
+
+    view = run_view.build({"stages": {"on_demand": {"status": "limit"}},
+                           "summary": {"claude_limit": {"kind": "WEEKLY"}, "trigger": "manual"}}, [], [], [])
+    assert "다시 요청" in view["headline"]
+    assert "이어서 합니다" not in view["headline"]
+    assert view["trigger"] == "요청 점검"
+
+
 def test_run_file_download_and_path_limits(world, tmp_path):
-    run_id = world["changed"]["run_id"]
+    run_id = _draft_file(world)
     client = world["client"]
     ok = client.get(f"/qa-agent/runs/{run_id}/files/impact_checklist_draft.xlsx")
     assert ok.status_code == 200 and ok.content[:2] == b"PK"
@@ -507,3 +527,92 @@ def test_issue_audit_is_refused_for_past_day_without_issue_snapshot_and_while_lo
 def test_dashboard_shows_issue_audit_button(world):
     page = world["client"].get("/qa-agent").text
     assert 'id="audit-now"' in page and "현재 상태 점검" in page
+
+
+# -- 결론 단계와 짧은 카드 (REQ-QAINTEL-033) ----------------------------------------------
+
+
+@pytest.mark.parametrize(("verdict", "level"), [
+    ("SPEC_VIOLATION", "사양과 다름"), ("CONTRADICTS_SPEC", "사양과 다름"), ("CONFLICTS_WITH_PAST_DECISION", "사양과 다름"),
+    ("QA_CHECK_NEEDED", "검토 필요"), ("PARTIALLY_COVERED", "검토 필요"), ("SPEC_UNDEFINED", "검토 필요"), ("TC 없음", "검토 필요"),
+    ("INSUFFICIENT_EVIDENCE", "근거 부족"), ("ROOT_CAUSE_INFORMATION", "참고"),
+    ("CONSISTENT_WITH_SPEC", "문제 없음"), ("NO_QA_IMPACT", "문제 없음"), ("FULLY_COVERED", "문제 없음"),
+])
+def test_level_mapping_table(verdict, level):
+    assert dash.level({"verdict": verdict}) == level
+
+
+def test_card_has_at_most_three_todos_and_no_badge_row(world):
+    finding = {"id": 1, "subject": "VP-1", "verdict": "QA_CHECK_NEEDED", "summary": "요약", "analysis_type": "SPEC_COVERAGE",
+               "action": "첫째\n둘째\n- 셋째\n넷째", "sections": {"alerts": [{"type": "ISSUE_WITHOUT_TC"}]}}
+    card = dash.card(finding)
+    assert card["todos"] == ["첫째", "둘째", "셋째"] and card["level"] == "검토 필요"
+    page = world["client"].get("/qa-agent").text
+    cards = page[page.index("최신 분석 결과"):page.index("최근 실행")]
+    assert 'class="tags"' not in cards and "기존 Issue" not in cards        # 칩 줄이 없다
+    assert 'class="level ' in cards
+
+
+def test_dashboard_orders_by_level_and_folds_no_problem(world):
+    cards = dash.dashboard(dash.choose(""))["cards"]
+    order = [dash.LEVEL_ORDER.index(item["level"]) for item in cards]
+    assert order == sorted(order)
+    page = world["client"].get("/qa-agent").text
+    if any(item["level"] == "문제 없음" for item in cards):
+        assert '<details class="qa-ok-cards"><summary>문제 없음' in page
+
+
+def test_old_coverage_finding_renders_key_block_and_details(world):
+    """개편 전 Coverage Finding(칩·TC 표 구획)도 새 상세에서 결론과 함께 보인다."""
+    store = world["store"]
+    old = {"subject": "VP-11", "subject_title": "검색", "verdict": "PARTIALLY_COVERED", "summary": "옛 Coverage 요약",
+           "evidence": [{"source_type": "srs", "location": "VP-11 본문"}], "analysis_type": "SPEC_COVERAGE",
+           "sections": {"change": {"summary": "정렬 바뀜", "changed_requirements": ["최신순"]},
+                        "checklist_coverage": {"tcs": [{"tc_id": "TC_2", "decision": "UPDATE_EXISTING", "reason": "옛 Expected"}]}},
+           "draft_tcs": [], "confidence": "Review Needed", "action": "TC_2 Expected 수정"}
+    finding_id = store.add_finding(world["changed"]["run_id"], "qa-spec-coverage-analysis", "COV-001", old, product="vxvue")
+    page = world["client"].get(f"/qa-agent/findings/{finding_id}").text
+    key = page[page.index('id="key-result"'):page.index('<details class="qa-more">')]
+    assert "검토 필요" in key and "옛 Coverage 요약" in key and "정렬 바뀜" in key and "TC_2 Expected 수정" in key
+    assert 'data-action="tc-check"' in key
+    assert "<h3>Checklist Coverage" in page[page.index('<details class="qa-more">'):]
+
+
+def test_detail_shows_on_demand_buttons_only_for_their_analysis(world):
+    spec = world["client"].get(f"/qa-agent/findings/{_finding_id(world, 'SPEC_COVERAGE')}").text
+    fixed = world["client"].get(f"/qa-agent/findings/{_finding_id(world, 'FIXED_ISSUE')}").text
+    new = world["client"].get(f"/qa-agent/findings/{_finding_id(world, 'NEW_ISSUE')}").text
+    assert 'data-action="tc-check"' in spec and 'data-action="tc-draft"' not in spec
+    assert 'data-action="tc-draft"' in fixed and 'data-action="tc-check"' not in fixed
+    assert "on-demand" not in new.split("<script>")[0]
+
+
+def test_knowledge_section_asks_for_latest_manual_and_tc_and_has_no_manual_button(world):
+    page = world["client"].get("/qa-agent").text
+    assert "정확한 분석을 위해 매뉴얼과 TC 가 최신이 아니라면 최신 버전을 업로드해 주세요." in page
+    assert 'id="manual-now"' not in page and "/qa-agent/manual-check" not in page
+    assert world["client"].post("/qa-agent/manual-check", data={"product": "VXvue"}).status_code in (404, 405)
+
+
+# -- 버튼 요청 실행 (REQ-QAINTEL-016·032) ----------------------------------------------
+
+
+def test_tc_check_and_tc_draft_launch_with_on_demand_flags(world, launcher):
+    spec_id, fixed_id = _finding_id(world, "SPEC_COVERAGE"), _finding_id(world, "FIXED_ISSUE")
+    response = world["client"].post(f"/qa-agent/findings/{spec_id}/tc-check")
+    assert response.status_code == 202
+    assert launcher.commands[-1][-5:] == ["--on-demand", "tc-check", "--no-email", "--finding", str(spec_id)]
+    response = world["client"].post(f"/qa-agent/findings/{fixed_id}/tc-draft")
+    assert response.status_code == 202 and launcher.commands[-1][-4:-2] == ["tc-draft", "--no-email"]
+
+
+def test_on_demand_is_refused_for_wrong_analysis_unknown_action_and_while_locked(world, launcher):
+    new_id, spec_id = _finding_id(world, "NEW_ISSUE"), _finding_id(world, "SPEC_COVERAGE")
+    wrong = world["client"].post(f"/qa-agent/findings/{new_id}/tc-check")
+    assert wrong.status_code == 400 and wrong.json()["detail"] == "사양 변경 분석에서만 TC 점검을 할 수 있습니다."
+    assert world["client"].post(f"/qa-agent/findings/{spec_id}/whatever").status_code == 404
+    assert world["client"].post("/qa-agent/findings/999999/tc-check").status_code == 404
+    world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
+    world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
+    locked = world["client"].post(f"/qa-agent/findings/{spec_id}/tc-check")
+    assert locked.status_code == 409 and locked.json()["detail"] == "QA Agent가 이미 실행 중입니다."

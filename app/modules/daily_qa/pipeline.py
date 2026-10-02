@@ -15,7 +15,6 @@ Claude 사용량 한도에 걸리면 남은 AI 작업을 멈추고 초기화 시
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -32,12 +31,15 @@ from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
 from app.modules.daily_qa.change_events import (
     ANALYSIS_ORDER,
     ENTITY_SRS,
+    FIXED_ISSUE,
     ISSUE_AUDIT,
     ISSUE_AUDIT_TARGET,
     SPEC_COVERAGE,
     SRS_CREATED,
     SRS_REMOVED,
     SRS_UPDATED,
+    TC_CHECK,
+    TC_DRAFT,
     ChangeEvent,
     detect_issue_events,
     detect_srs_events,
@@ -46,7 +48,7 @@ from app.modules.daily_qa.change_events import (
 from app.modules.daily_qa.checklist_xlsx import coverage_rows_from_finding, draft_rows_from_finding, write_draft
 from app.modules.daily_qa.collector import CollectionError, collect_issues, collect_srs, fetch_all_comments
 from app.modules.daily_qa.evidence_validation import draft_key, validate_finding
-from app.modules.daily_qa.intelligence import ANALYSIS_SKILLS, AnalysisTarget, Corpus, build_item, build_tasks
+from app.modules.daily_qa.intelligence import ANALYSIS_SKILLS, ON_DEMAND_SKILLS, AnalysisTarget, Corpus, build_item, build_tasks
 from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient
 from app.modules.daily_qa.schema import (
     ANALYSIS_SKILL_NAMES,
@@ -54,6 +56,7 @@ from app.modules.daily_qa.schema import (
     SKILL_COVERAGE,
     SKILL_E,
     SKILL_F,
+    SKILL_TC_DRAFT,
     ResultFileError,
     parse_result,
 )
@@ -66,14 +69,25 @@ from app.modules.daily_qa.workspace import WorkspaceError, prepare, write_contex
 logger = logging.getLogger("regression_analyzer")
 
 LOCK_STALE_SECONDS = 6 * 3600
-#: 상태 키 (제품 slug 가 앞에 붙는다: `vxvue:manual_hash`, REQ-QAINTEL-023).
-STATE_MANUAL_HASH = "manual_hash"
+#: 상태 키 (제품 slug 가 앞에 붙는다: `vxvue:claude_limit`, REQ-QAINTEL-023).
+#: `manual_check_due` 는 매뉴얼 점검이 자동이던 때의 키다. 이제 읽지도 쓰지도 않는다 (REQ-QAINTEL-034).
 STATE_MANUAL_DUE = "manual_check_due"
 STATE_CLAUDE_LIMIT = "claude_limit"
 STATE_CATCHUP_AFTER = "catchup_after"
 #: 개편 전 전역 상태 키. 옛 제품만 한 번 읽는다.
-LEGACY_STATE_MANUAL_HASH = "manual_hash"
 LEGACY_STATE_B_PENDING = "spec_change_pending"
+#: 사람이 버튼으로 요청하는 실행 (REQ-QAINTEL-016·032·034). `--on-demand` 값이다.
+ON_DEMAND_TC_CHECK = "tc-check"
+ON_DEMAND_TC_DRAFT = "tc-draft"
+ON_DEMAND_MANUAL = "manual-check"
+ON_DEMAND_KINDS = (ON_DEMAND_TC_CHECK, ON_DEMAND_TC_DRAFT, ON_DEMAND_MANUAL)
+ON_DEMAND_LABELS = {ON_DEMAND_TC_CHECK: "TC 점검", ON_DEMAND_TC_DRAFT: "검증 TC 초안", ON_DEMAND_MANUAL: "매뉴얼 점검"}
+ON_DEMAND_REFUSALS = {
+    ON_DEMAND_TC_CHECK: "사양 변경 분석에서만 TC 점검을 할 수 있습니다.",
+    ON_DEMAND_TC_DRAFT: "수정 완료 이슈 분석에서만 검증 TC 초안을 만들 수 있습니다.",
+}
+#: 요청 실행이 저장하는 Finding 의 분석 종류.
+ON_DEMAND_STORED_KIND = {ON_DEMAND_TC_CHECK: TC_CHECK, ON_DEMAND_TC_DRAFT: TC_DRAFT}
 #: AI 단계 키 (단계 상태에 쓴다). 분석 종류 이름을 그대로 쓴다.
 AI_STAGES = (*ANALYSIS_ORDER, "F")
 SRS_REMOVED_ANALYSIS = "SRS_REMOVED"
@@ -158,14 +172,6 @@ def _is_weekly(today: datetime, weekly_day: str) -> bool:
     return WEEKDAYS[today.weekday()] == weekly_day
 
 
-def _manual_hash(manuals: dict[str, str]) -> str:
-    digest = hashlib.sha256()
-    for name in sorted(manuals):
-        digest.update(name.encode())
-        digest.update(hashlib.sha256(manuals[name].encode("utf-8", "replace")).digest())
-    return digest.hexdigest()
-
-
 def run_daily(
     cfg: DailyQaSettings,
     *,
@@ -183,6 +189,8 @@ def run_daily(
     since: date | None = None,
     until: date | None = None,
     issue_audit: bool = False,
+    on_demand: str = "",
+    finding_id: int | None = None,
 ) -> dict:
     """`since`·`until` 을 주면 그 기간의 변경을 분석한다 (REQ-QAINTEL-027).
 
@@ -197,7 +205,8 @@ def run_daily(
         run = None
         try:
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
-                       rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit)
+                       rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit,
+                       on_demand=on_demand, finding_id=finding_id)
             outcome = run.execute()
         except Exception as exc:  # 예상 못 한 오류도 실행 기록과 메일에 남긴다
             logger.exception("daily_qa_crashed run=%s", run_id)
@@ -209,6 +218,11 @@ def run_daily(
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
         store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
+        if on_demand:
+            # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
+            store.set_email_status(run_id, "skipped")
+            outcome.update({"run_id": run_id, "email": {"status": "skipped"}})
+            return outcome
         base = cfg.review_base_url
         review_url = f"{base}/qa-agent/runs/{run_id}" if base else f"/qa-agent/runs/{run_id}"
         subject, text, body = report.build_email(
@@ -253,7 +267,10 @@ def _tc_key(tc_ref: dict | None) -> tuple:
 
 
 def _finding_key(item: dict) -> tuple:
-    return (item["subject"], item["verdict"], _tc_key(item.get("tc_ref")), draft_key(item))
+    key = (item["subject"], item["verdict"], _tc_key(item.get("tc_ref")), draft_key(item))
+    if item.get("analysis_type") in (TC_CHECK, TC_DRAFT):
+        return (*key, item["analysis_type"], (item.get("sections") or {}).get("source_finding"))
+    return key
 
 
 class _OpenFindings:
@@ -317,7 +334,7 @@ class _TaskOutcome:
 
 class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
-                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False):
+                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None):
         self.cfg: DailyQaSettings = cfg
         self.store: DailyQaStore = store
         self.run_id = run_id
@@ -368,11 +385,19 @@ class _Run:
         self.audit_runner = None
         self.audit_summary: dict | None = None
         self._audit_left: list[dict] | None = None
+        #: 사람이 버튼으로 요청한 실행. 이때만 TC·매뉴얼을 AI 에 보낸다 (REQ-QAINTEL-016·032·034).
+        self.on_demand = on_demand
+        self.finding_id = finding_id
+        self.on_demand_events: list[dict] | None = None
+        self.only_kind: str | None = None
+        self.source_finding: dict | None = None
         if self.period:
             self.audit["period"] = {"since": since.isoformat() if since else "", "until": (until or local_today).isoformat()}
 
     # -- 흐름 --------------------------------------------------------------
     def execute(self) -> dict:
+        if self.on_demand:
+            return self._execute_on_demand()
         if self.issue_audit:
             return self._execute_audit()
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -386,7 +411,7 @@ class _Run:
         issue_items = issues.items if issues else self._saved_issues()
         self._deterministic(srs, srs_items, tc_rows)
         self._analyses(client, srs_items, issue_items, tc_rows)
-        self._manual_check(srs_items)
+        self.stages["F"] = _stage("not_due", "매뉴얼 점검은 자동으로 돌지 않습니다. 사람이 요청할 때만 돕니다(`--on-demand manual-check`).")
         self._draft_excel()
         return self._finish()
 
@@ -424,7 +449,8 @@ class _Run:
         if "preflight" not in self.stages:
             notes = {"rules": self.rules_state.reason,
                      "token": "CLAUDE_CODE_OAUTH_TOKEN 이 없고 Claude CLI 도 로그인돼 있지 않아 AI 단계를 건너뜁니다.",
-                     "limit": self.limit.describe() + " AI 분석은 대기로 남깁니다." if self.limit else ""}
+                     "limit": self.limit.describe() + (" 한도가 풀린 뒤 다시 요청하세요." if self.on_demand else
+                                                       " AI 분석은 대기로 남깁니다.") if self.limit else ""}
             note = notes.get(self.ai_block, "")
             if not self.ai_block and self.claude_login:
                 note = f"Claude CLI 로그인({self.claude_login['method'] or '로그인'})으로 부릅니다."
@@ -672,6 +698,8 @@ class _Run:
 
     # -- AI 분석 -----------------------------------------------------------------
     def _target_events(self) -> list[dict]:
+        if self.on_demand_events is not None:
+            return self.on_demand_events
         if self.dry_run:
             return [{"id": None, **event.as_dict()} for event in self.new_events]
         if self.issue_audit:
@@ -709,9 +737,9 @@ class _Run:
                 comment_cache[issue_id] = comments
             return comment_cache[issue_id]
 
-        answers = {kind: self._answers(ANALYSIS_SKILLS[kind]) for kind in ANALYSIS_ORDER}
+        answers = {kind: self._answers(self._skill(kind)) for kind in ANALYSIS_ORDER}
         for kind in ANALYSIS_ORDER:
-            targets = grouped[kind]
+            targets = grouped[kind] if self.only_kind in (None, kind) else {}
             if not targets:
                 self.stages[kind] = _stage("skipped", "대상 없음")
                 continue
@@ -719,9 +747,9 @@ class _Run:
             for entity_id, target_events in targets.items():
                 event_ids = [event["id"] for event in target_events if event.get("id")]
                 item = build_item(AnalysisTarget(kind, entity_id, event_ids, target_events), corpus, known, self.cfg,
-                                  comments_loader=comments_loader)
+                                  comments_loader=comments_loader, with_tc=bool(self.on_demand))
                 if item is None:
-                    if not self.dry_run and self.until is None:
+                    if not self.dry_run and self.until is None and not self.on_demand:
                         self.store.update_events(event_ids, "abandoned", self.run_id, error="대상이 오늘 스냅샷에 없습니다")
                     continue
                 items.append(item)
@@ -736,11 +764,15 @@ class _Run:
                 tasks = issue_audit.build_tasks(items, corpus, self.cfg.intelligence.audit_batch_size, answers[kind],
                                                 corpus.unreadable_documents)
             else:
-                tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents)
+                tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents,
+                                    skill=self._skill(kind))
             selected = tasks[:max(self.budget, 0)]
             self.budget -= len(selected)
             overflow = len(tasks) - len(selected)
-            self._write_context(srs_items, tc_rows)
+            if self.on_demand:
+                self._write_context(srs_items, tc_rows, self.inputs.manuals)
+            else:
+                self._write_context(srs_items, [], {})
             outcomes = [self._run_task(task, known, kind) for task in self._until_limit(selected)]
             self._record_events(kind, outcomes, item_events)
             self.stages[kind] = self._stage_result(kind, selected, outcomes, overflow)
@@ -751,6 +783,10 @@ class _Run:
                 if grouped[kind]:
                     stage = self.stages[kind]
                     stage["note"] = (str(stage.get("note") or "") + f" · 읽지 못한 사양서: {names}").strip(" ·")
+
+    def _skill(self, kind: str) -> str:
+        """자동 실행은 가벼운 Skill, 버튼 요청은 TC 를 보는 Skill 이다."""
+        return ON_DEMAND_SKILLS[kind] if self.on_demand and kind in ON_DEMAND_SKILLS else ANALYSIS_SKILLS[kind]
 
     def _answers(self, skill: str) -> list[dict]:
         """이 제품 질문의 답변. 이름을 바꾼 Skill 의 옛 답변도 넣는다 (REQ-DAILY-009 4번, REQ-QAINTEL-023)."""
@@ -767,7 +803,8 @@ class _Run:
         if self.ai_block == "rules":
             self.stages[kind] = _stage("rules", self.rules_state.reason, targets=count)
         elif self.limit is not None:
-            self.stages[kind] = _stage("limit", self.limit.describe() + " 분석 대상은 대기로 남깁니다.", targets=count)
+            note = " 한도가 풀린 뒤 다시 요청하세요." if self.on_demand else " 분석 대상은 대기로 남깁니다."
+            self.stages[kind] = _stage("limit", self.limit.describe() + note, targets=count)
         else:
             self.stages[kind] = _stage("skipped", self.stages["preflight"]["note"], targets=count)
 
@@ -783,9 +820,9 @@ class _Run:
             self.audit["unreadable_documents"] = unreadable
         return Corpus(self.profile, issue_items, srs_items, tc_rows, chunks, labels, self.inputs.manuals, unreadable)
 
-    def _write_context(self, srs_items, tc_rows) -> None:
+    def _write_context(self, srs_items, tc_rows, manuals: dict[str, str]) -> None:
         if self.workspace is not None and not self.context_written:
-            self.audit["context"] = write_context(self.workspace, srs_items, [row.as_dict() for row in tc_rows], self.inputs.manuals)
+            self.audit["context"] = write_context(self.workspace, srs_items, [row.as_dict() for row in tc_rows], manuals)
             self.context_written = True
 
     def _run_task(self, task: packages.Task, known, kind: str | None) -> _TaskOutcome:
@@ -839,7 +876,8 @@ class _Run:
         for finding in checked.accepted:
             data = finding.model_dump()
             if task.skill in ANALYSIS_SKILL_NAMES and kind:
-                validated, reason = validate_finding(data, kind, known, targets, tuple(self.profile.regression_axes))
+                validated, reason = validate_finding(data, kind, known, targets, tuple(self.profile.regression_axes),
+                                                     tc_mode=bool(self.on_demand))
                 if validated is None:
                     if reason == "not_significant":
                         not_significant += 1
@@ -847,10 +885,12 @@ class _Run:
                         rejected.append({"subject": data.get("subject"), "verdict": data.get("verdict"), "reason": reason})
                     continue
                 data = validated
-                data["analysis_type"] = kind
+                data["analysis_type"] = ON_DEMAND_STORED_KIND.get(self.on_demand, kind)
+                if self.source_finding is not None:
+                    data["sections"]["source_finding"] = self.source_finding["id"]
                 data["event_ids"] = next((item.get("event_ids") or [] for item in task.payload["items"]
                                           if item.get("target") == data["subject"]), [])
-            dedupe = task.skill in (SKILL_COVERAGE,) or task.skill not in ANALYSIS_SKILL_NAMES
+            dedupe = task.skill in (SKILL_COVERAGE, SKILL_TC_DRAFT) or task.skill not in ANALYSIS_SKILL_NAMES
             finding_id = self.findings_box.save(self.run_id, task.skill, task.task_id, data, dedupe=dedupe)
             if finding_id:
                 saved.setdefault(data["subject"], []).append(finding_id)
@@ -893,8 +933,11 @@ class _Run:
                 self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
 
     def _record_events(self, kind: str, outcomes: list[_TaskOutcome], item_events: dict[str, list[int]]) -> None:
-        """분석 하나의 결과를 이벤트에 적는다. 한 이벤트의 분석이 여럿이면 분석마다 따로 끝난다 (REQ-QAINTEL-006)."""
-        if self.dry_run:
+        """분석 하나의 결과를 이벤트에 적는다. 한 이벤트의 분석이 여럿이면 분석마다 따로 끝난다 (REQ-QAINTEL-006).
+
+        버튼 요청은 이미 끝난 분석을 한 번 더 보는 것이라 이벤트 상태를 바꾸지 않는다.
+        """
+        if self.dry_run or self.on_demand:
             return
         max_attempts = self.cfg.intelligence.event_max_attempts
         for outcome in outcomes:
@@ -935,33 +978,15 @@ class _Run:
             note = (note + f" · 규칙 위반으로 버린 Finding {rejected}건").strip(" ·")
         return _stage(status, note.strip(), tasks=len(selected), done=done, failed=failed, accepted=accepted, rejected=rejected)
 
-    # -- 매뉴얼 누락 후보 점검 (REQ-DAILY-006, REQ-QAINTEL-007 3번) ---------------------
-    def _manual_hash_key(self) -> str:
-        return self.cfg.state_key(STATE_MANUAL_HASH)
-
+    # -- 매뉴얼 누락 후보 점검 (REQ-DAILY-006, REQ-QAINTEL-034) --------------------------
     def _manual_check(self, srs_items) -> None:
-        cfg, store = self.cfg, self.store
+        """사람이 [매뉴얼 점검]을 눌렀을 때만 돈다. 매뉴얼은 사람이 넣는 자료라 자동으로 돌리지 않는다."""
+        cfg = self.cfg
         manuals = self.inputs.manuals
-        manual_hash = _manual_hash(manuals) if manuals else ""
-        stored_hash = store.get_state(self._manual_hash_key()) or (store.get_state(LEGACY_STATE_MANUAL_HASH) if cfg.is_legacy_product else "")
-        manual_changed = bool(manual_hash) and manual_hash != stored_hash
-        weekly = self.force_weekly or _is_weekly(self.today, cfg.weekly_day)
-        carried = store.get_state(cfg.state_key(STATE_MANUAL_DUE)) == "1"
-        due = weekly or manual_changed or carried
-        if not due:
-            self.stages["F"] = _stage("not_due", f"매주 {cfg.weekly_day} 또는 매뉴얼이 바뀐 날에만 돕니다.")
-            return
-        if not self.new_events and not self.targets_found:
-            # 변경이 없는 실행은 AI 를 부르지 않는다. 다음 변경이 있는 실행으로 미룬다.
-            if not self.dry_run:
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "1")
-            self.stages["F"] = _stage("not_due", "변경이 없는 실행이라 다음 변경이 있는 실행으로 미룹니다.")
-            return
         if not srs_items:
             self.stages["F"] = _stage("skipped", "SRS 스냅샷이 없습니다.")
             return
-        week_ago = self.snapshots.previous(snapshots.KIND_SRS, (self.today - timedelta(days=6)).strftime("%Y-%m-%d")) \
-            or self.snapshots.oldest_before(snapshots.KIND_SRS, self.run_date)
+        week_ago = self.snapshots.previous(snapshots.KIND_SRS, (self.today - timedelta(days=6)).strftime("%Y-%m-%d"))             or self.snapshots.oldest_before(snapshots.KIND_SRS, self.run_date)
         weekly_diff = diff_snapshots(self.snapshots.load(week_ago), srs_items)
         by_id = {item["id"]: item for item in srs_items}
         changed = [
@@ -972,33 +997,49 @@ class _Run:
         tasks = packages.build_f_tasks(changed, sorted(manuals), cfg.batch_size, self._answers(SKILL_F))
         if not tasks:
             self.stages["F"] = _stage("skipped", "입력이 없습니다 (최근 7일 변경 SRS 또는 매뉴얼 없음).")
-            if not self.dry_run:
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "")
             return
         if self.ai_block or self.limit is not None:
             self._blocked_stage("F", len(tasks))
-            if not self.dry_run:
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "1")
             return
-        if self.budget <= 0:
-            # 작업 상한은 한 실행 전체의 수다. 분석이 다 썼으면 다음 실행으로 미룬다 (NFR-DAILY-001).
-            if not self.dry_run:
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "1")
-            self.stages["F"] = _stage("not_due", f"이번 실행의 작업 상한({cfg.max_tasks_per_run}개)을 분석이 다 써서 다음 실행으로 미룹니다.")
-            return
-        selected = tasks[: self.budget]
+        selected = tasks[: max(self.budget, 0)]
         self.budget -= len(selected)
-        self._write_context(srs_items, [])
+        self._write_context(srs_items, [], manuals)
         outcomes = [self._run_task(task, None, None) for task in self._until_limit(selected)]
-        result = self._stage_result("F", selected, outcomes, max(len(tasks) - len(selected), 0))
-        self.stages["F"] = result
-        if not self.dry_run:
-            if result["status"] == "ok":
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "")
-                if manual_hash:
-                    store.set_state(self._manual_hash_key(), manual_hash)
-            else:
-                store.set_state(cfg.state_key(STATE_MANUAL_DUE), "1")
+        self.stages["F"] = self._stage_result("F", selected, outcomes, max(len(tasks) - len(selected), 0))
+
+    # -- 사람이 버튼으로 요청한 실행 (REQ-QAINTEL-016·032·034) ---------------------------
+    def _execute_on_demand(self) -> dict:
+        """저장 스냅샷으로 한 가지만 돈다. 이벤트 상태·스냅샷은 바꾸지 않고 메일도 보내지 않는다."""
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        self._preflight()
+        note = "요청 실행: 저장된 최신 스냅샷을 씁니다(Polarion 을 새로 읽지 않음)"
+        self.stages["collect_srs"] = _stage("ok", note)
+        self.stages["collect_issues"] = _stage("ok", note)
+        srs_items, issue_items = self._saved_srs(), self._saved_issues()
+        if self.on_demand == ON_DEMAND_MANUAL:
+            self._manual_check(srs_items)
+            return self._finish()
+        tc_rows = self._tc_index()
+        source = self.store.get_finding(self.finding_id) if self.finding_id else None
+        wanted = {ON_DEMAND_TC_CHECK: SPEC_COVERAGE, ON_DEMAND_TC_DRAFT: FIXED_ISSUE}.get(self.on_demand)
+        refusal = ON_DEMAND_REFUSALS.get(self.on_demand, "알 수 없는 요청입니다.")
+        if source is None or wanted is None or source.get("analysis_type") != wanted:
+            self.stages["on_demand"] = _stage("failed", refusal)
+            return self._finish()
+        events = self.store.list_events(ids=source.get("event_ids") or []) if source.get("event_ids") else []
+        if not events:
+            self.stages["on_demand"] = _stage("failed", "이 분석을 만든 변경 기록이 없어 다시 돌릴 수 없습니다.")
+            return self._finish()
+        self.source_finding = source
+        self.only_kind = wanted
+        # 이미 끝난 분석이라도 다시 고르도록 남은 분석을 이 한 가지로 정한다.
+        self.on_demand_events = [{**event, "analysis_required": True, "analyses": [wanted], "remaining_analyses": [wanted]}
+                                 for event in events]
+        self._analyses(None, srs_items, issue_items, tc_rows)
+        self.stages["on_demand"] = _stage(self.stages.get(wanted, {}).get("status", "skipped"),
+                                          f"{source['subject']} 의 {ON_DEMAND_LABELS[self.on_demand]}")
+        self._draft_excel()
+        return self._finish()
 
     # -- 초안 Excel (REQ-QAINTEL-018) ---------------------------------------------
     def _draft_excel(self) -> None:
@@ -1008,11 +1049,13 @@ class _Run:
         checklist = self.profile.checklist or {}
         rows, coverage_rows, review_rows = [], [], []
         for item in findings:
+            # TC 비교 결과는 [TC 점검] 요청(또는 개편 전 Coverage 분석)에만 있다 (REQ-QAINTEL-016·031).
+            coverage = item.get("analysis_type") == TC_CHECK or item.get("skill") == SKILL_COVERAGE
             if item["draft_tcs"]:
                 rows.extend(draft_rows_from_finding(item, checklist=checklist))
-            if item.get("analysis_type") == SPEC_COVERAGE:
+            if coverage:
                 coverage_rows.extend(coverage_rows_from_finding(item))
-            if item["draft_tcs"] or item.get("analysis_type") == SPEC_COVERAGE:
+            if item["draft_tcs"] or coverage:
                 review_rows.append({
                     "대상": item["subject"], "대상 제목": item["subject_title"], "분석": item.get("analysis_type", ""),
                     "판정": item["verdict"], "요약": item["summary"],
@@ -1080,7 +1123,7 @@ class _Run:
     def _finish(self) -> dict:
         statuses = [stage["status"] for stage in self.stages.values()]
         counted = [status for status in statuses if status not in ("not_due", "skipped")]
-        if counted and all(status == "failed" for status in counted):
+        if (self.stages.get("on_demand") or {}).get("status") == "failed" or (counted and all(status == "failed" for status in counted)):
             status = "FAILED"
         elif any(status in ("failed", "partial", "rules", "limit") for status in statuses) or not self._collected():
             status = "PARTIAL"

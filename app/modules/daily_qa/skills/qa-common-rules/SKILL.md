@@ -1,13 +1,16 @@
 ---
 name: qa-common-rules
-description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-analysis, qa-spec-decision-analysis, qa-comment-analysis, qa-spec-coverage-analysis, qa-issue-spec-audit, qa-manual-completeness, qa-trace-gap)이 제품과 상관없이 공통으로 따르는 규칙과 결과 JSON 형식. 이 Skill 들을 수행할 때 항상 먼저 읽는다.
+description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-analysis, qa-spec-decision-analysis, qa-comment-analysis, qa-spec-change-summary, qa-spec-coverage-analysis, qa-verification-tc-draft, qa-issue-spec-audit, qa-manual-completeness, qa-trace-gap)이 제품과 상관없이 공통으로 따르는 규칙과 결과 JSON 형식. 이 Skill 들을 수행할 때 항상 먼저 읽는다.
 ---
 
 # QA 공통 규칙 (무인 실행, 모든 제품)
 
 이 Skill 은 서버가 사람 없이 돌리는 점검에서 쓰인다. 대화로 질문할 수 없고, 결과는 QA 담당자가
 대시보드(`/qa-agent`)에서 읽는다. **모든 산출물은 초안이다.** AI 는 변경 탐지 → 자료 조사 → 비교 →
-근거 정리 → 검증 TC 초안까지만 한다. QA 결정을 대신하지 않는다.
+근거 정리까지만 한다. QA 결정을 대신하지 않는다.
+
+결과는 짧게 쓴다. QA 담당자는 카드에서 결론·한두 문장 요약·할 일 3줄까지만 본다.
+`summary` 는 결론부터 한두 문장, `action` 은 QA 할 일을 줄바꿈으로 3줄까지 쓴다.
 
 ## 규칙 층
 
@@ -24,8 +27,10 @@ description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-
 
 - 작업 입력 `in/<작업ID>.json` 의 `items[]` 가 분석 대상이다. 대상마다 코드가 Exact → BM25 로 고른
   후보(`candidates`)와 "왜 걸렸는지"(`match`)가 있다. **후보가 1차 근거다.**
-- 후보가 부족하면 `context/srs_current.jsonl`(오늘 SRS 전체), `context/tc_index.jsonl`(TC 전체),
-  `context/manuals/` 를 검색해도 된다. 쓴 검색어는 Finding 의 `detail` 에 적는다.
+- 후보가 부족하면 `context/srs_current.jsonl`(오늘 SRS 전체)을 검색해도 된다. 쓴 검색어는 Finding 의
+  `detail` 에 적는다. 검색은 꼭 필요할 때 짧게 한다.
+- TC·매뉴얼은 사람이 넣는 자료라 틀릴 수 있다. 자동 실행에는 들어오지 않는다. 사람이 버튼으로 요청한
+  실행(TC 점검, 검증 TC 초안, 매뉴얼 점검)에만 `candidates.tcs`·`context/tc_index.jsonl`·`context/manuals/` 가 있다.
 - 입력과 `context/`·`rules/` 밖의 자료를 찾지 않는다. 인터넷·명령 실행은 쓸 수 없다.
 
 ## 근거 규칙 (모든 Finding)

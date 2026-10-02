@@ -186,11 +186,15 @@ def write_task_input(run: RunWorkspace, task_id: str, payload: dict) -> tuple[Pa
 
 
 def write_context(run: RunWorkspace, srs_items: list[dict], tc_rows: list[dict], manuals: dict[str, str]) -> dict:
-    stats = {
-        "srs": _write_jsonl(run.context_dir / "srs_current.jsonl", srs_items),
-        "tc": _write_jsonl(run.context_dir / "tc_index.jsonl", tc_rows),
-        "manuals": [],
-    }
+    """AI 가 더 찾아볼 수 있는 자료. 자동 실행은 TC·매뉴얼을 넘기지 않아 그 파일을 만들지 않는다 (REQ-QAINTEL-031)."""
+    stats = {"srs": _write_jsonl(run.context_dir / "srs_current.jsonl", srs_items), "tc": {}, "manuals": []}
+    if tc_rows:
+        stats["tc"] = _write_jsonl(run.context_dir / "tc_index.jsonl", tc_rows)
+    else:
+        (run.context_dir / "tc_index.jsonl").unlink(missing_ok=True)
+    if not manuals:
+        shutil.rmtree(run.context_dir / "manuals", ignore_errors=True)
+        return stats
     manual_dir = run.context_dir / "manuals"
     manual_dir.mkdir(exist_ok=True)
     for name, text in manuals.items():

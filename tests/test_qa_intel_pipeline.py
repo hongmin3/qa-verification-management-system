@@ -46,6 +46,8 @@ def analysis_producer(calls: list):
                 ids = [value["id"] for value in item.get("new_comments", [])]
                 finding.update(verdict="ROOT_CAUSE_INFORMATION", evidence=[],
                                sections={"comments": [{"comment_id": ids[0], "summary": "원인", "classification": "ROOT_CAUSE_INFORMATION"}]})
+            elif kind == "SPEC_COVERAGE" and task.skill == "qa-spec-change-summary":
+                finding.update(verdict="QA_CHECK_NEEDED", action="바뀐 동작 확인", sections={"change": {"summary": "사양 변경"}})
             elif kind == "SPEC_COVERAGE":
                 finding.update(verdict="NOT_COVERED", draft_tcs=[{
                     "kind": "Regression", "srs_no": target, "title": f"{target} 신규 검증", "test_step": "1. 실행한다.",
@@ -135,10 +137,16 @@ def test_rd_result_fixed_runs_fixed_analyzer_and_drafts_excel(env):
     assert kinds == ["ISSUE_ACTION_DETAILS_CHANGED", "ISSUE_METADATA_CHANGED", "ISSUE_RD_RESULT_CHANGED", "ISSUE_ROOT_CAUSE_CHANGED"]
     assert env["calls"] == [("qa-fixed-issue-analysis", ["VP-100"])]   # 세 이벤트를 한 분석으로 묶는다
     finding = env["store"].list_findings(run_id=outcome["run_id"], analysis_type="FIXED_ISSUE")[0]
-    assert len(finding["event_ids"]) == 3 and finding["draft_tcs"]
+    assert len(finding["event_ids"]) == 3 and finding["draft_tcs"] == []   # 자동 실행은 초안을 만들지 않는다 (REQ-QAINTEL-013)
     axes = [entry["axis"] for entry in finding["sections"]["regression_risk"]["axes"]]
     assert "GENERATOR" in axes   # 제품 설정이 정한 축
-    assert (env["cfg"].output_dir / outcome["run_id"] / "impact_checklist_draft.xlsx").is_file()
+    assert not (env["cfg"].output_dir / outcome["run_id"] / "impact_checklist_draft.xlsx").exists()
+    # [검증 TC 초안 만들기]를 누르면 TC 후보와 함께 초안 Skill 이 돌고 초안 Excel 이 생긴다 (REQ-QAINTEL-032).
+    drafted = env["run"](DAY2.replace(hour=12), on_demand="tc-draft", finding_id=finding["id"])
+    assert env["calls"][-1] == ("qa-verification-tc-draft", ["VP-100"])
+    saved = env["store"].list_findings(run_id=drafted["run_id"], analysis_type="TC_DRAFT")[0]
+    assert saved["draft_tcs"] and saved["sections"]["source_finding"] == finding["id"]
+    assert (env["cfg"].output_dir / drafted["run_id"] / "impact_checklist_draft.xlsx").is_file()
 
 
 def test_rd_result_spec_runs_spec_analyzer(env):
@@ -177,7 +185,7 @@ def test_srs_and_issue_changes_in_same_run(env):
     env["state"]["issues"].append(issue_item("VP-201", "2026-09-29T09:00:00Z", [], review="", status="open"))
     outcome = env["run"](DAY2)
     skills = sorted(skill for skill, _ in env["calls"])
-    assert skills == ["qa-new-issue-analysis", "qa-spec-coverage-analysis"]
+    assert skills == ["qa-new-issue-analysis", "qa-spec-change-summary"]
     assert outcome["status"] == "SUCCESS"
 
 

@@ -1,9 +1,12 @@
 ---
 name: qa-spec-coverage-analysis
-description: 새로 생기거나 바뀐 SRS 마다 정확히 무엇이 바뀌었는지, 관련 과거 이슈가 있었는지, 기존 Checklist·TC 가 바뀐 요구사항과 최신 Expected 를 실제로 검증하는지 판단하고, 모자라면 기존 TC 수정안이나 신규 Checklist TC 초안을 낸다. 입력 파일(runs/<실행ID>/in/COV-*.json)을 받았을 때 쓴다.
+description: 사람이 사양 변경 분석 화면에서 [TC 점검]을 눌렀을 때만 쓴다. 바뀐 SRS 하나에 대해 정확히 무엇이 바뀌었는지, 관련 과거 이슈가 있었는지, 기존 Checklist·TC 가 바뀐 요구사항과 최신 Expected 를 실제로 검증하는지 판단하고, 모자라면 기존 TC 수정안이나 신규 Checklist TC 초안을 낸다. 입력 파일(runs/<실행ID>/in/COV-*.json)을 받았을 때 쓴다.
 ---
 
-# 사양 변경 Coverage 분석
+# TC 점검 (사양 변경 Coverage 분석, 요청할 때만)
+
+이 Skill 은 자동 실행에서 돌지 않는다. 사람이 버튼을 누른 SRS 변경 하나만 받는다. TC·Checklist 는 사람이
+넣는 자료라 틀릴 수 있다. TC 가 옛 사양 기준으로 보이면 그 사실을 그대로 적는다.
 
 **먼저 `qa-common-rules` 와 제품 규칙 Skill 을 읽는다.** 목적은 "비슷한 TC 찾기"가 아니다.
 아래 여덟 질문에 답해 QA 가 바로 다음 행동을 정할 수 있게 한다.

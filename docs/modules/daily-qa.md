@@ -65,14 +65,16 @@ Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
 | 수정 완료 이슈 분석 | 연구소 결과 FIXED 이슈의 변경, FIXED 이슈의 의미 있는 새 댓글 | `qa-fixed-issue-analysis` |
 | Spec 판정 이슈 분석 | 연구소 결과가 사양대로·결함 아님인 이슈의 변경 | `qa-spec-decision-analysis` |
 | 새 댓글 분석 | 진행 상태 알림이 아닌 새 댓글 | `qa-comment-analysis` |
-| 사양 변경 Coverage 분석 | 새 SRS·바뀐 SRS | `qa-spec-coverage-analysis` |
+| 사양 변경 요약 | 새 SRS·바뀐 SRS | `qa-spec-change-summary` |
+| TC 점검 | 사람이 사양 변경 상세에서 요청 | `qa-spec-coverage-analysis` |
+| 검증 TC 초안 | 사람이 수정 완료 이슈 상세에서 요청 | `qa-verification-tc-draft` |
 
 상태만 바뀐 이슈, 심각도·버전 같은 속성만 바뀐 이슈, 없어진 SRS·이슈는 기록만 남기고 AI 를 부르지 않는다.
 
 | 공통·제품 Skill | 역할 |
 |---|---|
 | `qa-common-rules` (+`references/output-contract.md`) | 모든 분석이 먼저 읽는 공통 규칙·결과 형식 |
-| `qa-manual-completeness` | 매뉴얼 누락 후보 점검 (주 1회, 변경이 있는 실행에서만) |
+| `qa-manual-completeness` | 사람이 CLI로 요청하는 매뉴얼 누락 후보 점검. 예약 실행에는 포함하지 않는다 |
 | `qa-trace-gap` | 사양–TC 연결 점검의 대화형 후속 확인 (무인 실행 아님) |
 | `config/products/vxvue/skills/vxvue-qa-rules/` | VXvue 제품 규칙·검증 관문(G1~G7, `references/gates.md`) |
 

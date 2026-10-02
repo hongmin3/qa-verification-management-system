@@ -71,6 +71,10 @@ VERDICT_LABELS = {
     "PAST_FIXED": "과거 Fixed 이슈",
     "PAST_SPEC": "과거 Spec 이슈",
     "SAME_FUNCTION_REGRESSION": "같은 기능 Regression",
+    "NO_QA_IMPACT": "QA 영향 없음",
+    "QA_CHECK_NEEDED": "QA 확인 필요",
+    "CONFLICTS_WITH_PAST_DECISION": "과거 판정과 다름",
+    "SPEC_UNCLEAR": "사양 불명확",
 }
 ANALYSIS_TYPE_LABELS = {**ANALYSIS_LABELS, "SRS_REMOVED": "삭제 SRS 참조 TC"}
 #: 대시보드에 보일 수동 업로드 지식 문서의 종류. QA 규칙(.md)·지침 프롬프트는 지식 문서로 관리하지 않아
@@ -192,6 +196,37 @@ def _latest_revisions(rows: list[dict]) -> list[dict]:
     ]
 
 
+# -- 결론 단계 (REQ-QAINTEL-033) -------------------------------------------------------
+
+#: 화면에 보이는 결론. 분석마다 다른 판정 값을 다섯 단계로 줄인다. 목록도 이 순서로 보인다.
+LEVEL_ORDER = ("사양과 다름", "검토 필요", "근거 부족", "참고", "문제 없음")
+LEVEL_CLASSES = {"사양과 다름": "level-conflict", "검토 필요": "level-check", "근거 부족": "level-weak",
+                 "참고": "level-info", "문제 없음": "level-ok"}
+_LEVELS = {
+    "사양과 다름": ("SPEC_VIOLATION", "CONTRADICTS_SPEC", "CONFLICTS_WITH_PAST_DECISION"),
+    "근거 부족": ("INSUFFICIENT_EVIDENCE",),
+    "참고": ("ROOT_CAUSE_INFORMATION", "RESOLUTION_INFORMATION", "REPRODUCTION_INFORMATION", "OTHER_SIGNIFICANT_INFORMATION"),
+    "문제 없음": ("CONSISTENT_WITH_SPEC", "SUPPORTED_BY_SPEC", "FULLY_COVERED", "NO_QA_IMPACT", "NOT_SIGNIFICANT"),
+}
+VERDICT_LEVEL = {verdict: name for name, verdicts in _LEVELS.items() for verdict in verdicts}
+TODO_LIMIT = 3
+
+
+def level(finding: dict) -> str:
+    """판정 값 → 결론 단계. 표에 없는 값(검토 쪽 판정, 옛 점검의 판정)은 `검토 필요` 다."""
+    return VERDICT_LEVEL.get(finding.get("verdict", ""), "검토 필요")
+
+
+def todos(finding: dict) -> list[str]:
+    """QA 할 일. 권고 → 확인할 점 → `action` 줄 순서로 찾고 3줄까지 보인다."""
+    sections = finding.get("sections") or {}
+    found = list((sections.get("recommendation") or {}).get("actions") or []) + \
+        list((sections.get("recommendation") or {}).get("checks") or []) + list((sections.get("qa_analysis") or {}).get("checks") or [])
+    if not found:
+        found = [line.strip(" -•\t") for line in str(finding.get("action") or sections.get("action") or "").splitlines()]
+    return [str(item).strip() for item in found if str(item).strip()][:TODO_LIMIT]
+
+
 # -- 카드 --------------------------------------------------------------------------
 
 
@@ -230,19 +265,30 @@ def badges(finding: dict) -> list[str]:
 
 
 def card(finding: dict) -> dict:
+    """세 줄 카드: 결론 단계, 한 줄 요약, QA 할 일 (REQ-QAINTEL-033). 세부 표시는 상세 화면의 `자세히` 에 있다."""
     kind = finding.get("analysis_type", "")
+    name = level(finding)
     return {
         "id": finding["id"],
         "subject": finding["subject"],
         "title": finding.get("subject_title", ""),
         "kind": ANALYSIS_TYPE_LABELS.get(kind, kind or finding.get("skill", "")),
+        "analysis_type": kind,
         "verdict": finding["verdict"],
         "verdict_label": label(finding["verdict"]),
+        "level": name,
+        "level_class": LEVEL_CLASSES[name],
         "summary": finding.get("summary", ""),
+        "todos": todos(finding),
         "badges": badges(finding),
         "created": kst(finding.get("created_at")),
         "confidence": finding.get("confidence", ""),
     }
+
+
+def sort_cards(cards: list[dict]) -> list[dict]:
+    """결론 단계 순서, 같은 단계는 최신이 먼저."""
+    return sorted(cards, key=lambda item: (LEVEL_ORDER.index(item["level"]), -item["id"]))
 
 
 # -- 요약 --------------------------------------------------------------------------
@@ -313,7 +359,7 @@ def dashboard(choice: ProductChoice) -> dict:
         "last_run": last,
         "runs": runs,
         "summary": change_summary(events),
-        "cards": [card(item) for item in findings],
+        "cards": sort_cards([card(item) for item in findings]),
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),

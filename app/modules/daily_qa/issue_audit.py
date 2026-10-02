@@ -50,7 +50,6 @@ _SENTENCE_CHARS = 300
 _CARD_CHARS = 400
 _EXCERPTS = 3
 _EXCERPT_CHARS = 700
-_TC_CANDIDATES = 3
 
 
 def _cut(text: str, limit: int) -> str:
@@ -239,12 +238,9 @@ def build_tasks(items: list[dict], corpus, batch_size: int, answers: list[dict] 
             for srs_id, entry in srs_entries.items():
                 current = corpus.srs_by_id.get(srs_id) or {}
                 entry["excerpts"] = _excerpts(current.get("text", ""), [item for item in chunk if srs_id in item["srs_ids"]])
-            tcs: list[dict] = []
-            if key and any(item["category"] == CAT_A_FIXED for item in chunk):
-                current = corpus.srs_by_id.get(key) or {}
-                tcs = corpus.tc_candidates([], current.get("title", ""), _TC_CANDIDATES, srs_ids=(key, current.get("old_id", "")))
+            # TC 는 사람이 넣는 자료라 자동 점검에 넣지 않는다 (사용자 결정 2026-10-02, REQ-QAINTEL-030 순서 6).
             payload_items = [{name: value for name, value in item.items() if name != "_srs"} for item in chunk]
             tasks.append(Task(task_id=f"{TASK_PREFIX}-{number:03d}", skill=SKILL, payload={
-                "analysis_type": ISSUE_AUDIT, "basis": BASIS_TAG, "srs": list(srs_entries.values()), "tcs": tcs,
+                "analysis_type": ISSUE_AUDIT, "basis": BASIS_TAG, "srs": list(srs_entries.values()),
                 "items": payload_items, "answered_questions": answers or [], "unreadable_documents": unreadable or []}))
     return tasks

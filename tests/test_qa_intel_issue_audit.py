@@ -97,7 +97,7 @@ def test_audit_run_groups_by_srs_and_sends_srs_once(tmp_path):
     assert sorted(item["target"] for item in vp1["items"]) == ["VP-101", "VP-102"]
     assert [entry["id"] for entry in vp1["srs"]] == ["VP-11"]                  # SRS 내용은 작업에 한 번
     assert all("_srs" not in item and "srs" not in item for item in vp1["items"])
-    assert vp1["tcs"] and not vp2["tcs"]                                       # A-수정이 있는 작업에만 TC 후보
+    assert "tcs" not in vp1 and "tcs" not in vp2                               # TC 는 자동 점검에 보내지 않는다(사용자 결정 2026-10-02)
     assert vp1["srs"][0]["added_sentences"] and vp1["srs"][0]["excerpts"]
     assert outcome["summary"]["issue_audit"]["targets"] == 3
     assert "현재 상태 기준 점검" in outcome["stages"]["events"]["note"]
@@ -107,21 +107,21 @@ def test_audit_findings_are_validated_and_marked_with_basis(tmp_path):
     h = _world(tmp_path)
     outcome = h.run(DAY2, since=DAY1.date(), issue_audit=True)
     findings = {item["subject"]: item for item in h.store.list_findings(run_id=outcome["run_id"])}
-    tc_impact = findings["VP-101"]["sections"]["tc_impact"]
-    assert tc_impact["decision"] == "수정 필수" and tc_impact["tc_ids"] == ["TC_1"]   # 입력에 없는 TC_X 는 뺀다
+    assert "tc_impact" not in findings["VP-101"]["sections"]                       # 점검은 TC 를 보지 않는다
     assert all(item["sections"]["basis"] == issue_audit.BASIS_TAG for item in findings.values())
     events = h.events(event_types=(ISSUE_AUDIT_TARGET,))
     assert {event["analysis_status"] for event in events} == {"done"}
 
 
-def test_bad_tc_impact_decision_is_dropped(tmp_path):
+def test_tc_impact_from_the_model_is_dropped(tmp_path):
+    """점검은 TC 를 보지 않는다. 모델이 TC 영향을 쓰면 빼고 기록을 남긴다 (REQ-QAINTEL-030 순서 6)."""
     h = _world(tmp_path)
-    h.script["VP-101"]["sections"] = {"tc_impact": {"decision": "삭제", "tc_ids": ["TC_1"]}}
+    h.script["VP-101"]["sections"] = {"tc_impact": {"decision": "수정 필수", "tc_ids": ["TC_1"]}}
     outcome = h.run(DAY2, since=DAY1.date(), issue_audit=True)
     finding = h.store.list_findings(run_id=outcome["run_id"], analysis_type=ISSUE_AUDIT)
     vp101 = next(item for item in finding if item["subject"] == "VP-101")
-    assert vp101["sections"]["tc_impact"] == {}
-    assert any(entry["reason"] == "허용되지 않은 TC 영향 판정" for entry in vp101["sections"]["validation"]["removed"])
+    assert "tc_impact" not in vp101["sections"]
+    assert any(entry["reason"] == "자동 점검은 TC 를 보지 않음" for entry in vp101["sections"]["validation"]["removed"])
 
 
 def test_rerunning_the_same_period_does_not_call_claude_again(tmp_path):

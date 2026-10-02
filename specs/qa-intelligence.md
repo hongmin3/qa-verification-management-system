@@ -22,21 +22,27 @@
 
 ## 1. 목적
 
-QA 담당자가 매일 Polarion 전체를 직접 훑지 않아도, 전날 대비 실제로 의미 있는 변경만 자동으로 찾아 최신 사양과 과거 이슈·TC 를 근거로 정리해 준다.
+QA 담당자가 매일 Polarion 전체를 직접 훑지 않아도, 전날 대비 실제로 의미 있는 변경만 자동으로 찾아 최신 사양과 과거 이슈를 근거로 짧게 정리해 준다.
 
-AI 가 QA 결정을 대신하지 않는다. 하는 일은 "변경 탐지 → 자료 조사 → 비교 → 근거 정리 → 검증 TC 초안" 까지다. 판단과 반영은 사람이 한다.
+AI 가 QA 결정을 대신하지 않는다. 자동 실행이 하는 일은 "변경 탐지 → 자료 조사 → 비교 → 근거 정리" 까지다. 판단과 반영은 사람이 한다.
+
+TC·Checklist·매뉴얼은 사람이 손으로 넣는 자료라 최신이 아니거나 틀릴 수 있다. 그래서 자동 실행은 이 자료와 비교하지 않는다. TC 와 맞춰 보는 일(TC 점검, 검증 TC 초안)은 사람이 결과 화면의 버튼을 누를 때만 한다(사용자 결정 2026-10-02).
+
+이유: 사양 변경마다 TC 와 비교하던 분석은 작업 하나에 토큰 176만~516만 개를 써서 Claude 주간 한도를 다 썼다(2026-10-01·02 실행 기록).
 
 ### 이 기능은
 
 - 서버가 평일 07:30(한국 시간)에 스스로 한 번 돈다. 주말과 대한민국 공휴일에는 돌지 않는다. QA 담당자는 화면의 [지금 실행] 버튼으로 같은 일을 바로 돌릴 수도 있다.
 - Polarion 에서 SRS 전체와 이슈 전체를 읽어 어제 저장한 사본(스냅샷)과 비교한다. 바뀐 것만 "변경 이벤트"로 남긴다.
-- 변경 이벤트의 종류에 따라 신규 이슈 분석, 수정 완료(Fixed) 이슈 분석, Spec 판정 이슈 분석, 새 댓글 분석, 사양 변경 Coverage 분석을 돌린다.
-- 결과는 `/qa-agent` 화면에서 본다. 오늘 바뀐 것의 요약, 분석 카드, 근거 위치, 검증 TC 초안이 보인다.
+- 변경 이벤트의 종류에 따라 신규 이슈 분석, 수정 완료(Fixed) 이슈 분석, Spec 판정 이슈 분석, 새 댓글 분석, 사양 변경 분석을 돌린다.
+- 결과는 `/qa-agent` 화면에서 본다. 카드마다 결론 한 가지, 한두 문장 요약, QA 할 일 3줄까지가 보인다(REQ-QAINTEL-033).
+- 사양 변경 분석 화면의 [TC 점검], 수정 완료 이슈 분석 화면의 [검증 TC 초안 만들기]를 누르면 그때 TC 와 비교한다.
 - 바뀐 것이 하나도 없으면 AI 를 한 번도 부르지 않고 "변경사항 없음"으로 끝난다.
 
 ```flow
 평일 07:30 예약 또는 [지금 실행] -> Polarion 수집(SRS 전체·이슈 전체) -> 스냅샷 비교 -> 변경 이벤트
-변경 이벤트 -> 분석 대상 고르기 -> 후보 압축(Exact -> BM25) -> Claude Skill(격리 작업 폴더) -> 근거 검증 -> SQLite -> /qa-agent 대시보드
+변경 이벤트 -> 분석 대상 고르기 -> 후보 압축(Exact -> BM25, TC·매뉴얼 제외) -> Claude Skill(격리 작업 폴더) -> 근거 검증 -> SQLite -> /qa-agent 대시보드
+/qa-agent 대시보드 -> 사람이 [TC 점검]·[검증 TC 초안 만들기] -> TC 와 비교(요청 실행) -> SQLite
 변경 이벤트 -(바뀐 것 없음)-> 변경사항 없음(AI 호출 0회) -> /qa-agent 대시보드
 Polarion 수집 -(실패·0건·급감)-> 스냅샷 기준 유지 -> 다음 실행에서 다시 비교
 Claude Skill -(실패)-> 이벤트 보존 -> 다음 실행에서 다시 분석
@@ -53,8 +59,10 @@ Claude Skill -(사용량 한도)-> 남은 AI 중지·초기화 시각 표시 -> 
 | 이슈 스냅샷 | 그날 읽은 이슈 전체를 저장한 파일(`data/daily_qa/snapshots/<slug>/issues/<날짜>.json`)이다 |
 | 기준 스냅샷 | 비교할 전날 스냅샷이 없어 오늘 것만 저장한 상태다. 이때는 이벤트를 만들지 않는다 |
 | 변경 이벤트 | 스냅샷 비교로 찾은 변경 하나(`qa_change_events` 한 줄)다. 종류(`event_type`), 바뀌기 전·후 값, 바뀐 필드, AI 분석이 필요한지와 그 이유를 담는다 |
-| 분석 종류 | 이벤트를 받아 돌리는 분석이다. 신규 이슈(`NEW_ISSUE`), 수정 완료 이슈(`FIXED_ISSUE`), Spec 판정 이슈(`SPEC_DECISION`), 새 댓글(`COMMENT`), 사양 변경 Coverage(`SPEC_COVERAGE`)가 있다 |
-| 후보 압축 | 이슈 전체나 TC 전체를 AI 에 넘기지 않고, 코드가 Exact → BM25 검색으로 관련 후보만 골라 넣는 것이다 |
+| 분석 종류 | 이벤트를 받아 돌리는 분석이다. 신규 이슈(`NEW_ISSUE`), 수정 완료 이슈(`FIXED_ISSUE`), Spec 판정 이슈(`SPEC_DECISION`), 새 댓글(`COMMENT`), 사양 변경(`SPEC_COVERAGE`)이 있다 |
+| 요청 실행 | 사람이 버튼이나 명령으로 한 가지만 부탁한 실행이다. TC 점검(`TC_CHECK`), 검증 TC 초안(`TC_DRAFT`), 매뉴얼 점검이 있다. 이때만 TC·매뉴얼을 AI 에 보낸다 |
+| 결론 단계 | 화면에 보이는 결론이다. `사양과 다름`, `검토 필요`, `근거 부족`, `참고`, `문제 없음` 다섯 가지다(REQ-QAINTEL-033) |
+| 후보 압축 | 이슈 전체를 AI 에 넘기지 않고, 코드가 Exact → BM25 검색으로 관련 후보만 골라 넣는 것이다 |
 | Coverage | 기존 Checklist·TC 가 바뀐 사양의 핵심 동작과 Expected Result 를 실제로 검증하는지다 |
 | 변경사항 없음 | 수집은 성공했고 변경 이벤트가 하나도 없는 실행 결과(`NO_CHANGE`)다 |
 
@@ -64,7 +72,8 @@ Claude Skill -(사용량 한도)-> 남은 AI 중지·초기화 시각 표시 -> 
 
 - 예약 실행(평일·공휴일 제외)과 화면의 수동 실행
 - SRS·이슈 전체 수집, 스냅샷 저장·비교, 변경 이벤트 저장과 재시도
-- 다섯 가지 분석과 근거 검증, 검증 TC 초안, 초안 Excel
+- 다섯 가지 자동 분석과 근거 검증
+- 사람이 요청할 때만 도는 TC 점검·검증 TC 초안·매뉴얼 점검과 초안 Excel
 - `/qa-agent` 대시보드, 분석 상세 화면, 실행 상세 화면, 기간 분석 조회 화면
 - 대시보드 위쪽의 수동 업로드 지식 문서 목록(업로드 날짜 포함)
 - 제품 설정으로 다른 제품을 붙이는 구조(제품별 데이터 분리)
@@ -93,9 +102,10 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 - 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기), REQ-QAINTEL-030(이슈 기록이 없는 기간의 현재 상태 기준 점검)
 - 무엇이 바뀌었나: REQ-QAINTEL-003(SRS), REQ-QAINTEL-004(이슈), REQ-QAINTEL-005(이벤트), REQ-QAINTEL-006(저장·재시도), REQ-QAINTEL-008(기준 스냅샷), REQ-QAINTEL-009(수집 실패), REQ-QAINTEL-028(삭제된 SRS 를 가리키는 TC)
 - AI 를 부를지: REQ-QAINTEL-007(변경 없음·상태만 바뀜), REQ-QAINTEL-010(분석 대상 고르기), REQ-QAINTEL-025(사용량 한도·실행 예외), NFR-QAINTEL-001
-- 분석하기: REQ-QAINTEL-011(후보 압축), REQ-QAINTEL-012 ~ REQ-QAINTEL-016(다섯 가지 분석)
+- 분석하기(자동): REQ-QAINTEL-011(후보 압축), REQ-QAINTEL-012 ~ REQ-QAINTEL-015, REQ-QAINTEL-031(사양 변경 분석)
+- 사람이 요청할 때만: REQ-QAINTEL-016(TC 점검), REQ-QAINTEL-032(검증 TC 초안), REQ-QAINTEL-034(매뉴얼 점검)
 - 결과 믿기: REQ-QAINTEL-017(근거 검증), REQ-QAINTEL-018(초안 Excel), REQ-QAINTEL-026(토큰 사용량 기록)
-- 결과 보기: REQ-QAINTEL-019(대시보드), REQ-QAINTEL-020(상세 화면), REQ-QAINTEL-022(지식 문서 목록), REQ-QAINTEL-024(기간 조회)
+- 결과 보기: REQ-QAINTEL-019(대시보드), REQ-QAINTEL-020(상세 화면), REQ-QAINTEL-033(결론 단계와 짧은 카드), REQ-QAINTEL-022(지식 문서 목록), REQ-QAINTEL-024(기간 조회)
 
 ### REQ-QAINTEL-001 예약 실행과 공휴일 건너뛰기
 
@@ -372,15 +382,17 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | `ISSUE_ROOT_CAUSE_CHANGED`, `ISSUE_ACTION_DETAILS_CHANGED` | 수정 완료 이슈 분석 | Spec 판정 이슈 분석 | 기록만 |
 | `ISSUE_CONTENT_UPDATED`, `ISSUE_REPRODUCTION_UPDATED` | 수정 완료 이슈 분석 | Spec 판정 이슈 분석 | 신규 이슈 분석(다시 분석) |
 | `ISSUE_COMMENT_ADDED`(의미 있는 댓글) | 새 댓글 분석 + 수정 완료 이슈 분석 | 새 댓글 분석 | 새 댓글 분석 |
-| `SRS_CREATED`, `SRS_UPDATED` | 사양 변경 Coverage 분석 | | |
+| `SRS_CREATED`, `SRS_UPDATED` | 사양 변경 분석(REQ-QAINTEL-031) | | |
 
 "기록만" 인 이벤트는 `analysis_required` 가 거짓이고, 이유에 "이 연구소 결과에 맞는 분석이 없어 기록만 남김" 이 적힌다.
 
-**결과** 분석 종류별 대상 목록. 한 실행의 작업 묶음 수 상한(NFR-DAILY-001) 안에서 신규 이슈 → 수정 완료 → Spec 판정 → 새 댓글 → Coverage 순으로 돌린다. 상한을 넘은 대상의 이벤트는 `pending` 으로 남는다.
+**결과** 분석 종류별 대상 목록. 한 실행의 작업 묶음 수 상한(NFR-DAILY-001) 안에서 신규 이슈 → 수정 완료 → Spec 판정 → 새 댓글 → 사양 변경 순으로 돌린다. 상한을 넘은 대상의 이벤트는 `pending` 으로 남는다.
 
 ### REQ-QAINTEL-011 후보 압축
 
 **하는 일** 분석마다 AI 에 넘길 후보를 코드가 먼저 고른다. 이슈 전체·TC 전체·사양 전체를 넘기지 않는다.
+
+> **주의** TC 후보와 매뉴얼 문단 후보는 요청 실행(REQ-QAINTEL-016·032)에만 넣는다. 자동 실행의 작업 입력과 작업 폴더 `context/` 에는 TC 색인(`tc_index.jsonl`)과 매뉴얼(`manuals/`)을 두지 않는다.
 
 **순서**
 
@@ -393,8 +405,8 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | 비슷한 과거 이슈 | 오늘 이슈 스냅샷(자기 자신 제외) | `daily_qa.intelligence.issue_candidates`(8) |
 | 사양 | 오늘 SRS 스냅샷 | `daily_qa.intelligence.spec_candidates`(6) |
 | 사양서 조각 | Knowledge 에 등록한 사양서(기존 문서 로더 `app/core/knowledge_documents.py`) | `daily_qa.intelligence.spec_doc_candidates`(4) |
-| TC | TC 색인(REQ-DAILY-014) | `daily_qa.tc_candidate_limit`(15) |
-| 매뉴얼 문단 | 지식 사본의 매뉴얼 텍스트 | 3 |
+| TC (요청 실행만) | TC 색인(REQ-DAILY-014) | `daily_qa.tc_candidate_limit`(15) |
+| 매뉴얼 문단 (요청 실행만) | 지식 사본의 매뉴얼 텍스트 | 3 |
 
 4. 비슷한 과거 이슈는 새 이슈와 발생 버전 또는 목표 버전이 같은 후보를 앞에 둔다. 현재 검증 중인 버전의 중복을 먼저 보기 위해서다.
 5. 후보마다 "왜 걸렸는지"(`'VP-5500' 정확 일치`, `용어 유사도 0.42`, `연결 항목`)를 함께 넘긴다.
@@ -406,7 +418,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 **하는 일** 새로 등록된 이슈마다 중복 여부, 사양 대비 판단, 과거 이슈와의 관계, QA 권고를 정리한다. Skill `qa-new-issue-analysis`.
 
-**입력** 이슈(제목·설명·재현 절차·Expected·Actual·오류 문구·연결 SRS·발생·목표 버전), 비슷한 과거 이슈 후보, 사양 후보, 사양서 조각, TC 후보.
+**입력** 이슈(제목·설명·재현 절차·Expected·Actual·오류 문구·연결 SRS·발생·목표 버전), 비슷한 과거 이슈 후보, 사양 후보, 사양서 조각. TC 후보는 넣지 않는다.
 
 **순서**
 
@@ -449,17 +461,19 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 - TC 초안을 만들지 않는다. 만들면 코드가 Finding 을 버린다(REQ-QAINTEL-017).
 
-### REQ-QAINTEL-013 수정 완료 이슈 분석과 검증 TC 초안
+### REQ-QAINTEL-013 수정 완료 이슈 분석
 
-**하는 일** 연구소가 고쳤다고 한 이슈의 원인과 조치를 검토하고, 최신 사양과 맞는지, 어디까지 다시 봐야 하는지 정리한 뒤 검증 TC 초안을 만든다. QA 규칙의 Skill S04(Fix Verification)에 해당한다. Skill `qa-fixed-issue-analysis`.
+**하는 일** 연구소가 고쳤다고 한 이슈의 원인과 조치를 검토하고, 최신 사양과 맞는지, 어디까지 다시 봐야 하는지 짧게 정리한다. QA 규칙의 Skill S04(Fix Verification)에 해당한다. Skill `qa-fixed-issue-analysis`.
+
+> **참고** 검증 TC 초안은 자동으로 만들지 않는다. 사람이 이 분석 화면에서 [검증 TC 초안 만들기]를 누르면 REQ-QAINTEL-032 가 만든다.
 
 **언제** REQ-QAINTEL-010 표에서 "수정 완료 이슈 분석" 인 이벤트가 있을 때.
 
-**입력** 이슈 본문, 발생 원인, 조치 내용, 연구소 댓글(최근 20개), 사양 후보, 사양서 조각, TC 후보, 비슷한 과거 이슈, 제품 설정의 Regression 축.
+**입력** 이슈 본문, 발생 원인, 조치 내용, 연구소 댓글(최근 20개), 사양 후보, 사양서 조각, 비슷한 과거 이슈, 제품 설정의 Regression 축. TC 후보는 넣지 않는다.
 
 **순서**
 
-1. 원인 검토 → 조치 검토 → 최신 사양과 맞는지 → 바뀐 범위 → 부작용·Regression 범위 → 기존 TC Coverage → 검증 TC 초안 순서로 쓴다.
+1. 원인 검토 → 조치 검토 → 최신 사양과 맞는지 → 바뀐 범위 → 부작용·Regression 범위 → QA 할 일 순서로 쓴다.
 2. 사양 판정은 아래 가운데 하나다.
 
 | 판정 | 뜻 |
@@ -471,24 +485,13 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | `INSUFFICIENT_EVIDENCE` | 근거가 모자란다 |
 
 3. Regression 축은 코드가 제품 설정(`qa_intelligence.regression_axes`)에서 정한다. 모델은 축마다 해당 여부와 이유만 채운다. 해당하지 않는 축도 "해당 없음" 으로 남긴다.
-4. 기존 TC 마다 원인을 덮는지와 그 이유를 적는다.
-5. 검증 TC 초안은 기존 형식(`DraftTc`: `kind`, `srs_no`, `change`, `change_detail`, `title`, `precondition`, `test_step`, `expected_result`, `test_data`)을 쓴다. `kind` 는 `수정확인` 또는 `Regression` 이다. 관점(`perspective`)을 하나 적는다.
+4. 요약은 한두 문장, QA 할 일은 3줄까지 쓴다.
 
-| 관점 | 뜻 |
-|---|---|
-| `DIRECT_FIX` | 원래 조건으로 고친 결과를 확인 |
-| `REGRESSION` | 원인이 닿는 다른 경로 |
-| `STATE_TRANSITION` | 상태가 바뀌는 순서 |
-| `BOUNDARY` | 경곗값 |
-| `NEGATIVE` | 잘못된 입력·실패 조건 |
-| `INTEGRATION` | 연동 |
-
-**결과** Finding 하나(분석 종류 `FIXED_ISSUE`, 판정 = 사양 판정, 초안 목록).
+**결과** Finding 하나(분석 종류 `FIXED_ISSUE`, 판정 = 사양 판정). 초안은 없다.
 
 **지킬 것**
 
-- 사양 판정이 `SPEC_UNDEFINED`·`INSUFFICIENT_EVIDENCE` 면 초안을 만들지 않는다. 대신 "Checklist TC 생성 보류" 와 확인할 점을 남긴다.
-- 오늘 연구소 결과가 `FIXED` 가 아닌 이슈에 이 분석이 초안을 내면 코드가 Finding 을 버린다.
+- 이 분석이 초안이나 TC Coverage 를 내면 코드가 그 부분만 빼고 "자동 분석이라 초안을 뺐습니다" 메모를 남긴다(REQ-QAINTEL-017).
 
 ### REQ-QAINTEL-014 Spec 판정 이슈 분석
 
@@ -538,9 +541,20 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 **결과** Finding 하나(분석 종류 `COMMENT`, 판정 = 가장 앞 댓글의 분류).
 
-### REQ-QAINTEL-016 사양 변경 Coverage 분석
+### REQ-QAINTEL-016 TC 점검 (사양 변경 Coverage 분석, 요청할 때만)
 
-**하는 일** 새로 생기거나 바뀐 SRS 마다 과거 이슈 이력과 기존 Checklist·TC 가 그 변경을 이미 충분히 다루는지 보고, 모자라면 기존 TC 수정안이나 신규 Checklist TC 초안을 낸다. Skill `qa-spec-coverage-analysis`. 상위 SPEC 의 사양 변경 영향 검토(REQ-DAILY-003)를 대신한다.
+**하는 일** 바뀐 SRS 하나에 대해 과거 이슈 이력과 기존 Checklist·TC 가 그 변경을 이미 충분히 다루는지 보고, 모자라면 기존 TC 수정안이나 신규 Checklist TC 초안을 낸다. Skill `qa-spec-coverage-analysis`. 상위 SPEC 의 사양 변경 영향 검토(REQ-DAILY-003)를 대신한다.
+
+**언제** 사람이 사양 변경 분석(REQ-QAINTEL-031) 상세 화면에서 [TC 점검]을 누를 때만 돈다(`POST /qa-agent/findings/<번호>/tc-check`). CLI 는 `scripts/run_daily_qa.py --on-demand tc-check --finding <번호>` 다. 자동 실행에서는 돌지 않는다.
+
+이유: TC 는 사람이 넣는 자료라 최신이 아닐 수 있다. 자동으로 비교하면 틀린 결론이 나오고 토큰도 많이 쓴다.
+
+요청 실행은 아래처럼 돈다(REQ-QAINTEL-032 와 같다).
+
+1. 저장된 최신 SRS·이슈 스냅샷을 쓴다. Polarion 을 새로 읽지 않는다.
+2. 원래 분석을 만든 변경 이벤트로 작업 하나를 만든다. TC 후보와 매뉴얼 문단 후보를 넣는다.
+3. 결과는 새 Finding(분석 종류 `TC_CHECK`)으로 저장하고 `sections.source_finding` 에 원래 분석 번호를 적는다. 원래 분석과 이벤트 상태는 바꾸지 않는다.
+4. 메일을 보내지 않는다. 실행 잠금·사용량 한도·실행당 작업 상한은 자동 실행과 같다.
 
 **입력**
 
@@ -610,11 +624,20 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 7. `SPEC_REVIEW_REQUIRED` 면 초안을 만들지 않고 "Checklist TC 생성 보류" 와 확인할 점을 적는다.
 
-**결과** SRS 변경마다 Finding 하나(분석 종류 `SPEC_COVERAGE`, 판정 = Coverage). 구획에 변경 내용, 이슈 Coverage, Checklist Coverage, 부족한 점, 경고, 권고 TC 변경이 있다. 관련 이슈·TC·초안의 연결은 `related_ids` 로 복원할 수 있다.
+**결과** Finding 하나(분석 종류 `TC_CHECK`, 판정 = Coverage). 구획에 변경 내용, 이슈 Coverage, Checklist Coverage, 부족한 점, 경고, 권고 TC 변경이 있다. 관련 이슈·TC·초안의 연결은 `related_ids` 로 복원할 수 있다.
+
+**안 될 때**
+
+| 경우 | 응답 |
+|---|---|
+| 원래 분석이 사양 변경 분석이 아님 | 400 "사양 변경 분석에서만 TC 점검을 할 수 있습니다." |
+| 없는 분석 번호 | 404 "Finding 이 없습니다." |
+| 다른 실행 중 | 409 "QA Agent가 이미 실행 중입니다." |
 
 **지킬 것**
 
-- 같은 SRS 변경을 다시 돌려도 같은 이벤트는 다시 분석하지 않는다(REQ-QAINTEL-006). 같은 대상·판정·초안 제목의 Finding 이 열려 있으면 저장하지 않는다(REQ-DAILY-018).
+- 같은 버튼을 다시 눌러도 같은 대상·판정·초안 제목의 Finding 이 열려 있으면 저장하지 않는다(REQ-DAILY-018).
+- 개편 전에 자동으로 만든 Coverage Finding(분석 종류 `SPEC_COVERAGE`, Skill `qa-spec-coverage-analysis`)은 지우지 않고 그대로 보인다.
 
 ### REQ-QAINTEL-017 분석 결과 근거 검증
 
@@ -628,10 +651,12 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 4. TC 는 TC 색인의 TC ID 나 `파일 / 시트 / N행` 위치여야 한다.
 5. 사양서 조각 근거는 작업 입력으로 준 조각 번호(`ref`)여야 한다. 댓글 근거는 작업 입력의 댓글 번호여야 한다.
 6. 맞지 않는 항목은 결과에서 빼고, 뺀 항목과 이유를 Finding 의 검증 기록(`sections.validation`)에 남긴다.
-7. 판정을 뒷받침해야 하는데 근거가 하나도 남지 않으면 Finding 을 버린다. 근거가 없음을 뜻하는 판정(`SPEC_UNDEFINED`, `SPEC_AMBIGUOUS`, `INSUFFICIENT_EVIDENCE`, `SPEC_NOT_FOUND`, `SPEC_REVIEW_REQUIRED`, `NO_DUPLICATE_FOUND`)은 근거 없이도 남기되 신뢰도를 `Review Needed` 보다 높이지 않는다.
+7. 판정을 뒷받침해야 하는데 근거가 하나도 남지 않으면 Finding 을 버린다. 근거가 없음을 뜻하는 판정(`SPEC_UNDEFINED`, `SPEC_AMBIGUOUS`, `INSUFFICIENT_EVIDENCE`, `SPEC_NOT_FOUND`, `SPEC_REVIEW_REQUIRED`, `NO_DUPLICATE_FOUND`, `SPEC_UNCLEAR`)은 근거 없이도 남기되 신뢰도를 `Review Needed` 보다 높이지 않는다.
 8. 중복 판정이 `STRONG_DUPLICATE`·`POSSIBLE_DUPLICATE` 인데 남은 후보가 없으면 `INSUFFICIENT_EVIDENCE` 로 바꾼다.
 9. TC 초안 규칙
-   - 수정 완료 이슈 분석이 아닌데 초안이 있거나, 대상 이슈의 오늘 연구소 결과가 `FIXED` 가 아니면 Finding 을 버린다.
+   - 신규 이슈·Spec 판정·댓글·현재 상태 점검이 초안을 내면 Finding 을 버린다.
+   - 자동 실행의 수정 완료 이슈 분석·사양 변경 분석이 초안이나 TC 비교 구획을 내면 그 부분만 빼고 메모를 남긴다.
+   - 검증 TC 초안 요청(REQ-QAINTEL-032)에서 대상 이슈의 오늘 연구소 결과가 `FIXED` 가 아니면 Finding 을 버린다.
    - 사양 판정이 `SPEC_UNDEFINED`·`INSUFFICIENT_EVIDENCE`·`SPEC_AMBIGUOUS` 이거나 Coverage 가 `FULLY_COVERED`·`SPEC_REVIEW_REQUIRED` 면 초안을 빼고 "Checklist TC 생성 보류" 를 남긴다.
 10. 조치 문장이 QA 규칙 §55 금지 조치(이슈 닫기, TC 덮어쓰기, 결과·이력 삭제)를 담으면 Finding 을 버린다(REQ-DAILY-007 과 같다).
 
@@ -643,11 +668,11 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 **순서**
 
-1. `Checklist 초안` 시트에는 신규 초안(수정 완료 이슈 분석의 초안, Coverage 의 `CREATE_NEW`)만 넣는다. 열 이름과 순서는 제품 설정의 Checklist 형식(`qa_intelligence.checklist.headers`)이고, 원본 Checklist 가 있으면 머리글 서식과 열 너비를 복사한다.
+1. `Checklist 초안` 시트에는 신규 초안(검증 TC 초안 요청의 초안, TC 점검의 `CREATE_NEW`)만 넣는다. 열 이름과 순서는 제품 설정의 Checklist 형식(`qa_intelligence.checklist.headers`)이고, 원본 Checklist 가 있으면 머리글 서식과 열 너비를 복사한다.
 2. `Coverage` 시트에는 SRS 변경마다 TC 별 조치(`KEEP`, `UPDATE_EXISTING`, `CREATE_NEW`, `SPEC_REVIEW_REQUIRED`), 이유, 추천 수정, 관련 이슈, Finding 번호를 넣는다.
 3. `Review` 시트에는 Finding 별 판정·요약·근거 위치·신뢰도를 넣는다.
 
-**결과** 실행 폴더의 `impact_checklist_draft.xlsx`. 이번 실행에 초안이나 Coverage Finding 이 하나라도 있을 때만 만든다.
+**결과** 실행 폴더의 `impact_checklist_draft.xlsx`. 이번 실행에 초안이나 TC 점검 Finding 이 하나라도 있을 때만 만든다. 자동 실행은 초안이 없으므로 보통 만들지 않는다.
 
 ### REQ-QAINTEL-019 QA Agent 대시보드
 
@@ -660,10 +685,10 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 1. 맨 위: 수동 업로드 지식 문서 목록(REQ-QAINTEL-022).
 2. 실행: 마지막 실행(시각·결과), 실행 결과 요약, 다음 자동 실행 시각(주말·공휴일 제외), [지금 실행] 버튼.
 3. 오늘 변경 요약: 마지막 실행의 신규 이슈, Fixed(연구소 결과가 `FIXED` 로 바뀐 이슈), Spec(`SPEC`·`NOT_BUG` 로 바뀐 이슈), 댓글 추가, SRS 변경 수.
-4. 최신 분석 결과 카드: 대상 번호, 분석 종류, 주요 판정(예: "중복 후보 있음", "SPEC_VIOLATION 가능성"), [상세보기].
+4. 최신 분석 결과 카드: 결론 단계, 분석 종류, 대상 번호·제목, 한두 문장 요약, QA 할 일 3줄까지, [상세보기](REQ-QAINTEL-033). `문제 없음` 카드는 접어 둔다.
 5. 최근 실행 목록: 실행마다 결과와 [실행 상세] 링크.
 
-> **예시** `[VP-30301] 신규 Issue · 중복 후보 있음 · SPEC_VIOLATION 가능성 · [상세보기]`
+> **예시** `검토 필요 · 사양 변경 분석` / `[VP-516] Display X-ray Image` / "Reject 문구가 '영상 표시 마크' 표로 바뀌었다." / QA 할 일 ① Q/R 수신 영상 표시 확인 ② FTM 영상 확인
 
 **설정** 제품이 하나면 그 제품을 고른다. 여럿이면 주소의 `?product=<이름>` 으로 고른다. 조회 함수는 모두 제품을 받는다.
 
@@ -676,17 +701,23 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 ### REQ-QAINTEL-020 분석 상세 화면과 실행 상세 화면
 
-**하는 일** Finding 하나의 분석 내용을 분석 종류에 맞는 구획으로 보여 준다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
+**하는 일** Finding 하나의 결론과 할 일을 맨 위에 보이고, 분석 종류별 구획은 `자세히` 를 펼쳐야 보인다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
 
 **화면 구성**
 
-| 분석 종류 | 구획 |
+1. 맨 위 핵심 덩어리: 결론 단계, 판정 이름·신뢰도, 한두 문장 요약, 바뀐 사양(요구사항 5개까지), 근거 3개까지, QA 할 일 3줄까지.
+2. 같은 덩어리의 버튼: 사양 변경 분석이면 [TC 점검], 수정 완료 이슈 분석이면 [검증 TC 초안 만들기]. 다른 분석에는 버튼이 없다.
+3. `자세히`: 아래 표의 구획, 칩, 근거 전체, 추가 확인사항, 근거 검증 기록, 변경 이벤트.
+
+| 분석 종류 | `자세히` 의 구획 |
 |---|---|
 | 신규 이슈 | Summary, Duplicate Analysis, Specification Analysis, Historical Analysis, QA Recommendation, Evidence |
-| 수정 완료 이슈 | Summary, Root Cause Review, Resolution Review, Specification Consistency, Regression Risk, Verification TC, Evidence |
+| 수정 완료 이슈 | Root Cause Review, Resolution Review, Specification Consistency, Regression Risk(초안이 있을 때만 Verification TC) |
+| 검증 TC 초안(요청) | 수정 완료 이슈와 같고 Verification TC 가 있다 |
 | Spec 판정 이슈 | Summary, R&D Claim, Specification Evidence, Historical Decisions, QA Analysis, Evidence |
 | 새 댓글 | New Comment, Classification, Impact, Evidence |
-| 사양 변경 Coverage | Specification Change, Historical Issue Coverage, Checklist Coverage, Coverage Gap, Recommended TC Changes, Evidence |
+| 사양 변경 | 관련 과거 이슈 |
+| TC 점검(요청)·개편 전 Coverage | Specification Change, Historical Issue Coverage, Checklist Coverage, Coverage Gap, Recommended TC Changes |
 
 - 모든 상세 화면 아래에 이 Finding 을 만든 이벤트와 근거 검증 기록(뺀 항목과 이유)이 있다.
 - 개편 전 Finding 은 판정·요약·근거·초안만 보인다.
@@ -759,6 +790,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | 파일 수정일 | 담당자 PC 의 파일 수정 시각(`modified`, 한국 시간). 화면으로 등록한 문서는 빈칸 |
 | 올린 경로 | 지식 폴더 / Knowledge 화면 등록 |
 
+- 표 위에 안내 문장 "정확한 분석을 위해 매뉴얼과 TC 가 최신이 아니라면 최신 버전을 업로드해 주세요." 를 보인다(사용자 결정 2026-10-02).
 - 표 위에 마지막 수집 시각(`synced_at`)을 보인다.
 - 읽지 못한 파일(`error`)은 "읽지 못함" 으로 표시한다.
 - 같은 문서(REQ-KNOW-009 의 논리 문서)의 판이 여럿 올라와 있으면 가장 최신 판 하나만 보인다. 판을 비교할 수 없으면 둘 다 보인다.
@@ -1034,7 +1066,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
    | 묶음 | 조건 | 볼 것 |
    |---|---|---|
-   | A-수정 | 연결 SRS 가 기간 안에 바뀌었고 연구소 결과가 `FIXED` | 수정 뒤 사양이 바뀌어 관련 TC 를 고쳐야 하는지(QA 규칙 §43) |
+   | A-수정 | 연결 SRS 가 기간 안에 바뀌었고 연구소 결과가 `FIXED` | 수정 뒤 사양이 바뀌어 이슈의 Expected 가 새 사양과 맞는지(QA 규칙 §43). TC 는 보지 않는다 |
    | A-사양 | 연결 SRS 가 기간 안에 바뀌었고 연구소 결과가 `SPEC`·`NOT_BUG` | 바뀐 사양이 연구소 판정을 뒷받침하는지 |
    | A-기타 | 연결 SRS 가 기간 안에 바뀌었고 그 밖의 연구소 결과 | 바뀐 사양이 이슈의 Expected 와 맞는지 |
    | B | 연결 SRS 가 바뀌지 않았고 연구소 결과가 `SPEC`·`NOT_BUG` | 지금 사양이 연구소 판정을 뒷받침하는지. SRS 마지막 수정이 이슈 마지막 수정보다 앞서면 "판정 뒤 SRS 가 바뀌지 않음" 신호를 붙인다(QA 규칙 §11) |
@@ -1050,7 +1082,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
    - SRS 하나와 그 SRS 에 연결된 이슈 요약 카드를 한 작업에 넣는다. SRS 내용은 작업마다 한 번만 넣는다. 한 작업의 이슈는 `daily_qa.intelligence.audit_batch_size`(기본 10)건까지다.
    - SRS 는 바뀐 문장과 이슈 내용에 가까운 문단 3개만 넣는다. 바뀌지 않은 SRS 도 가까운 문단만 넣는다.
-   - A-수정 이슈가 있는 작업에만 그 SRS 의 TC 후보를 3개까지 넣는다.
+   - TC 후보는 넣지 않는다(사용자 결정 2026-10-02). 모델이 TC 영향을 쓰면 코드가 빼고 기록을 남긴다.
    - QA 규칙은 Skill 이 정한 절(§6·7·10·11·38·43)만 읽는다.
    - 점검 작업은 `daily_qa.intelligence.audit_model` 모델로 부른다. 비우면 `ai.claude.models.light` 다.
    - 결과가 `충돌`·`부분 일치` 인 이슈는 상세 화면에서 단일 이슈 분석(REQ-QAAGENT-001)으로 깊게 볼 수 있다.
@@ -1064,7 +1096,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
    | `CONTRADICTS_SPEC` | 충돌 |
    | `INSUFFICIENT_EVIDENCE` | 근거 부족 |
 
-   A-수정 이슈는 TC 영향(`sections.tc_impact.decision`)을 더한다. 값은 QA 규칙 §43 의 TC 판정 여섯 가지(`유지`·`경미 수정`·`수정 필수`·`Issue Link 수정`·`신규 TC 필요`, 그리고 사양을 다시 봐야 한다는 판정)이고, 목록은 `app/modules/daily_qa/evidence_validation.py` 의 `AUDIT_TC_DECISIONS` 다.
+   A-수정 이슈의 TC 영향은 이 점검에서 정하지 않는다. 필요하면 사람이 관련 사양 변경 분석에서 [TC 점검]을 누른다.
 
 **결과**
 
@@ -1086,6 +1118,102 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 - verified·closed 이슈가 판정 기준이다. `in_review`·`in_progress`·`open`·`reopened` 이슈는 카드에 "참고만" 표시를 붙이고 Expected 근거로 쓰지 않는다(지침 §6).
 - 연구소 댓글이나 조치 내용만으로 `일치` 를 내지 않는다(QA 규칙 §7). 실제로 전체를 보지 않았으면 "전수조사 완료"라고 쓰지 않는다(QA 규칙 §10).
 - 실행당 작업 상한(`daily_qa.max_tasks_per_run`)은 이 점검에도 적용된다. 넘은 묶음은 대기로 남아 다음 실행이 이어 간다. 점검 전체 건수에는 따로 상한을 두지 않는다.
+
+### REQ-QAINTEL-031 사양 변경 분석 (자동)
+
+**하는 일** 새로 생기거나 바뀐 SRS 마다 무엇이 바뀌었는지, QA 가 확인할 것이 있는지, 관련 과거 이슈가 있는지 짧게 정리한다. TC·Checklist·매뉴얼은 보지 않는다. Skill `qa-spec-change-summary`.
+
+> **예시** VP-767 에 "Reload 뒤에도 목록 상태를 유지한다." 가 더해졌다. 카드에는 `검토 필요` 와 "Reload 뒤 목록 유지 조건이 생겼다." 가, 할 일에는 "Reload 뒤 목록 유지 확인" 이 보인다.
+
+**언제** REQ-QAINTEL-010 표에서 `SRS_CREATED`·`SRS_UPDATED` 이벤트가 있을 때. 예약·[지금 실행]·기간 실행이 모두 같다.
+
+**입력** SRS 번호·본문, 바뀐 필드, 바뀌기 전·후 값, 더한 문장·뺀 문장, 관련 과거 이슈 후보(REQ-QAINTEL-016 입력의 이슈 후보와 같은 순서), 연관 사양·사양서 조각.
+
+**순서**
+
+1. 바뀐 것(`sections.change`): 한두 문장 요약과 바뀐 요구사항 문장 5개까지.
+2. 관련 과거 이슈(`sections.related_issues`): 후보 가운데 관계있는 것만 5개까지. 관계는 `EXISTING_DEFECT`·`PAST_FIXED`·`PAST_SPEC`·`SAME_FUNCTION_REGRESSION` 이다.
+3. 판정은 아래 넷 가운데 하나다.
+
+   | 판정 | 뜻 | 결론 단계 |
+   |---|---|---|
+   | `NO_QA_IMPACT` | 서식·오탈자·표현만 바뀌었다 | 문제 없음 |
+   | `QA_CHECK_NEEDED` | 동작·조건·값이 바뀌어 QA 가 확인할 것이 있다 | 검토 필요 |
+   | `CONFLICTS_WITH_PAST_DECISION` | 과거 Spec 판정이나 수정 결과가 새 사양과 다르다 | 사양과 다름 |
+   | `SPEC_UNCLEAR` | 바뀐 문장이 여러 뜻으로 읽혀 Expected 를 정할 수 없다 | 검토 필요 |
+
+4. 요약은 한두 문장, QA 할 일은 3줄까지 쓴다.
+
+**결과** SRS 변경마다 Finding 하나(분석 종류 `SPEC_COVERAGE`, Skill `qa-spec-change-summary`). 화면에서 [TC 점검]을 누를 수 있다(REQ-QAINTEL-016).
+
+**지킬 것**
+
+- 작업 입력에 TC 후보·매뉴얼 후보를 넣지 않고, 작업 폴더 `context/` 에 TC 색인·매뉴얼을 두지 않는다.
+- 관련 과거 이슈는 오늘 이슈 스냅샷에 있는 번호만 남긴다. TC 비교 구획이나 초안이 오면 빼고 메모를 남긴다(REQ-QAINTEL-017).
+- 바뀐 것의 요약(`sections.change.summary`)이 비었거나 문장이 아니면 결과를 버린다.
+
+### REQ-QAINTEL-032 검증 TC 초안 (요청할 때만)
+
+**하는 일** 수정 완료 이슈 하나에 대해 기존 TC 가 원인을 다시 잡는지 보고, 잡지 못하는 것만 검증 TC 초안으로 만든다. Skill `qa-verification-tc-draft`.
+
+**언제** 사람이 수정 완료 이슈 분석(REQ-QAINTEL-013) 상세 화면에서 [검증 TC 초안 만들기]를 누를 때(`POST /qa-agent/findings/<번호>/tc-draft`). CLI 는 `scripts/run_daily_qa.py --on-demand tc-draft --finding <번호>` 다.
+
+**순서**
+
+1. REQ-QAINTEL-016 의 요청 실행 순서 1~4 와 같다. 입력은 수정 완료 이슈 분석의 입력에 TC 후보를 더한 것이다.
+2. 기존 TC 마다 원인을 덮는지와 이유(`sections.tc_coverage`)를 적는다.
+3. 검증 TC 초안은 기존 형식(`DraftTc`: `kind`, `srs_no`, `change`, `change_detail`, `title`, `precondition`, `test_step`, `expected_result`, `test_data`)을 쓴다. `kind` 는 `수정확인` 또는 `Regression` 이다. 관점(`perspective`)은 `DIRECT_FIX`·`REGRESSION`·`STATE_TRANSITION`·`BOUNDARY`·`NEGATIVE`·`INTEGRATION` 가운데 하나다.
+
+**결과** Finding 하나(분석 종류 `TC_DRAFT`, `sections.source_finding` = 원래 분석 번호, 초안 목록). 초안 Excel(REQ-QAINTEL-018)이 생긴다.
+
+**안 될 때**
+
+| 경우 | 응답 |
+|---|---|
+| 원래 분석이 수정 완료 이슈 분석이 아님 | 400 "수정 완료 이슈 분석에서만 검증 TC 초안을 만들 수 있습니다." |
+| 다른 실행 중 | 409 "QA Agent가 이미 실행 중입니다." |
+| 사용량 한도 중 | AI 를 부르지 않고 단계가 `limit` 으로 끝난다. 원래 분석은 그대로다 |
+
+**지킬 것**
+
+- 사양 판정이 `SPEC_UNDEFINED`·`INSUFFICIENT_EVIDENCE` 면 초안을 만들지 않는다. 대신 "Checklist TC 생성 보류" 와 확인할 점을 남긴다.
+- 오늘 연구소 결과가 `FIXED` 가 아닌 이슈에 초안을 내면 코드가 Finding 을 버린다.
+- 최신 SRS·사양서 근거가 없으면 초안을 빼고 "Checklist TC 생성 보류" 를 남긴다. 기존 TC만으로 Expected 를 확정하지 않는다.
+- 과거 자동 분석 결과와 요청 결과는 분석 종류·원래 분석 번호로 구분한다. 같은 버튼에서 같은 대상·판정·초안이 열려 있으면 다시 저장하지 않는다(REQ-DAILY-018).
+
+### REQ-QAINTEL-033 결론 단계와 짧은 카드
+
+**하는 일** 분석마다 다른 판정 값을 다섯 가지 결론으로 줄여, 카드 한 장만 보고 다음 행동을 정하게 한다.
+
+**순서**
+
+1. 판정 값을 아래 표로 결론 단계에 맞춘다. 표에 없는 값은 `검토 필요` 다.
+
+   | 결론 단계 | 판정 값 |
+   |---|---|
+   | 사양과 다름 | `SPEC_VIOLATION`, `CONTRADICTS_SPEC`, `CONFLICTS_WITH_PAST_DECISION` |
+   | 검토 필요 | `PARTIALLY_CONSISTENT`, `PARTIALLY_SUPPORTED`, `SPEC_UNDEFINED`, `SPEC_AMBIGUOUS`, `SPEC_NOT_FOUND`, `QA_CHECK_NEEDED`, `SPEC_UNCLEAR`, `PARTIALLY_COVERED`, `NOT_COVERED`, `SPEC_REVIEW_REQUIRED`, `QA_ACTION_REQUIRED`, `SPEC_CLAIM`, `REQUIREMENT_INFORMATION`, 표에 없는 값 |
+   | 근거 부족 | `INSUFFICIENT_EVIDENCE` |
+   | 참고 | `ROOT_CAUSE_INFORMATION`, `RESOLUTION_INFORMATION`, `REPRODUCTION_INFORMATION`, `OTHER_SIGNIFICANT_INFORMATION` |
+   | 문제 없음 | `CONSISTENT_WITH_SPEC`, `SUPPORTED_BY_SPEC`, `FULLY_COVERED`, `NO_QA_IMPACT`, `NOT_SIGNIFICANT` |
+
+2. QA 할 일은 권고(`sections.recommendation.actions`·`checks`) → 확인할 점(`sections.qa_analysis.checks`) → 조치 문장(`action`, 줄마다 하나) 순서로 찾아 3줄까지 보인다.
+3. 목록은 결론 단계 순서(사양과 다름 → 검토 필요 → 근거 부족 → 참고 → 문제 없음)로, 같은 단계는 최신이 먼저다. `문제 없음` 은 접어 둔다.
+
+**지킬 것**
+
+- 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 `자세히` 에 있다.
+- 조치 문장(`action`)은 Finding 표에 칸이 없어 `sections.action` 에 함께 저장한다. 저장하지 않으면 카드의 할 일이 비어 보인다.
+
+### REQ-QAINTEL-034 매뉴얼 점검 (요청할 때만)
+
+**하는 일** 최근 7일 사양 변경이 매뉴얼에 반영됐는지 본다(REQ-DAILY-006 의 점검과 같은 Skill `qa-manual-completeness`).
+
+**언제** 사람이 `scripts/run_daily_qa.py --on-demand manual-check` 를 실행할 때만 돈다. 화면 버튼은 두지 않는다(사용자 결정 2026-10-02). 예약·[지금 실행]·주간 요일·매뉴얼이 바뀐 날에도 자동으로 돌지 않는다.
+
+이유: 매뉴얼은 사람이 넣는 자료라 최신이 아닐 수 있다.
+
+**결과** 단계 `F` 의 결과와 Finding. 자동 실행의 단계 `F` 는 늘 `not_due` 이고 비고는 "매뉴얼 점검은 자동으로 돌지 않습니다." 로 시작한다. 예전의 미룬 점검 상태(`manual_check_due`)는 읽지도 쓰지도 않는다.
 
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
@@ -1188,7 +1316,7 @@ REQ-QAINTEL-017
 REQ-QAINTEL-016, REQ-QAINTEL-018
 
 #### 절차
-신규 SRS + TC 없음, 기존 TC 완전 커버, Expected 만 옛 사양, 과거 이슈만 있음, 사양 불명확, 같은 변경 다시 실행을 만든다.
+자동 실행으로 사양 변경 분석을 만든 뒤 [TC 점검] 요청 실행을 돌린다. 신규 SRS + TC 없음, 기존 TC 완전 커버, Expected 만 옛 사양, 과거 이슈만 있음, 사양 불명확, 같은 버튼 다시 누름을 만든다.
 
 #### Expected Result
 각각 `NOT_COVERED`+초안, `FULLY_COVERED`+초안 없음, `UPDATE_EXISTING`, 이슈 Coverage 있음+`NOT_COVERED`, 초안 없음, 두 번째 실행에 새 초안 없음. 초안 Excel 에 `Coverage` 시트가 있다.
@@ -1279,10 +1407,24 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 **절차** `tests/test_qa_intel_issue_audit.py` 를 돌린다. 합성 이슈·SRS 스냅샷과 가짜 실행기(`FakeRunner`)를 쓴다.
 
 1. 묶음 나누기: A-수정·A-사양·A-기타·B·D·대상 아님이 표대로 나뉜다. 비슷한 제목만으로는 연결하지 않는다. 판정 뒤 SRS 가 바뀌지 않은 B 에 신호가 붙는다.
-2. 작업 묶기: 같은 SRS 의 이슈가 한 작업에 들어가고, SRS 내용은 작업에 한 번만 들어간다. A-수정이 없는 작업에는 TC 후보가 없다.
+2. 작업 묶기: 같은 SRS 의 이슈가 한 작업에 들어가고, SRS 내용은 작업에 한 번만 들어간다. 어느 작업에도 TC 후보가 없다.
 3. 같은 기간을 다시 돌리면 새 점검 이벤트가 생기지 않고 Claude 호출이 0회다.
-4. 점검 작업은 점검 모델로 부른다. 결과 판정·TC 영향 값이 허용 목록 밖이면 버린다.
+4. 점검 작업은 점검 모델로 부른다. 결과 판정이 허용 목록 밖이면 버리고, 모델이 쓴 TC 영향은 뺀다.
 5. 실행 상세에 알림 문장과 묶음별 수가 보인다. `POST /qa-agent/issue-audit` 은 202, 실행 중이면 409 다.
+
+**기대 결과** 모든 테스트 통과.
+
+### TEST-QAINTEL-018 자동은 핵심만, TC·매뉴얼은 요청할 때만
+
+**목적** 자동 실행이 TC·매뉴얼을 쓰지 않고, 요청 실행만 TC 와 비교하며, 화면이 결론 단계와 짧은 카드로 보이는지 확인한다.
+
+**절차** `tests/test_qa_intel_core_mode.py` 와 `tests/test_qa_intel_dashboard.py` 의 결론 단계·버튼 테스트를 돌린다. 가짜 Polarion·가짜 실행기를 쓴다.
+
+1. 자동 실행의 모든 작업 입력에 TC·매뉴얼 후보가 없고, `context/` 에 `tc_index.jsonl`·`manuals/` 가 없다.
+2. 사양 변경은 `qa-spec-change-summary` 로 분석하고, 없는 이슈 번호는 빠지며, 할 일이 카드까지 이어진다.
+3. 자동 수정 완료 이슈 분석의 초안은 빠지고 메모가 남는다. 주간 요일·미룬 점검 상태가 있어도 매뉴얼 점검은 돌지 않는다.
+4. [TC 점검]은 TC 후보와 함께 Coverage Skill 을 한 번 부르고 `TC_CHECK` 로 저장하며 이벤트 상태·메일을 바꾸지 않는다. [검증 TC 초안]은 `TC_DRAFT` 로 초안을 저장한다. 맞지 않는 분석·한도 중이면 Claude 를 부르지 않는다.
+5. 결론 단계 표, 할 일 3줄, 칩 없는 카드, 결론 순 정렬, 개편 전 Coverage Finding 의 새 상세, 분석별 버튼, 지식 문서 안내 문장, 매뉴얼 점검 버튼 없음.
 
 **기대 결과** 모든 테스트 통과.
 
@@ -1333,10 +1475,10 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-010 | `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-004: `tests/test_qa_intel_events.py` | verified |
 | REQ-QAINTEL-011 | `app/modules/daily_qa/intelligence.py`, `app/retrieval/hybrid.py` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
 | REQ-QAINTEL-012 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-new-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
-| REQ-QAINTEL-013 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-fixed-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
+| REQ-QAINTEL-013 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/skills/qa-fixed-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-014 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-spec-decision-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
 | REQ-QAINTEL-015 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-comment-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
-| REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
+| REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
@@ -1351,6 +1493,10 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-029 | `app/modules/daily_qa/alm_history.py`, `scripts/import_alm_srs_history.py`, `app/modules/daily_qa/product_adapter.py` | TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-030 | `app/modules/daily_qa/issue_audit.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/qa_agent/run_view.py`, `app/modules/daily_qa/skills/qa-issue-spec-audit/SKILL.md`, `app/modules/qa_agent/router.py` | TEST-QAINTEL-017: `tests/test_qa_intel_issue_audit.py`, `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-028 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | verified |
+| REQ-QAINTEL-031 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/workspace.py`, `app/modules/daily_qa/skills/qa-spec-change-summary/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_validation.py` | verified |
+| REQ-QAINTEL-032 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/qa_agent/router.py`, `scripts/run_daily_qa.py`, `app/modules/daily_qa/skills/qa-verification-tc-draft/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_pipeline.py`, `tests/test_qa_intel_dashboard.py` | verified |
+| REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py` | verified |
+| REQ-QAINTEL-034 | `app/modules/daily_qa/pipeline.py`, `scripts/run_daily_qa.py` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_failures.py`, `tests/test_daily_qa_pipeline.py` | verified |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

@@ -34,15 +34,18 @@ SKILL_FIXED_ISSUE = "qa-fixed-issue-analysis"
 SKILL_SPEC_DECISION = "qa-spec-decision-analysis"
 SKILL_COMMENT = "qa-comment-analysis"
 SKILL_SPEC_COVERAGE = "qa-spec-coverage-analysis"
+SKILL_SPEC_SUMMARY = "qa-spec-change-summary"
 SKILL_ISSUE_AUDIT = "qa-issue-spec-audit"
 ANALYSIS_SKILLS = {
     NEW_ISSUE: SKILL_NEW_ISSUE,
     FIXED_ISSUE: SKILL_FIXED_ISSUE,
     SPEC_DECISION: SKILL_SPEC_DECISION,
     COMMENT: SKILL_COMMENT,
-    SPEC_COVERAGE: SKILL_SPEC_COVERAGE,
+    SPEC_COVERAGE: SKILL_SPEC_SUMMARY,
     ISSUE_AUDIT: SKILL_ISSUE_AUDIT,
 }
+#: 사람이 버튼으로 요청한 실행의 Skill (REQ-QAINTEL-016·032).
+ON_DEMAND_SKILLS = {SPEC_COVERAGE: SKILL_SPEC_COVERAGE, FIXED_ISSUE: "qa-verification-tc-draft"}
 TASK_PREFIX = {NEW_ISSUE: "NEW", FIXED_ISSUE: "FIX", SPEC_DECISION: "SPC", COMMENT: "CMT", SPEC_COVERAGE: "COV", ISSUE_AUDIT: "AUD"}
 
 #: 공통 Regression 축. 제품 설정이 비어 있으면 이것을 쓴다 (GENERATOR 같은 장비 축은 제품이 더한다).
@@ -332,8 +335,13 @@ class AnalysisTarget:
     events: list[dict]
 
 
-def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, comments_loader=None) -> dict | None:
-    """분석 대상 하나의 입력. 대상이 오늘 스냅샷에 없으면 None (이벤트는 포기로 바뀐다)."""
+def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, comments_loader=None,
+               with_tc: bool = False) -> dict | None:
+    """분석 대상 하나의 입력. 대상이 오늘 스냅샷에 없으면 None (이벤트는 포기로 바뀐다).
+
+    TC·매뉴얼은 사람이 넣는 자료라 틀릴 수 있다. 자동 실행(`with_tc=False`)은 TC 후보·매뉴얼 후보를
+    넣지 않고, 사람이 버튼으로 요청한 실행만 넣는다 (REQ-QAINTEL-031·032, REQ-QAINTEL-016).
+    """
     intel = cfg.intelligence
     kind = target.analysis_type
     if kind == ISSUE_AUDIT:
@@ -354,16 +362,17 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
         query = f"{srs.get('title', '')} {changed_text}"
         terms = extract_terms(srs.get("title", ""), changed_text, extra=tuple(value for value in (srs["id"], srs.get("old_id")) if value))
         related = corpus.related_issues_for_srs(srs, query, intel.issue_candidates, intel.recent_fixed_days)
-        tcs = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=(srs["id"], srs.get("old_id", "")),
-                                   related_issue_ids=tuple(item["id"] for item in related))
         spec = corpus.spec_candidates(terms, query, intel.spec_candidates, intel.spec_doc_candidates, known)
+        candidates = {"issues": related, "srs": spec["srs"], "spec_docs": spec["spec_docs"]}
+        if with_tc:
+            candidates["tcs"] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=(srs["id"], srs.get("old_id", "")),
+                                                     related_issue_ids=tuple(item["id"] for item in related))
+            candidates["manuals"] = corpus.manual_candidates(query, intel.manual_candidates)
         return {**base, "srs": {"id": srs["id"], "old_id": srs.get("old_id", ""), "title": srs.get("title", ""),
                                 "status": srs.get("status", ""), "text": _cut(srs.get("text", ""), TEXT_LIMIT)},
                 "change": {"events": [event["event_type"] for event in target.events], "after": after,
                            "before": {key: value for event in target.events for key, value in (event.get("before") or {}).items()}},
-                "candidates": {"issues": related, "tcs": tcs, "srs": spec["srs"], "spec_docs": spec["spec_docs"],
-                               "manuals": corpus.manual_candidates(query, intel.manual_candidates)},
-                "search": spec["search"]}
+                "candidates": candidates, "search": spec["search"]}
 
     issue = corpus.issue_by_id.get(target.entity_id)
     if issue is None:
@@ -391,18 +400,17 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
                            "spec_docs": spec["spec_docs"]},
             "search": spec["search"]}
     if kind == FIXED_ISSUE:
-        linked = tuple(value for value in issue.get("linked_ids") or () if value in corpus.srs_by_id)
-        item["candidates"]["tcs"] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=linked[:1] + tuple(
-            corpus.srs_by_id[value].get("old_id", "") for value in linked[:1]))
+        if with_tc:
+            linked = tuple(value for value in issue.get("linked_ids") or () if value in corpus.srs_by_id)
+            item["candidates"]["tcs"] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=linked[:1] + tuple(
+                corpus.srs_by_id[value].get("old_id", "") for value in linked[:1]))
         item["regression_axes"] = list(cfg.product_profile.regression_axes or DEFAULT_AXES)
-    elif kind == NEW_ISSUE:
-        item["candidates"]["tcs"] = corpus.tc_candidates(terms, query, min(cfg.tc_candidate_limit, 8))
     return item
 
 
 def build_tasks(kind: str, items: list[dict], batch_size: int, answers: list[dict] | None = None,
-                unreadable: list[str] | None = None) -> list[Task]:
-    skill = ANALYSIS_SKILLS[kind]
+                unreadable: list[str] | None = None, skill: str = "") -> list[Task]:
+    skill = skill or ANALYSIS_SKILLS[kind]
     prefix = TASK_PREFIX[kind]
     return [
         Task(task_id=f"{prefix}-{number:03d}", skill=skill,

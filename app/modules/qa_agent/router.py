@@ -247,6 +247,45 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
     return JSONResponse(result, status_code=202)
 
 
+#: 버튼 요청 → (원래 분석 종류, 거절 문구). 원래 분석이 맞지 않으면 띄우지 않는다 (REQ-QAINTEL-016·032).
+_ON_DEMAND_SOURCES = {
+    "tc-check": ("SPEC_COVERAGE", "사양 변경 분석에서만 TC 점검을 할 수 있습니다."),
+    "tc-draft": ("FIXED_ISSUE", "수정 완료 이슈 분석에서만 검증 TC 초안을 만들 수 있습니다."),
+}
+_LAUNCH_REFUSALS = {
+    "running": "QA Agent가 이미 실행 중입니다.",
+    "disabled": "QA Agent 가 꺼져 있습니다 (daily_qa.enabled).",
+}
+
+
+def _launch_on_demand(choice, on_demand: str, finding_id: int | None = None):
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+
+    result = launch_detached(choice.cfg.product, trigger="manual", on_demand=on_demand, finding_id=finding_id)
+    if result["status"] in _LAUNCH_REFUSALS:
+        return JSONResponse({"detail": _LAUNCH_REFUSALS[result["status"]], **result}, status_code=409)
+    limit = dash.limit_info(choice)
+    if limit:
+        result["warning"] = f"{limit['description']} 한도가 풀린 뒤 다시 누르세요."
+    return JSONResponse(result, status_code=202)
+
+
+@router.post("/findings/{finding_id}/{action}")
+def finding_on_demand(finding_id: int, action: str):
+    """[TC 점검]·[검증 TC 초안]. 사람이 누를 때만 TC 를 AI 에 보낸다 (REQ-QAINTEL-016·032)."""
+    if action not in _ON_DEMAND_SOURCES:
+        raise HTTPException(404, "없는 요청입니다.")
+    store = dash.choose("").store
+    finding = store.get_finding(finding_id)
+    if not finding:
+        raise HTTPException(404, "Finding 이 없습니다.")
+    wanted, refusal = _ON_DEMAND_SOURCES[action]
+    if finding.get("analysis_type") != wanted:
+        return JSONResponse({"detail": refusal}, status_code=400)
+    return _launch_on_demand(_choice(finding.get("product") or ""), action, finding_id)
+
+
+
 @router.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_detail(request: Request, run_id: str):
     """실행 상세: 단계·이벤트·내려받을 파일 (REQ-QAINTEL-020)."""

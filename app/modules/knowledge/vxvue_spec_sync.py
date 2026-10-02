@@ -161,6 +161,7 @@ def run(target_url: str, dry_run: bool = False) -> dict:
     원격 서버 대상이면 report_sync_log()로 별도 보고한다).
     """
     logger = _configure_logging()
+    target_url = target_url.rstrip("/")
     lock_file, state_file, _ = _paths()
     config = load_product_config("vxvue")
     if config is None or config.specification.source != "alm_crawler":
@@ -185,7 +186,15 @@ def run(target_url: str, dry_run: bool = False) -> dict:
     normalized_dir = root / "data" / "specifications" / "vxvue" / "normalized" / date_tag
 
     state = _load_state(state_file)
-    changed = [pdf for pdf in pdfs if state.get(pdf.name) != _file_signature(pdf)]
+    # 다른 서버의 업로드 성공은 이번 대상의 등록을 증명하지 않는다.
+    # 옛 파일별 상태는 보존하고, 대상별 상태가 없으면 한 번 다시 등록한다.
+    target_states = state.setdefault("targets", {})
+    if not isinstance(target_states, dict):
+        target_states = state["targets"] = {}
+    target_state = target_states.setdefault(target_url, {})
+    if not isinstance(target_state, dict):
+        target_state = target_states[target_url] = {}
+    changed = [pdf for pdf in pdfs if target_state.get(pdf.name) != _file_signature(pdf)]
     unchanged = len(pdfs) - len(changed)
     logger.info("최신 날짜=%s, 대상 PDF=%d건, 변경=%d건, 미변경=%d건, dry_run=%s", date_tag, len(pdfs), len(changed), unchanged, dry_run)
 
@@ -208,7 +217,7 @@ def run(target_url: str, dry_run: bool = False) -> dict:
                 (normalized_dir / f"{pdf.stem}.md").write_text(text, encoding="utf-8")
                 _register_specification(client, target_url, pdf, config.product, config.version)
                 replaced_total += _replace_stale_revisions(client, target_url, config.product, pdf.name, logger)
-                state[pdf.name] = _file_signature(pdf)
+                target_state[pdf.name] = _file_signature(pdf)
                 uploaded.append(pdf.name)
                 logger.info("등록 완료: %s", pdf.name)
             except Exception:

@@ -60,6 +60,10 @@ SPEC_DECISION = "SPEC_DECISION"
 COMMENT = "COMMENT"
 SPEC_COVERAGE = "SPEC_COVERAGE"
 ISSUE_AUDIT = "ISSUE_AUDIT"
+#: 사람이 버튼으로 요청한 분석의 종류. 이벤트가 아니라 Finding 에만 쓴다 (REQ-QAINTEL-016·032·034).
+TC_CHECK = "TC_CHECK"
+TC_DRAFT = "TC_DRAFT"
+MANUAL_CHECK = "MANUAL_CHECK"
 #: 실행 순서 (REQ-QAINTEL-010).
 ANALYSIS_ORDER = (NEW_ISSUE, FIXED_ISSUE, SPEC_DECISION, COMMENT, SPEC_COVERAGE, ISSUE_AUDIT)
 ANALYSIS_LABELS = {
@@ -67,8 +71,11 @@ ANALYSIS_LABELS = {
     FIXED_ISSUE: "수정 완료 이슈 분석",
     SPEC_DECISION: "Spec 판정 이슈 분석",
     COMMENT: "새 댓글 분석",
-    SPEC_COVERAGE: "사양 변경 Coverage 분석",
+    SPEC_COVERAGE: "사양 변경 분석",
     ISSUE_AUDIT: "이슈 정합성 점검(현재 상태 기준)",
+    TC_CHECK: "TC 점검(요청)",
+    TC_DRAFT: "검증 TC 초안(요청)",
+    MANUAL_CHECK: "매뉴얼 점검(요청)",
 }
 
 CONTENT_FIELDS = ("title", "description")

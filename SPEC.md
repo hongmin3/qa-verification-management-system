@@ -148,7 +148,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 
 > **참고** 서버 앱도 사양서 동기화와 지식 폴더 수집을 예약해 두지만, 서버에서 크롤러 폴더와 지식 폴더에 접근할 수 없으면 건너뛴다. 이 두 일은 담당자 PC 가 한다(REQ-SCHED-002).
 
-사양–TC 연결 점검과 매뉴얼 누락 후보 점검은 일일 점검 안에서 주 1회(`daily_qa.weekly_day`, 기본 월요일)만 돈다. 매뉴얼 누락 후보 점검은 매뉴얼이 바뀐 날에도 돈다. 변경이 없는 날에는 매뉴얼 누락 후보 점검을 다음 변경이 있는 실행으로 미룬다(REQ-DAILY-005, REQ-DAILY-006).
+사양–TC 연결 점검은 일일 점검 안에서 주 1회(`daily_qa.weekly_day`, 기본 월요일)만 돈다(REQ-DAILY-005). 매뉴얼 누락 후보 점검은 자동으로 돌지 않고 사람이 요청할 때만 돈다(REQ-DAILY-006, REQ-QAINTEL-034).
 
 ### 4.2 결과를 알려 주는 곳
 
@@ -172,7 +172,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 수정 완료 이슈 분석 | 연구소 결과가 `FIXED` 로 바뀐 이슈의 원인·조치·Regression 범위를 검토하고 검증 TC 초안을 만든다 | 예 |
 | Spec 판정 이슈 분석 | "사양대로"·"결함 아님" 으로 판정된 이슈를 사양과 과거 이슈에 비춰 다시 본다 | 예 |
 | 새 댓글 분석 | 어제 없던 의미 있는 댓글만 읽어 QA 판단에 영향이 있는지 나눈다 | 예 |
-| 사양 변경 Coverage 분석 | 새로 생기거나 바뀐 사양(SRS)을 기존 TC·과거 이슈가 이미 다루는지 보고, 모자라면 TC 수정안이나 신규 TC 초안을 낸다 | 예 |
+| 사양 변경 분석 | 새로 생기거나 바뀐 사양(SRS)에서 무엇이 바뀌었고 QA 가 확인할 것이 있는지, 관련 과거 이슈가 있는지 짧게 정리한다. TC 와 맞춰 보는 TC 점검은 사람이 버튼을 누를 때만 돈다 | 예 |
 | 사양–TC 연결 점검 | TC 가 하나도 연결되지 않은 사양, 삭제된 사양을 가리키는 TC 를 찾는다(주 1회) | 아니오 |
 | 매뉴얼 누락 후보 점검 | 바뀐 사양이 사용자 매뉴얼에 반영되지 않았을 수 있는 곳을 찾는다 | 예 |
 
@@ -2990,7 +2990,8 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 - 서버가 평일 07:30(한국 시간)에 제품마다 한 번 스스로 돈다. 주말과 대한민국 공휴일에는 돌지 않는다. QA 담당자는 `/qa-agent` 대시보드의 [지금 실행]으로 같은 점검을 바로 돌릴 수도 있다.
 - Polarion 의 SRS 전체와 이슈 전체를 읽어 전날 스냅샷과 비교하고, 바뀐 것만 변경 이벤트로 남긴다. 담당자 PC 가 서버에 올린 TC Excel·매뉴얼·QA 규칙도 읽는다.
-- 변경 이벤트의 종류에 따라 다섯 가지 분석을 돌린다. 신규 이슈, 수정 완료 이슈, Spec 판정 이슈, 새 댓글, 사양 변경 Coverage 분석이다. AI 없이 계산하는 사양–TC 연결 점검과 매뉴얼 누락 후보 점검도 함께 돈다.
+- 변경 이벤트의 종류에 따라 다섯 가지 분석을 돌린다. 신규 이슈, 수정 완료 이슈, Spec 판정 이슈, 새 댓글, 사양 변경 분석이다. 자동 분석은 TC·매뉴얼을 보지 않는다. AI 없이 계산하는 사양–TC 연결 점검도 함께 돈다.
+- TC 점검, 검증 TC 초안, 매뉴얼 누락 후보 점검은 사람이 요청할 때만 돈다(REQ-QAINTEL-016·032·034).
 - 바뀐 것이 하나도 없으면 Claude 를 한 번도 부르지 않고 "변경사항 없음" 으로 끝난다.
 - 결과는 요약 메일과 `/qa-agent` 대시보드에서 본다. 모든 결과는 AI 초안이다. 화면에는 승인·거절 입력이 없고, Polarion 과 원본 TC·Checklist 에 옮기는 일은 사람이 직접 한다.
 
@@ -3041,7 +3042,7 @@ Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 �
 | 변경 이벤트 | 스냅샷 비교로 찾은 변경 하나다. 표 `qa_change_events` 에 한 줄로 저장한다(REQ-QAINTEL-005, REQ-QAINTEL-006) |
 | 분석 종류 | 변경 이벤트를 받아 돌리는 AI 분석이다. 신규 이슈(`NEW_ISSUE`), 수정 완료 이슈(`FIXED_ISSUE`), Spec 판정 이슈(`SPEC_DECISION`), 새 댓글(`COMMENT`), 사양 변경 Coverage(`SPEC_COVERAGE`)가 있다(REQ-QAINTEL-010) |
 | 사양–TC 연결 점검 | TC 가 없는 SRS 와 없어진 SRS 를 가리키는 TC 를 AI 없이 찾는 점검이다. 내부 키 `E`. 결과의 Skill 이름 칸에는 `qa-trace-gap` 이 저장된다(개편 전 기록은 `vxvue-trace-gap`) |
-| 매뉴얼 누락 후보 점검 | 최근 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 것을 고르는 점검이다. 내부 키 `F`, Skill `qa-manual-completeness`(개편 전 이름 `vxvue-manual-completeness`) |
+| 매뉴얼 누락 후보 점검 | 최근 바뀐 SRS 가운데 매뉴얼 반영이 빠졌을 수 있는 것을 고르는 점검이다. 사람이 요청할 때만 돈다. 내부 키 `F`, Skill `qa-manual-completeness`(개편 전 이름 `vxvue-manual-completeness`) |
 | 공통 규칙 Skill | 모든 제품의 무인 점검 Skill 이 먼저 읽는 규칙이다. `app/modules/daily_qa/skills/qa-common-rules/` 에 있다(REQ-DAILY-024) |
 | 제품 규칙 Skill | 한 제품에만 해당하는 규칙 절 번호와 검증 관문을 적은 Skill 이다. VXvue 는 `config/products/vxvue/skills/vxvue-qa-rules/` 에 있다 |
 | Legacy 번호 | SRS 의 옛 번호(`oldId`)로, `03-10-05` 모양이다. TC 파일은 이 번호를 쓰는 경우가 많다 |
@@ -3119,8 +3120,8 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 8. 스냅샷을 저장하고 전날 스냅샷과 비교해 변경 이벤트를 만들어 저장한다(REQ-QAINTEL-005, REQ-QAINTEL-006).
 9. AI 없이 계산하는 두 가지를 한다. 삭제된 SRS 를 가리키는 TC 찾기(매일, 13.4절)와 사양–TC 연결 점검(주 1회, REQ-DAILY-005)이다.
 10. 분석이 필요한 이벤트를 다섯 가지 분석으로 나눠 차례로 돌린다(REQ-QAINTEL-010). 실행당 작업 묶음 수 상한(NFR-DAILY-001) 안에서만 돈다.
-11. 매뉴얼 누락 후보 점검을 돌릴 차례면 돌린다(REQ-DAILY-006).
-12. 이번 실행의 검증 TC 초안과 Coverage 조치로 초안 Excel 을 만든다(REQ-QAINTEL-018).
+11. 매뉴얼 누락 후보 점검은 돌리지 않는다. 단계 `F` 를 `오늘은 대상 아님` 으로 남긴다(REQ-DAILY-006).
+12. 이번 실행에 초안이나 TC 점검 결과가 있으면 초안 Excel 을 만든다(REQ-QAINTEL-018). 자동 실행은 보통 만들지 않는다.
 13. 실행 결과를 정하고(REQ-DAILY-022) `audit.json` 을 쓰고 실행 기록을 마친다.
 14. 요약 메일을 보낸다(REQ-DAILY-008). 잠금 파일을 지운다.
 
@@ -3308,17 +3309,11 @@ REQ-QAINTEL-013 이 대신한다.
 
 내부 키 `F`, Skill `qa-manual-completeness`.
 
-**언제** 아래 가운데 하나일 때 돌 차례가 된다.
+**언제** 사람이 `scripts/run_daily_qa.py --on-demand manual-check` 를 실행할 때만 돈다(REQ-QAINTEL-034). 화면 버튼은 없다. 예약·[지금 실행]·주간 요일·매뉴얼이 바뀐 날에도 자동으로 돌지 않는다(사용자 결정 2026-10-02).
 
-- 설정한 요일(`daily_qa.weekly_day`)이거나 CLI `--weekly` 일 때
-- 지식 사본의 매뉴얼 텍스트가, 지난번 이 점검을 끝냈을 때와 달라졌을 때
-- 앞 실행이 이 점검을 미뤄 두었을 때(상태 값 `<slug>:manual_check_due`)
+이유: 매뉴얼은 사람이 넣는 자료라 최신이 아닐 수 있다. 자동으로 돌리면 옛 매뉴얼로 틀린 후보를 낸다.
 
-매뉴얼이 바뀌었는지는 지문으로 가린다. 매뉴얼 파일 이름과 내용으로 만든 지문(SHA-256)을 상태 값 `<slug>:manual_hash` 와 비교한다. 개편 전 키 `manual_hash` 도 읽는다.
-
-돌 차례여도 변경이 없는 실행(`NO_CHANGE`)에서는 돌리지 않는다. 미룸 표시(`<slug>:manual_check_due`)를 남기고, 다음 변경이 있는 실행에서 돌린다(REQ-QAINTEL-007). 점검이 `완료` 로 끝나면 미룸 표시를 지운다.
-
-이유: 변경이 없는 날에는 Claude 를 한 번도 부르지 않는다(NFR-QAINTEL-001).
+> **참고** 자동이던 때 쓰던 상태 값 `<slug>:manual_check_due`·`<slug>:manual_hash` 는 지우지 않고 더 읽지도 쓰지도 않는다.
 
 **입력**
 
@@ -3348,17 +3343,16 @@ REQ-QAINTEL-013 이 대신한다.
 **결과**
 
 - Finding(대상 = SRS 번호). 근거에 SRS 위치와 매뉴얼 위치(`파일명 / 절 번호 또는 제목`)를 함께 둔다. 매뉴얼 위치에 절 번호가 없으면 SRS 번호가 든 근거를 꼭 함께 둔다.
-- 단계가 `완료` 이고 dry-run 이 아니면 매뉴얼 지문을 저장한다.
+- 요청 실행의 결과를 남긴다. 자동 실행용 매뉴얼 지문과 미룸 표시는 갱신하지 않는다.
 - 사용하는 검증 관문: G1, G2, G7.
 
 **안 될 때**
 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
-| 지정 요일이 아니고 매뉴얼도 그대로 | 돌지 않는다 | `오늘은 대상 아님` "매주 <요일> 또는 매뉴얼이 바뀐 날에만 돕니다." |
-| 돌 차례인데 변경이 없는 실행 | 돌지 않고 미룸 표시를 남긴다 | `오늘은 대상 아님` "변경이 없는 실행이라 다음 변경이 있는 실행으로 미룹니다." |
+| 사람이 요청하지 않음 | 자동 실행에서 건너뛴다 | `오늘은 대상 아님` "매뉴얼 점검은 자동으로 돌지 않습니다." |
 | 지식 사본에 매뉴얼이 없거나 바뀐 SRS 가 없다 | 돌지 않는다 | `건너뜀` "입력이 없습니다" |
-| 단계가 `완료` 가 아님 | 매뉴얼 지문을 저장하지 않고 미룸 표시를 남긴다 | 다음 실행에서 다시 돌 차례로 본다 |
+| 사용량 한도 중 | AI 를 부르지 않는다 | 한도 표시를 보고 풀린 뒤 사람이 다시 요청한다 |
 
 ### REQ-DAILY-007 AI 결과 형식 검증
 
@@ -3461,7 +3455,7 @@ Finding 하나의 필드:
 
 HTML 본문도 같은 내용을 담는다. 단계는 표로, 점검별 건수는 목록으로 보인다. 판정별 건수는 넣지 않는다.
 
-- 단계 이름과 점검 이름은 화면과 같은 이름을 쓴다(사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 신규 이슈 분석, 수정 완료 이슈 분석, Spec 판정 이슈 분석, 새 댓글 분석, 사양 변경 Coverage 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검). 내부 키(`E` 등)는 보이지 않는다.
+- 단계 이름과 점검 이름은 화면과 같은 이름을 쓴다(사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 신규 이슈 분석, 수정 완료 이슈 분석, Spec 판정 이슈 분석, 새 댓글 분석, 사양 변경 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검). 내부 키(`E` 등)는 보이지 않는다.
 - 이미 보낸 옛 메일의 링크(`/daily-qa/runs/<실행 ID>`)는 새 주소로 넘어간다(REQ-QAINTEL-019).
 - Finding 건수는 이번 실행에서 새로 저장한 것만 센다. 중복이라 저장하지 않은 것은 세지 않는다.
 
@@ -3529,7 +3523,7 @@ REQ-QAINTEL-019 가 대신한다.
 **언제** 저장소 폴더에서 아래 명령을 쓴다.
 
 ```text
-python scripts/run_daily_qa.py [--product <제품>] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--dry-run] [--weekly] [--no-email] [--check]
+python scripts/run_daily_qa.py [--product <제품>] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--dry-run] [--weekly] [--on-demand tc-check|tc-draft|manual-check] [--finding <번호>] [--no-email] [--check]
 ```
 
 **입력**
@@ -3541,7 +3535,9 @@ python scripts/run_daily_qa.py [--product <제품>] [--since YYYY-MM-DD] [--unti
 | `--since`, `--until` | 기간을 정한 실행(REQ-QAINTEL-027) |
 | `--trigger` | 실행 기록에 남길 실행 방법(`scheduled`, `manual`, `manual_cli`, `catchup`). 예약·[지금 실행]이 넘긴다. 사람이 칠 때는 쓰지 않는다 |
 | `--dry-run` | Claude 를 부르지 않는 시험 실행(REQ-DAILY-013) |
-| `--weekly` | 오늘이 지정 요일이 아니어도 사양–TC 연결 점검과 매뉴얼 누락 후보 점검까지 돌린다 |
+| `--weekly` | 오늘이 지정 요일이 아니어도 사양–TC 연결 점검까지 돌린다 |
+| `--on-demand` | 사람이 요청한 한 가지만 돈다. `tc-check`(TC 점검, REQ-QAINTEL-016), `tc-draft`(검증 TC 초안, REQ-QAINTEL-032), `manual-check`(매뉴얼 누락 후보 점검, REQ-QAINTEL-034). 저장 스냅샷을 쓰고 메일을 보내지 않는다 |
+| `--finding` | `tc-check`·`tc-draft` 의 대상 분석 번호 |
 | `--no-email` | 요약 메일을 보내지 않는다. 메일 칸에 `disabled` 가 남는다 |
 | `--check` | 설정만 확인하고 끝낸다(REQ-DAILY-012). 다른 옵션은 무시한다 |
 
@@ -3763,6 +3759,8 @@ REQ-QAINTEL-019 가 대신한다.
 3. 신규 이슈·수정 완료 이슈·Spec 판정 이슈·새 댓글 분석과 매뉴얼 누락 후보 점검은 이 검사를 하지 않는다. 같은 변경을 두 번 분석하지 않는 것은 이벤트 저장(REQ-QAINTEL-006)이 맡는다.
 4. 시험 실행은 Finding 을 저장하지 않는다(REQ-DAILY-013).
 
+> **참고** 요청한 TC 점검·검증 TC 초안은 분석 종류와 원래 분석 번호도 구분한다. 과거 자동 분석 결과와는 별도로 저장하며 같은 버튼의 중복 결과는 저장하지 않는다.
+
 > **예시** 월요일 사양–TC 연결 점검이 `VP-12 TC 없음` 을 냈고 아직 검토 대기면, 다음 주 월요일에는 같은 Finding 을 새로 만들지 않는다. 사람이 거절했다면 다음 주에 다시 만든다.
 
 **결과** 저장하지 않은 중복 Finding 은 메일 건수와 단계의 "새로 저장한 수" 에 들어가지 않는다.
@@ -3903,7 +3901,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 | `FIXED_ISSUE` | 수정 완료 이슈 분석 |
 | `SPEC_DECISION` | Spec 판정 이슈 분석 |
 | `COMMENT` | 새 댓글 분석 |
-| `SPEC_COVERAGE` | 사양 변경 Coverage 분석 |
+| `SPEC_COVERAGE` | 사양 변경 분석 |
 | `E` | 사양–TC 연결 점검 |
 | `F` | 매뉴얼 누락 후보 점검 |
 | `B`, `C` | 사양 변경 영향 검토, 이슈 수정확인 초안(개편 전 실행 기록에만 있다) |
@@ -3915,7 +3913,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 | `failed` | 실패 | 실패했다 |
 | `skipped` | 건너뜀 | 설정이 없거나 입력이 없어 돌지 않았다 |
 | `rules` | 규칙 판 불일치 | REQ-DAILY-010 |
-| `not_due` | 오늘은 대상 아님 | 주 1회 점검의 지정 요일이 아니거나, 변경이 없는 실행이라 매뉴얼 누락 후보 점검을 미뤘다(REQ-DAILY-006) |
+| `not_due` | 오늘은 대상 아님 | 주 1회 점검의 지정 요일이 아니거나, 사람이 요청할 때만 도는 매뉴얼 누락 후보 점검이다(REQ-DAILY-006) |
 | `limit` | Claude 사용량 한도 | 사용량 한도·인증 실패로 AI 분석을 멈췄다. 이벤트는 대기로 남는다(REQ-QAINTEL-025) |
 
 단계마다 비고 한 줄과 건수(있을 때)를 저장한다.
@@ -3961,7 +3959,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 |---|---|
 | `CLAUDE.md` | 사람 없이 도는 실행의 규칙 |
 | `.claude/settings.json` | 도구 허용 범위 |
-| `.claude/skills/<Skill>/` | 공통 Skill 여덟 개(`qa-common-rules`, 다섯 가지 분석 Skill, `qa-manual-completeness`, `qa-trace-gap`)와 제품 규칙 Skill(VXvue 는 `vxvue-qa-rules`) 사본 |
+| `.claude/skills/<Skill>/` | 공통 Skill 열한 개(`qa-common-rules`, 자동 분석 Skill 다섯 개와 현재 상태 점검 `qa-issue-spec-audit`, 요청 실행 Skill `qa-spec-coverage-analysis`·`qa-verification-tc-draft`, `qa-manual-completeness`, `qa-trace-gap`)와 제품 규칙 Skill(VXvue 는 `vxvue-qa-rules`) 사본 |
 | `rules/qa-guide.md`, `rules/instruction-prompt.txt` | QA 규칙 사본(마스킹) |
 | `runs/<실행 ID>/in/` | 작업 입력(마스킹) |
 | `runs/<실행 ID>/context/` | 전체 SRS·TC 색인·매뉴얼(마스킹) |
@@ -4086,7 +4084,7 @@ REQ-QAINTEL-019 가 대신한다.
 
 **순서**
 
-1. 실행당 AI 작업 묶음 수 상한(`max_tasks_per_run`)을 다섯 가지 분석(신규 이슈 → 수정 완료 이슈 → Spec 판정 이슈 → 새 댓글 → 사양 변경 Coverage, REQ-QAINTEL-010)과 매뉴얼 누락 후보 점검 차례로 나눠 쓴다.
+1. 실행당 AI 작업 묶음 수 상한(`max_tasks_per_run`)을 다섯 가지 분석(신규 이슈 → 수정 완료 이슈 → Spec 판정 이슈 → 새 댓글 → 사양 변경, REQ-QAINTEL-010) 차례로 나눠 쓴다. 요청 실행(TC 점검·검증 TC 초안·매뉴얼 점검)도 같은 상한을 지킨다.
 2. 남은 상한을 넘는 묶음은 돌리지 않고, 단계 비고에 "상한 초과로 N개 묶음 다음 실행으로 미룸" 을 적는다.
    - 미룬 묶음의 변경 이벤트는 `pending` 으로 남아 다음 실행의 분석 대상에 다시 오른다(REQ-QAINTEL-006).
    - 규칙 판 불일치·토큰 없음·사용량 한도로 돌지 않은 날의 이벤트도 같다.
@@ -5918,7 +5916,9 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 1. 잠금 파일(`data/spec_sync.lock`)이 있으면 "이미 실행 중인 것으로 보입니다" 를 찍고 종료 코드 1 로 끝낸다. 없으면 잠금 파일을 만든다.
 2. output 폴더에서 이름이 `YYYY-MM-DD` 인 폴더 가운데 가장 늦은 날짜를 고른다.
 3. 그 폴더의 `pdf/` 에서 패턴에 맞는 PDF 를 모은다(이름이 겹치면 하나로).
-4. 상태 파일(`data/spec_sync_state.json`)에 적힌 파일별 크기·수정 시각과 비교해 바뀐 파일만 고른다. 바뀐 것이 없으면 "변경 없음 (미변경 N건, 날짜 …)"으로 끝난다.
+4. 상태 파일(`data/spec_sync_state.json`)에서 올릴 서버 주소별로 저장한 파일 크기·수정 시각과 비교한다. 그 서버에 올린 기록이 없거나 파일이 바뀌면 등록한다. 주소 끝의 `/` 는 같은 주소로 본다. 바뀐 것이 없으면 "변경 없음 (미변경 N건, 날짜 …)"으로 끝난다.
+
+   > **참고** 서버 구분이 없던 옛 상태 값은 보존한다. 대상별 기록이 없는 첫 실행에서는 한 번 다시 등록한다.
 5. 바뀐 파일마다 차례로 다음을 한다.
    1. 원본을 `data/specifications/vxvue/original/<날짜>/` 에 복사한다.
    2. 텍스트를 뽑아 `normalized/<날짜>/<이름>.md` 로 쓴다.
@@ -8657,13 +8657,15 @@ REQ-DEPLOY-002, 003, 004 는 자동 테스트가 없다(nginx 포트 대조만 T
 
 REQ-SYNC-001을 `tests/test_vxvue_spec_sync.py` 로 검증한다. 이름에서 끝의 날짜만 빼는지, 날짜 없는 이름은 그대로인지, 올린 문서와 날짜만 다른 옛 리비전만 지우고 이름이 다른 문서는 지우지 않는지 본다.
 
+같은 파일을 다른 대상 주소에도 올리는지, 같은 주소의 끝 `/`만 달라지면 다시 올리지 않는지, 기존 파일별 기록을 유지하는지도 확인한다.
+
 ```text
 python -m pytest tests/test_vxvue_spec_sync.py -q
 ```
 
 `PARTIAL` 의 종료 코드 1 은 `tests/test_sync_vxvue_spec_cli.py::test_spec_sync_exit_code` 가 본다.
 
-> **참고** 최신 날짜 폴더 고르기, 바뀐 파일만 고르기, 잠금 파일은 자동 테스트가 없다. 담당자 PC 에서 `--dry-run` 으로 "변경 N건 감지"를 확인하고, 작업 스케줄러의 마지막 결과가 0 인지 본다.
+> **참고** 최신 날짜 폴더 고르기와 잠금 파일은 자동 테스트가 없다. 담당자 PC 에서 `--dry-run` 으로 "변경 N건 감지"를 확인하고, 작업 스케줄러의 마지막 결과가 0 인지 본다.
 
 ### TEST-SYNC-002
 
@@ -9079,7 +9081,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-003 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | deprecated |
 | REQ-DAILY-004 | `app/modules/daily_qa/schema.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | deprecated |
 | REQ-DAILY-005 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
-| REQ-DAILY-006 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/qa-manual-completeness/SKILL.md` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | implemented |
+| REQ-DAILY-006 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/qa-manual-completeness/SKILL.md` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | implemented |
 | REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
 | REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |

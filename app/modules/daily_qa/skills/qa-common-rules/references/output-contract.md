@@ -47,7 +47,8 @@
   - `tc`: `location` 에 입력 TC 의 `location`(`파일 / 시트 / N행`) 또는 `tc_id`.
   - `issue`: `location` 에 이슈 번호. `comment`: `ref` 에 입력 댓글의 `id`.
   - `rules`: `location` 에 규칙 절(`§61`).
-- `action`: 사람이 할 다음 조치 한 문장. 이슈 종료·Close, TC 덮어쓰기, 결과·이력 삭제는 쓰지 않는다(쓰면 버려진다).
+- `summary`: 결론부터 한두 문장. 카드에 그대로 보인다.
+- `action`: QA 할 일. 줄바꿈으로 3줄까지(카드에 3줄까지 보인다). 이슈 종료·Close, TC 덮어쓰기, 결과·이력 삭제는 쓰지 않는다(쓰면 버려진다).
 - 판정할 것이 없으면 `findings: []`. 빈 결과도 올바른 결과다.
 
 ## Skill 별 판정 값
@@ -58,7 +59,9 @@
 | qa-fixed-issue-analysis | CONSISTENT_WITH_SPEC / PARTIALLY_CONSISTENT / CONTRADICTS_SPEC / SPEC_UNDEFINED / INSUFFICIENT_EVIDENCE |
 | qa-spec-decision-analysis | SUPPORTED_BY_SPEC / PARTIALLY_SUPPORTED / SPEC_AMBIGUOUS / SPEC_NOT_FOUND / CONTRADICTS_SPEC |
 | qa-comment-analysis | 첫 의미 있는 댓글의 분류 (아래 comments 표) |
-| qa-spec-coverage-analysis | FULLY_COVERED / PARTIALLY_COVERED / NOT_COVERED / SPEC_REVIEW_REQUIRED |
+| qa-spec-change-summary | NO_QA_IMPACT / QA_CHECK_NEEDED / CONFLICTS_WITH_PAST_DECISION / SPEC_UNCLEAR |
+| qa-spec-coverage-analysis (요청) | FULLY_COVERED / PARTIALLY_COVERED / NOT_COVERED / SPEC_REVIEW_REQUIRED |
+| qa-verification-tc-draft (요청) | CONSISTENT_WITH_SPEC / PARTIALLY_CONSISTENT / CONTRADICTS_SPEC / SPEC_UNDEFINED / INSUFFICIENT_EVIDENCE |
 | qa-manual-completeness | 보강 권장 / 타 문서 위임 적절 / 유지 / 사양 확인 필요 |
 
 ## `sections` (분석 Skill)
@@ -74,23 +77,25 @@
 | fixed | `root_cause_review`, `resolution_review` | `{summary, assessment}` |
 | fixed | `change_scope` | `{summary}` |
 | fixed | `regression_risk` | `{axes: [{axis, applicable: true/false, reason}]}` — 축 이름은 입력 `regression_axes` 만 |
-| fixed | `tc_coverage` | `[{tc_id, location, covers: true/false, reason}]` |
+| tc-draft (요청) | `tc_coverage` | `[{tc_id, location, covers: true/false, reason}]` |
 | spec-decision | `rd_claim`, `qa_analysis` | `{summary}`, `{summary, checks: [..]}` |
 | comment | `comments` | `[{comment_id, summary, classification, impact, follow_up}]` |
-| coverage | `change` | `{summary, changed_requirements: [..]}` |
+| spec-change-summary, coverage | `change` | `{summary, changed_requirements: [..]}` — 요구사항 5개까지 |
+| spec-change-summary | `related_issues` | `[{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]` — 5개까지 |
 | coverage | `issue_coverage` | `{has_related, issues: [{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]}` |
 | coverage | `checklist_coverage` | `{tcs: [{tc_id, location, decision: KEEP/UPDATE_EXISTING, reason, recommended_change}]}` |
 | coverage | `gaps` | `[{perspective, description}]` |
 | coverage | `alerts` | `[{type: ISSUE_WITHOUT_TC/TC_EXPECTED_OUTDATED/FIXED_ISSUE_WITHOUT_REGRESSION_TC/SPEC_ISSUE_BEHAVIOR_CHANGED, detail}]` |
-| fixed, coverage | `tc_hold` | `{reason, questions: [..]}` — 초안을 만들지 않은 이유 |
+| tc-draft, coverage (요청) | `tc_hold` | `{reason, questions: [..]}` — 초안을 만들지 않은 이유 |
 
 댓글 분류: ROOT_CAUSE_INFORMATION / RESOLUTION_INFORMATION / REPRODUCTION_INFORMATION / SPEC_CLAIM /
 REQUIREMENT_INFORMATION / QA_ACTION_REQUIRED / OTHER_SIGNIFICANT_INFORMATION / NOT_SIGNIFICANT.
 
 ## `draft_tcs`
 
-qa-fixed-issue-analysis(연구소 결과 `FIXED` 인 이슈)와 qa-spec-coverage-analysis(`PARTIALLY_COVERED`·`NOT_COVERED`)만 쓴다.
-다른 Skill 이 쓰면 Finding 이 버려진다. 사양 근거가 부족한 판정이면 코드가 초안을 뺀다.
+사람이 버튼으로 요청한 qa-verification-tc-draft(연구소 결과 `FIXED` 인 이슈)와 qa-spec-coverage-analysis
+(`PARTIALLY_COVERED`·`NOT_COVERED`)만 쓴다. 자동 실행 Skill 이 쓰면 코드가 초안을 뺀다. 사양 근거가 부족한
+판정이면 코드가 초안을 뺀다.
 
 ```json
 {"kind": "수정확인", "perspective": "DIRECT_FIX", "srs_no": "VP-2345", "change": "검색 날짜 조건",

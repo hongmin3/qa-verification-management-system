@@ -271,17 +271,18 @@ def test_fixed_analysis_uses_snapshot_comments_when_live_read_fails(tmp_path):
     assert "캐시 초기화 누락으로 보입니다" in json.dumps(fixed, ensure_ascii=False)
 
 
-def test_manual_check_shares_the_remaining_task_budget(tmp_path):
-    h = _harness(tmp_path, max_tasks_per_run=1)
+def test_requested_manual_check_respects_the_task_limit(tmp_path):
+    """요청한 매뉴얼 점검도 실행당 작업 상한(`max_tasks_per_run`)을 넘지 않는다 (REQ-QAINTEL-034, NFR-DAILY-001)."""
+    h = _harness(tmp_path, max_tasks_per_run=1, batch_size=1)
     h.inputs.manuals = {"User Manual.txt": "검색 화면 설명"}
     h.run(DAY1)
-    h.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-11"], review="", status="open"))
+    h.srs[0] = srs_item("VP-10", "01-01", "목록 화면")
     h.srs[1] = srs_item("VP-11", "01-02", "검색 화면")
-    outcome = h.run(DAY2, force_weekly=True)
-    called = h.skills_called()
-    assert len(called) == 1                                               # 상한 1 을 분석이 다 썼다
-    assert outcome["stages"]["F"]["status"] == "not_due" and "상한" in outcome["stages"]["F"]["note"]
-    assert h.store.get_state(h.cfg.state_key("manual_check_due")) == "1"  # 다음 실행으로 미룬다
+    h.run(DAY2)
+    h.calls.clear()
+    outcome = h.run(DAY2.replace(hour=12), on_demand="manual-check")
+    assert h.skills_called() == ["qa-manual-completeness"]                 # 묶음 2개 중 1개만
+    assert "상한 초과로 1개 묶음" in outcome["stages"]["F"]["note"]
 
 
 @pytest.mark.parametrize("text", ["API Error: 401 {\"type\":\"authentication_error\"}", "401 Unauthorized",

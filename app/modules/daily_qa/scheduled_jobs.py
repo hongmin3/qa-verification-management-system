@@ -53,7 +53,8 @@ def schedule_settings(settings=None) -> dict:
 
 
 def launch_detached(product: str | None = None, *, trigger: str = "scheduled", today: datetime | None = None,
-                    popen=subprocess.Popen, since: str = "", until: str = "", issue_audit: bool = False) -> dict:
+                    popen=subprocess.Popen, since: str = "", until: str = "", issue_audit: bool = False,
+                    on_demand: str = "", finding_id: int | None = None) -> dict:
     """점검 프로세스를 띄우고 바로 돌아온다. 돌려주는 `status` 로 화면·로그가 이유를 안다.
 
     `holiday`·`running`·`disabled`·`not_configured` 이면 띄우지 않았다.
@@ -64,8 +65,8 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
     if not cfg.enabled:
         logger.info("qa_agent_skipped reason=disabled product=%s", cfg.slug)
         return {"status": "disabled", "product": cfg.slug}
-    # 종료일이 지난 날인 기간 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
-    if not cfg.polarion.configured and not until:
+    # 종료일이 지난 날인 기간 실행과 버튼 요청 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
+    if not cfg.polarion.configured and not until and not on_demand:
         logger.info("qa_agent_skipped reason=polarion_설정_없음 product=%s", cfg.slug)
         return {"status": "not_configured", "product": cfg.slug}
     if trigger == "scheduled":
@@ -96,6 +97,10 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         command += ["--until", until]
     if issue_audit:
         command += ["--issue-audit"]
+    if on_demand:
+        command += ["--on-demand", on_demand, "--no-email"]
+        if finding_id is not None:
+            command += ["--finding", str(finding_id)]
     with (log_dir / "daily_qa.out").open("a", encoding="utf-8") as log:
         process = popen(command, stdout=log, stderr=subprocess.STDOUT, **options)
     logger.info("daily_qa_launched pid=%s product=%s trigger=%s", process.pid, cfg.slug, trigger)

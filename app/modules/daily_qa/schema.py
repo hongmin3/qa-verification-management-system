@@ -29,6 +29,10 @@ SKILL_E = "qa-trace-gap"
 SKILL_F = "qa-manual-completeness"
 SKILL_COVERAGE = "qa-spec-coverage-analysis"
 SKILL_ISSUE_AUDIT = "qa-issue-spec-audit"
+#: 자동 실행의 사양 변경 분석. TC·매뉴얼을 보지 않는다 (REQ-QAINTEL-031).
+SKILL_SPEC_SUMMARY = "qa-spec-change-summary"
+#: 요청할 때만 도는 검증 TC 초안 (REQ-QAINTEL-032).
+SKILL_TC_DRAFT = "qa-verification-tc-draft"
 
 SKILL_LABELS = {
     SKILL_B: "사양 변경 영향 검토",
@@ -41,7 +45,9 @@ SKILL_LABELS = {
     "qa-fixed-issue-analysis": "수정 완료 이슈 분석",
     "qa-spec-decision-analysis": "Spec 판정 이슈 분석",
     "qa-comment-analysis": "새 댓글 분석",
-    SKILL_COVERAGE: "사양 변경 Coverage 분석",
+    SKILL_COVERAGE: "TC 점검(요청)",
+    SKILL_SPEC_SUMMARY: "사양 변경 분석",
+    SKILL_TC_DRAFT: "검증 TC 초안(요청)",
     SKILL_ISSUE_AUDIT: "이슈 정합성 점검(현재 상태 기준)",
 }
 
@@ -66,12 +72,14 @@ VERDICTS: dict[str, tuple[str, ...]] = {
                             "REQUIREMENT_INFORMATION", "QA_ACTION_REQUIRED", "OTHER_SIGNIFICANT_INFORMATION", "NOT_SIGNIFICANT"),
     SKILL_COVERAGE: ("FULLY_COVERED", "PARTIALLY_COVERED", "NOT_COVERED", "SPEC_REVIEW_REQUIRED"),
     SKILL_ISSUE_AUDIT: ("CONSISTENT_WITH_SPEC", "PARTIALLY_CONSISTENT", "CONTRADICTS_SPEC", "INSUFFICIENT_EVIDENCE"),
+    SKILL_SPEC_SUMMARY: ("NO_QA_IMPACT", "QA_CHECK_NEEDED", "CONFLICTS_WITH_PAST_DECISION", "SPEC_UNCLEAR"),
+    SKILL_TC_DRAFT: ("CONSISTENT_WITH_SPEC", "PARTIALLY_CONSISTENT", "CONTRADICTS_SPEC", "SPEC_UNDEFINED", "INSUFFICIENT_EVIDENCE"),
 }
 
 #: 새 분석 Skill. 결과 검증은 `evidence_validation.py` 가 한다 (REQ-QAINTEL-017).
 ANALYSIS_SKILL_NAMES = frozenset(
     {"qa-new-issue-analysis", "qa-fixed-issue-analysis", "qa-spec-decision-analysis", "qa-comment-analysis", SKILL_COVERAGE,
-     SKILL_ISSUE_AUDIT}
+     SKILL_ISSUE_AUDIT, SKILL_SPEC_SUMMARY, SKILL_TC_DRAFT}
 )
 
 ISSUE_TYPES = (

@@ -4,7 +4,9 @@
 파이프라인 전체 경로(사양서 로더 실패, 댓글 거르기, Regression 축, spec_doc 근거)는 `Harness` 로 돌려
 가짜 Claude 가 받은 작업 입력(`h.payloads`)을 읽는다.
 
-Validates: REQ-QAINTEL-011, REQ-QAINTEL-012, REQ-QAINTEL-013, REQ-QAINTEL-014, REQ-QAINTEL-015
+TC 후보는 사람이 버튼으로 요청한 실행(`with_tc=True`)에만 들어간다 (REQ-QAINTEL-031·032).
+
+Validates: REQ-QAINTEL-011, REQ-QAINTEL-012, REQ-QAINTEL-013, REQ-QAINTEL-014, REQ-QAINTEL-015, REQ-QAINTEL-032
 """
 
 from __future__ import annotations
@@ -62,9 +64,9 @@ def target(kind: str, entity_id: str, events=None) -> AnalysisTarget:
     return AnalysisTarget(kind, entity_id, [event.get("id") for event in events], events)
 
 
-def item_for(kind, entity_id, corpus, cfg, events=None, comments_loader=None):
+def item_for(kind, entity_id, corpus, cfg, events=None, comments_loader=None, with_tc=False):
     known = corpus.known()
-    item = build_item(target(kind, entity_id, events), corpus, known, cfg, comments_loader=comments_loader)
+    item = build_item(target(kind, entity_id, events), corpus, known, cfg, comments_loader=comments_loader, with_tc=with_tc)
     return item, known
 
 
@@ -91,18 +93,21 @@ def test_srs_spec_doc_and_tc_candidates_never_exceed_their_limits(tmp_path, pool
     corpus = corpus_of([mk_issue("VP-900", rd="FIXED", linked=("VP-10",))],
                        srs=[mk_srs(f"VP-{10 + number}") for number in range(pool)],
                        tcs=[mk_tc(number) for number in range(pool)], chunks=[mk_chunk(number) for number in range(pool)])
-    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}])
+    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}],
+                       with_tc=True)
     candidates = item["candidates"]
     assert 0 < len(candidates["srs"]) <= min(pool, limit)
     assert 0 < len(candidates["spec_docs"]) <= min(pool, limit)
     assert len(candidates["tcs"]) == min(pool, limit)
 
 
-def test_new_issue_tc_candidates_are_capped_at_eight_even_if_setting_is_larger(tmp_path):
+@pytest.mark.parametrize("with_tc", [False, True])
+def test_new_issue_input_never_carries_tc_candidates(tmp_path, with_tc):
+    """신규 이슈 분석은 TC 를 보지 않는다. 요청 실행도 없다 (REQ-QAINTEL-012 입력)."""
     cfg = cfg_with(tmp_path, tc_limit=15)
     corpus = corpus_of([mk_issue("VP-900")], tcs=[mk_tc(number) for number in range(12)])
-    item, _ = item_for(NEW_ISSUE, "VP-900", corpus, cfg)
-    assert len(item["candidates"]["tcs"]) == 8
+    item, _ = item_for(NEW_ISSUE, "VP-900", corpus, cfg, with_tc=with_tc)
+    assert "tcs" not in item["candidates"]
 
 
 def test_zero_spec_doc_limit_sends_no_spec_doc(tmp_path):
@@ -137,7 +142,7 @@ def test_other_issue_that_mentions_target_number_is_still_a_candidate(tmp_path):
 def test_only_target_in_pool_gives_empty_candidates_without_error(tmp_path):
     cfg = cfg_with(tmp_path)
     item, _ = item_for(NEW_ISSUE, "VP-900", corpus_of([mk_issue("VP-900")]), cfg)
-    assert item["candidates"] == {"issues": [], "srs": [], "spec_docs": [], "tcs": []}
+    assert item["candidates"] == {"issues": [], "srs": [], "spec_docs": []}
 
 
 def test_target_missing_from_today_snapshot_returns_none(tmp_path):
@@ -194,7 +199,8 @@ def test_every_candidate_carries_a_match_reason(tmp_path):
     corpus = corpus_of([me, mk_issue("VP-101"), mk_issue("VP-102", title="VP-10 관련 표시")],
                        srs=[mk_srs("VP-10", old_id="01-02-03"), mk_srs("VP-11", title="검색")],
                        tcs=[mk_tc(1), mk_tc(2, srs_ref="VP-11")], chunks=[mk_chunk(1), mk_chunk(2, "로그인 화면")])
-    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}])
+    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}],
+                       with_tc=True)
     for group in ("issues", "srs", "spec_docs", "tcs"):
         entries = item["candidates"][group]
         assert entries, group
@@ -260,9 +266,8 @@ def test_new_issue_and_spec_decision_inputs_have_no_regression_axes(tmp_path):
     new_item, _ = item_for(NEW_ISSUE, "VP-900", corpus, cfg)
     spec_item, _ = item_for(SPEC_DECISION, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}])
     assert "regression_axes" not in new_item and "regression_axes" not in spec_item
-    # Spec 판정 분석은 TC 초안을 만들지 않으므로 TC 후보도 보내지 않는다 (REQ-QAINTEL-014 입력).
-    assert "tcs" not in spec_item["candidates"]
-    assert "tcs" in new_item["candidates"]
+    # 자동 분석은 TC 후보를 보내지 않는다 (REQ-QAINTEL-012·014 입력).
+    assert "tcs" not in spec_item["candidates"] and "tcs" not in new_item["candidates"]
 
 
 def test_fixed_and_spec_decision_inputs_include_loaded_comments_and_register_their_ids(tmp_path):
@@ -285,10 +290,19 @@ def test_fixed_and_spec_decision_inputs_include_loaded_comments_and_register_the
     assert calls == ["VP-900", "VP-900"]
 
 
+def test_fixed_issue_auto_input_has_no_tc_candidates(tmp_path):
+    """자동 실행의 수정 완료 이슈 분석은 TC 를 보지 않는다 (REQ-QAINTEL-013)."""
+    cfg = cfg_with(tmp_path)
+    corpus = corpus_of([mk_issue("VP-900", rd="FIXED", linked=("VP-10",))], srs=[mk_srs("VP-10")], tcs=[mk_tc(1), mk_tc(2)])
+    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}])
+    assert "tcs" not in item["candidates"] and item["regression_axes"]
+
+
 def test_fixed_issue_without_linked_srs_still_gets_search_based_tc_candidates(tmp_path):
     cfg = cfg_with(tmp_path)
     corpus = corpus_of([mk_issue("VP-900", rd="FIXED", linked=("VP-77",))], srs=[mk_srs("VP-10")], tcs=[mk_tc(1), mk_tc(2)])
-    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}])
+    item, _ = item_for(FIXED_ISSUE, "VP-900", corpus, cfg, events=[{"id": 1, "event_type": "ISSUE_RD_RESULT_CHANGED"}],
+                       with_tc=True)
     tcs = item["candidates"]["tcs"]
     assert len(tcs) == 2
     assert all(entry["match"].startswith("같은 기능(검색)") for entry in tcs)

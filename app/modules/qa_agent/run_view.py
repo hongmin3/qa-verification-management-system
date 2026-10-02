@@ -146,7 +146,9 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     if dry_run:
         parts.append("시험 실행이라 저장·AI 분석·메일은 하지 않았습니다.")
     elif summary.get("claude_limit"):
-        parts.append("Claude 사용량 한도에 걸려 남은 분석은 대기로 남겼고, 한도가 풀리면 이어서 합니다.")
+        parts.append("Claude 사용량 한도에 걸려 요청 점검을 수행하지 못했습니다. 한도가 풀린 뒤 다시 요청하세요."
+                     if "on_demand" in stages else
+                     "Claude 사용량 한도에 걸려 남은 분석은 대기로 남겼고, 한도가 풀리면 이어서 합니다.")
     elif cards:
         parts.append(f"분석 결과 {len(cards)}건을 만들었습니다.")
     headline = " ".join(part for part in parts if part)
@@ -171,7 +173,7 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     return {
         "headline": headline, "tiles": tiles, "flow": flow, "stages": rows, "downloads": downloads,
         "mail": MAIL_LABELS.get(run.get("email_status") or "", run.get("email_status") or "-"),
-        "trigger": TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
+        "trigger": "요청 점검" if "on_demand" in stages else TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
         "dry_run": dry_run,
         "audit": audit_box,
         "audit_remaining": summary.get("issue_audit_remaining"),

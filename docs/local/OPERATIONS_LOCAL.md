@@ -56,11 +56,8 @@ Docker Compose 로 도는 설치본은 컨테이너 안 포트만 바뀌므로 �
 ## 재기동 절차
 
 ```bash
-# 핵심 앱
-OLD_PID=$(ss -ltnp 'sport = :24357' | grep -oP 'pid=\K[0-9]+')
-kill "$OLD_PID"
-cd /home/ubuntu/ai-regression-impact-analyzer && nohup .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 24357 \
-  > output/logs/uvicorn.out 2>&1 & disown
+# 핵심 앱 (systemd qa-verification.service, ExecStart=.venv/bin/python -m app.serve — 2026-10-02 확인)
+sudo systemctl restart qa-verification
 
 # Manual Hub
 sudo systemctl restart qa-manual-hub

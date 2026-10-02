@@ -9,7 +9,10 @@
     python scripts/run_daily_qa.py --since 2026-09-25 --until 2026-09-30   # 기간의 변경을 분석한다 (REQ-QAINTEL-027)
     python scripts/run_daily_qa.py --issue-audit --since 2026-08-31 --until 2026-09-22   # 이슈 기록 없는 기간의 현재 상태 점검 (REQ-QAINTEL-030)
     python scripts/run_daily_qa.py --dry-run       # Claude 를 부르지 않고 입력 묶음과 결정적 계산만 (스냅샷·Finding 은 저장하지 않는다)
-    python scripts/run_daily_qa.py --weekly        # 오늘이 지정 요일이 아니어도 주 1회 단계(사양–TC 연결 점검, 매뉴얼 누락 후보 점검)까지 돌린다
+    python scripts/run_daily_qa.py --weekly        # 오늘이 지정 요일이 아니어도 주 1회 사양–TC 연결 점검까지 돌린다
+    python scripts/run_daily_qa.py --on-demand tc-check --finding 301   # 사양 변경 분석 하나의 TC 점검 (REQ-QAINTEL-016)
+    python scripts/run_daily_qa.py --on-demand tc-draft --finding 302   # 수정 완료 이슈 하나의 검증 TC 초안 (REQ-QAINTEL-032)
+    python scripts/run_daily_qa.py --on-demand manual-check             # 최근 7일 사양 변경의 매뉴얼 점검 (REQ-QAINTEL-034)
     python scripts/run_daily_qa.py --no-email      # 메일을 보내지 않는다
     python scripts/run_daily_qa.py --check         # 설정·자격증명·작업 폴더만 확인하고 끝낸다
 
@@ -31,7 +34,7 @@ from app.core.console import configure_stdout  # noqa: E402
 configure_stdout()
 
 from app.modules.daily_qa import rules  # noqa: E402
-from app.modules.daily_qa.pipeline import RunLocked, active_limit, run_daily  # noqa: E402
+from app.modules.daily_qa.pipeline import ON_DEMAND_KINDS, RunLocked, active_limit, run_daily  # noqa: E402
 from app.modules.daily_qa.store import DailyQaStore  # noqa: E402
 from app.modules.daily_qa.settings import load  # noqa: E402
 from app.modules.daily_qa.workspace import WorkspaceError, validate_location  # noqa: E402
@@ -78,7 +81,10 @@ def main() -> int:
     parser.add_argument("--until", type=date.fromisoformat, default=None, help="기간 분석 종료일 YYYY-MM-DD (비우면 오늘, 새로 수집)")
     parser.add_argument("--issue-audit", action="store_true", help="이슈 기록이 없는 기간을 현재 이슈 상태 기준으로 점검한다")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--weekly", action="store_true", help="E·F 를 오늘 강제로 돌린다")
+    parser.add_argument("--weekly", action="store_true", help="사양–TC 연결 점검(E)을 오늘 강제로 돌린다")
+    parser.add_argument("--on-demand", default="", choices=("", *ON_DEMAND_KINDS),
+                        help="사람이 요청한 한 가지만 돈다: TC 점검, 검증 TC 초안, 매뉴얼 점검")
+    parser.add_argument("--finding", type=int, default=None, help="--on-demand tc-check/tc-draft 의 대상 분석 번호")
     parser.add_argument("--no-email", action="store_true")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
@@ -97,7 +103,8 @@ def main() -> int:
     sender = (lambda *_: {"status": "disabled"}) if args.no_email else None
     try:
         outcome = run_daily(cfg, dry_run=args.dry_run, force_weekly=args.weekly, send_email=sender, trigger=args.trigger,
-                            since=args.since, until=args.until, issue_audit=args.issue_audit)
+                            since=args.since, until=args.until, issue_audit=args.issue_audit,
+                            on_demand=args.on_demand, finding_id=args.finding)
     except RunLocked as exc:
         print(str(exc))
         return 3

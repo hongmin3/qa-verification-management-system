@@ -345,25 +345,23 @@ def test_legacy_spec_change_pending_becomes_pending_srs_events(tmp_path):
     assert {event["analysis_status"] for event in h.events(outcome["run_id"])} == {"done"}
 
 
-# -- 10. NO_CHANGE 날은 매뉴얼 누락 후보 점검을 미룬다 (REQ-QAINTEL-007 3번, REQ-DAILY-006) -----
+# -- 10. 매뉴얼 누락 후보 점검은 사람이 요청할 때만 돈다 (REQ-QAINTEL-034, REQ-DAILY-006) -----
 
 
-def test_no_change_day_defers_manual_check_to_next_change_run(tmp_path):
+def test_manual_check_never_runs_automatically_only_on_request(tmp_path):
     workbook = make_tc_workbook(tmp_path / "(TC) VXvue_TestCase.xlsx", [("TC_1", "VP-10", "목록 표시")])
     h = harness(tmp_path, tc_paths=[workbook], manuals={"VXvue_Manual.txt": "목록 화면 설명"})
     h.run(DAY1)
     quiet = h.run(DAY2)
-    assert quiet["status"] == "NO_CHANGE"
-    assert quiet["stages"]["F"]["status"] == "not_due" and "미룹니다" in quiet["stages"]["F"]["note"]
-    assert h.store.get_state("vxvue:manual_check_due") == "1"
-    assert h.calls == []
+    assert quiet["status"] == "NO_CHANGE" and quiet["stages"]["F"]["status"] == "not_due"
+    assert h.store.get_state("vxvue:manual_check_due") == "" and h.calls == []
 
     h.srs[0] = srs_item("VP-10", "01-01", "목록", text="표시 항목은 4개다.")
-    changed = h.run(DAY3)
-    assert "qa-manual-completeness" in h.skills_called()
-    assert changed["stages"]["F"]["status"] == "ok"
-    assert h.store.get_state("vxvue:manual_check_due") == ""
-    assert h.store.get_state("vxvue:manual_hash")
+    changed = h.run(DAY3, force_weekly=True)                 # 변경 + 주간 요일이어도 자동으로는 돌지 않는다
+    assert "qa-manual-completeness" not in h.skills_called()
+    assert changed["stages"]["F"]["status"] == "not_due" and "요청할 때만" in changed["stages"]["F"]["note"]
+    requested = h.run(DAY3.replace(hour=12), on_demand="manual-check")
+    assert h.skills_called()[-1] == "qa-manual-completeness" and requested["stages"]["F"]["status"] == "ok"
 
 
 # -- 11. 댓글 읽기 상한 (REQ-QAINTEL-004 3번) -----------------------------------------------

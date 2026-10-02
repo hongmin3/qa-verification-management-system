@@ -19,7 +19,7 @@ findings 를 비운 결과와 질문 하나만 쓰고 끝낸다.
 - `candidates.issues[]`: 코드가 고른 비슷한 과거 이슈. 같은 버전 후보가 앞에 있다. 각 후보의
   `rd_result`(과거 처리 결과), `match`(왜 걸렸는지).
 - `candidates.srs[]`: 사양 후보(오늘 SRS). `candidates.spec_docs[]`: 사양서 조각(`ref`, `location`).
-- `candidates.tcs[]`: 관련 TC 후보. `search`: 코드가 쓴 검색어.
+- `search`: 코드가 쓴 검색어. TC 후보는 없다(TC 는 자동 분석에서 보지 않는다).
 
 ## 절차 (이슈마다)
 
@@ -39,7 +39,7 @@ findings 를 비운 결과와 질문 하나만 쓰고 끝낸다.
    - 비슷한 과거 이슈들의 처리 결과가 서로 다르면 `HISTORICAL_DECISION_CONFLICT`
 
    표시마다 뒷받침하는 후보를 `sections.historical.candidates` 에 넣는다. 후보 없는 표시는 코드가 뺀다.
-4. **QA 권고.** `sections.recommendation.actions`(사람이 할 다음 조치)와 `checks`(확인할 점).
+4. **QA 권고.** `sections.recommendation.actions`(사람이 할 다음 조치)와 `checks`(확인할 점). 합쳐서 3개까지.
 
 ## Finding
 

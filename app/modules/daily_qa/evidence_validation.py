@@ -6,7 +6,8 @@
 - 없는 번호는 결과에서 빼고, 뺀 항목과 이유를 `sections.validation` 에 남긴다(숨기지 않는다).
 - 판정을 뒷받침해야 하는데 근거가 하나도 남지 않으면 Finding 을 버린다.
 - 근거가 없음을 뜻하는 판정은 남기되 신뢰도를 `Review Needed` 보다 높이지 않는다.
-- 초안 규칙: 수정 완료(FIXED) 이슈 분석과 Coverage 부족 판정에만 초안을 허용한다.
+- 초안 규칙: 사람이 버튼으로 요청한 검증 TC 초안·TC 점검에만 초안을 허용한다. 자동 실행 결과의 초안은
+  버리고 메모를 남긴다 (REQ-QAINTEL-013·031·032).
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from app.parsers.polarion_issue import WORK_ITEM_ID_RE
 #: 근거가 없다는 것 자체가 판정인 값. 근거 없이도 남기되 신뢰도를 올리지 않는다.
 ABSENCE_VERDICTS = frozenset({
     "SPEC_UNDEFINED", "SPEC_AMBIGUOUS", "INSUFFICIENT_EVIDENCE", "SPEC_NOT_FOUND", "SPEC_REVIEW_REQUIRED", "NO_DUPLICATE_FOUND",
+    "SPEC_UNCLEAR",
 })
 #: 초안을 만들면 안 되는 사양 판정 (Expected 를 정할 근거가 없다, REQ-QAINTEL-013·016).
 NO_DRAFT_VERDICTS = frozenset({"SPEC_UNDEFINED", "SPEC_AMBIGUOUS", "INSUFFICIENT_EVIDENCE", "FULLY_COVERED", "SPEC_REVIEW_REQUIRED"})
@@ -34,8 +36,6 @@ ISSUE_RELATIONS = ("EXISTING_DEFECT", "PAST_FIXED", "PAST_SPEC", "SAME_FUNCTION_
 TC_DECISIONS = ("KEEP", "UPDATE_EXISTING")
 COVERAGE_ALERTS = ("ISSUE_WITHOUT_TC", "TC_EXPECTED_OUTDATED", "FIXED_ISSUE_WITHOUT_REGRESSION_TC", "SPEC_ISSUE_BEHAVIOR_CHANGED")
 DRAFT_HOLD = "Checklist TC 생성 보류"
-#: 이슈 정합성 점검의 TC 영향 판정 (QA 규칙 §43, REQ-QAINTEL-030).
-AUDIT_TC_DECISIONS = ("유지", "경미 수정", "수정 필수", "Issue Link 수정", "신규 TC 필요", "사양 확인 필요")
 CONFIDENCE_RANK = {"Unsupported": 0, "Review Needed": 1, "Confirmed": 2}
 
 
@@ -153,29 +153,33 @@ def _clean_tc_entries(entries, known: KnownIds, record: ValidationRecord, label:
     return kept
 
 
-def _clean_audit(sections: dict, known: KnownIds, record: ValidationRecord) -> None:
-    """TC 영향 판정은 허용 값만, TC 번호는 실제 TC 만 남긴다. 판정 근거가 현재 상태라는 표시를 붙인다."""
+def _clean_audit(sections: dict, record: ValidationRecord) -> None:
+    """점검은 TC 를 보지 않는다. TC 영향 판정이 오면 버린다. 판정 근거가 현재 상태라는 표시를 붙인다."""
     from app.modules.daily_qa.issue_audit import BASIS_TAG
 
-    impact = sections.get("tc_impact")
-    if isinstance(impact, dict):
-        decision = str(impact.get("decision") or "")
-        if decision and decision not in AUDIT_TC_DECISIONS:
-            record.drop("tc_impact", decision, "허용되지 않은 TC 영향 판정")
-            impact = None
-        else:
-            tc_ids = [value for value in impact.get("tc_ids") or [] if value in known.tc_ids]
-            for value in impact.get("tc_ids") or []:
-                if value not in known.tc_ids:
-                    record.drop("tc_impact", str(value), "입력에 없는 TC 번호")
-            impact = {**impact, "tc_ids": tc_ids}
-    sections["tc_impact"] = impact if isinstance(impact, dict) else {}
+    impact = sections.pop("tc_impact", None)
+    if impact:
+        record.drop("tc_impact", str((impact or {}).get("decision") if isinstance(impact, dict) else impact),
+                    "자동 점검은 TC 를 보지 않음")
     sections["basis"] = BASIS_TAG
 
 
+def _clean_spec_summary(sections: dict, known: KnownIds, subject: str, record: ValidationRecord) -> None:
+    """사양 변경 분석 (REQ-QAINTEL-031). 관련 이슈는 오늘 스냅샷에 있는 번호만 남긴다."""
+    related = _issue_list(sections.get("related_issues"), known, subject, record, "related_issues")
+    sections["related_issues"] = [entry if entry.get("relation") in ISSUE_RELATIONS else {**entry, "relation": "EXISTING_DEFECT"}
+                                  for entry in related]
+    for key in ("checklist_coverage", "tc_coverage", "alerts", "gaps"):
+        if sections.pop(key, None):
+            record.drop(key, key, "자동 분석은 TC 를 보지 않음")
+
+
 def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets: set[str],
-                     axes: tuple[str, ...] = ()) -> tuple[dict | None, str]:
-    """(검증을 마친 Finding 또는 None, 버린 이유). 이유가 `not_significant` 면 규칙 위반이 아니다."""
+                     axes: tuple[str, ...] = (), tc_mode: bool = False) -> tuple[dict | None, str]:
+    """(검증을 마친 Finding 또는 None, 버린 이유). 이유가 `not_significant` 면 규칙 위반이 아니다.
+
+    `tc_mode` 는 사람이 버튼으로 요청한 실행이다. TC 비교 구획과 초안은 그때만 남긴다.
+    """
     record = ValidationRecord()
     subject = str(finding.get("subject") or "").strip()
     if subject not in targets:
@@ -197,10 +201,13 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
     elif analysis_type == SPEC_DECISION:
         _clean_history(sections, known, subject, record)
     elif analysis_type == ISSUE_AUDIT:
-        _clean_audit(sections, known, record)
+        _clean_audit(sections, record)
     elif analysis_type == FIXED_ISSUE:
         _clean_axes(sections, axes or DEFAULT_AXES, record)
-        sections["tc_coverage"] = _clean_tc_entries(sections.get("tc_coverage"), known, record, "tc_coverage")
+        if tc_mode:
+            sections["tc_coverage"] = _clean_tc_entries(sections.get("tc_coverage"), known, record, "tc_coverage")
+        elif sections.pop("tc_coverage", None):
+            record.drop("tc_coverage", "tc_coverage", "자동 분석은 TC 를 보지 않음")
         _clean_history(sections, known, subject, record)
     elif analysis_type == COMMENT:
         kept = []
@@ -218,6 +225,12 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
         if not significant:
             return None, "not_significant"
         verdict = finding["verdict"] = significant[0]["classification"]
+    elif analysis_type == SPEC_COVERAGE and not tc_mode:
+        change = sections.get("change")
+        summary = change.get("summary") if isinstance(change, dict) else None
+        if not isinstance(summary, str) or not summary.strip():
+            return None, "사양 변경 요약(change.summary)이 없습니다."
+        _clean_spec_summary(sections, known, subject, record)
     elif analysis_type == SPEC_COVERAGE:
         issue_cov = dict(sections.get("issue_coverage") or {})
         issues = _issue_list(issue_cov.get("issues"), known, subject, record, "issue_coverage")
@@ -239,12 +252,17 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
             return None, f"금지된 조치를 담고 있습니다(QA 규칙 §55): {str(text)[:80]}"
 
     drafts = list(finding.get("draft_tcs") or [])
+    if drafts and analysis_type not in (FIXED_ISSUE, SPEC_COVERAGE):
+        return None, "이 분석 종류는 TC 초안을 만들 수 없습니다(REQ-QAINTEL-017)."
+    if drafts and not tc_mode:
+        record.notes.append(f"자동 분석이라 초안 {len(drafts)}건을 뺐습니다. 검증 TC 초안은 화면의 버튼으로 만듭니다.")
+        drafts = []
     if drafts:
         if analysis_type == FIXED_ISSUE and known.issue_rd.get(subject) != RD_FIXED:
             return None, "연구소 결과가 FIXED 가 아닌 이슈에 수정확인 TC 초안을 만들었습니다(REQ-QAINTEL-017)."
-        if analysis_type not in (FIXED_ISSUE, SPEC_COVERAGE):
-            return None, "이 분석 종류는 TC 초안을 만들 수 없습니다(REQ-QAINTEL-017)."
-        if verdict in NO_DRAFT_VERDICTS:
+        current_spec = any(item.get("source_type") in ("srs", "spec_doc") and item.get("validity") == "Current"
+                           for item in evidence)
+        if verdict in NO_DRAFT_VERDICTS or not current_spec:
             record.notes.append(f"{verdict} 판정이라 초안 {len(drafts)}건을 뺐습니다({DRAFT_HOLD}).")
             sections.setdefault("tc_hold", {"reason": "Expected Result 를 확정할 최신 사양 근거가 부족함.", "questions": []})
             drafts = []
@@ -275,6 +293,7 @@ def related_ids(finding: dict, analysis_type: str) -> dict:
     for key in ("duplicate", "historical"):
         issues += [entry["issue_id"] for entry in (sections.get(key) or {}).get("candidates") or []]
     issues += [entry["issue_id"] for entry in (sections.get("issue_coverage") or {}).get("issues") or []]
+    issues += [entry["issue_id"] for entry in sections.get("related_issues") or []]
     tcs = [entry.get("tc_id") or entry.get("location") for entry in sections.get("tc_coverage") or []]
     tcs += [entry.get("tc_id") or entry.get("location") for entry in (sections.get("checklist_coverage") or {}).get("tcs") or []]
     srs = sorted({token for item in finding.get("evidence") or [] if item.get("source_type") == "srs"

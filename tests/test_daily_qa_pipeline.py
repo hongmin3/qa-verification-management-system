@@ -16,7 +16,7 @@ from openpyxl import load_workbook
 from app.modules.daily_qa.agent_runner import FakeRunner
 from app.modules.daily_qa.pipeline import Inputs, RunLocked, run_daily
 from app.modules.daily_qa.rules import RulesState
-from app.modules.daily_qa.schema import SKILL_COVERAGE, SKILL_E, SKILL_F
+from app.modules.daily_qa.schema import SKILL_COVERAGE, SKILL_E, SKILL_F, SKILL_SPEC_SUMMARY
 from app.modules.daily_qa.settings import PolarionSettings
 from app.modules.daily_qa.srs_snapshot import save_snapshot
 from app.modules.daily_qa.store import DailyQaStore
@@ -66,6 +66,10 @@ def _producer(task, run):
                          "checklist_coverage": {"tcs": [{"tc_id": "TC_1", "location": "", "decision": "UPDATE_EXISTING",
                                                          "reason": "Expected 가 옛 본문", "recommended_change": "Expected 1번 수정"}]}},
         })
+    if task.skill == SKILL_SPEC_SUMMARY:
+        # 자동 사양 변경 분석은 TC 를 보지 않는다. 판정·요약만 쓴다 (REQ-QAINTEL-031).
+        findings = [{**finding, "verdict": "QA_CHECK_NEEDED", "draft_tcs": [], "sections": {"change": {"summary": "본문 변경"}}}
+                    for finding in findings]
     write_result(run, task, findings, questions=[{"subject": "VP-10", "question": "Admin 만 보이나?", "why": "권한"}]
                  if task.skill == SKILL_COVERAGE else None)
 
@@ -84,21 +88,26 @@ def test_full_run_uses_legacy_snapshot_and_creates_findings_draft_and_email(env)
     assert outcome["status"] == "SUCCESS", stages
     assert stages["collect_srs"]["counts"] == {"total": 3, "added": 1, "removed": 0, "modified": 1}
     assert stages["collect_issues"]["status"] == "ok" and "기준 스냅샷만" in stages["collect_issues"]["note"]
-    assert stages["E"]["status"] == "ok" and stages["F"]["status"] == "ok"
+    assert stages["E"]["status"] == "ok" and stages["F"]["status"] == "not_due"   # 매뉴얼 점검은 요청할 때만
     store = env["store"]
     findings = store.list_findings(run_id=outcome["run_id"])
-    assert {item["skill"] for item in findings} >= {SKILL_COVERAGE, SKILL_E}
+    assert {item["skill"] for item in findings} >= {SKILL_SPEC_SUMMARY, SKILL_E}
+    # 사양 변경 분석 하나에서 [TC 점검]을 누르면 TC 비교 결과와 초안 Excel 이 생긴다 (REQ-QAINTEL-016).
+    source = next(item for item in findings if item["skill"] == SKILL_SPEC_SUMMARY and item["subject"] == "VP-10")
+    checked = _run(env, today=MONDAY.replace(hour=12), on_demand="tc-check", finding_id=source["id"])
+    assert {item["skill"] for item in store.list_findings(run_id=checked["run_id"])} == {SKILL_COVERAGE}
     assert all(item["product"] == "vxvue" for item in findings)
     assert len(store.list_questions(unanswered_only=True)) == 1
-    out_dir = env["cfg"].output_dir / outcome["run_id"]
+    out_dir = env["cfg"].output_dir / checked["run_id"]
     workbook = load_workbook(out_dir / "impact_checklist_draft.xlsx")
     assert workbook.sheetnames == ["Checklist 초안", "Coverage", "Review"]
     assert [cell.value for cell in workbook["Checklist 초안"][1]][:4] == ["Category", "TC ID", "버전", "SRS No"]
     decisions = {row[4] for row in workbook["Coverage"].iter_rows(min_row=2, values_only=True)}
     assert {"UPDATE_EXISTING", "CREATE_NEW"} <= decisions
     audit = json.loads((out_dir / "audit.json").read_text(encoding="utf-8"))
-    assert {task["task_id"] for task in audit["tasks"]} >= {"COV-001", "F-001"}
+    assert {task["task_id"] for task in audit["tasks"]} == {"COV-001"}
     assert (out_dir / "sent" / "COV-001.json").is_file()               # 보낸 입력이 남는다
+    out_dir = env["cfg"].output_dir / outcome["run_id"]
     assert env["sent"] and "Finding" in env["sent"][0][0] and "VXvue" in env["sent"][0][0]
     assert "/qa-agent/runs/" in env["sent"][0][1]
     assert store.get_run(outcome["run_id"])["email_status"] == "sent"
@@ -211,11 +220,14 @@ def test_missing_token_skips_ai_stages(env):
     assert "CLAUDE_CODE_OAUTH_TOKEN" in outcome["stages"]["preflight"]["note"]
 
 
-def test_manual_check_runs_on_weekly_day_with_changes(env):
+def test_manual_check_runs_only_when_requested(env):
+    """주간 요일·변경이 있어도 자동으로는 돌지 않고, 요청하면 돈다 (REQ-QAINTEL-034)."""
     outcome = _run(env)
-    assert outcome["stages"]["F"]["status"] == "ok"
+    assert outcome["stages"]["F"]["status"] == "not_due"
+    requested = _run(env, today=MONDAY.replace(hour=12), on_demand="manual-check")
+    assert requested["stages"]["F"]["status"] == "ok"
     assert any(task["task_id"] == "F-001" for task in json.loads(
-        (env["cfg"].output_dir / outcome["run_id"] / "audit.json").read_text(encoding="utf-8"))["tasks"])
+        (env["cfg"].output_dir / requested["run_id"] / "audit.json").read_text(encoding="utf-8"))["tasks"])
 
 
 def test_claude_tool_logs_are_collected_into_the_run_folder(env):

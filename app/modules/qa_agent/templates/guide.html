@@ -11,16 +11,18 @@
       <thead><tr><th>무엇이 바뀌면</th><th>대시보드 칸</th><th>무엇을 얻나</th></tr></thead>
       <tbody>
         <tr><td>새 이슈가 등록됨</td><td>신규 Issue</td><td>중복일 수 있는 이슈, 관련 사양, 비슷한 과거 이슈</td></tr>
-        <tr><td>연구소 결과가 수정 완료(FIXED)</td><td>Fixed</td><td>수정확인·Regression TC 초안(Checklist 형식 Excel)</td></tr>
+        <tr><td>연구소 결과가 수정 완료(FIXED)</td><td>Fixed</td><td>조치가 사양과 맞는지, 다시 확인할 것. 검증 TC 초안은 상세 화면의 [검증 TC 초안 만들기]로 만듭니다</td></tr>
         <tr><td>연구소 결과가 사양대로·결함 아님</td><td>Spec</td><td>그 판정의 사양 근거</td></tr>
         <tr><td>진행 알림이 아닌 새 댓글</td><td>Comment Update</td><td>댓글이 바꾼 판단</td></tr>
-        <tr><td>새 SRS·바뀐 SRS</td><td>SRS Update</td><td>기존 TC 로 덮이는지, 고칠 TC·새 TC</td></tr>
+        <tr><td>새 SRS·바뀐 SRS</td><td>SRS Update</td><td>무엇이 바뀌었는지, QA 가 확인할 것, 관련 과거 이슈. TC 와 맞춰 보려면 상세 화면의 [TC 점검]을 누릅니다</td></tr>
       </tbody>
     </table>
   </div>
   <p class="hint">상태만 바뀐 이슈, 심각도·버전 같은 속성만 바뀐 이슈는 기록만 남기고 분석하지 않습니다.</p>
+  <p class="hint">자동 분석은 TC·Checklist·매뉴얼을 보지 않습니다. 사람이 넣는 자료라 최신이 아닐 수 있기 때문입니다. TC 와 맞춰 보는 일은 버튼을 누를 때만 하고, 매뉴얼 점검은 담당자가 명령(<code>--on-demand manual-check</code>)으로만 돌립니다.</p>
   <ul>
-    <li><b>최신 분석 결과</b>의 [상세보기]를 누르면 요약·근거·관련 번호·초안 TC·원래 변경이 보입니다. 초안 TC 는 참고용입니다. 원본 Checklist·Polarion 에는 사람이 옮깁니다.</li>
+    <li><b>최신 분석 결과</b> 카드는 결론(<span class="pill">사양과 다름</span> <span class="pill">검토 필요</span> <span class="pill">근거 부족</span> <span class="pill">참고</span> <span class="pill">문제 없음</span>), 한두 문장 요약, QA 할 일 3줄까지만 보입니다. <span class="pill">문제 없음</span> 은 접어 둡니다.</li>
+    <li>[상세보기] 맨 위에 결론·바뀐 사양·근거·할 일이 있고, 나머지 분석 기록은 <b>자세히</b>를 펼쳐 봅니다. 초안 TC 는 참고용입니다. 원본 Checklist·Polarion 에는 사람이 옮깁니다.</li>
     <li><b>지식 문서 업로드 현황</b>은 담당자가 직접 올려야 하는 문서(TC·Checklist, 매뉴얼, ALM 을 쓰지 않는 제품의 사양서)의 최신본과 서버에 올라간 날짜입니다. ALM 에서 자동으로 가져오는 사양서, QA 규칙, 지침 프롬프트는 여기 보이지 않습니다.</li>
     <li><b>실행 상세</b>에서 단계별 상태, 찾은 변경 목록, 결과 파일(초안 Excel·audit.json)을 봅니다.</li>
   </ul>
