@@ -1008,7 +1008,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 **하는 일** QA 가 이슈 하나와 검증 환경을 넣고 분석을 시작한다. 예를 들어 제품 VXvue, 이슈 `VP-1234`, 실제 수행 `가능`, Test Data `준비됨` 을 넣고 `분석 실행` 을 누르면 작업 번호를 받고 진행 막대가 움직인다.
 
-**언제** `GET /qa-agent/issue-analysis` 화면의 입력 폼에서 `분석 실행` 버튼을 누를 때(`POST /qa-agent/analyses`). 이 화면은 상단 메뉴에 없고 주소로 연다(REQ-WEB-007).
+**언제** `GET /qa-agent/issue-analysis` 화면의 입력 폼에서 `분석 실행` 버튼을 누를 때(`POST /qa-agent/analyses`).
 
 **입력**
 
@@ -1619,7 +1619,7 @@ G5 교차 검사(Cross-check):
 
 **하는 일** QA Agent 분석만 모아 25건씩 보여주고, 한 분석의 결과 JSON 을 내려받게 한다.
 
-**언제** 이력 화면(`GET /qa-agent/analyses?page=<쪽>`)과 결과 화면의 `결과 JSON 내려받기`(`GET /qa-agent/analyses/<작업번호>/export`). 이력 화면은 상단 메뉴에 없다(REQ-WEB-007).
+**언제** 이력 화면(`GET /qa-agent/analyses?page=<쪽>`)과 결과 화면의 `결과 JSON 내려받기`(`GET /qa-agent/analyses/<작업번호>/export`).
 
 **결과**
 
@@ -1911,7 +1911,7 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 **하는 일** 규칙 구현 현황표와 제품별 규칙 주입량을 화면으로 보여준다. 예를 들어 Bellalun Viewer 를 고르면 S09(발생기)가 `0절 — 이 제품 규칙에 해당 내용 없음` 으로 보인다.
 
-**언제** `GET /qa-agent/rules?product=<제품>`. 제품 선택을 바꾸면 다시 불러온다. 상단 메뉴에는 없고 주소와 QA Agent 사용법의 링크로 연다(REQ-WEB-007).
+**언제** `GET /qa-agent/rules?product=<제품>`. 제품 선택을 바꾸면 다시 불러온다. 화면 이름은 `자동 점검 범위` 다. 상단 메뉴에는 없고 점검 현황 화면의 `자동 점검 범위 보기` 링크로 연다(REQ-WEB-007).
 
 **결과** 화면에 차례로 보이는 것:
 
@@ -6095,31 +6095,33 @@ AI 제공자 상태(`ai_provider`) 항목:
 
 **하는 일** 어느 화면에 있든 머리 오른쪽에 같은 메뉴가 같은 순서로 보인다. 지금 보고 있는 기능은 강조해서 보인다.
 
-> **예시** 매뉴얼 개정 검증 화면에서는 `QA 홈 · QA Agent · 매뉴얼 검증 · Knowledge · 비용 대시보드 · 사용법` 이 보이고 `매뉴얼 검증` 이 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
+> **예시** 매뉴얼 개정 검토 화면에서는 `QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · AI 분석 설정 · 사용법` 이 보이고 `매뉴얼 개정 검토` 가 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
 
 **결과**
 
 | 순서 | 메뉴 | 주소 | 허브에서 |
 |---|---|---|---|
 | 1 | QA 홈 | `/` | 빠진다 |
-| 2 | QA Agent | `/qa-agent` | 보인다 |
-| 3 | 매뉴얼 검증 | `/manual-review` | 보인다 |
-| 4 | Knowledge | `/knowledge` | 보인다 |
-| 5 | 비용 대시보드 | `/cost-dashboard` | 보인다 |
-| 6 | 사용법 | 그 기능의 `/<기능>/guide` | 빠진다 |
+| 2 | VXvue AI 챗봇 | `/vxvue-chatbot` | 보인다 |
+| 3 | 사양·이슈 변경 점검 | `/qa-agent` | 보인다 |
+| 4 | 매뉴얼 개정 검토 | `/manual-review` | 보인다 |
+| 5 | 검증 자료 관리 | `/knowledge` | 보인다 |
+| 6 | AI 사용량 | `/cost-dashboard` | 보인다 |
+| 7 | AI 분석 설정 | `/settings/ai` | 보인다 |
+| 8 | 사용법 | 그 기능의 `/<기능>/guide`. 사용법이 없는 화면(AI 분석 설정)은 빠진다 | 빠진다 |
 
 **순서**
 
-1. 메뉴 목록은 `app/web/templates/_nav.html` 의 `top_nav` 하나에만 적는다.
-2. 각 화면은 자기 기능 이름(`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
+1. 메뉴 목록은 `app/web/templates/_nav.html` 의 `top_nav` 하나에만 적는다. 메뉴 이름은 허브 카드 이름과 같다.
+2. 각 화면은 자기 기능 이름(`vxvue_chatbot`·`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`·`settings_ai`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
 3. 넘겨받은 기능의 메뉴에 강조 표시(`class="active"`, `aria-current="page"`)를 붙인다. 강조는 한 화면에 하나다.
 
 **지킬 것**
 
-- QA Agent 의 하위 화면은 상단 메뉴에 넣지 않는다. 기간 조회(`/qa-agent/period`)는 대시보드의 기간 조회 양식으로 연다.
-- 예전 단일 이슈 분석(`/qa-agent/issue-analysis`), 그 결과 목록(`/qa-agent/analyses`), 규칙 구현현황(`/qa-agent/rules`)은 메뉴와 대시보드에 링크하지 않는다. 화면은 남아 있어 주소와 QA Agent 사용법의 링크로 연다.
+- 기능 안의 하위 화면은 상단 메뉴에 넣지 않는다. 사양·이슈 변경 점검의 기간별 결과(`/qa-agent/period`)는 점검 현황 화면의 기간 조회 양식으로, 자동 점검 범위(`/qa-agent/rules`)는 같은 화면의 `자동 점검 범위 보기` 링크로 연다.
+- VXvue AI 챗봇의 대화 화면은 머리 영역을 숨기는 전체 화면이라 상단 메뉴가 없다. 챗봇 사용법 화면에는 있다.
 
-이유: 같은 일을 하는 버튼(`대시보드`와 `QA Agent`)과 자주 쓰지 않는 예전 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.
+이유: 같은 곳으로 가는 버튼(`점검 현황`과 `사양·이슈 변경 점검`)과 하위 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.
 
 ### REQ-OPS-001 운영 상태 점검
 
@@ -9294,7 +9296,7 @@ REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/tes
 
 ### TEST-WEB-001
 
-REQ-WEB-001, 002, 003, 006, 007 을 `tests/test_web.py` 로 확인한다: `/health`, 허브 카드 링크, 설정된 하위 서비스 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, `/guide` 308, 허브와 기능 화면의 상단 메뉴 순서·강조 표시, 예전 QA Agent 화면이 메뉴에 없고 주소로는 열림.
+REQ-WEB-001, 002, 003, 006, 007 을 `tests/test_web.py` 로 확인한다: `/health`, 허브 카드 링크, 설정된 하위 서비스 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, `/guide` 308, 허브와 기능 화면의 상단 메뉴 순서·강조 표시, 기간별 결과·자동 점검 범위가 상단 메뉴에 없고 점검 현황 화면에서 열림.
 
 ### TEST-WEB-002
 
@@ -9850,7 +9852,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-WEB-004 | `app/main.py`, `app/core/config.py`, `app/core/model_router.py` | TEST-CONF-001: `tests/test_secrets_file.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-WEB-005 | `app/main.py`, `app/core/storage.py` | TEST-WEB-002 | implemented |
 | REQ-WEB-006 | `app/web/templates/base.html`, `app/web/static/app.css`, `app/web/router.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
-| REQ-WEB-007 | `app/web/templates/_nav.html`, `app/web/static/app.css` | TEST-WEB-001: `tests/test_web.py` | verified |
+| REQ-WEB-007 | `app/web/templates/_nav.html`, `app/web/static/app.css`, `app/modules/qa_agent/templates/dashboard.html` | TEST-WEB-001: `tests/test_web.py` | verified |
 | REQ-OPS-001 | `scripts/monitor_health.py` | TEST-OPS-001: `tests/test_monitor_health.py` | implemented |
 | REQ-OPS-002 | `scripts/backup_data.py`, `app/core/retention.py` | TEST-OPS-002: `tests/test_backup.py` | implemented |
 | REQ-OPS-003 | `app/core/logger.py`, `deploy/systemd/qa-verification.service` | TEST-SCHED-001 | implemented |

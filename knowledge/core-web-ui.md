@@ -13,7 +13,7 @@
 
 - 기능 사이를 옮겨 가는 링크는 `app/web/templates/_nav.html` 에만 둔다. `base.html` 에는 기능 링크를 넣지 않는다(REQ-WEB-006).
 - 각 모듈은 자기 사용법(`/<module>/guide`)을 소유하고 그 주소를 `top_nav` 에 넘긴다.
-- 기능 안의 하위 화면(예: QA Agent 기간 조회)은 상단 메뉴에 넣지 않는다. 그 기능 화면 안의 링크·양식으로 연다(REQ-WEB-007).
+- 기능 안의 하위 화면(예: 사양·이슈 변경 점검의 기간별 결과·자동 점검 범위)은 상단 메뉴에 넣지 않는다. 그 기능 화면 안의 링크·양식으로 연다(REQ-WEB-007).
 
 ## 허브의 하위 서비스 카드
 <!-- akela: id=hub-service-cards scope=web-ui tier=should -->

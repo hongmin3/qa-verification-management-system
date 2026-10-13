@@ -69,6 +69,7 @@
     <input type="hidden" name="product" value="{{ selected }}">
     기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
+  <a class="hint" href="/qa-agent/rules?product={{ selected|urlencode }}">자동 점검 범위 보기</a>
   {% macro result_card(item) %}
     <div class="qa-card">
       <div class="qa-card-head"><span class="level {{ item.level_class }}">{{ item.level }}</span>

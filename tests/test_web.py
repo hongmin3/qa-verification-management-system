@@ -19,8 +19,8 @@ def _nav_links(page: str) -> list[str]:
     return re.findall(r'href="([^"]+)"', match.group(1))
 
 
-FEATURE_MENU = ["/qa-agent", "/manual-review", "/knowledge", "/cost-dashboard"]
-LEGACY_MENU = ["/qa-agent/period", "/qa-agent/issue-analysis", "/qa-agent/analyses", "/qa-agent/rules"]
+FEATURE_MENU = ["/vxvue-chatbot", "/qa-agent", "/manual-review", "/knowledge", "/cost-dashboard", "/settings/ai"]
+QA_AGENT_SUBSCREENS = ["/qa-agent/period", "/qa-agent/rules"]
 
 
 def test_hub_links_to_qa_modules():
@@ -50,24 +50,27 @@ def test_every_feature_page_shows_same_top_menu():
         "/knowledge/guide": ("/knowledge", "/knowledge/guide"),
         "/cost-dashboard": ("/cost-dashboard", "/cost-dashboard/guide"),
         "/cost-dashboard/guide": ("/cost-dashboard", "/cost-dashboard/guide"),
+        "/vxvue-chatbot/guide": ("/vxvue-chatbot", "/vxvue-chatbot/guide"),
+        "/settings/ai": ("/settings/ai", None),
     }
     for path, (active, guide) in pages.items():
         response = client.get(path)
         assert response.status_code == 200, path
-        assert _nav_links(response.text) == ["/", *FEATURE_MENU, guide], path
+        assert _nav_links(response.text) == ["/", *FEATURE_MENU, *([guide] if guide else [])], path
         nav = re.search(r'<nav class="top-nav">(.*?)</nav>', response.text, re.S).group(1)
         assert f'<a href="{active}" class="active" aria-current="page">' in nav, path
         assert nav.count('class="active"') == 1, path
 
 
-def test_legacy_qa_agent_screens_are_not_in_top_menu_but_still_open():
-    """Validates: REQ-WEB-007 — 기간 조회·단일 이슈 분석·분석 이력·규칙 구현현황은 메뉴에서 빠지고 주소로는 열린다."""
+def test_qa_agent_subscreens_open_from_dashboard_not_top_menu():
+    """Validates: REQ-WEB-007 — 기간별 결과·자동 점검 범위는 상단 메뉴에 없고 점검 현황 화면 안에서 연다."""
     client = TestClient(app)
-    for path in ("/qa-agent", "/qa-agent/guide"):
-        links = _nav_links(client.get(path).text)
-        assert not set(links) & set(LEGACY_MENU), path
-    assert 'href="/qa-agent/issue-analysis"' not in client.get("/qa-agent").text
-    for path in LEGACY_MENU:
+    dashboard = client.get("/qa-agent").text
+    for path in ("/qa-agent", "/qa-agent/guide", "/qa-agent/period", "/qa-agent/rules"):
+        assert not set(_nav_links(client.get(path).text)) & set(QA_AGENT_SUBSCREENS), path
+    assert 'action="/qa-agent/period"' in dashboard
+    assert 'href="/qa-agent/rules?product=' in dashboard
+    for path in QA_AGENT_SUBSCREENS:
         assert client.get(path).status_code == 200, path
 
 

@@ -12,7 +12,7 @@
 | 매뉴얼 개정 검토 | `/manual-review` | `/manual-review/guide` |
 | Knowledge — 문서·규칙 관리 | `/knowledge` | `/knowledge/guide` |
 | AI 사용량 | `/cost-dashboard` | `/cost-dashboard/guide` |
-| 자동 점검 범위 | `/qa-agent/rules` | (화면 자체가 설명) |
+| 자동 점검 범위 (점검 현황 화면의 링크) | `/qa-agent/rules` | (화면 자체가 설명) |
 | QA Manual Hub (하위 서비스) | `/manual-hub/` | [USERGUIDE](../services/qa-manual-hub/docs/USERGUIDE.md) |
 
 ---
@@ -137,6 +137,8 @@ Gate에서 막힌 분석은 호출 0회로 남는다.
 ---
 
 ## 6. 자동 점검 범위 — `/qa-agent/rules`
+
+상단 메뉴에는 없다. 사양·이슈 변경 점검의 점검 현황 화면에서 `자동 점검 범위 보기` 를 누른다.
 
 제품 QA 규칙 문서의 절마다 **어떤 방식으로 구현했는지**와 **Skill별로 규칙이 몇 KB
 주입되는지**를 보여준다.
