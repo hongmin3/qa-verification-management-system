@@ -9,6 +9,7 @@ python-docx가 필요해(`comment_writer.py`) 별도 의존성으로 추가돼 �
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -38,6 +39,10 @@ class TrackedChange:
     # 같은 문단(paragraph_index) 안에서 이 변경이 몇 번째 <w:ins>/<w:del>/<w:moveFrom>/<w:moveTo>
     # 인지(0부터). comment_writer.py가 문단 전체가 아니라 이 변경만 정확히 앵커링하는 데 쓴다.
     change_index_in_paragraph: int = 0
+    # 이 변경보다 앞에 나온 마지막 제목 문단의 글자와, 변경을 모두 받아들였을 때 이 문단에 남는
+    # 글자 (REQ-MANUAL-005 7번). 결과 화면 위치·AI 맥락·문장 점검(REQ-MANUAL-020)에 쓴다.
+    section_heading: str = ""
+    paragraph_text: str = ""
 
 
 @dataclass
@@ -46,9 +51,19 @@ class TrackChangesResult:
     plain_text: str = ""
 
 
+_BREAK_TAGS = {f"{W_NS}br": "\n", f"{W_NS}cr": "\n", f"{W_NS}tab": "\t"}
+
+
 def _text_of(element: ET.Element) -> str:
-    """<w:r> 하위의 <w:t>/<w:delText>를 문서 순서대로 이어붙인다."""
-    return "".join(node.text or "" for node in element.iter() if node.tag in (f"{W_NS}t", f"{W_NS}delText"))
+    """<w:r> 하위의 <w:t>/<w:delText>를 문서 순서대로 이어붙인다. 줄바꿈(<w:br>/<w:cr>)과 탭(<w:tab>)은
+    공백 문자로 남긴다 — 빼면 "지정합니다.<줄바꿈>저장할" 이 붙은 문장처럼 보인다 (REQ-MANUAL-020)."""
+    parts: list[str] = []
+    for node in element.iter():
+        if node.tag in (f"{W_NS}t", f"{W_NS}delText"):
+            parts.append(node.text or "")
+        elif node.tag in _BREAK_TAGS:
+            parts.append(_BREAK_TAGS[node.tag])
+    return "".join(parts)
 
 
 def _has_image(element: ET.Element) -> bool:
@@ -62,12 +77,49 @@ def _image_description(element: ET.Element) -> str:
     return ""
 
 
-def extract_track_changes_from_xml(xml_bytes: bytes) -> TrackChangesResult:
+_HEADING_NAME_RE = re.compile(r"^(heading|제목)\s*[1-9]$", re.IGNORECASE)
+
+
+def heading_style_ids(styles_xml: bytes | None) -> set[str]:
+    """제목 문단 스타일 id 목록. 이름이 `heading N`/`제목 N` 인 문단 스타일과, 그것을 바탕(basedOn)으로
+    만든 문단 스타일이다. 개요 수준(outlineLvl)은 보지 않는다 — 실제 VXvue 매뉴얼은 본문 번호 목록
+    스타일에도 개요 수준을 둔다 (REQ-MANUAL-005 주의)."""
+    if not styles_xml:
+        return set()
+    root = ET.fromstring(styles_xml)
+    names: dict[str, str] = {}
+    based_on: dict[str, str | None] = {}
+    for style in root.iter(f"{W_NS}style"):
+        if style.get(f"{W_NS}type") != "paragraph":
+            continue
+        style_id = style.get(f"{W_NS}styleId") or ""
+        name = style.find(f"{W_NS}name")
+        names[style_id] = name.get(f"{W_NS}val", "") if name is not None else ""
+        base = style.find(f"{W_NS}basedOn")
+        based_on[style_id] = base.get(f"{W_NS}val") if base is not None else None
+
+    def is_heading(style_id: str | None, depth: int = 0) -> bool:
+        if not style_id or depth > 20 or style_id not in names:
+            return False
+        return bool(_HEADING_NAME_RE.match(names[style_id].strip())) or is_heading(based_on.get(style_id), depth + 1)
+
+    return {style_id for style_id in names if is_heading(style_id)}
+
+
+def _paragraph_style(paragraph: ET.Element) -> str:
+    style = paragraph.find(f"{W_NS}pPr/{W_NS}pStyle")
+    return style.get(f"{W_NS}val", "") if style is not None else ""
+
+
+def extract_track_changes_from_xml(xml_bytes: bytes, heading_styles: set[str] | None = None) -> TrackChangesResult:
     root = ET.fromstring(xml_bytes)
+    heading_styles = heading_styles or set()
     result = TrackChangesResult()
     plain_lines: list[str] = []
+    section_heading = ""
     for paragraph_index, paragraph in enumerate(root.iter(f"{W_NS}p")):
         paragraph_plain: list[str] = []
+        paragraph_changes: list[TrackedChange] = []
         change_index_in_paragraph = 0
         for child in paragraph:
             kind = _KIND_BY_TAG.get(child.tag)
@@ -77,7 +129,7 @@ def extract_track_changes_from_xml(xml_bytes: bytes) -> TrackChangesResult:
                 if has_image and not text.strip():
                     description = _image_description(child)
                     text = f"이미지 변경{f' ({description})' if description else ''}"
-                result.changes.append(
+                paragraph_changes.append(
                     TrackedChange(
                         kind=f"image_{kind}" if has_image else kind,
                         author=child.get(f"{W_NS}author", ""),
@@ -86,6 +138,7 @@ def extract_track_changes_from_xml(xml_bytes: bytes) -> TrackChangesResult:
                         paragraph_index=paragraph_index,
                         review_required=has_image,
                         change_index_in_paragraph=change_index_in_paragraph,
+                        section_heading=section_heading,
                     )
                 )
                 change_index_in_paragraph += 1
@@ -96,6 +149,14 @@ def extract_track_changes_from_xml(xml_bytes: bytes) -> TrackChangesResult:
         line = "".join(paragraph_plain).strip()
         if line:
             plain_lines.append(line)
+        if heading_styles and line and _paragraph_style(paragraph) in heading_styles:
+            # 제목 문단 안의 변경은 그 제목 자신을 절 제목으로 본다.
+            section_heading = line
+            for change in paragraph_changes:
+                change.section_heading = line
+        for change in paragraph_changes:
+            change.paragraph_text = line
+        result.changes.extend(paragraph_changes)
     result.plain_text = "\n".join(plain_lines)
     return result
 
@@ -103,4 +164,5 @@ def extract_track_changes_from_xml(xml_bytes: bytes) -> TrackChangesResult:
 def extract_track_changes(path: Path) -> TrackChangesResult:
     with ZipFile(path) as archive:
         xml_bytes = archive.read("word/document.xml")
-    return extract_track_changes_from_xml(xml_bytes)
+        styles_xml = archive.read("word/styles.xml") if "word/styles.xml" in archive.namelist() else None
+    return extract_track_changes_from_xml(xml_bytes, heading_style_ids(styles_xml))

@@ -63,23 +63,36 @@ def _nth_tracked_change_element(paragraph_element, index: int):
     return None
 
 
-def comment_text_for(change: dict) -> str | None:
-    """QA가 재판정했으면 그 판정을, 아니면 AI 판정을 기준으로 Comment 문구를 만든다.
-    PASS(문제없음)인 변경에는 Comment를 달지 않는다 (None 반환)."""
-    decision = change.get("qa_decision") or change.get("decision")
-    if not decision or decision == ManualJudgment.PASS.value:
-        return None
+def text_issue_lines(change: dict) -> list[str]:
+    """문장 점검 결과를 Comment 줄로 바꾼다 (REQ-MANUAL-020)."""
     judgment = change.get("ai_judgment") or {}
+    return [f"[문장 점검] {item.get('label', '')}: \"{item.get('excerpt', '')}\"" for item in judgment.get("text_issues") or []]
+
+
+def comment_text_for(change: dict) -> str | None:
+    """QA가 재판정했으면 그 판정을, 아니면 AI 판정을 기준으로 Comment 문구를 만든다 (REQ-MANUAL-016).
+
+    QA가 문제없음(PASS)으로 확정했으면 Comment를 달지 않는다. 기준 판정이 없거나 PASS여도 문장 점검
+    결과가 있으면 그 줄만으로 Comment를 단다."""
+    qa_decision = change.get("qa_decision")
+    if qa_decision == ManualJudgment.PASS.value:
+        return None
+    decision = qa_decision or change.get("decision")
+    issue_lines = text_issue_lines(change)
     parts = []
-    qa_comment = (judgment.get("qa_comment") or "").strip()
-    if qa_comment:
-        parts.append(qa_comment)
-    note = (change.get("qa_note") or "").strip()
-    if note:
-        parts.append(f"(QA 메모: {note})")
-    if not parts:
-        parts.append(f"[{decision}] 검토가 필요합니다.")
-    return " ".join(parts)
+    if decision and decision != ManualJudgment.PASS.value:
+        judgment = change.get("ai_judgment") or {}
+        qa_comment = (judgment.get("qa_comment") or "").strip()
+        if qa_comment:
+            parts.append(qa_comment)
+        note = (change.get("qa_note") or "").strip()
+        if note:
+            parts.append(f"(QA 메모: {note})")
+        if not parts:
+            parts.append(f"[{decision}] 검토가 필요합니다.")
+    elif not issue_lines:
+        return None
+    return " ".join(parts + issue_lines)
 
 
 def insert_comments(revision_path: Path, changes: list[dict], output_path: Path, author: str = DEFAULT_AUTHOR) -> int:

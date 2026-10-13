@@ -61,3 +61,27 @@ def test_repeat_judge_uses_cache_and_makes_no_new_calls(tmp_path):
     result = second.judge(change, [])
 
     assert result.decision.value == "PASS"
+
+
+# Validates: REQ-MANUAL-011
+def test_payload_includes_section_heading_and_paragraph_text(tmp_path):
+    import json
+
+    client = ManualReviewAIClient(Storage(tmp_path / "app.db"), responder=lambda _: {})
+    change = TrackedChange("insertion", "연구소", "2026-08-01", "10분", 3, section_heading="잠금 정책", paragraph_text="가" * 1500)
+
+    payload = json.loads(client._payload("quick", change, []))
+
+    assert payload["manual_change"]["section_heading"] == "잠금 정책"
+    assert len(payload["manual_change"]["paragraph_text"]) == 1000
+
+
+# Validates: REQ-MANUAL-011
+def test_prompts_follow_document_change_review_rules():
+    from app.core.prompt_manager import load_prompt
+
+    for name in ("manual_revision_quick", "manual_revision_detail"):
+        prompt = load_prompt(name)
+        assert prompt.version == 3
+        for phrase in ("공통 설정 Coverage 규칙", "Manual-worthy Gate", "COVERED_ELSEWHERE", "NOT_MANUAL_WORTHY", "SPEC_CONFLICT", "section_heading"):
+            assert phrase in prompt.system_instruction, (name, phrase)

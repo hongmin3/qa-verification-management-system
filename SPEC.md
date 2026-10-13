@@ -46,7 +46,7 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 | 기능 | 누가, 언제 | 넣는 것 | 얻는 것 | 절 |
 |---|---|---|---|---|
 | QA Agent (이슈 검증 범위) | QA 담당자가 이슈 하나를 검증하기 전에 화면에서 | Polarion 이슈 번호(이슈 Export) | 이슈 유형, 관련 사양·TC, 수정확인·Regression 범위, 모자란 정보 질문 | 5.2 |
-| 매뉴얼 개정 검증 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정, 결과 Excel, Word Comment 파일 | 5.3 |
+| 매뉴얼 개정 검증 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정한 결과 화면, Word Comment 파일. Claude 대화로 돌리면 결과 Excel | 5.3 |
 | 비용 대시보드 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
 | QA Intelligence Agent 일일 점검 | 서버가 평일 07:30 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [지금 실행]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
@@ -1919,22 +1919,22 @@ python scripts/rule_capability_report.py --markdown
 
 **요구사항 지도**
 
-- 검증 등록하기(시작 화면, 요청 등록, 리비전 표기): REQ-MANUAL-001 ~ REQ-MANUAL-003
+- 검증 등록하기(시작 화면, 요청 등록, 리비전 표기, 파일 이름으로 채우기): REQ-MANUAL-001 ~ REQ-MANUAL-003, REQ-MANUAL-019
 - 진행 상태 보기와 서버 재시작 뒤 처리: REQ-MANUAL-004
-- 변경 뽑기(Word 변경 추적, PDF 비교, 단순 변경 걸러내기): REQ-MANUAL-005 ~ REQ-MANUAL-007
+- 변경 뽑기(Word 변경 추적, PDF 비교, 단순 변경 걸러내기, 문장 점검): REQ-MANUAL-005 ~ REQ-MANUAL-007, REQ-MANUAL-020
 - 판정 자료 모으기(사양서 근거, Release 범위 대조, 다른 Manual 영향 후보): REQ-MANUAL-008 ~ REQ-MANUAL-010
 - AI 판정과 사람 확인 신호: REQ-MANUAL-011, REQ-MANUAL-012
-- 결과 보고 QA 가 정하기(결과 화면, QA 재판정, 이전 회차 지적사항): REQ-MANUAL-013 ~ REQ-MANUAL-015
+- 결과 보고 QA 가 정하기(결과 화면, QA 확정, 이전 회차 지적사항): REQ-MANUAL-013 ~ REQ-MANUAL-015
 - 연구소에 회신할 Word 파일 받기: REQ-MANUAL-016
 - 사용법 화면: REQ-MANUAL-017
 - Claude 대화로 검증하기: REQ-MANUAL-018
 - 지킬 것(매뉴얼 서버 장애 격리, AI 호출 줄이기, 원본 보존과 QA 최종 결정): NFR-MANUAL-001 ~ NFR-MANUAL-003
 - 비용 대시보드(화면, 모으는 방법, 오늘 사용량, 사용법, 가는 길): REQ-COST-001 ~ REQ-COST-005
 
-매뉴얼 개정 검증 한 건은 이렇게 흐른다. 문서에서 변경을 뽑고, 판정 자료를 모은 뒤 AI 가 판정하고, QA 가 결과를 보고 고친 다음 Word Comment 파일을 받는다.
+매뉴얼 개정 검증 한 건은 이렇게 흐른다. QA 는 개정 매뉴얼 파일 하나만 끌어놓는다. 서버가 파일 이름으로 제품·매뉴얼·버전·이전 검증을 채우고, 변경을 뽑아 판정 자료를 모은 뒤 AI 가 판정한다. QA 는 결과 화면에서 할 일 묶음별로 바로 확인·확정하고, 연구소에 보낼 Word Comment 파일을 받는다.
 
 ```flow
-검증 등록 -> 문서 파싱 -> SRS 근거 준비 -> Release 범위 대조 -> 다른 Manual 영향 추적 -> AI 판정 -> 결과 저장 -> 결과 화면 -> QA 재판정 -> Word Comment 파일 받기
+파일 끌어놓기 -> 파일 이름 인식 -> 검증 등록 -> 문서 파싱 -> 문장 점검 -> SRS 근거 준비 -> Release 범위 대조 -> 다른 Manual 영향 추적 -> AI 판정 -> 결과 저장 -> 결과 화면 -> QA 확정 -> Word Comment 파일 받기
 문서 파싱 -(비교 대상 없는 첫 PDF)-> Baseline 등록 -> 끝
 AI 판정 -(quick 판정이 문제없음)-> 다음 변경
 AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
@@ -1968,6 +1968,12 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 | 판정 신호 | AI 나 서버가 판정에 붙이는 짧은 이유 코드다(`reason_codes`). 예: `PDF_DIFF_REVIEW_REQUIRED` |
 | 사람 검토 필요 | AI 결과를 믿지 말고 QA 가 원본을 직접 보라는 표시다(`needs_human_review`). 화면에는 "Human Review 필요"로 보인다 |
 | QA 재판정 | QA 가 AI 판정을 다른 판정으로 바꿔 저장하는 것이다(`qa_decision`). AI 판정 값은 따로 남는다 |
+| QA 확정 | QA 가 변경 한 건의 판정을 정한 상태다. AI 판정에 동의해도, 다른 판정으로 바꿔도 QA 판정(`qa_decision`)이 채워진다 |
+| 할 일 묶음 | 결과 화면이 변경을 나누는 세 묶음이다. 연구소 요청, QA 확인, 문제없음이다(REQ-MANUAL-013) |
+| 파일 이름 인식 | 올린 매뉴얼의 파일 이름에서 제품·매뉴얼 종류·버전을 읽어 입력 칸을 미리 채우는 것이다(REQ-MANUAL-019) |
+| 문장 점검 | 고친 뒤의 문장에 같은 단어 반복, 문장 붙음 같은 편집 잔재가 있는지 AI 없이 규칙으로 보는 것이다(REQ-MANUAL-020) |
+| 절 제목 | 변경이 들어 있는 가장 가까운 앞쪽 Word 제목 문단의 글자다(`section_heading`). 예: "문서 규칙" |
+| 최종 문장 | 변경 추적을 모두 받아들였을 때 그 문단에 남는 글자다(`paragraph_text`) |
 | 다른 Manual 영향 | 이번 Release 변경이 같은 제품의 다른 매뉴얼에도 반영돼야 할 수 있는 후보다(Cross-Manual) |
 | 매뉴얼 서버 | 매뉴얼 최신본(Current)을 보관하는 하위 서비스다(`services/qa-manual-hub`). 이 앱과 HTTP 로만 연결한다 |
 | Current 버전 | 매뉴얼 서버에서 조직이 최신본으로 지정한 버전이다 |
@@ -1980,25 +1986,46 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 
 ### REQ-MANUAL-001 검증 시작 화면
 
-**하는 일** QA 가 VXvue Service Manual 개정본을 받으면 이 화면에서 제품·매뉴얼·버전을 고르고 파일을 올린다. 같은 화면 아래에 지금까지의 검증 이력이 보인다.
+**하는 일** QA 가 VXvue Service Manual 개정본을 받으면 이 화면에 파일 하나만 끌어놓는다. 화면은 파일 이름으로 제품·매뉴얼·버전·이전 검증을 채워 보여 주고, QA 는 맞는지 보고 "검증 시작"을 누른다. 같은 화면 아래에 지금까지의 검증 이력이 보인다.
+
+> **예시** `(매뉴얼) VXvue Service Manual.V1.1.0W2_KO.docx` 를 끌어놓으면 "자동 인식: VXvue · VXvue Service Manual · V1.1.0 · W1" 이 보인다. 같은 매뉴얼·버전의 W1 검증이 이미 있으면 그 검증을 이어받아 W2 가 된다.
 
 **언제** 홈 화면의 매뉴얼 개정 검증 카드나 각 화면 메뉴에서 들어온다(`GET /manual-review`).
 
 **결과** 화면은 위에서부터 이렇게 구성된다.
 
 1. 제목 "매뉴얼 개정 검증"과 한 줄 설명.
-2. "현재 검증 근거 SRS" 칸. 제품마다 접을 수 있는 줄에 다음을 보인다.
-   - 등록 사양서 개수와 최근 동기화 상태
-   - 사양서 이름, 버전, 등록 시각. 서버는 UTC 로 주고 브라우저가 현지 시각으로 바꿔 보인다.
-   - 사양서가 없으면 "등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다."
-3. 입력 양식. 입력 항목은 REQ-MANUAL-002 를 따른다.
-   - 제품 목록은 Knowledge 에 등록된 제품이다.
-   - 매뉴얼 종류는 제품 설정의 매뉴얼 이름(`manual_types`)과 이전 검증 이력의 이름을 제안한다. 목록에 없는 이름도 쓸 수 있다.
-   - 제품 버전은 그 제품에 등록된 버전을 제안한다.
-   - "이전 검증" 목록에는 고른 제품·매뉴얼과 같은 리비전만 보인다. 하나를 고르면 그 리비전의 제품 버전이 자동으로 채워진다.
-   - "자동 리비전 표기" 칸이 입력에 따라 `V1.1.0 · W1` 같은 표기를 미리 보여 준다. 규칙은 REQ-MANUAL-003 이다.
-4. 진행 막대와 상태 문구(REQ-MANUAL-004).
-5. "검증 이력" 표. 최신 리비전이 위에 온다.
+2. 파일 놓는 칸. "개정 매뉴얼을 끌어놓거나 클릭해 고르세요 (.docx 변경 추적 / .pdf)". 꼭 필요한 입력은 이 파일 하나다.
+3. 파일을 고르면 "자동 인식" 칸이 나타난다(REQ-MANUAL-019).
+
+   - 한 줄 요약: `<제품> · <매뉴얼 종류> · V<버전> · <리비전 표기>`.
+
+   - 이어받을 이전 검증이 있으면 "이어받기: #<번호> <매뉴얼> <리비전 표기> (미해결 지적 N건)". 없으면 "새 검증 계보로 시작합니다".
+
+   - 인식 메모가 있으면 그 아래에 한 줄씩 보인다. 예: "파일 이름의 V4.4 는 등록된 제품 버전이 아니어서 V1.0 을 제안합니다."
+
+   - "인식 값 고치기"를 펼치면 제품, 매뉴얼 종류, 제품 버전, 이전 검증 칸이 미리 채워진 채로 나온다. 고치면 한 줄 요약과 리비전 표기(REQ-MANUAL-003)가 바로 바뀐다.
+
+   - 제품 목록은 Knowledge 에 등록된 제품이다. 매뉴얼 종류는 제품 설정의 매뉴얼 이름(`manual_types`)과 이전 검증 이력의 이름을 제안하고, 목록에 없는 이름도 쓸 수 있다. 제품 버전은 그 제품에 등록된 버전을 제안한다.
+
+   - "이전 검증" 목록에는 고른 제품·매뉴얼과 같은 리비전만 보인다. 하나를 고르면 그 리비전의 제품 버전이 채워진다.
+
+   - 인식에 실패한 칸이 있으면 "인식 값 고치기"가 펼쳐진 채로 나오고 빈 칸을 채우라는 문구가 보인다.
+4. "참고 자료 추가 (선택)" 접힌 칸. Release Note 와 설계검토보고서 파일 칸이 들어 있다. 첨부하지 않으면 같은 제품 버전의 최신 문서를 쓴다(REQ-MANUAL-002 10번).
+5. 근거 사양서 상태 한 줄. 파일을 고르기 전에는 제품마다, 고른 뒤에는 인식한 제품의 줄을 앞에 보인다.
+   - "근거 사양서 <개수>개 · 사양서 날짜 <가장 새 날짜> · 최근 동기화 <상태> (<날짜>)". 사양서 날짜는 사양서 이름의 `(261013)` 같은 날짜다.
+   - 펼치면 사양서 이름, 버전, 등록 시각이 보인다. 서버는 UTC 로 주고 브라우저가 현지 시각으로 바꿔 보인다.
+   - 경고는 아래 표대로 붙인다.
+6. "검증 시작" 버튼, 진행 막대와 상태 문구(REQ-MANUAL-004).
+7. "검증 이력" 표. 최신 리비전이 위에 온다.
+
+| 사양서 경고 | 조건 |
+|---|---|
+| "등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다." | 그 제품에 등록된 사양서가 없다 |
+| "지식 폴더에 더 새 사양서(<날짜>)가 있습니다. Knowledge 에서 동기화하세요." | 지식 사본(`data/product_knowledge/<제품>/`)에 모아 둔 사양서 가운데 이름의 날짜가 등록 사양서의 가장 새 날짜보다 늦은 것이 있다 |
+| "최근 사양서 동기화가 실패했습니다." | 그 제품 사양서의 마지막 동기화 상태가 `FAILED` 다 |
+
+이유: 오래된 사양서로 판정하면 맞게 고친 매뉴얼도 "수정 필요"로 나온다. 화면은 사양서 파일을 직접 고치지 않고 알리기만 한다(REQ-MANUAL-008 지킬 것).
 
 | 열 | 내용 |
 |---|---|
@@ -2021,7 +2048,7 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 
 ### REQ-MANUAL-002 검증 요청 등록
 
-**하는 일** QA 가 "검증 시작"을 누르면 서버가 입력을 검사하고, 개정본을 저장한 뒤 백그라운드 작업을 만든다. 검증 자체는 그 작업이 따로 실행한다.
+**하는 일** QA 가 "검증 시작"을 누르면 서버가 입력을 검사하고, 개정본을 저장한 뒤 백그라운드 작업을 만든다. 검증 자체는 그 작업이 따로 실행한다. 제품·매뉴얼 종류·제품 버전·이전 검증은 화면이 파일 이름 인식(REQ-MANUAL-019)으로 채운 값이 그대로 온다. 서버는 그 값을 QA 가 직접 쓴 값과 똑같이 검사한다.
 
 **언제** 검증 시작 화면의 "검증 시작" 버튼(`POST /manual-review/revisions`, multipart form).
 
@@ -2228,11 +2255,18 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
    - 문단 번호와, 그 문단 안에서 몇 번째 변경인지(`change_index_in_paragraph`, 0부터). Word Comment 를 정확한 위치에 붙일 때 쓴다(REQ-MANUAL-016).
 5. 변경 안에 그림(`drawing`, `pict`, `blip`)이 있으면 종류 앞에 `image_` 를 붙이고(예: `image_insertion`) 사람 검토 필요 표시를 켠다.
 6. 그림만 있고 글자가 없으면 글자를 "이미지 변경 (<그림 설명>)"으로 채운다. 그림 설명은 그림의 대체 텍스트이고, 없으면 그림 이름이다. 둘 다 없으면 "이미지 변경"만 쓴다.
-7. 서식 변경(글꼴·문단 모양 바꿈)은 뽑지 않는다.
+7. 변경마다 절 제목과 최종 문장을 함께 기록한다. 결과 화면의 위치 표시, AI 판정의 맥락(REQ-MANUAL-011), 문장 점검(REQ-MANUAL-020)에 쓴다.
+
+   - 제목 문단은 스타일 이름(`styles.xml` 의 `w:name`)이 `heading 1`~`heading 9` 또는 `제목 1`~`제목 9` 인 문단 스타일이거나, 그런 스타일을 바탕(`w:basedOn`)으로 만든 문단 스타일을 쓴 문단이다.
+
+   - 절 제목은 그 변경보다 앞에 나온 마지막 제목 문단의 최종 글자다. 앞에 제목이 없으면 빈 값이다.
+
+   - 최종 문장은 그 문단의 일반 글자와 삽입·이동 도착 글자를 이은 것이다. 삭제·이동 출발 글자와 그림은 뺀다. 앞뒤 공백을 지운다.
+8. 서식 변경(글꼴·문단 모양 바꿈)은 뽑지 않는다.
 
 이유: 서식 변경은 AI 판정 대상이 아니다.
 
-**결과** 변경 목록이 나온다. 모든 변경을 변경 표(`manual_changes`)에 저장한다. 분석 대상인지는 REQ-MANUAL-007 에서 함께 저장한다.
+**결과** 변경 목록이 나온다. 모든 변경을 변경 표(`manual_changes`)에 절 제목(`section_heading`)·최종 문장(`paragraph_text`)과 함께 저장한다. 분석 대상인지는 REQ-MANUAL-007 에서 함께 저장한다.
 
 **안 될 때**
 
@@ -2240,6 +2274,8 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 |---|---|---|
 | DOCX 가 아니거나 깨진 파일 | 작업 실패 | 실패 단계 "문서 파싱"과 오류 문구 |
 | 변경 추적 표시가 하나도 없음 | 변경 0건으로 정상 완료 | 결과 화면 "Track Changes가 감지되지 않았습니다." |
+
+> **주의** 개요 수준(`w:outlineLvl`)만으로 제목을 정하지 않는다. VXvue 1.1.0 Service Manual 은 본문 번호 목록 스타일(`VText0Number`)에도 개요 수준이 있어서, 그 기준으로는 "VXvue를 실행하십시오." 같은 본문이 제목이 된다.
 
 **지킬 것**
 
@@ -2461,11 +2497,23 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 | 값 | 뜻 |
 |---|---|
 | `stage` | `quick` 또는 `detail` |
-| `manual_change` | 변경 종류, 작성자, 글자, 문단 번호, 페이지 번호, 사람 검토 필요 여부 |
+| `manual_change` | 변경 종류, 작성자, 글자, 문단 번호, 페이지 번호, 사람 검토 필요 여부, 절 제목(`section_heading`), 최종 문장(`paragraph_text`, 1000자까지) |
 | `candidate_srs` | REQ-MANUAL-008 에서 고른 사양서 조각 |
 | `release_scope_context` | REQ-MANUAL-009 에서 짝지은 Release 항목 |
 
 같은 입력이 늘 같은 글자열이 되도록 키 순서를 정렬해 JSON 으로 보낸다.
+
+**판정 기준** 두 지시문은 VXvue QA 작성 규칙 가이드 Rev1.18 의 문서 개정 검토(S07, 35절)를 따른다.
+
+1. 변경 글자는 절 제목과 최종 문장을 함께 보고 판단한다. 삭제·삽입 한 조각만 보고 문장 전체의 뜻을 짐작하지 않는다.
+2. 공통 설정 Coverage 규칙(35.1). 특정 절에 사양 항목이 보이지 않는다고 바로 누락·보강으로 보지 않는다. 공통 절, 상위 절, 참조 절, 다른 공식 문서에서 설명할 수 있는 내용이면 `PASS` 로 두고 판정 신호 `COVERED_ELSEWHERE` 를 붙인다.
+3. Manual-worthy Gate(35.2). 아래 내용이 빠졌을 때만 보강·수정을 요구한다.
+   - 설치 방법·조건, 설정 경로, 기본값·허용 범위·입력값 검사
+   - 화면에 보이는 조건·켜지고 꺼지는 조건, 저장·적용·재시작·재연결 조건, 연동 조건
+   - 오류 메시지와 복구 방법, 진단·로그, 권한 차이, 모델·모드·라이선스별 제약
+   - 서비스 엔지니어나 대상 독자가 실제로 판단해야 하는 상태
+4. 내부 구현 상세, 대상 독자에게 필요 없는 상태 값, 다른 공식 문서가 더 알맞게 다루는 상세는 요구하지 않는다. 이때 판정 신호 `NOT_MANUAL_WORTHY` 를 붙일 수 있다.
+5. 사양서 안에서 기본값·조건·범위가 서로 다르면 권장 문구를 확정하지 않고 `SPEC_CONFIRMATION_REQUIRED` 로 둔다. 판정 신호는 `SPEC_CONFLICT` 다.
 
 **순서**
 
@@ -2473,7 +2521,7 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 2. 판정이 `PASS` 이고 detail 이 필요 없다고 하면 끝낸다.
 3. 아니면 detail 판정을 부른다(프롬프트 `manual_revision_detail`). 응답 형식은 문제(`problem`), 권장 문구(`recommended_manual_text`), QA Comment 초안(`qa_comment`), 근거 목록(`evidence`), 사람 검토 필요 여부다.
 4. 판정·확신도·판정 신호는 quick 판정 값을 쓰고, 나머지는 detail 판정 값을 붙인다. 쓴 프롬프트 버전도 기록한다.
-5. REQ-MANUAL-012 의 사람 확인 신호를 더한다.
+5. REQ-MANUAL-012 의 사람 확인 신호와 REQ-MANUAL-020 의 문장 점검 결과(`text_issues`)를 더한다.
 6. 판정, 확신도, 합친 판정 내용 전체(`ai_judgment_json`)를 변경 표에 저장한다.
 7. 같은 모델·같은 프롬프트 이름·같은 프롬프트 버전·같은 입력이면 AI 를 다시 부르지 않고 저장해 둔 답을 쓴다. 캐시 규칙과 토큰 기록은 REQ-USAGE 참조.
 
@@ -2506,8 +2554,8 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `app/prompts/manual_revision_quick.yaml` | 버전 2 | quick 판정 지시문 |
-| `app/prompts/manual_revision_detail.yaml` | 버전 2, 출력 8192 토큰, 내부 추론 0 | detail 판정 지시문 |
+| `app/prompts/manual_revision_quick.yaml` | 버전 3 | quick 판정 지시문 |
+| `app/prompts/manual_revision_detail.yaml` | 버전 3, 출력 8192 토큰, 내부 추론 0 | detail 판정 지시문 |
 | `analysis.cache_enabled` | true | 같은 입력이면 저장해 둔 답을 다시 쓴다(REQ-USAGE 참조) |
 
 **안 될 때**
@@ -2545,25 +2593,52 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 ### REQ-MANUAL-013 결과 화면
 
-**하는 일** 검증이 끝나면 QA 는 이 화면에서 변경마다 AI 판정과 근거를 읽고, 누락 의심과 다른 매뉴얼 영향 후보를 확인한다.
+**하는 일** 검증이 끝나면 QA 는 이 화면 맨 위에서 할 일이 몇 건인지 먼저 본다. 변경은 "연구소 요청", "QA 확인", "문제없음" 세 묶음으로 나뉘고, QA 는 묶음별로 AI 판정에 동의하거나 바꿔서 확정한다. 결과는 따로 파일로 내려받지 않고 이 화면에서 바로 본다. 다 끝나면 같은 자리에서 연구소에 보낼 Word Comment 파일을 받는다.
+
+> **예시** 변경 84건 가운데 분석 대상이 31건이면 "연구소 요청 7 · QA 확인 5 · 문제없음 19 · 단순 변경 53" 이 보인다. QA 는 연구소 요청 7건을 읽고 고친 뒤 "Comment 넣은 Word 받기"를 누른다.
 
 **언제** 검증 이력의 "결과 보기"나 완료 문구의 링크를 누를 때(`GET /manual-review/revisions/<리비전 번호>/view`).
 
 **결과** 화면은 위에서부터 이렇게 구성된다.
 
-1. 머리: 제품 · 매뉴얼 · 리비전 표기 · 제품 버전 · 상태.
-2. 판정 요약: 분석 대상 변경의 AI 판정 값별 개수를 한국어 이름으로 보인다. 판정이 아직 없으면 "판정 대기"로 센다. 분석 대상이 없으면 "(분석 대상 변경 없음)".
-3. DOCX 리비전이면 "[Word Comment 삽입 DOCX 생성]" 링크(REQ-MANUAL-016). PDF 리비전이면 "PDF 변경은 페이지 텍스트 비교 결과이며 모든 항목에 사람 확인이 필요합니다. Word Comment 생성은 지원하지 않습니다."
-4. "누락 의심" 칸(누락 의심이 있을 때만): 카테고리, 제목, 검토 결과 배지, 출처, 설명.
-5. "다른 Manual 영향 확인" 칸(후보가 있을 때만): 대상 매뉴얼, 제목, QA 상태, 근거 문서, Release 출처, BM25 점수(소수 셋째 자리), 근거 문단, QA 확정 양식(REQ-MANUAL-010).
-6. "이전 Round 미해결 지적사항" 칸(있을 때만, REQ-MANUAL-015).
-7. "변경사항 (N건)" 칸. 단순 변경을 포함한 모든 변경을 문단 번호 순서로 보인다. 변경마다 다음이 나온다.
-   - 변경 종류 배지: 추가, 삭제, 이동(출발), 이동(도착), PDF 추가, PDF 삭제, PDF 수정. 그 밖의 종류는 코드 그대로 보인다(예: `image_insertion`).
-   - 사람 확인 신호 배지, 단순 변경 배지 또는 AI 판정 배지와 확신도(소수 둘째 자리), QA 재판정 배지, "Human Review 필요" 배지
-   - 변경 글자
-   - 위치: PDF 면 "PDF 페이지 N", 아니면 "작성자 · 날짜 · 문단 #N"
-   - 문제, 판정 신호, QA Comment 초안, 권장 문구, 근거 목록(근거 종류, 사양 번호·제목, 파일, 페이지, 시각 확인 상태)
-   - 분석 대상 변경에만 QA 재판정 양식(REQ-MANUAL-014)
+1. 머리: 제품 · 매뉴얼 · 리비전 표기 · 제품 버전 · 상태. 그 아래 한 줄 요약 "변경 N건 중 분석 대상 M건 · QA 확정 x/M".
+2. 할 일 묶음 탭: "연구소 요청 a", "QA 확인 b", "문제없음 c", "단순 변경 d". 탭을 누르면 그 묶음의 변경만 보인다. 처음 열 때는 건수가 있는 첫 탭(연구소 요청 → QA 확인 → 문제없음 순서)이 선택된다. 묶음을 나누는 규칙은 아래 표다.
+3. 받기 버튼 줄.
+   - DOCX 리비전이면 "Comment 넣은 Word 받기"(REQ-MANUAL-016). PDF 리비전이면 이 버튼 대신 "PDF 변경은 페이지 텍스트 비교 결과이며 모든 항목에 사람 확인이 필요합니다. Word Comment 생성은 지원하지 않습니다."
+   - "남은 AI 판정 모두 동의" 버튼(REQ-MANUAL-014). QA 확정되지 않은 분석 대상 변경이 있을 때만 보인다.
+4. 변경 카드 목록. 묶음 안에서 문단 번호 순서로 보인다. 카드마다 다음이 나온다.
+
+   - 위치: PDF 면 "PDF 페이지 N", 아니면 "<절 제목> · 문단 #N". 절 제목이 없으면 "문단 #N" 만 쓴다. 작성자·날짜는 작은 글씨로 뒤에 붙인다.
+
+   - 변경 종류 배지(추가, 삭제, 이동(출발), 이동(도착), PDF 추가, PDF 삭제, PDF 수정, 이미지 변경)와 판정 배지. QA 확정이면 "QA 확정: <판정>", 아니면 "AI: <판정>".
+
+   - 변경 글자. 최종 문장이 변경 글자와 다르면 "최종 문장: …"을 함께 보인다.
+
+   - 문제, QA Comment 초안, 권장 문구가 있으면 각 한 줄 제목과 함께 보인다.
+
+   - 문장 점검 결과가 있으면 "문장 점검: <항목 이름> — "<발췌>"" 를 줄마다 보인다(REQ-MANUAL-020).
+
+   - 근거 한 줄: "<파일> p.<페이지> <사양 제목>". 여러 개면 줄마다 보인다.
+
+   - "자세히"를 펼치면 확신도(소수 둘째 자리), 판정 신호, 사람 확인 신호, 근거 종류와 시각 확인 상태, AI 가 처음 낸 판정(바뀐 경우)이 보인다.
+
+   - 분석 대상 변경에만 "동의" 버튼과 "판정 바꾸기" 양식(판정 목록, 사유 칸, 저장)이 있다(REQ-MANUAL-014). AI 판정이 없으면 "동의" 버튼을 만들지 않는다. 사람 검토 필요 변경에는 "사람 검토 필요" 배지가 붙는다.
+5. 접힌 보조 칸. 각 제목 옆에 건수를 보이고, 건수가 0이면 칸을 만들지 않는다.
+   - "누락 의심 N": 카테고리, 제목, 검토 결과 배지, 출처, 설명.
+   - "다른 Manual 영향 N": 대상 매뉴얼, 제목, QA 상태, 근거 문서, Release 출처, BM25 점수(소수 셋째 자리), 근거 문단, QA 확정 양식(REQ-MANUAL-010).
+   - "이전 회차 지적사항 N": REQ-MANUAL-015 의 내용과 확정 양식.
+6. 아래쪽 안내 문구: "AI 판정은 QA 판단을 돕는 초안입니다. 최종 결정은 QA 확정 값입니다."
+
+| 묶음 | 들어가는 변경 |
+|---|---|
+| 연구소 요청 | 기준 판정이 `SUPPLEMENT_REQUIRED`, `MODIFICATION_REQUIRED`, `DELETE_REQUIRED`, `MISSING_SUSPECTED` 인 변경. 또는 QA 확정 전이고 문장 점검 결과가 있는 변경 |
+| QA 확인 | 기준 판정이 `SPEC_CONFIRMATION_REQUIRED`, `VERSION_CONFIRMATION_REQUIRED`, `UNABLE_TO_DETERMINE` 인 변경. 또는 QA 확정 전이고 판정이 없거나 사람 검토 필요가 켜진 변경 |
+| 문제없음 | 위 둘에 들지 않는 분석 대상 변경 |
+| 단순 변경 | 분석 대상이 아닌 변경(REQ-MANUAL-007). 동의·판정 양식이 없다 |
+
+기준 판정은 QA 판정이 있으면 그것, 없으면 AI 판정이다. QA 확정이면 QA 판정만으로 묶음을 정한다. 위 표에서 위쪽 줄이 먼저다.
+
+이유: QA 가 "문제없음"으로 확정한 변경을 문장 점검이나 사람 검토 표시 때문에 다시 할 일로 올리지 않는다.
 
 **안 될 때**
 
@@ -2571,12 +2646,18 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 |---|---|---|
 | 없는 리비전 | 404 | "리비전을 찾을 수 없습니다." |
 | 변경 0건 | 빈 목록 | "Track Changes가 감지되지 않았습니다." |
+| 선택한 묶음에 변경이 없음 | 빈 목록 | "이 묶음에는 변경이 없습니다." |
 
 ### REQ-MANUAL-014 QA 재판정
 
-**하는 일** AI 가 "문제없음"이라 했지만 QA 가 보니 경고 문구가 빠졌다면, QA 는 "보강 필요"로 바꾸고 사유를 적어 저장한다. AI 판정 값은 따로 남는다.
+**하는 일** AI 판정이 맞으면 QA 는 카드의 "동의"를 한 번 누른다. AI 가 "문제없음"이라 했지만 QA 가 보니 경고 문구가 빠졌다면, "판정 바꾸기"에서 "보강 필요"를 고르고 사유를 적어 저장한다. 어느 쪽이든 화면을 다시 읽지 않고 카드와 묶음 건수만 바뀐다. AI 판정 값은 따로 남는다.
 
-**언제** 결과 화면에서 변경마다 있는 "QA 판정 변경..." 목록과 "저장" 버튼(`POST /manual-review/revisions/<리비전>/changes/<변경>/qa-decision`).
+**언제**
+
+- 카드의 "동의" 버튼: 그 변경의 AI 판정을 QA 판정으로 보낸다.
+- 카드의 "판정 바꾸기" 양식의 "저장" 버튼.
+- 둘 다 같은 주소다(`POST /manual-review/revisions/<리비전>/changes/<변경>/qa-decision`). 화면은 `Accept: application/json` 머리글을 붙여 보낸다.
+- "남은 AI 판정 모두 동의" 버튼(`POST /manual-review/revisions/<리비전>/qa-decisions/accept-ai`).
 
 **입력**
 
@@ -2590,7 +2671,26 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 1. 변경이 이 리비전에 속하는지 본다.
 2. 판정 값이 허용 목록에 있는지 본다.
 3. QA 판정과 사유를 저장한다. 앞서 저장한 QA 판정·사유는 새 값으로 바뀐다. AI 판정 칸은 건드리지 않는다.
-4. 결과 화면으로 돌아간다(303).
+4. 요청에 `Accept: application/json` 이 있으면 JSON 으로 답한다. 없으면 결과 화면으로 돌아간다(303). 화면의 자바스크립트가 꺼져 있어도 양식으로 저장할 수 있게 하려는 것이다.
+
+JSON 답의 내용이다.
+
+| 키 | 뜻 |
+|---|---|
+| `change_id` | 저장한 변경 번호 |
+| `qa_decision`, `qa_decision_label` | 저장한 QA 판정 코드와 한국어 이름 |
+| `bucket` | 이 변경이 이제 속한 묶음(`request`, `check`, `pass`) |
+| `bucket_counts` | 묶음별 건수(`request`, `check`, `pass`, `simple`) |
+| `confirmed`, `functional` | QA 확정 건수, 분석 대상 건수 |
+
+"남은 AI 판정 모두 동의"는 이렇게 한다.
+
+1. 리비전이 있는지 본다.
+2. 분석 대상 변경 가운데 QA 판정이 비어 있고 AI 판정이 있는 변경을 고른다.
+3. 그 가운데 사람 검토 필요가 켜진 변경과 문장 점검 결과가 있는 변경은 뺀다.
+4. 남은 변경마다 QA 판정에 AI 판정을 넣는다. QA 메모는 비운 채로 둔다.
+5. JSON 이면 `accepted`(동의한 건수), `skipped`(뺀 건수), `bucket_counts`, `confirmed`, `functional` 을 돌려준다. 아니면 결과 화면으로 돌아간다(303).
+6. 화면은 "AI 판정 N건에 동의했습니다. 사람 확인이 필요한 M건은 직접 확인하세요." 를 보이고 화면을 다시 읽는다.
 
 **결과** 변경 표의 QA 판정(`qa_decision`)과 QA 메모(`qa_note`)에 저장된다. Word Comment 파일은 QA 판정이 있으면 그것을 먼저 쓴다(REQ-MANUAL-016).
 
@@ -2600,10 +2700,15 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 |---|---|---|
 | 변경이 없거나 다른 리비전의 변경 | 404 | "변경 항목을 찾을 수 없습니다." |
 | 허용하지 않는 판정 값 | 400 | "지원하지 않는 판정 값입니다." |
+| 일괄 동의할 리비전이 없음 | 404 | "리비전을 찾을 수 없습니다." |
+| 화면에서 저장 요청이 실패함 | 카드 상태를 바꾸지 않는다 | 카드 아래 "저장하지 못했습니다: <오류 문구>" |
 
 **지킬 것**
 
-- 판정 요약(REQ-MANUAL-013 2번)은 AI 판정으로 센다. QA 재판정은 요약 숫자를 바꾸지 않는다.
+- 작업 결과 요약의 판정 값별 개수(`decision_counts`, REQ-MANUAL-004)는 AI 판정으로 센다. QA 판정은 이 숫자를 바꾸지 않는다. 화면의 묶음 건수(REQ-MANUAL-013)는 기준 판정으로 센다.
+- 일괄 동의는 사람 검토 필요 변경과 문장 점검 결과가 있는 변경을 확정하지 않는다.
+
+이유: 그림·PDF 변경처럼 AI 가 글자만 보고 판정한 변경을 QA 가 보지 않고 확정하면 사람 확인 신호(REQ-MANUAL-012)가 쓸모없어진다.
 
 ### REQ-MANUAL-015 이전 회차 지적사항 이어받기
 
@@ -2662,16 +2767,22 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 **하는 일** 검증과 QA 재판정이 끝나면, 문제 항목마다 원본 Word 파일의 해당 위치에 QA Comment 를 붙인 새 파일을 내려받아 연구소에 회신한다. 예: `VXvue Service Manual.V1.1.0W2_KO_AI검토.docx`.
 
-**언제** 결과 화면의 "[Word Comment 삽입 DOCX 생성]" 링크(`GET /manual-review/revisions/<리비전>/comment-docx`).
+**언제** 결과 화면의 "Comment 넣은 Word 받기" 버튼(`GET /manual-review/revisions/<리비전>/comment-docx`).
 
 **순서**
 
 1. 리비전과 원본 파일이 있고 DOCX 인지 본다.
 2. 분석 대상 변경마다 Comment 문구를 정한다.
+
    1. 기준 판정은 QA 판정이고, 없으면 AI 판정이다.
-   2. 기준 판정이 없거나 `PASS` 면 Comment 를 달지 않는다.
-   3. 문구는 AI 의 QA Comment 초안이다. QA 메모가 있으면 그 뒤에 "(QA 메모: …)"를 붙인다.
-   4. 둘 다 없으면 "[<판정 코드>] 검토가 필요합니다."
+
+   2. QA 판정이 `PASS` 면 Comment 를 달지 않는다.
+
+   3. 기준 판정이 `PASS` 가 아니면 문구는 AI 의 QA Comment 초안이다. QA 메모가 있으면 그 뒤에 "(QA 메모: …)"를 붙인다. 둘 다 없으면 "[<판정 코드>] 검토가 필요합니다."
+
+   4. 문장 점검 결과(REQ-MANUAL-020)가 있으면 항목마다 "[문장 점검] <항목 이름>: "<발췌>"" 를 문구 뒤에 붙인다. 기준 판정이 없거나 `PASS` 여도 문장 점검 결과가 있으면 이 줄만으로 Comment 를 단다.
+
+   5. 기준 판정이 없거나 `PASS` 이고 문장 점검 결과도 없으면 Comment 를 달지 않는다.
 3. Comment 를 붙일 위치를 찾는다.
    1. 문단 번호로 문단을 찾고, 그 문단 안에서 같은 순번의 변경 표시를 찾는다. 그 변경의 첫 글자 묶음부터 끝 글자 묶음까지에 붙인다.
    2. 그 변경 표시를 못 찾으면 문단 전체에 붙인다.
@@ -2714,9 +2825,9 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 **결과** 화면에 담는 내용이다.
 
-1. 검증 등록: 제품·매뉴얼 종류·제품 버전 입력, 자동 리비전 표기, 이전 검증 선택, PDF Baseline 순서, 참고 문서 자동 재사용, 사양서는 공용 문서를 다시 쓴다는 점.
-2. 결과 확인과 QA 판정: 판정 종류, 누락 의심, QA 재판정.
-3. Word Comment 결과 내려받기.
+1. 검증 등록: 파일 하나 끌어놓기, 파일 이름 인식과 "인식 값 고치기", 자동 리비전 표기와 이전 검증 자동 선택, PDF Baseline 순서, 참고 문서 자동 재사용, 근거 사양서 상태 줄과 경고, 사양서는 공용 문서를 다시 쓴다는 점.
+2. 결과 확인과 QA 확정: 할 일 묶음 세 가지, 판정 종류, 동의와 판정 바꾸기, 남은 AI 판정 모두 동의(사람 검토 필요 변경은 빠짐), 문장 점검, 누락 의심.
+3. Word Comment 파일 내려받기.
 4. 현재 지원 범위와 준비 중인 기능. 이 목록은 구현과 맞아야 한다.
 5. "AI 검토는 QA 판단을 보조하며 최종 승인이나 사양 확정을 대체하지 않습니다."
 
@@ -2726,7 +2837,7 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 
 ### REQ-MANUAL-018 Claude 대화로 돌리는 매뉴얼 개정 검증
 
-**하는 일** QA 가 Claude Code 에게 "이 경로의 매뉴얼을 분석해 줘"라고 말하면, Claude 가 개정 매뉴얼의 변경마다 최신 사양서와 맞는지 판정하고 결과 Excel 과 Word Comment 파일을 만든다. 화면(REQ-MANUAL-001~016)과 같은 판정 기준을 쓴다. AI 판정은 Gemini 대신 사용자가 연 Claude 세션이 한다.
+**하는 일** QA 가 Claude Code 에게 "이 경로의 매뉴얼을 분석해 줘"라고 말하면, Claude 가 개정 매뉴얼의 변경마다 최신 사양서와 맞는지 판정하고 결과 Excel 과 Word Comment 파일을 만든다. 화면(REQ-MANUAL-001~016)과 같은 판정 기준을 쓴다. AI 판정은 서버가 부르는 Claude CLI 대신 사용자가 연 Claude 세션이 한다.
 
 > **예시** QA 가 이 저장소에서 Claude Code 를 열고 "`D:/manual/VXvue_UserManual_Rev1.8.docx` 매뉴얼 분석해 줘. 릴리스 노트는 `D:/manual/RN_1.1.docx`" 라고 말한다. Claude 는 변경 42건을 뽑고, 판정 결과를 보여 준 뒤 `output/manual_review_local/` 에 결과 파일 두 개를 만든다.
 
@@ -2747,8 +2858,8 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 **순서**
 
 1. 준비(`extract`): 도구가 변경을 뽑고(REQ-MANUAL-005·006), 단순 변경을 거르고(REQ-MANUAL-007), 변경마다 사양서 근거 후보를 고르고(REQ-MANUAL-008), 참고 문서와 대조한다(REQ-MANUAL-009). 사양서는 서버와 같은 지식 사본(`data/product_knowledge/<제품>/`)에서 읽는다.
-2. 도구는 결과 폴더에 판정할 목록(`changes.json`)과 판정 기록 틀(`decisions.json`)을 쓴다. 이미지 변경에는 사람 검토 필요 표시를 켠다(REQ-MANUAL-012).
-3. Claude 가 변경마다 REQ-MANUAL-011 표의 판정 값 가운데 하나와 확신도, 근거(사양 조각 번호), 문제·권장 문구·QA Comment 초안을 `decisions.json` 에 채운다. 근거 없는 칸은 비워 둔다.
+2. 도구는 결과 폴더에 판정할 목록(`changes.json`)과 판정 기록 틀(`decisions.json`)을 쓴다. 이미지 변경에는 사람 검토 필요 표시를 켠다(REQ-MANUAL-012). 변경마다 절 제목(`section_heading`), 최종 문장(`paragraph_text`), 문장 점검 결과(`text_issues`, REQ-MANUAL-020)를 함께 적는다.
+3. Claude 가 변경마다 REQ-MANUAL-011 표의 판정 값 가운데 하나와 확신도, 근거(사양 조각 번호), 문제·권장 문구·QA Comment 초안을 `decisions.json` 에 채운다. 근거 없는 칸은 비워 둔다. 판정은 REQ-MANUAL-011 의 판정 기준(공통 절 Coverage, Manual-worthy Gate)을 따른다.
 4. Claude 는 판정 요약(판정 값별 건수, 문제 있는 변경 목록)을 대화에 보이고, QA 의 수정 요청을 받아 `decisions.json` 을 고친다.
 5. 마무리(`finish`): 도구가 `decisions.json` 을 검사하고 결과를 만든다.
    - 판정 값이 표에 없거나, 변경 번호가 `changes.json` 에 없거나, 근거 번호가 보낸 후보에 없으면 그 줄을 오류로 알리고 멈춘다.
@@ -2761,7 +2872,7 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 |---|---|
 | `changes.json` | 뽑은 변경과 사양서 근거 후보 |
 | `decisions.json` | Claude 와 QA 가 정한 판정 |
-| `manual_review.xlsx` | 변경마다 판정·근거·권장 문구. 판정 값은 한국어 이름으로 보인다 |
+| `manual_review.xlsx` | 변경마다 판정·근거·권장 문구·문장 점검 결과. 판정 값은 한국어 이름으로 보인다 |
 | `<매뉴얼 이름>_QA_Comment.docx` | Comment 를 넣은 사본. 원본은 바꾸지 않는다 |
 | `comments.json` | 이번 회차 지적사항 |
 
@@ -2778,6 +2889,104 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 - 원본 매뉴얼·참고 문서는 읽기만 한다.
 - 도구는 외부 AI 를 부르지 않는다. 판정은 사용자가 연 Claude 세션이 한다. 이 세션은 회사 Claude Team 계정 기준을 따른다(OPEN_QUESTIONS 3).
 - 결과를 핵심 앱 DB 에 저장하지 않는다. 결과는 결과 폴더에만 있다.
+
+### REQ-MANUAL-019 파일 이름으로 검증 정보 채우기
+
+**하는 일** QA 가 개정 매뉴얼 파일을 고르면 서버가 파일 이름을 읽어 제품, 매뉴얼 종류, 제품 버전, 이어받을 이전 검증을 제안한다. QA 는 입력 칸 네 개를 직접 채우지 않고 제안이 맞는지만 본다.
+
+> **예시** `(매뉴얼) VXvue Service Manual.V1.1.0W2_KO.docx` 는 제품 `VXvue`, 매뉴얼 종류 `VXvue Service Manual`, 제품 버전 `1.1.0` 으로 읽는다. 같은 제품·매뉴얼·버전의 완료된 W1 검증(#12)이 있으면 그 검증을 이어받아 `V1.1.0 · W2` 가 된다.
+
+**언제** 시작 화면에서 파일을 고르거나 끌어놓을 때(`GET /manual-review/suggest?file_name=<파일 이름>`). 파일 내용은 보내지 않는다.
+
+**순서**
+
+1. 파일 이름을 지식 자산 이름 규칙(`app/core/product_knowledge.py` 의 `parse_asset_name`)으로 나눈다. `(매뉴얼)` 같은 앞 꼬리표, `V1.1.0W2` 같은 리비전, `_KO` 같은 언어 표시를 떼고 남은 글자가 문서 이름이다.
+2. 제품을 정한다.
+   1. 등록된 제품 가운데 이름이 문서 이름 안에 들어 있는 제품을 고른다(대소문자 무시). 여럿이면 이름이 가장 긴 제품이다.
+   2. 못 찾았고 등록된 제품이 하나뿐이면 그 제품이다.
+   3. 그래도 없으면 빈 값으로 두고 메모 "파일 이름에서 제품을 찾지 못했습니다."를 붙인다.
+3. 매뉴얼 종류를 정한다. 그 제품의 매뉴얼 이름 목록(REQ-MANUAL-001)에서 아래 순서로 찾는다. 비교할 때는 대소문자와 공백 차이를 무시한다.
+   1. 문서 이름과 같은 이름
+   2. 문서 이름 안에 들어 있는 이름 가운데 가장 긴 이름
+   3. 없으면 문서 이름을 그대로 쓰고 메모 "목록에 없는 매뉴얼 이름입니다. 새 매뉴얼이면 그대로 두세요."를 붙인다.
+4. 제품 버전을 정한다. 리비전에서 `V` 와 `W<숫자>` 를 뗀 값을 파일 버전이라 한다. 등록 버전은 그 제품의 버전 목록이다.
+
+| 경우 | 제안 버전 | 메모 |
+|---|---|---|
+| 파일 버전이 등록 버전에 있음 | 파일 버전 | 없음 |
+| 파일 버전이 등록 버전보다 모두 새롭고, 첫 숫자가 가장 새 등록 버전과 같음 | 파일 버전 | "새 제품 버전 V<파일 버전>으로 시작합니다." |
+| 그 밖에 등록 버전이 있음 | 가장 새 등록 버전 | "파일 이름의 V<파일 버전>은 등록된 제품 버전이 아니어서 V<제안 버전>을 제안합니다. 다르면 고치세요." |
+| 파일 버전이 있고 등록 버전이 없음 | 파일 버전 | 없음 |
+| 파일 버전이 없음 | 가장 새 등록 버전, 없으면 빈 값 | "파일 이름에 버전이 없습니다." |
+
+   버전끼리는 점으로 나눈 숫자를 차례로 비교한다(1.10 은 1.9 보다 새롭다).
+
+5. 이전 검증을 고른다. 같은 제품·매뉴얼 종류·제품 버전의 리비전 가운데 상태가 완료(`REVIEWED`) 또는 Baseline(`BASELINE`)인 가장 최근 리비전이다. 올린 파일이 PDF 면 원본도 PDF 인 리비전만 본다.
+6. 리비전 표기를 REQ-MANUAL-003 규칙으로 미리 만든다. 파일 이름의 `W<숫자>` 와 다르면 메모 "파일 이름은 W<n>이지만 검증 회차는 <표기>입니다."를 붙인다.
+7. 이전 검증이 있으면 그 계보의 미해결 지적사항 수(REQ-MANUAL-015 2번)를 센다.
+
+**결과** JSON 으로 답한다.
+
+| 키 | 뜻 |
+|---|---|
+| `product`, `manual_name`, `target_version` | 제안 값. 못 정했으면 빈 글자 |
+| `parent_revision_id`, `parent_label` | 이어받을 리비전 번호와 "#<번호> <매뉴얼> <리비전 표기>". 없으면 `null` 과 빈 글자 |
+| `open_comment_count` | 이어받는 미해결 지적사항 수 |
+| `revision_label` | 미리 만든 리비전 표기. 버전이 비면 빈 글자 |
+| `file_revision` | 파일 이름에서 읽은 리비전(예: `V1.1.0W2`) |
+| `notes` | 인식 메모 목록 |
+| `complete` | 제품·매뉴얼 종류·제품 버전이 모두 채워졌는지 |
+
+**안 될 때**
+
+| 경우 | 동작 | 사용자에게 보이는 것 |
+|---|---|---|
+| 파일 이름이 비었음 | 400 | "파일 이름이 필요합니다." |
+| `.docx`·`.pdf` 가 아님 | 400 | "Word Track Changes(.docx) 또는 PDF 파일만 지원합니다." |
+| 제안 요청이 실패함(연결 끊김 등) | 화면이 "인식 값 고치기"를 펼친다 | "자동 인식을 하지 못했습니다. 값을 직접 입력하세요." |
+
+**지킬 것**
+
+- 제안은 저장하지 않는다. 버전 목록에도 추가하지 않는다. 등록은 "검증 시작"(REQ-MANUAL-002)에서만 한다.
+- 파일 이름의 버전을 제품 버전으로 확정하지 않는다. 제안과 메모로만 보이고 QA 가 고칠 수 있게 둔다.
+
+이유: `DICOM Conformance Statement.V4.4W1` 처럼 파일 이름의 버전이 문서 자체의 버전인 매뉴얼이 있다. QA 작성 규칙 가이드도 파일 이름의 개정을 적용 제품 버전으로 확정하지 않도록 한다.
+
+### REQ-MANUAL-020 문장 점검
+
+**하는 일** 연구소가 문장을 고치다 남긴 편집 잔재를 AI 없이 찾는다. 예를 들어 "설정 설정 화면에서"처럼 같은 단어가 두 번 남았거나, 문장을 지우다 "합니다.다음"처럼 두 문장이 붙었으면 결과 화면과 Word Comment 에 알린다.
+
+**언제** 검증 2단계에서 변경을 저장한 뒤, AI 판정 결과를 저장할 때 함께 붙인다. Claude 대화 검증(REQ-MANUAL-018)의 `extract` 도 같은 규칙을 쓴다.
+
+**순서**
+
+1. DOCX 변경만 본다. PDF 변경과 이미지 변경은 보지 않는다.
+2. 검사 대상은 그 변경 문단의 최종 문장(REQ-MANUAL-005 7번)이다.
+3. 아래 표의 규칙을 차례로 본다. 발췌는 걸린 곳 앞뒤를 포함해 40자까지다.
+
+| 항목 코드 | 화면 이름 | 걸리는 경우 | 예 |
+|---|---|---|---|
+| `DUPLICATE_WORD` | 같은 단어 반복 | 두 글자 이상인 같은 단어(한글·영문)가 공백 하나 이상을 사이에 두고 바로 이어 나온다 | "설정 설정", "the the" |
+| `DUPLICATE_PHRASE` | 추가 문구 중복 | 이번에 추가한 글자(앞뒤 공백을 지우고 8자 이상, 두 단어 이상)가 최종 문장에 두 번 이상 나온다. 한 단어짜리 추가는 정상 문장에도 두 번 나올 수 있어 보지 않는다 | 같은 경고 문장이 두 번 |
+| `MERGED_SENTENCE` | 문장 붙음 | 마침표 바로 뒤에 공백 없이 다음 문장이 이어진다. 앞 글자가 한글 `다` 이고 뒤가 한글이거나, 앞이 영문 소문자이고 뒤가 영문 대문자로 시작하는 단어일 때만 본다 | "합니다.다음", "screen.Click" |
+| `DOUBLE_PUNCTUATION` | 문장부호 겹침 | 쉼표 두 개(`,,`), 마침표 정확히 두 개(`..`), 또는 공백 뒤에 바로 오는 쉼표·마침표(숫자·마침표 앞 제외) | "입니다..", "설정 ." |
+| `DOUBLE_SPACE` | 공백 겹침 | 글자 사이에 공백이 두 개 이상 이어진다 | "로그인  화면" |
+
+4. 같은 문단의 문단 규칙 결과(`DUPLICATE_PHRASE` 를 뺀 나머지)는 그 문단의 첫 분석 대상 변경에만 붙인다. `DUPLICATE_PHRASE` 는 해당 추가 변경에 붙인다.
+5. 결과는 변경마다 `{code, label, excerpt}` 목록(`text_issues`)이다. AI 판정 내용(`ai_judgment_json`)에 함께 저장한다.
+
+**결과**
+
+- 결과 화면 카드에 "문장 점검" 줄이 보이고, QA 확정 전이면 그 변경은 연구소 요청 묶음에 들어간다(REQ-MANUAL-013).
+- Word Comment 문구에 "[문장 점검] …" 줄이 붙는다(REQ-MANUAL-016).
+
+**지킬 것**
+
+- 문장 점검은 AI 판정 값을 바꾸지 않는다.
+- 문장 점검 결과만으로 지적사항을 확정하지 않는다. QA 가 "문제없음"으로 확정하면 Comment 를 달지 않는다.
+- 번호 오류는 보지 않는다. Word 자동 번호는 문서 글자에 들어 있지 않아서 글자만으로 맞는지 알 수 없다.
+
+> **참고** 문장 점검은 QA 작성 규칙 가이드 S07 의 "변경 후 중복/잔재/번호 오류/문장 병합 오류" 확인을 돕는다. 번호 오류 확인은 QA 가 원본에서 한다.
 
 ### NFR-MANUAL-001 매뉴얼 서버 연동의 경계와 장애 격리
 
@@ -8152,6 +8361,9 @@ REQ-MANUAL-001 확인. `tests/test_manual_review_router.py`
 - `test_home_shows_registered_srs_sources`: SRS 칸에 등록 사양서가 보임
 - `test_product_added_in_knowledge_appears_in_manual_review`: Knowledge에서 추가한 제품이 목록에 나옴
 - `test_vxvue_manual_types_are_suggested_and_custom_input_is_allowed`: 매뉴얼 종류 제안과 자유 입력
+- `test_home_shows_single_dropzone_and_collapsed_reference_docs`: 파일 놓는 칸 하나, 접힌 참고 자료 칸, 접힌 "인식 값 고치기"
+- `test_srs_status_warns_when_knowledge_copy_has_newer_spec`: 지식 사본에 더 새 사양서가 있으면 경고
+- `test_srs_status_warns_when_no_spec_or_failed_sync`: 사양서가 없거나 마지막 동기화가 실패면 경고
 
 ### TEST-MANUAL-002
 
@@ -8199,8 +8411,10 @@ REQ-MANUAL-005 확인. `tests/test_docx_track_changes.py`
 - `test_plain_text_keeps_unchanged_runs_alongside_tracked_changes`: 최종본 글자
 - `test_extract_track_changes_reads_real_docx_zip`: 실제 DOCX 압축 파일 읽기
 - `test_image_inside_tracked_change_requires_human_review`: 그림 변경 종류·문구·사람 확인 표시
+- `test_records_section_heading_and_paragraph_text`: 제목 스타일(바탕 스타일 포함)로 절 제목을 찾고 최종 문장을 기록
+- `test_outline_level_alone_is_not_heading`: 개요 수준만 있는 본문 스타일은 제목이 아님
 
-서식 변경은 뽑지 않으므로(REQ-MANUAL-005 7번) 따로 테스트하지 않는다.
+서식 변경은 뽑지 않으므로(REQ-MANUAL-005 8번) 따로 테스트하지 않는다.
 
 ### TEST-MANUAL-006
 
@@ -8248,6 +8462,8 @@ REQ-MANUAL-010 확인.
 REQ-MANUAL-011 확인.
 
 - `tests/test_manual_review_ai_client.py`: 문제없음이면 detail 생략, 문제 의심이면 detail 호출, 같은 입력 재판정은 새 호출 없음
+- `tests/test_manual_review_ai_client.py::test_payload_includes_section_heading_and_paragraph_text`: AI 입력에 절 제목과 최종 문장(1000자까지)
+- `tests/test_manual_review_ai_client.py::test_prompts_follow_document_change_review_rules`: 두 지시문이 버전 3이고 Coverage 규칙·Manual-worthy Gate·판정 신호를 담음
 - `tests/test_manual_review_reviewer.py::test_reviewer_result_includes_ai_audit_for_cost_dashboard`: 호출 수·캐시 적중 기록
 - `tests/test_manual_review_storage.py::test_manual_change_judgment_round_trip`
 
@@ -8268,6 +8484,8 @@ REQ-MANUAL-012 확인.
 REQ-MANUAL-013 확인. `tests/test_manual_review_router.py`
 
 - `test_view_missing_revision_returns_404`, `test_view_renders_change_and_ai_judgment`, `test_view_renders_missing_suspected_release_findings`
+- `test_view_groups_changes_into_work_buckets`: 묶음 탭 건수, 첫 탭 선택, 받기 버튼, 절 제목 위치, 문장 점검 줄, 접힌 보조 칸
+- `tests/test_manual_review_result_view.py`: 묶음 규칙(QA 판정 우선, 문장 점검은 연구소 요청, 사람 검토는 QA 확인, 판정 없음은 QA 확인, 단순 변경), 묶음 건수와 QA 확정 수
 
 ### TEST-MANUAL-014
 
@@ -8277,6 +8495,9 @@ REQ-MANUAL-014 확인.
 - `tests/test_manual_review_storage.py::test_manual_change_qa_decision_override`
 
 - `tests/test_manual_review_router.py::test_qa_decision_rejects_unknown_value`: 목록에 없는 값은 400
+- `tests/test_manual_review_router.py::test_qa_decision_json_response_returns_bucket_counts`: JSON 요청이면 묶음과 건수를 돌려줌
+- `tests/test_manual_review_router.py::test_accept_ai_skips_human_review_and_text_issue_changes`: 일괄 동의가 사람 검토·문장 점검 변경과 이미 확정한 변경을 건드리지 않음
+- `tests/test_manual_review_router.py::test_accept_ai_missing_revision_returns_404`
 
 ### TEST-MANUAL-015
 
@@ -8296,6 +8517,7 @@ REQ-MANUAL-016 확인.
 - `tests/test_comment_writer.py`: 파일 이름 규칙, 금지 문자 치환, 문구 규칙(문제없음 제외, QA 메모, QA가 문제없음으로 바꾸면 Comment 없음, 문구 없을 때 기본 문구), 변경 위치에 붙이기, 문단 안 특정 변경에 붙이기, 문제없음·단순 변경 건너뛰기, 범위 밖 문단 건너뛰기
 - `tests/test_manual_review_router.py::test_comment_docx_download_returns_400_when_nothing_to_flag`, `test_comment_docx_download_uses_product_specific_author`, `test_comment_docx_download_missing_revision_returns_404`
 - `tests/test_comment_writer.py::test_output_filename_uses_real_revision_label_without_middle_dot`: 실제 리비전 표기로 만든 파일 이름에 가운뎃점이 없음
+- `tests/test_comment_writer.py::test_comment_text_appends_text_issue_lines`, `test_text_issue_alone_creates_comment_unless_qa_pass`: 문장 점검 줄과 QA 문제없음 확정 시 생략
 
 ### TEST-MANUAL-017
 
@@ -8340,6 +8562,25 @@ REQ-MANUAL-018 을 확인한다. 파일 `tests/test_manual_review_local.py`.
 ```text
 .venv/Scripts/python.exe -m pytest -q tests/test_manual_review_local.py
 ```
+
+
+### TEST-MANUAL-022
+
+REQ-MANUAL-019 확인.
+
+- `tests/test_manual_review_intake.py`: VXvue 파일 이름에서 제품·매뉴얼·버전 제안, 완료·Baseline 리비전 가운데 가장 최근 것을 이전 검증으로 고르고 미해결 지적 수를 셈, PDF 는 PDF 리비전만 이어받음, 문서 버전(V4.4)은 가장 새 등록 버전을 제안, 첫 숫자가 같은 더 새 버전은 새 제품 버전, 목록에 없는 매뉴얼 이름 유지와 메모, 파일 이름 회차와 검증 회차가 다를 때 메모, 제품을 못 찾으면 빈 값
+- `tests/test_manual_review_router.py::test_suggest_endpoint_returns_json_and_saves_nothing`: JSON 답과 버전 목록이 늘지 않음
+- `tests/test_manual_review_router.py::test_suggest_rejects_empty_or_unsupported_file_name`: 빈 이름·지원하지 않는 확장자 400
+
+자동 테스트 없음: 화면에서 파일을 끌어놓을 때 칸이 채워지는지. 사람이 확인: 시작 화면에 실제 Service Manual 파일을 끌어놓고 자동 인식 줄과 리비전 표기를 본다.
+
+### TEST-MANUAL-023
+
+REQ-MANUAL-020 확인.
+
+- `tests/test_manual_review_text_checks.py`: 다섯 항목이 걸리는 예와 걸리지 않는 예(버전 숫자 `1.1.0`, 말줄임 `...`, 파일 이름 `config.yaml`, 숫자 앞 공백 마침표), 문단 결과는 첫 분석 대상 변경에만, 추가 문구 중복은 그 추가 변경에, PDF·이미지 변경 제외
+- `tests/test_manual_review_reviewer.py::test_reviewer_attaches_text_issues_to_judgment`: 검증 결과에 문장 점검이 저장되고 AI 판정 값은 그대로
+- `tests/test_manual_review_local.py::test_extract_writes_section_heading_and_text_issues`: Claude 대화 검증의 `changes.json` 에 절 제목·최종 문장·문장 점검이 들어감
 
 ### TEST-COST-001
 
@@ -9150,11 +9391,11 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-RULE-005 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/rules.html` | TEST-RULE-003 | implemented |
 | REQ-RULE-006 | `app/modules/qa_agent/rule_capability.py` | TEST-RULE-002: `tests/test_rule_capability.py` | implemented |
 | REQ-RULE-007 | `scripts/rule_capability_report.py` | TEST-RULE-003 | implemented |
-| REQ-MANUAL-001 | `app/modules/manual_review/router.py`, `app/modules/manual_review/templates/index.html`, `app/modules/manual_review/templates/module_base.html` | TEST-MANUAL-001: `tests/test_manual_review_router.py` | implemented |
+| REQ-MANUAL-001 | `app/modules/manual_review/router.py`, `app/modules/manual_review/intake.py`, `app/modules/manual_review/templates/index.html`, `app/modules/manual_review/templates/module_base.html` | TEST-MANUAL-001: `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-002 | `app/modules/manual_review/router.py`, `app/core/storage.py`, `app/core/usage.py` | TEST-MANUAL-002: `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-003 | `app/modules/manual_review/router.py`, `app/modules/manual_review/reviewer.py`, `app/core/storage.py` | TEST-MANUAL-003: `tests/test_manual_review_router.py`, `tests/test_manual_review_reviewer.py`, `tests/test_manual_review_storage.py` | implemented |
 | REQ-MANUAL-004 | `app/modules/manual_review/router.py`, `app/modules/manual_review/reviewer.py`, `app/main.py`, `app/core/storage.py` | TEST-MANUAL-004: `tests/test_manual_review_reviewer.py` | implemented |
-| REQ-MANUAL-005 | `app/modules/manual_review/docx_track_changes.py` | TEST-MANUAL-005: `tests/test_docx_track_changes.py` | implemented |
+| REQ-MANUAL-005 | `app/modules/manual_review/docx_track_changes.py`, `app/core/storage.py` | TEST-MANUAL-005: `tests/test_docx_track_changes.py` | implemented |
 | REQ-MANUAL-006 | `app/modules/manual_review/pdf_revision_diff.py`, `app/modules/manual_review/reviewer.py` | TEST-MANUAL-006: `tests/test_pdf_revision_diff.py` | implemented |
 | REQ-MANUAL-007 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/reviewer.py` | TEST-MANUAL-007: `tests/test_change_filter.py`, `tests/test_manual_review_reviewer.py` | implemented |
 | REQ-MANUAL-008 | `app/modules/manual_review/srs_evidence.py`, `app/core/document_cache.py` | TEST-MANUAL-008: `tests/test_srs_evidence.py` | implemented |
@@ -9162,12 +9403,14 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-MANUAL-010 | `app/modules/manual_review/cross_manual.py`, `app/modules/manual_review/router.py` | TEST-MANUAL-010: `tests/test_cross_manual.py`, `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-011 | `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/schemas.py`, `app/prompts/manual_revision_quick.yaml`, `app/prompts/manual_revision_detail.yaml` | TEST-MANUAL-011: `tests/test_manual_review_ai_client.py`, `tests/test_manual_review_reviewer.py` | implemented |
 | REQ-MANUAL-012 | `app/modules/manual_review/reviewer.py`, `app/modules/manual_review/review_signals.py`, `app/modules/manual_review/schemas.py` | TEST-MANUAL-012: `tests/test_manual_review_reviewer.py`, `tests/test_pdf_revision_diff.py`, `tests/test_manual_review_local.py` | implemented |
-| REQ-MANUAL-013 | `app/modules/manual_review/router.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-013: `tests/test_manual_review_router.py` | implemented |
-| REQ-MANUAL-014 | `app/modules/manual_review/router.py`, `app/core/storage.py` | TEST-MANUAL-014: `tests/test_manual_review_router.py`, `tests/test_manual_review_storage.py` | implemented |
+| REQ-MANUAL-013 | `app/modules/manual_review/router.py`, `app/modules/manual_review/result_view.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-013: `tests/test_manual_review_router.py`, `tests/test_manual_review_result_view.py` | implemented |
+| REQ-MANUAL-014 | `app/modules/manual_review/router.py`, `app/modules/manual_review/result_view.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-014: `tests/test_manual_review_router.py`, `tests/test_manual_review_storage.py` | implemented |
 | REQ-MANUAL-015 | `app/modules/manual_review/comment_resolution.py`, `app/modules/manual_review/router.py`, `app/core/storage.py`, `app/modules/manual_review/comment_writer.py` | TEST-MANUAL-015: `tests/test_comment_resolution.py`, `tests/test_manual_review_storage.py`, `tests/test_manual_review_router.py`, `tests/test_comment_writer.py` | implemented |
 | REQ-MANUAL-016 | `app/modules/manual_review/comment_writer.py`, `app/modules/manual_review/router.py` | TEST-MANUAL-016: `tests/test_comment_writer.py`, `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-017 | `app/modules/manual_review/templates/guide.html`, `app/modules/manual_review/router.py` | TEST-MANUAL-017: `tests/test_web.py`, `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-018 | `scripts/manual_review_local.py`, `.claude/skills/vxvue-manual-revision-review/SKILL.md`, `app/modules/manual_review/local_review.py` | TEST-MANUAL-021: `tests/test_manual_review_local.py` | implemented |
+| REQ-MANUAL-019 | `app/modules/manual_review/intake.py`, `app/modules/manual_review/router.py`, `app/modules/manual_review/templates/index.html` | TEST-MANUAL-022: `tests/test_manual_review_intake.py`, `tests/test_manual_review_router.py` | implemented |
+| REQ-MANUAL-020 | `app/modules/manual_review/text_checks.py`, `app/modules/manual_review/reviewer.py`, `app/modules/manual_review/local_review.py`, `app/modules/manual_review/comment_writer.py` | TEST-MANUAL-023: `tests/test_manual_review_text_checks.py`, `tests/test_manual_review_reviewer.py`, `tests/test_manual_review_local.py` | implemented |
 | NFR-MANUAL-001 | `app/core/manual_hub_client.py`, `app/modules/manual_review/cross_manual.py` | TEST-MANUAL-018: `tests/test_manual_hub_client.py`, `tests/test_cross_manual.py` | implemented |
 | NFR-MANUAL-002 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/srs_evidence.py` | TEST-MANUAL-020: `tests/test_manual_review_ai_client.py` | implemented |
 | NFR-MANUAL-003 | `app/modules/manual_review/comment_writer.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-020: `tests/test_comment_writer.py` | implemented |

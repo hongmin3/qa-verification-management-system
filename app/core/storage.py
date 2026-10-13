@@ -126,6 +126,8 @@ class Storage(DailyQaStorageMixin):
                 ("source_page", "INTEGER"),
                 ("review_required", "INTEGER NOT NULL DEFAULT 0"),
                 ("change_index_in_paragraph", "INTEGER NOT NULL DEFAULT 0"),
+                ("section_heading", "TEXT NOT NULL DEFAULT ''"),
+                ("paragraph_text", "TEXT NOT NULL DEFAULT ''"),
             ):
                 if column not in manual_change_columns:
                     db.execute(f"ALTER TABLE manual_changes ADD COLUMN {column} {ddl}")
@@ -626,11 +628,13 @@ class Storage(DailyQaStorageMixin):
         source_page: int | None = None,
         review_required: bool = False,
         change_index_in_paragraph: int = 0,
+        section_heading: str = "",
+        paragraph_text: str = "",
     ) -> int:
         with self.connect() as db:
             cursor = db.execute(
-                "INSERT INTO manual_changes(revision_id,kind,author,change_date,paragraph_index,text,functional,source_page,review_required,change_index_in_paragraph,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                (revision_id, kind, author, change_date, paragraph_index, text, int(functional), source_page, int(review_required), change_index_in_paragraph, datetime.now(timezone.utc).isoformat()),
+                "INSERT INTO manual_changes(revision_id,kind,author,change_date,paragraph_index,text,functional,source_page,review_required,change_index_in_paragraph,section_heading,paragraph_text,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (revision_id, kind, author, change_date, paragraph_index, text, int(functional), source_page, int(review_required), change_index_in_paragraph, section_heading, paragraph_text, datetime.now(timezone.utc).isoformat()),
             )
             return int(cursor.lastrowid)
 
