@@ -74,9 +74,28 @@ class Settings(BaseModel):
         }
 
 
+def _merge(base: dict, override: dict) -> dict:
+    """`override` 의 키로 `base` 를 덮어쓴다. 둘 다 묶음이면 안쪽 키 단위로 덮어쓴다."""
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def build_settings(root: Path = ROOT) -> Settings:
     with (root / "config.yaml").open(encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
+    # 그 컴퓨터에만 쓰는 값 (REQ-CONF-001 순서 2). Git·배포에 넣지 않는다.
+    # 자동 테스트는 그 PC 의 설정에 흔들리지 않게 읽지 않는다 (tests/conftest.py 가 QA_SKIP_LOCAL_CONFIG=1).
+    local = root / "config.local.yaml"
+    if local.is_file() and os.environ.get("QA_SKIP_LOCAL_CONFIG") != "1":
+        with local.open(encoding="utf-8") as handle:
+            override = yaml.safe_load(handle) or {}
+        if isinstance(override, dict):
+            raw = _merge(raw, override)
     values, sources = resolve_secrets(root, os.environ)
     settings = Settings(raw=raw, secrets=Secrets(**values), secret_sources=sources, root=root)
     for key in ("upload_dir", "specification_dir", "testcase_dir", "index_dir", "report_dir", "export_dir", "generated_tc_dir", "log_dir", "manual_revision_dir", "manual_review_comment_dir", "manual_hub_cache_dir"):

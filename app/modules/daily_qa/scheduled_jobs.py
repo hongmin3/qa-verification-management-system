@@ -57,6 +57,7 @@ def schedule_settings(settings=None) -> dict:
         "calendar": str(settings.get("daily_qa.schedule.holiday_calendar", "kr") or "kr"),
         "extra": tuple(str(item) for item in extra),
         "run_missed": bool(settings.get("daily_qa.schedule.run_missed", True)),
+        "enabled": bool(settings.get("daily_qa.schedule.enabled", True)),
     }
 
 
@@ -204,6 +205,11 @@ def run_catchups() -> list[dict]:
 def register_scheduled_jobs(scheduler: BackgroundScheduler) -> None:
     sched = schedule_settings()
     hour, _, minute = sched["time"].partition(":")
+    # 예약은 한 곳에서만 켠다 (REQ-QAINTEL-001). 끈 곳에서도 [지금 실행] 뒤 한도 다시 돌기는 남긴다.
+    if not sched.get("enabled", True):
+        scheduler.add_job(run_catchups, IntervalTrigger(minutes=10), id=CATCHUP_JOB_ID, replace_existing=True, max_instances=1)
+        logger.info("scheduled_job_skipped reason=daily_qa.schedule.enabled=false registered=%s", CATCHUP_JOB_ID)
+        return
     for product in configured_products():
         slug = load(product=product).slug
         scheduler.add_job(

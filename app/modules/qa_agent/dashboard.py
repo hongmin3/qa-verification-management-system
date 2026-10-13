@@ -316,6 +316,8 @@ def change_summary(events: list[dict]) -> dict:
 
 def next_run_text(cfg: DailyQaSettings, now: datetime | None = None) -> str:
     sched = schedule_settings()
+    if not sched.get("enabled", True):
+        return "예약 꺼짐 (이 서버는 자동 실행하지 않음)"
     moment = holidays.next_run(now or datetime.now(timezone.utc), cfg.root, sched["day_of_week"], sched["time"],
                                sched["calendar"], sched["extra"], sched["skip_holidays"])
     return moment.strftime("%Y-%m-%d (%a) %H:%M") if moment else ""

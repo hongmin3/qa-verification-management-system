@@ -12,6 +12,13 @@
 
 ## 2026-10-13 놓친 오늘 예약 만회 (REQ-QAINTEL-035)
 
+- 담당자 PC 예약 끄기(사용자 결정): `config.local.yaml`(Git 제외)에 `daily_qa.schedule.enabled: false`. 이 PC 테스트 서버를 다시 띄웠다. 대시보드는 "예약 꺼짐" 을 보인다.
+- 서버 Polarion 정보: 사용자가 PowerShell 에서 Git Bash 용 명령을 실행해 명령 글자 두 줄이 서버 `secrets.txt` 에 들어갔다(값은 들어가지 않음). 백업 뒤 두 줄을 지웠고 PowerShell 용 명령을 가짜 값으로 확인해 다시 안내했다. 넣은 뒤 `/config/reload` 가 필요하다(웹 프로세스는 시작 때 읽은 설정을 쓴다).
+- 운영 서버 배포(10:29, 사용자 요청): 서버 백업(`backups/qa-backup-20261013T004831Z.zip`, `~/qa-app-backup-20261012-204831.tgz`, 설정·비밀 사본) → `scripts/deploy.ps1 -Restart`(테스트 1202 passed) → 옛 Regression 파일 39개·빈 폴더 5개 삭제 → 이 PC 의 SRS·이슈 스냅샷 17개 복사(해시 일치).
+- 배포 확인: `/health`·`/`·`/qa-agent`·`/knowledge`·`/cost-dashboard`·`/manual-review` 200, `/daily-qa` 307, `/impact-analyzer` 308, nginx 80 200. 사용량 칸은 서버 계정으로 지금 조회(5시간 12%·주간 24% 사용). `run_daily_qa.py --check` 9줄 중 Polarion 설정만 `[주의]`.
+- 배포 스크립트 결함: Windows PowerShell 5.1 이 pytest 경고(stderr)를 오류로 바꿔 테스트 통과 뒤 멈췄다. 외부 명령을 종료 코드로만 판단하게 고쳤다(REQ-DEPLOY-002).
+- 남은 사용자 조치: 서버 `secrets.txt` 에 `POLARION_HOST`·`POLARION_TOKEN` 추가(없으면 서버 일일 점검은 `not_configured` 로 건너뜀). 서버 `Restart=always` 는 sudo 가 필요해 하지 않았다(지금은 `on-failure` + 부팅 자동 시작).
+- 같은 시각 다른 세션(Codex)이 이 저장소에서 pytest 를 돌리고 있었다. 커밋 전 변경 파일을 확인했다.
 - 현황 점검: 마지막 커밋 `58e9466`(10-02) 뒤 코드 변경이 없다. DB의 마지막 일일 QA 실행은 `20261002-102319-vxvue`(PARTIAL)이고, 그 뒤 11일 동안 실행 기록이 없다. 변경 이벤트는 완료 35건·대상 아님 15건·대기 42건으로 10-02와 같다.
 - 원인: 07:30 예약은 12000 테스트 서버 안의 메모리 예약이다. 서버는 로그인 때 뜬다. `supervisor.log` 의 시작 시각이 10-08 07:44, 10-13 08:01로 07:30보다 늦었다. 10-06은 06:19에 떴지만 07:30 실행 기록이 없다(절전으로 추정, 확인 못 함).
 - 사용자 결정: 앱 시작 때 오늘 예약분을 놓쳤으면 실행하는 만회 규칙(다)을 택했다. SPEC에 REQ-QAINTEL-035·TEST-QAINTEL-019를 먼저 더했다.

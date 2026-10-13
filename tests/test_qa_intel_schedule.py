@@ -270,3 +270,29 @@ def test_missed_schedule_watch_is_registered_and_runs_soon_after_start(monkeypat
     first = job.next_run_time or job.trigger.get_next_fire_time(None, before)
     assert before <= first <= before + timedelta(minutes=2)
     assert scheduler.get_job("qa_agent_vxvue").func is scheduled_jobs.launch_scheduled
+
+
+def test_schedule_switch_off_registers_only_the_limit_catchup(monkeypatch):
+    """Validates: REQ-QAINTEL-001, REQ-QAINTEL-035 — daily_qa.schedule.enabled: false (TEST-QAINTEL-019 8번)."""
+    from apscheduler.schedulers.background import BackgroundScheduler
+
+    monkeypatch.setattr(scheduled_jobs, "configured_products", lambda settings=None: ["VXvue"])
+    monkeypatch.setattr(scheduled_jobs, "schedule_settings", lambda settings=None: {
+        "day_of_week": "mon-fri", "time": "07:30", "skip_holidays": True, "calendar": "kr", "extra": (),
+        "run_missed": True, "enabled": False})
+    scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+    scheduled_jobs.register_scheduled_jobs(scheduler)
+    ids = {job.id for job in scheduler.get_jobs()}
+    assert ids == {scheduled_jobs.CATCHUP_JOB_ID}
+
+
+def test_dashboard_next_run_says_off_when_schedule_is_disabled(tmp_path, monkeypatch):
+    """Validates: REQ-QAINTEL-019 순서 2 — 예약을 끈 서버는 다음 자동 실행 시각을 보이지 않는다."""
+    from app.modules.qa_agent import dashboard
+
+    cfg = make_settings(tmp_path, tmp_path / "ws")
+    base = {"day_of_week": "mon-fri", "time": "07:30", "skip_holidays": True, "calendar": "kr", "extra": ()}
+    monkeypatch.setattr(dashboard, "schedule_settings", lambda settings=None: {**base, "enabled": True})
+    assert dashboard.next_run_text(cfg, datetime(2026, 10, 13, 8, 0, tzinfo=KST)).startswith("2026-10-14")
+    monkeypatch.setattr(dashboard, "schedule_settings", lambda settings=None: {**base, "enabled": False})
+    assert dashboard.next_run_text(cfg) == "예약 꺼짐 (이 서버는 자동 실행하지 않음)"

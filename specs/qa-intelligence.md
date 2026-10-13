@@ -126,6 +126,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
+| `daily_qa.schedule.enabled` | `true` | `false` 면 07:30 예약(`qa_agent_<slug>`)과 놓친 예약 만회 감시(REQ-QAINTEL-035)를 등록하지 않는다. [지금 실행]과 한도 뒤 다시 돌기는 그대로다 |
 | `daily_qa.products` | `[daily_qa.product]` | 예약을 등록할 제품 이름 목록 |
 | `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛸지 |
 | `daily_qa.schedule.holiday_calendar` | `kr` | 공휴일 표 이름(`config/holidays/<이름>.yaml`) |
@@ -135,6 +136,9 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 - 공휴일 건너뛰기는 예약 실행에만 적용한다. 사람이 [지금 실행]을 누르면 공휴일에도 돈다(REQ-QAINTEL-021).
 - 예약 시각에 앱이 꺼져 있었으면 앱이 다시 돌 때 오늘 몫을 한 번 띄운다(REQ-QAINTEL-035).
+- 서버와 담당자 PC 가 같은 점검을 두 번 하지 않게, 예약은 한 곳에서만 켠다. 2026-10-13 부터 운영 서버가 맡고, 담당자 PC 는 `config.local.yaml` 에서 `daily_qa.schedule.enabled: false` 로 끈다.
+
+  이유: 두 곳이 모두 돌면 같은 변경을 두 계정의 사용량으로 두 번 분석하고 요약 메일도 두 번 간다.
 
 ### REQ-QAINTEL-002 제품 설정과 공통 모델
 
@@ -684,7 +688,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 **화면 구성**
 
 1. 맨 위: 수동 업로드 지식 문서 목록(REQ-QAINTEL-022).
-2. 실행: 마지막 실행(시각·결과), 실행 결과 요약, 다음 자동 실행 시각(주말·공휴일 제외), [지금 실행] 버튼.
+2. 실행: 마지막 실행(시각·결과), 실행 결과 요약, 다음 자동 실행 시각(주말·공휴일 제외), [지금 실행] 버튼. 그 서버에서 예약을 껐으면(`daily_qa.schedule.enabled: false`) 다음 자동 실행 자리에 "예약 꺼짐 (이 서버는 자동 실행하지 않음)" 을 보인다.
 3. 오늘 변경 요약: 마지막 실행의 신규 이슈, Fixed(연구소 결과가 `FIXED` 로 바뀐 이슈), Spec(`SPEC`·`NOT_BUG` 로 바뀐 이슈), 댓글 추가, SRS 변경 수.
 4. 최신 분석 결과 카드: 결론 단계, 분석 종류, 대상 번호·제목, 한두 문장 요약, QA 할 일 3줄까지, [상세보기](REQ-QAINTEL-033). `문제 없음` 카드는 접어 둔다.
 5. 최근 실행 목록: 실행마다 결과와 [실행 상세] 링크.
@@ -1246,6 +1250,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 | 키 | 기본값 | 뜻 |
 |---|---|---|
 | `daily_qa.schedule.run_missed` | `true` | `false` 면 놓친 예약을 만회하지 않는다. 정시 예약만 돈다 |
+| `daily_qa.schedule.enabled` | `true` | `false` 면 정시 예약과 함께 만회 감시도 등록하지 않는다(REQ-QAINTEL-001) |
 
 > **주의** 이 기능을 처음 설치한 날에는 상태 기록이 비어 있다. 예약 시각이 지난 평일에 설치하면 그날 예약 실행이 한 번 뜬다.
 
@@ -1504,6 +1509,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 5. 공휴일: 뜨지 않고 상태 기록은 오늘 날짜가 된다.
 6. 정시 예약이 띄운 날: 상태 기록이 오늘 날짜이고 만회 확인이 띄우지 않는다.
 7. 감시 예약 `qa_agent_missed_schedule` 이 10분 간격으로 등록되고 첫 확인이 앱 시작 직후에 잡힌다.
+8. `daily_qa.schedule.enabled: false` 면 `qa_agent_<slug>` 와 `qa_agent_missed_schedule` 이 등록되지 않고, 한도 뒤 다시 돌기(`qa_agent_limit_catchup`)는 등록된다.
 
 **기대 결과** 모든 테스트 통과. 만회 코드를 빼면 1·3번이 실패한다.
 

@@ -185,8 +185,8 @@ def test_failed_second_project_keeps_first_collected_snapshot_for_diagnosis(tmp_
     with pytest.raises(RuntimeError): engine.run(cfg)
     partial = list((cfg.snapshots_dir / '.runs').rglob('D-1.json'))
     assert len(partial) == 1
-    assert json.loads(partial[0].read_text())['project_id'] == 'Demo'
-    failed = json.loads(next((cfg.base_dir/'.runs').rglob('manifest.json')).read_text())
+    assert json.loads(partial[0].read_text(encoding='utf-8'))['project_id'] == 'Demo'
+    failed = json.loads(next((cfg.base_dir/'.runs').rglob('manifest.json')).read_text(encoding='utf-8'))
     assert failed['stats'][0]['total_items'] == 1
     assert not list(cfg.base_dir.glob('????-??-??/manifest.json'))
 
@@ -206,7 +206,7 @@ def test_no_publish_never_reuses_published_success(tmp_path, monkeypatch):
     assert preview['status'] == 'PREVIEW'
     assert preview['published'] is False and preview['reused'] is False
     assert before == {p.name:p.read_bytes() for p in cfg.knowledge_folder.iterdir()}
-    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text())['run_id'] == prior['run_id']
+    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text(encoding='utf-8'))['run_id'] == prior['run_id']
 
 
 def test_completion_manifest_write_failure_is_recorded_failed(tmp_path, monkeypatch):
@@ -218,10 +218,10 @@ def test_completion_manifest_write_failure_is_recorded_failed(tmp_path, monkeypa
         return write_json(path, value)
     monkeypatch.setattr(engine, '_json', fail_public)
     with pytest.raises(OSError): engine.run(cfg, force=True)
-    failed = [json.loads(p.read_text()) for p in (cfg.base_dir/'.runs').glob('*/manifest.json')]
+    failed = [json.loads(p.read_text(encoding='utf-8')) for p in (cfg.base_dir/'.runs').glob('*/manifest.json')]
     assert sorted(r['status'] for r in failed) == ['FAILED', 'SUCCESS']
     assert all(not r['published'] for r in failed if r['status'] == 'FAILED')
-    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text())['run_id'] == prior['run_id']
+    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text(encoding='utf-8'))['run_id'] == prior['run_id']
 
 
 def test_crawler_does_not_retry_invalid_comment_request(tmp_path, monkeypatch):
@@ -270,4 +270,4 @@ def test_failed_public_readback_restores_both_deployment_locations(tmp_path, mon
     with pytest.raises(ValueError): engine.run(cfg, force=True)
     assert failed
     assert before == {p.name:p.read_bytes() for p in cfg.knowledge_folder.iterdir()}
-    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text())['run_id'] == prior['run_id']
+    assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text(encoding='utf-8'))['run_id'] == prior['run_id']

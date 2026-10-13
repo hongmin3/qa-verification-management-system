@@ -46,12 +46,13 @@ try {
     $changed += $oldSync
     $collectAction = New-ScheduledTaskAction -Execute $Python -Argument $collectArgs -WorkingDirectory $ProjectRoot
     $principal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType S4U -RunLevel Limited
+    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '09:00'
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4)
+    $settings.Enabled = $true
     if ($oldCollect) {
-        Set-ScheduledTask -TaskName $oldCollect.TaskName -TaskPath $oldCollect.TaskPath -Action $collectAction -Principal $principal | Out-Null
+        Set-ScheduledTask -TaskName $oldCollect.TaskName -TaskPath $oldCollect.TaskPath -Action $collectAction -Principal $principal -Trigger $trigger -Settings $settings | Out-Null
         $changed += $oldCollect
     } else {
-        $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '09:00'
-        $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4)
         Register-ScheduledTask -TaskName 'QA_SRS_Collect' -Action $collectAction -Trigger $trigger -Settings $settings -Principal $principal | Out-Null
     }
 } catch {
