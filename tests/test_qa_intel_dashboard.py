@@ -309,6 +309,29 @@ def test_run_detail_lists_events_files_and_cards(world):
     assert world["client"].get("/qa-agent/runs/20000101-000000-vxvue").status_code == 404
 
 
+def test_run_detail_folds_existing_information_and_keeps_run_filtered_legacy_results(world):
+    """Validates: REQ-QAINTEL-020. 214개 규칙 결과는 10개만 펼치고 모두보기에서 찾는다."""
+    run_id = world["changed"]["run_id"]
+    legacy_ids = []
+    for i in range(65):
+        legacy_ids.append(world["store"].add_finding(run_id, "qa-trace-gap", f"legacy-{i}",
+            {"subject": f"LEGACY-{i}", "verdict": "TC 없음", "summary": "옛 규칙 점검"}, product="vxvue"))
+    world["store"].add_finding(world["baseline"]["run_id"], "qa-trace-gap", "other-run",
+        {"subject": "ANOTHER-RUN", "verdict": "TC 없음", "summary": "다른 실행"}, product="vxvue")
+    page = world["client"].get(f"/qa-agent/runs/{run_id}").text
+    primary = page[page.index('id="run-priority"'):page.index('id="run-details"')]
+    assert primary.count('class="qa-card"') == 10
+    assert f'/qa-agent/runs/{run_id}/findings' in primary
+    assert '<details id="run-details"' in page and '<details id="run-details" open' not in page
+    listing = world["client"].get(f"/qa-agent/runs/{run_id}/findings")
+    assert listing.status_code == 200 and "LEGACY-64" in listing.text
+    assert "ANOTHER-RUN" not in listing.text
+    assert "LEGACY-0" in world["client"].get(f"/qa-agent/runs/{run_id}/findings?page=2").text
+    assert f'/qa-agent/findings/{legacy_ids[-1]}' in listing.text
+    assert world["client"].get("/qa-agent/runs/missing/findings").status_code == 404
+    assert world["client"].get(f"/qa-agent/runs/{run_id}/findings?page=0").status_code == 404
+
+
 def test_run_detail_reads_as_plain_korean_for_first_time_users(world):
     """Validates: REQ-QAINTEL-020 — 결과 한 줄, 숫자 카드, 4칸 흐름이 있고 내부 값이 그대로 보이지 않는다."""
     page = world["client"].get(f"/qa-agent/runs/{world['changed']['run_id']}").text

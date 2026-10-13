@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block page_title %}AI 모델 설정{% endblock %}
+{% block header_title %}AI 모델 설정{% endblock %}
+{% block header_subtitle %}작업별 모델과 추론 정도를 확인하고 다음 호출에 적용합니다.{% endblock %}
+{% block header_nav %}<nav><a href="/">QA 홈</a><a href="/qa-agent">QA Agent</a><a href="/cost-dashboard">비용 대시보드</a></nav>{% endblock %}
+{% block content %}
+<style>
+  .ai-settings {max-width:1200px;min-width:0}
+  .ai-settings section {margin-bottom:20px;min-width:0}
+  .ai-settings table {width:100%;border-collapse:collapse;table-layout:fixed}
+  .ai-settings th,.ai-settings td {padding:12px 8px;text-align:left;vertical-align:top;border-bottom:1px solid #dde4ee;overflow-wrap:anywhere}
+  .ai-settings select {width:100%;min-width:0}
+  .ai-settings code {white-space:normal;overflow-wrap:anywhere}
+  .ai-settings pre {white-space:pre-wrap;overflow-wrap:anywhere}
+  .ai-settings .actions {display:flex;flex-wrap:wrap;gap:10px}
+  .ai-settings button:disabled {opacity:.5;cursor:not-allowed}
+  .ai-settings .setting-label {width:30%}
+  .ai-settings .choice-cell {width:30%}
+  .ai-settings .setting-key {display:block;font-size:12px;font-weight:normal;margin-top:5px}
+  @media(max-width:700px) {
+    .ai-settings table,.ai-settings tbody,.ai-settings tr,.ai-settings td {display:block;width:100%}
+    .ai-settings thead {display:none}
+    .ai-settings tr {padding:10px 0;border-bottom:1px solid #cbd5e1}
+    .ai-settings td {border:0;padding:6px 0}
+    .ai-settings td[data-label]:before {content:attr(data-label) " · ";font-weight:bold}
+    .ai-settings .choice-cell {width:100%}
+  }
+</style>
+<div class="ai-settings">
+<section>
+  <h2>다음 실행부터 적용</h2>
+  <p>다음 화면 AI 호출과 다음 일일 QA 실행부터 새 설정을 씁니다.</p>
+  {% for run in running_runs %}<p>진행 중인 실행 <code>{{ run }}</code> 는 이전 값으로 끝까지 돕니다.</p>{% endfor %}
+  {% if not can_edit %}
+  <p><strong>현재 접속은 읽기 전용입니다.</strong> 저장하려면 SSH 터널로 서버의 앱 포트에 직접 연결하세요. nginx 를 거친 접속은 저장할 수 없습니다.</p>
+  <p>SSH 터널을 연 뒤 <code>http://127.0.0.1:12000/settings/ai</code> 를 여세요.</p>
+  <pre><code>ssh -N -L 12000:127.0.0.1:{{ port }} 계정@서버
+# 다른 로컬 포트를 골랐다면 주소의 12000 도 바꿉니다.</code></pre>
+  {% endif %}
+  <p class="hint">현재 상태 점검 모델의 빈 값은 가벼운 작업 모델을 따릅니다. 추론 정도의 빈 값은 CLI 기본값을 씁니다. 모델 사용 가능 여부는 Claude 계정과 CLI 에서 결정합니다.</p>
+</section>
+<section>
+  <h2>모델과 추론 정도</h2>
+  <form id="ai-settings-form">
+  <table aria-label="AI 설정">
+    <thead><tr><th class="setting-label">설정</th><th>지금 값</th><th>출처</th><th class="choice-cell">고르는 칸</th></tr></thead>
+    <tbody>
+    {% for row in settings %}
+    <tr>
+      <td><b>{{ row.label }}</b><code class="setting-key">{{ row.key }}</code></td>
+      <td data-label="지금 값"><span data-value="{{ row.key }}">{{ row.value or '빈 값' }}</span><p class="hint">기본값: {{ row.default or '빈 값' }}</p></td>
+      <td data-label="출처"><span data-source="{{ row.key }}">{{ row.source }}</span></td>
+      <td class="choice-cell"><label for="setting-{{ loop.index }}" class="hint">{{ row.label }} 선택</label><select id="setting-{{ loop.index }}" data-key="{{ row.key }}" {% if not can_edit %}disabled{% endif %}>
+        {% if row.value not in row.choices %}<option value="{{ row.value }}" selected disabled>{{ row.value }} (허용 목록 밖)</option>{% endif %}
+        {% for choice in row.choices %}<option value="{{ choice }}" {% if choice == row.value %}selected{% endif %}>{{ choice or ('가벼운 작업 모델 따름' if row.key == 'daily_qa.intelligence.audit_model' else 'CLI 기본') }}</option>{% endfor %}
+      </select></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="actions"><button type="submit" id="save-settings" {% if not can_edit %}disabled{% endif %}>저장</button><button type="button" id="reset-settings" {% if not can_edit %}disabled{% endif %}>기본값으로 되돌리기</button></div>
+  <p id="settings-message" role="status" aria-live="polite">{{ error }}</p>
+  </form>
+</section>
+<section>
+  <h2>최근 변경 기록 10건</h2>
+  <table aria-label="설정 변경 기록"><thead><tr><th>시각</th><th>설정</th><th>이전 값 → 새 값</th><th>접속 주소</th></tr></thead><tbody id="settings-history">
+    {% for item in history %}<tr><td data-label="시각">{{ item.changed_at }}</td><td data-label="설정">{{ item.key }}</td><td data-label="변경">{{ item.old_value or '빈 값' }} → {{ item.new_value or '빈 값' }}</td><td data-label="접속 주소">{{ item.client }}</td></tr>{% else %}<tr><td colspan="4">변경 기록이 없습니다.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+</div>
+{% if can_edit %}
+<script>
+(() => {
+  const form = document.getElementById('ai-settings-form');
+  const save = document.getElementById('save-settings');
+  const reset = document.getElementById('reset-settings');
+  const message = document.getElementById('settings-message');
+  const selects = [...form.querySelectorAll('select[data-key]')];
+  const currentValues = new Map(selects.map(select => [select.dataset.key, select.value]));
+  async function submit(path, body) {
+    save.disabled = reset.disabled = true;
+    message.textContent = '저장 중입니다.';
+    try {
+      const response = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      const state = await response.json();
+      if (!response.ok) throw new Error(typeof state.detail === 'string' ? state.detail : '입력값을 확인해 주세요.');
+      for (const row of state.settings) {
+        form.querySelector(`[data-value="${row.key}"]`).textContent = row.value || '빈 값';
+        form.querySelector(`[data-source="${row.key}"]`).textContent = row.source;
+        form.querySelector(`[data-key="${row.key}"]`).value = row.value;
+        currentValues.set(row.key, row.value);
+      }
+      const history = document.getElementById('settings-history');
+      history.replaceChildren();
+      for (const item of state.history) {
+        const tr = document.createElement('tr');
+        [item.changed_at, item.key, `${item.old_value || '빈 값'} → ${item.new_value || '빈 값'}`, item.client].forEach((value, index) => {
+          const td = document.createElement('td');
+          td.dataset.label = ['시각', '설정', '변경', '접속 주소'][index];
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        history.appendChild(tr);
+      }
+      message.textContent = '저장했습니다. 다음 실행부터 적용됩니다.';
+    } catch (error) { message.textContent = error.message || '저장하지 못했습니다.'; }
+    finally { save.disabled = reset.disabled = false; }
+  }
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const changed = selects.filter(select => select.value !== currentValues.get(select.dataset.key));
+    if (!changed.length) { message.textContent = '바뀐 설정이 없습니다.'; return; }
+    submit('/settings/ai', Object.fromEntries(changed.map(select => [select.dataset.key, select.value])));
+  });
+  reset.addEventListener('click', () => submit('/settings/ai/reset', {keys: selects.map(select => select.dataset.key)}));
+})();
+</script>
+{% endif %}
+{% endblock %}

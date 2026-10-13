@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel
 
 from app.core.secrets_loader import DEFAULTS, resolve_secrets, secret_files_state
+from app.core.setting_overrides import ALLOWED_KEYS, load_overrides
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -45,8 +46,14 @@ class Settings(BaseModel):
     secrets: Secrets
     secret_sources: dict[str, str] = {}
     root: Path = ROOT
+    overrides: dict[str, str] = {}
 
     def get(self, dotted: str, default: Any = None) -> Any:
+        if dotted in ALLOWED_KEYS and dotted in self.overrides:
+            return self.overrides[dotted]
+        return self.default_value(dotted, default)
+
+    def default_value(self, dotted: str, default: Any = None) -> Any:
         value: Any = self.raw
         for key in dotted.split("."):
             if not isinstance(value, dict) or key not in value:
@@ -98,6 +105,7 @@ def build_settings(root: Path = ROOT) -> Settings:
             raw = _merge(raw, override)
     values, sources = resolve_secrets(root, os.environ)
     settings = Settings(raw=raw, secrets=Secrets(**values), secret_sources=sources, root=root)
+    settings.overrides = load_overrides(root.resolve() / "data" / "app.db", settings)
     for key in ("upload_dir", "specification_dir", "testcase_dir", "index_dir", "report_dir", "export_dir", "generated_tc_dir", "log_dir", "manual_revision_dir", "manual_review_comment_dir", "manual_hub_cache_dir"):
         settings.path(f"storage.{key}").mkdir(parents=True, exist_ok=True)
     return settings

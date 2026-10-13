@@ -17,6 +17,7 @@ STAGE_LABELS = {
     "collect_srs": "SRS 수집",
     "collect_issues": "이슈 수집",
     "tc_index": "TC 색인",
+    "email": "메일",
     "events": "변경 감지",
     **ANALYSIS_LABELS,
     "E": SKILL_LABELS[SKILL_E],

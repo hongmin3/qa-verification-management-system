@@ -298,12 +298,27 @@ def run_detail(request: Request, run_id: str):
 
     out_dir = choice.cfg.output_dir / run_id
     files = sorted(path.name for path in out_dir.glob("*") if path.suffix in DOWNLOADABLE_SUFFIXES) if out_dir.is_dir() else []
-    findings = store.list_findings(run_id=run_id, limit=500)
+    findings = store.list_findings(run_id=run_id, limit=-1)
     events = store.list_events(run_id=run_id)
     cards = [dash.card(item) for item in findings]
     return templates.TemplateResponse(request, "run_detail.html", _dash_context(
         run=run, files=files, events=events, cards=cards, view=run_view.build(run, events, cards, files),
         stage_labels=STAGE_LABELS, status_labels=STATUS_LABELS, event_labels=dash.EVENT_LABELS))
+
+
+@router.get("/runs/{run_id}/findings", response_class=HTMLResponse)
+def run_findings(request: Request, run_id: str, page: int = 1):
+    """이 실행의 모든 결과. 예전 규칙 점검 결과도 포함한다 (REQ-QAINTEL-020)."""
+    store = dash.choose("").store
+    run = store.get_run(run_id)
+    if not run:
+        raise HTTPException(404, "실행 기록이 없습니다.")
+    cards = dash.sort_cards([dash.card(item) for item in store.list_findings(run_id=run_id, limit=-1)])
+    pages = max(1, (len(cards) + 49) // 50)
+    if page < 1 or page > pages:
+        raise HTTPException(404, "결과 페이지가 없습니다.")
+    return templates.TemplateResponse(request, "run_findings.html", _dash_context(
+        run=run, cards=cards[(page - 1) * 50:page * 50], total=len(cards), page=page, pages=pages))
 
 
 @router.get("/runs/{run_id}/files/{name}")

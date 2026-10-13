@@ -15,6 +15,7 @@ def test_hub_links_to_qa_modules():
     assert response.status_code == 200
     assert "<nav>" not in response.text
     assert 'href="/manual-review"' in response.text
+    assert '<a class="app-card" href="/settings/ai">' in response.text
 
 
 def test_hub_shows_configured_external_services():

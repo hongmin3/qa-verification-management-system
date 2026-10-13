@@ -7,6 +7,7 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
+from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
 
 
 class Storage(DailyQaStorageMixin):
@@ -25,6 +26,7 @@ class Storage(DailyQaStorageMixin):
 
     def initialize(self) -> None:
         with self.connect() as db:
+            db.executescript(SETTINGS_SCHEMA)
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL,

@@ -17,7 +17,7 @@
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
@@ -30,7 +30,8 @@
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
 | **2026-10-13 후속 작업·다른 세션용 프롬프트(서버 실행 오류·진행 표시·남은 일)** | [후속 작업 프롬프트](local/CONTINUE_2026-10-13.md) |
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
-| **2026-10-13 AI 모델·추론 정도 화면 설정 계획** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) (미착수, 접근 제한 방식 결정 필요) |
+| **AI 모델·추론 정도 화면 설정** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) · [SPEC REQ-AICALL-007](../SPEC.md) (서버 안에서만 저장, 외부는 읽기 전용) |
+| **등록된 Excel 사양서 읽기** | [SPEC REQ-PARSE-010](../SPEC.md) · 등록·동기화된 XLSX의 모든 시트·행과 원문 위치를 분석에 사용 |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
@@ -82,7 +83,7 @@
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
 | [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 9단계 파이프라인 |
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 하위 서비스 통합까지 |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 실행 중인 작업 차단·사용자 sudo 재시작, 하위 서비스 통합까지 |
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |

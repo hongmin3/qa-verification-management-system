@@ -16,6 +16,7 @@ from app.modules.daily_qa.scheduled_jobs import register_scheduled_jobs as regis
 from app.modules.manual_review.router import resume_queued_jobs as resume_queued_manual_jobs
 from app.modules.qa_agent.router import resume_queued_jobs as resume_queued_qa_agent_jobs
 from app.web.router import build_router
+from app.web.settings_router import router as settings_router
 
 settings = get_settings()
 storage = Storage()
@@ -49,6 +50,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title=settings.get("app.name"), version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=settings.root / "app" / "web" / "static"), name="static")
 app.include_router(build_router())
+app.include_router(settings_router)
 
 
 @app.get("/health")

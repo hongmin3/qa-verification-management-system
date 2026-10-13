@@ -1,6 +1,7 @@
 {% extends "module_base.html" %}
 {% block content %}
 {% include "_intel_style.html" %}
+{% include "_run_progress.html" %}
 {% set s = finding.sections or {} %}
 {% set kind = finding.analysis_type %}
 {# 요청 실행 결과는 원래 분석의 구획 모양을 쓴다. 자동 사양 변경 분석은 TC 구획이 없다 (REQ-QAINTEL-031·033). #}
@@ -112,10 +113,11 @@
       <p>{% if (s.issue_coverage or {}).has_related %}관련 Issue 있음{% else %}관련 Issue 없음{% endif %}</p>
       {{ issue_list((s.issue_coverage or {}).issues) }}</div>
     <div class="qa-section"><h3>Checklist Coverage</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
-      <div class="table-wrap"><table class="history"><thead><tr><th>TC</th><th>조치</th><th>이유</th><th>추천 수정</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="history"><thead><tr><th>TC</th><th>조치</th><th>이유</th><th>추천 수정</th><th>Expected 충돌</th></tr></thead><tbody>
       {% for tc in (s.checklist_coverage or {}).tcs or [] %}
-        <tr><td>{{ tc.tc_id }}<div class="hint" style="margin:0">{{ tc.location }}</div></td><td><span class="pill">{{ tc.decision }}</span></td><td>{{ tc.reason }}</td><td>{{ tc.recommended_change }}</td></tr>
-      {% else %}<tr><td colspan="4">관련 TC 없음</td></tr>{% endfor %}</tbody></table></div></div>
+        <tr><td>{{ tc.tc_id }}<div class="hint" style="margin:0">{{ tc.location }}</div></td><td><span class="pill">{{ tc.decision }}</span></td><td>{{ tc.reason }}</td><td>{{ tc.recommended_change }}</td>
+          <td>{% if tc.expected_conflict %}<b>{{ tc.expected_conflict.classification }}</b><div>{{ tc.expected_conflict.issue_id }}</div><div>{{ tc.expected_conflict.reason }}</div>{% else %}<span class="hint">기록 없음</span>{% endif %}</td></tr>
+      {% else %}<tr><td colspan="5">관련 TC 없음</td></tr>{% endfor %}</tbody></table></div></div>
     <div class="qa-section"><h3>Coverage Gap</h3>
       {% if s.gaps %}<ul>{% for gap in s.gaps %}<li><span class="pill">{{ gap.perspective }}</span> {{ gap.description }}</li>{% endfor %}</ul>{% else %}<p class="hint">없음</p>{% endif %}
       {% for alert in s.alerts or [] %}<p class="qa-banner"><b>{{ label(alert.type) }}</b> {{ alert.detail }}</p>{% endfor %}</div>
@@ -151,18 +153,10 @@
 <script>
 (function () {
   const message = document.getElementById('on-demand-message');
+  const progress = QARunProgress({{ (finding.product or '') | tojson }});
   document.querySelectorAll('button.on-demand').forEach((button) => {
-    button.addEventListener('click', async () => {
-      if (!confirm(button.textContent.trim() + ' 을(를) 시작할까요? AI 를 부릅니다.')) return;
-      button.disabled = true;
-      const response = await fetch('/qa-agent/findings/{{ finding.id }}/' + button.dataset.action, {method: 'POST'});
-      const data = await response.json().catch(() => ({}));
-      if (response.status === 202) {
-        message.textContent = '시작했습니다. 끝나면 QA Agent 첫 화면의 최신 분석 결과에 보입니다.' + (data.warning ? ' ' + data.warning : '');
-      } else {
-        message.textContent = data.detail || '시작하지 못했습니다.';
-        button.disabled = false;
-      }
+    button.addEventListener('click', () => {
+      if (confirm(button.textContent.trim() + ' 을(를) 시작할까요? AI 를 부릅니다.')) progress.launch('/qa-agent/findings/{{ finding.id }}/' + button.dataset.action, null, message);
     });
   });
 })();

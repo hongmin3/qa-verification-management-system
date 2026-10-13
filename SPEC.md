@@ -58,7 +58,7 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 
 | 배포 단위 | 위치 | 하는 일 |
 |---|---|---|
-| 핵심 앱 | `app/` | Regression 영향 분석, QA Agent, 매뉴얼 개정 검증, QA Intelligence Agent 일일 점검, Knowledge, 비용 대시보드 |
+| 핵심 앱 | `app/` | QA Agent, 매뉴얼 개정 검증, QA Intelligence Agent 일일 점검, Knowledge, 비용 대시보드 |
 | 하위 서비스 QA Manual Hub | `services/qa-manual-hub/` | 제품 매뉴얼 파일을 버전별로 올리고 찾아보는 사내 매뉴얼 서버 |
 
 포함:
@@ -85,10 +85,10 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 | SRS | 소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 `VP-1234` 모양의 번호를 갖는다 |
 | 사양서 | 제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word `.docx`). Knowledge 메뉴에 제품별로 등록한다 |
 | Polarion | 사양(SRS)과 이슈를 관리하는 회사의 ALM 도구 |
-| Claude | Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 부른다 |
+| Claude | Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검증이 부른다 |
 | Claude CLI | Claude 를 명령줄에서 부르는 프로그램(`claude`). 이 시스템은 `claude -p` 로 사람 없이 한 번씩 부른다 |
-| Gemini | Google 의 생성형 AI. 설정(`ai.provider: gemini`)으로 고르면 Regression 영향 분석·QA Agent·매뉴얼 개정 검증이 Claude 대신 부른다 |
-| AI 제공자 | 세 화면 기능이 판정을 받을 AI(`ai.provider`)다. `claude_cli`(기본) 또는 `gemini` 다(REQ-AICALL-005). 5.1~5.3절 본문의 "Gemini 를 부른다", "Gemini 토큰"은 이 설정으로 고른 AI 를 부른다는 뜻이다 |
+| Gemini | Google 의 생성형 AI. 설정(`ai.provider: gemini`)으로 고르면 QA Agent·매뉴얼 개정 검증이 Claude 대신 부른다 |
+| AI 제공자 | QA Agent와 매뉴얼 개정 검증이 판정을 받을 AI(`ai.provider`)다. `claude_cli`(기본) 또는 `gemini` 다(REQ-AICALL-005). 5.1~5.3절 본문의 "Gemini 를 부른다", "Gemini 토큰"은 이 설정으로 고른 AI 를 부른다는 뜻이다 |
 | Skill | Claude Code 가 읽는 작업 설명서 폴더(`SKILL.md`). 일일 점검의 공통 Skill 은 `app/modules/daily_qa/skills/`, 제품 규칙 Skill 은 `config/products/<slug>/skills/` 에 있다 |
 | 토큰 | AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다 |
 | 확인 요청 | 근거가 부족해 사람이 원본을 보고 정해야 한다는 표시. 화면·보고서·TC 초안에는 "확인"과 "필요"를 이어 쓴 문구로 보인다("사양 확인 요청", "중복 확인 요청"도 같다). 사양서에서는 준비 검사가 그 문구를 미완성 표시로 읽기 때문에 "확인 요청"으로 적는다 |
@@ -233,7 +233,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | KNOW | Knowledge 화면·문서 등록·파일명 규약 | 5.5 |
 | CONF | 설정·비밀 설정·제품 설정 | 5.5 |
 | STORE | 저장 방식·DB 표 | 5.5 |
-| AICALL | AI 호출 공통 규칙 | 5.5 |
+| AICALL | AI 호출 공통 규칙과 모델 설정 | 5.5 |
 | USAGE | 토큰 사용량·하루 한도·할당량 소진 알림 | 5.5 |
 | MAIL | 메일 발송 공통 | 5.5 |
 | SCHED | 앱 내장 예약 실행기 | 5.5 |
@@ -531,7 +531,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 ### REQ-PARSE-005 지원하지 않는 문서 형식 거절
 
-**하는 일** 글 뽑기는 `.pdf` 와 `.docx` 만 받는다.
+**하는 일** 글 뽑기는 `.pdf` 와 `.docx` 를 받는다. 등록·동기화된 `.xlsx` 사양서는 REQ-PARSE-010으로 읽는다. 수동 업로드의 허용 형식은 REQ-KNOW-003을 따른다.
 
 > **예시** `legacy.doc` 는 거절한다.
 
@@ -634,6 +634,22 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 - 저장한 결과를 따로 새로 고치지 않는다.
 
 이유: 같은 문서 번호의 원본은 바뀌지 않는다. 새 리비전은 늘 새 문서 번호로 등록된다.
+
+### REQ-PARSE-010 등록된 Excel 사양서 읽기
+
+**하는 일** 등록·동기화된 `.xlsx` 사양서의 모든 시트와 행을 읽어 QA Agent와 일일 점검의 검색 자료로 쓴다. 40행 이후 본문도 포함한다.
+
+**순서**
+
+1. 기존 `openpyxl`로 파일을 읽기 전용으로 연다. 시트 순서와 원래 행 번호를 유지한다.
+2. 빈 셀은 건너뛰되 남은 값에 원래 셀 주소를 붙인다. 숫자 0과 논리값은 남기고 수식은 계산하지 않고 식을 읽는다. 값이 없는 행·시트는 건너뛴다.
+3. 시트별 본문을 기본 1,800자 이내의 조각으로 나눈다. 긴 행도 나눠서 끝까지 읽는다. 각 조각의 제목에 시트 이름과 원래 행 범위를 남긴다.
+4. Excel에는 인쇄 쪽 번호를 붙이지 않는다. 공용 조각 형식의 쪽 번호는 0으로 저장하고, 검색 근거에는 문서 이름·시트 이름·원래 행 범위만 표시한다.
+5. 전문과 조각은 기존 파싱 저장본(REQ-PARSE-009, REQ-KNOW-007)으로 저장해 다시 쓰며, 등록 문서 검색 경로(REQ-KNOW-006)에 넘긴다.
+
+**안 될 때** 읽을 수 없거나 깨진 파일은 "Excel 사양서를 읽을 수 없습니다: <파일 이름>" 오류를 낸다. 공용 로더는 읽지 못한 목록에 남기고 다른 문서는 계속 읽는다.
+
+> **주의** 이 요구사항은 등록·동기화된 사양서 읽기 지원이다. 수동 업로드의 허용 확장자나 TC Excel 열 해석은 바꾸지 않는다.
 
 ### REQ-CORE-001 평가 지표
 
@@ -1992,10 +2008,15 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
    - 사양서 이름, 버전, 등록 시각. 서버는 UTC 로 주고 브라우저가 현지 시각으로 바꿔 보인다.
    - 사양서가 없으면 "등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다."
 3. 입력 양식. 입력 항목은 REQ-MANUAL-002 를 따른다.
+
    - 제품 목록은 Knowledge 에 등록된 제품이다.
+
    - 매뉴얼 종류는 제품 설정의 매뉴얼 이름(`manual_types`)과 이전 검증 이력의 이름을 제안한다. 목록에 없는 이름도 쓸 수 있다.
+
    - 제품 버전은 그 제품에 등록된 버전을 제안한다.
+
    - "이전 검증" 목록에는 고른 제품·매뉴얼과 같은 리비전만 보인다. 하나를 고르면 그 리비전의 제품 버전이 자동으로 채워진다.
+
    - "자동 리비전 표기" 칸이 입력에 따라 `V1.1.0 · W1` 같은 표기를 미리 보여 준다. 규칙은 REQ-MANUAL-003 이다.
 4. 진행 막대와 상태 문구(REQ-MANUAL-004).
 5. "검증 이력" 표. 최신 리비전이 위에 온다.
@@ -2368,9 +2389,13 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
    4. `Description for Each Version` 또는 `버전별 (상세) 설명` 줄을 만나면 항목 모으기를 멈춘다.
    5. 그 뒤 절에서 각 항목의 `Before:`/`Now:`(`After:`) 설명을 찾아 "Before: … | Now: …"로 붙인다. 2000자까지다. 항목 제목과 비슷한 줄을 보고 어느 항목의 설명인지 가린다.
 3. 설계검토보고서에서 항목을 뽑는다.
+
    1. "N. 문제 분석" 절 안의 `N.N.N` 번호 항목 제목만 뽑는다. 번호만 있는 줄이면 다음 줄을 제목으로 쓴다. 카테고리는 모두 Changed 다.
+
    2. 다른 큰 절(`N. 제목`)을 만나면 그 절 모으기를 멈춘다.
+
    3. 페이지마다 되풀이되는 머리글·바닥글(문서 번호, 서식 번호, "Page N / M", 회사 이름)과 목차 줄(점 3개 이상)은 무시한다.
+
    4. "변경 결과"류 절(`N. …변경/적용/change…결과/result`)에서 `pass`/`fail` 이 있는 줄을 찾아, 해당 항목에 검토 결과 `PASS`/`FAIL` 을 붙인다.
 4. Release 항목마다 "제목 + 설명"으로 이번 분석 대상 변경들을 BM25 검색한다.
    1. 1등 점수가 0보다 크면 그 변경과 짝을 짓는다(`FOUND`).
@@ -2418,8 +2443,11 @@ AI 판정 -(quick 판정이 문제 의심)-> detail 판정 -> 다음 변경
 **순서**
 
 1. 같은 제품의 다른 매뉴얼 원문을 세 곳에서 이 순서로 모은다. 같은 매뉴얼 이름이 여러 곳에 있으면 앞 순서의 것을 쓴다.
+
    1. 이 앱에 등록된 리비전 가운데 매뉴얼 이름별로 가장 최근의 완료(`REVIEWED`) 또는 Baseline 리비전. 파일이 있어야 한다.
+
    2. 매뉴얼 서버의 Current 버전(NFR-MANUAL-001). 지금 검증 중인 매뉴얼 이름은 뺀다.
+
    3. 알려진 매뉴얼 이름(제품 설정의 `manual_types` 와 검증 이력의 이름) 가운데 아직 모이지 않은 것은, 등록된 매뉴얼·사양서 문서 중 이름에 그 매뉴얼 이름이 들어간 가장 최근 문서.
 2. 지금 검증 중인 매뉴얼은 항상 뺀다.
 3. 각 매뉴얼 원문을 줄 단위 문단으로 나눈다. 12자 이상인 줄만 쓴다.
@@ -2558,11 +2586,17 @@ QA 가 상태를 바꾸면 저장한 뒤 결과 화면으로 돌아간다(`POST 
 5. "다른 Manual 영향 확인" 칸(후보가 있을 때만): 대상 매뉴얼, 제목, QA 상태, 근거 문서, Release 출처, BM25 점수(소수 셋째 자리), 근거 문단, QA 확정 양식(REQ-MANUAL-010).
 6. "이전 Round 미해결 지적사항" 칸(있을 때만, REQ-MANUAL-015).
 7. "변경사항 (N건)" 칸. 단순 변경을 포함한 모든 변경을 문단 번호 순서로 보인다. 변경마다 다음이 나온다.
+
    - 변경 종류 배지: 추가, 삭제, 이동(출발), 이동(도착), PDF 추가, PDF 삭제, PDF 수정. 그 밖의 종류는 코드 그대로 보인다(예: `image_insertion`).
+
    - 사람 확인 신호 배지, 단순 변경 배지 또는 AI 판정 배지와 확신도(소수 둘째 자리), QA 재판정 배지, "Human Review 필요" 배지
+
    - 변경 글자
+
    - 위치: PDF 면 "PDF 페이지 N", 아니면 "작성자 · 날짜 · 문단 #N"
+
    - 문제, 판정 신호, QA Comment 초안, 권장 문구, 근거 목록(근거 종류, 사양 번호·제목, 파일, 페이지, 시각 확인 상태)
+
    - 분석 대상 변경에만 QA 재판정 양식(REQ-MANUAL-014)
 
 **안 될 때**
@@ -3112,7 +3146,13 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 2. 잠금 파일이 6시간보다 오래됐으면 멈춘 실행이 남긴 것으로 보고 지운 뒤 진행한다.
 3. 실행 ID(`YYYYMMDD-HHMMSS-<slug>`)를 정하고 실행 기록을 `실행 중` 으로 만든다. 실행 기록에 제품을 함께 적는다.
 4. 사전 점검을 한다. QA 규칙 판(REQ-DAILY-010), Claude 인증, 남아 있는 Claude 사용량 한도(REQ-QAINTEL-025), 작업 폴더 위치(NFR-SEC-001)를 확인하고, 지식 사본에서 TC·매뉴얼·영향성평가 Checklist 위치를 읽는다.
-   - Claude 인증: 비밀 설정의 `CLAUDE_CODE_OAUTH_TOKEN` 이 있으면 그 토큰을 쓴다(서버). 없으면 `claude auth status` 로 그 PC 의 Claude CLI 로그인을 확인한다. 이 명령은 모델을 부르지 않는다. 로그인돼 있으면 토큰 없이 CLI 를 불러 기존 로그인을 쓰고, 사전 점검 비고에 "Claude CLI 로그인(<방식>)으로 부릅니다." 를 남긴다. 로그인도 없으면 AI 단계를 건너뛴다.
+
+   - Claude 인증: 비밀 설정의 `CLAUDE_CODE_OAUTH_TOKEN` 이 있으면 그 토큰을 쓴다(서버).
+
+   - 없으면 `claude auth status` 로 그 PC 의 Claude CLI 로그인을 확인한다. 이 명령은 모델을 부르지 않는다.
+
+   - 로그인돼 있으면 토큰 없이 CLI 를 불러 기존 로그인을 쓰고, 사전 점검 비고에 "Claude CLI 로그인(<방식>)으로 부릅니다." 를 남긴다. 로그인도 없으면 AI 단계를 건너뛴다.
+
    - 실행 기록(`audit.json` 의 `claude_auth`)에는 방식(`claude.ai` 등)과 요금제만 적는다. 이메일·조직 번호는 적지 않는다.
 
 5. SRS 전체를 읽는다(REQ-DAILY-002, REQ-QAINTEL-003).
@@ -3266,7 +3306,7 @@ REQ-QAINTEL-013 이 대신한다.
 
 내부 키 `E`. AI 를 쓰지 않는다.
 
-**언제** 설정한 요일(`daily_qa.weekly_day`, 기본 월요일)에만 돈다. CLI `--weekly` 로 다른 요일에도 돌릴 수 있다. 다른 날에는 단계가 `오늘은 대상 아님` 으로 남는다.
+**언제** 한국 시간 날짜의 설정한 요일(`daily_qa.weekly_day`, 기본 월요일)에만 돈다. CLI `--weekly` 로 다른 요일에도 돌릴 수 있다. 다른 날에는 단계가 `오늘은 대상 아님` 으로 남는다. 스냅샷 날짜도 같은 한국 시간 날짜를 쓴다.
 
 **입력**
 
@@ -3396,12 +3436,19 @@ Finding 하나의 필드:
    - 위 형식에 맞지 않는다
    - `skill`·`task_id` 가 작업과 다르다
 2. 파일이 맞으면 Finding 마다 아래를 차례로 본다. 하나라도 걸리면 그 Finding 을 버리고 이유를 남긴다.
+
    1. 판정 값이 그 점검의 판정 목록에 없다.
+
    2. 근거가 하나도 없다.
+
    3. 어느 근거의 위치에도 찾아갈 수 있는 위치가 없다. 인정하는 위치는 Polarion 번호(`VP-123`), Legacy 번호(`01-20-05`), `N행`·`row N`, `§번호`, `N절`, `sheet`·`시트` 다.
+
    4. 조치(`action`)가 아래 가운데 하나를 하라고 한다.
+
       - 이슈를 닫거나 종료하기(예: "이슈를 닫는다", "VP-6669 종료", "Close the issue")
+
       - 기존 TC 를 덮어쓰기("덮어쓴다", `overwrite`)
+
       - 결과·이력을 지우기
 
       > **예시** "닫기 버튼 동작을 확인하는 TC 보강", "Closed 상태 이슈 목록 TC 보강", "앱 종료 시 설정 저장 TC 추가" 는 화면·기능 이름이므로 버리지 않는다.
@@ -3689,9 +3736,13 @@ python scripts/run_daily_qa.py --dry-run
 1. 작업 입력을 마스킹해 작업 폴더 `runs/<실행 ID>/in/<작업 ID>.json` 에 쓰고, 같은 파일을 실행 폴더 `sent/` 에 복사한다. 마스킹 건수는 `audit.json` 에 남긴다.
 2. 전체 SRS·TC 색인·매뉴얼(`context/`)은 그 실행에서 처음 AI 작업을 돌리기 바로 전에 한 번만 쓴다.
 3. 이전 결과 파일을 지우고 Claude 를 부른다. 작업 폴더에서 `claude -p` 를 실행하고, 표준입력으로 아래 안내문을 넘긴다.
+
    - 첫 줄: `/<Skill 이름> runs/<실행 ID>/in/<작업 ID>.json`
+
    - 실행 ID, 작업 ID, 결과 파일 위치(`runs/<실행 ID>/out/<작업 ID>.json`), 전체 색인 위치
+
    - 제품 설정에 제품 규칙 Skill 이 있으면 "제품 규칙 Skill `<이름>` 을 먼저 읽는다."(VXvue 는 `vxvue-qa-rules`)
+
    - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
 4. 실행 옵션과 환경은 NFR-SEC-001 을 따른다. 제한 시간(`task_timeout_seconds`)을 넘기면 멈추고 실패로 본다.
 5. 모델은 `--model <ai.claude.models.standard>`, 추론 정도는 `--effort <ai.claude.effort>` 로 넘긴다. 화면 AI 기능과 같은 설정을 쓴다. 값이 비면 그 인자를 넣지 않고 CLI 기본값을 쓴다. 현재 상태 점검 작업(REQ-QAINTEL-030)은 모델만 `daily_qa.intelligence.audit_model` 을 쓰고 추론 정도는 같다.
@@ -3725,8 +3776,8 @@ python scripts/run_daily_qa.py --dry-run
 |---|---|---|
 | `daily_qa.claude_command` | `claude` | Claude CLI 실행 파일. 이름만 적었는데 PATH 에 없으면 `~/.local/bin/<이름>` 을 쓴다(REQ-AICALL-005) |
 | `daily_qa.task_timeout_seconds` | `900` | 작업 한 번의 제한 시간(초) |
-| `ai.claude.models.standard` | `claude-opus-5-5` | 분석 작업의 모델(`--model`) |
-| `ai.claude.effort` | `medium` | 분석 작업의 추론 정도(`--effort`) |
+| `ai.claude.models.standard` | `claude-opus-5-5` | 분석 작업의 모델(`--model`). 화면에서 바꾼 값이 먼저 적용된다(REQ-AICALL-007) |
+| `ai.claude.effort` | `medium` | 분석 작업의 추론 정도(`--effort`). 화면에서 바꾼 값이 먼저 적용된다(REQ-AICALL-007) |
 
 **안 될 때**
 
@@ -3751,11 +3802,17 @@ REQ-QAINTEL-019 가 대신한다.
 
 1. Finding 표(`daily_qa_findings`)에 실행 ID, 제품, 점검(Skill 이름), 작업 ID, 대상, 대상 제목, 판정, 요약, 상세, 신뢰도, 이슈 유형, 근거, 대상 TC 위치, TC 초안, 만든 시각을 저장한다. 다섯 가지 분석은 분석 종류, 이벤트 번호, 구획, 관련 번호도 저장한다(REQ-QAINTEL-012 ~ REQ-QAINTEL-016). 검토 상태는 `검토 대기` 다.
 2. 사양 변경 Coverage 분석(AI 결과와 삭제 SRS 계산 모두)과 사양–TC 연결 점검은 저장 전에 같은 기록인지 본다. 같은 제품의 Finding 만 본다. 아래가 모두 같은 Finding 이 `검토 대기`, `승인`, `근거 추가 필요` 상태로 남아 있으면 저장하지 않는다.
+
    - 같은 점검
+
    - 같은 대상
+
    - 같은 판정
+
    - 같은 대상 TC(통합문서·시트·TC 번호. TC 번호가 없으면 행)
+
    - 같은 초안 제목(초안이 있을 때)
+
    - 이름을 바꾸기 전 Skill(`vxvue-spec-change-impact`, `vxvue-trace-gap`)의 Finding 도 같은 점검으로 본다
 
    > **예시** VP-10 을 가리키는 TC 세 개가 모두 `수정 필수` 면 Finding 세 개가 저장된다. 다음 날 같은 세 TC 로 다시 나오면 저장하지 않는다.
@@ -3908,6 +3965,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 | `SPEC_COVERAGE` | 사양 변경 분석 |
 | `E` | 사양–TC 연결 점검 |
 | `F` | 매뉴얼 누락 후보 점검 |
+| `email` | 메일 |
 | `B`, `C` | 사양 변경 영향 검토, 이슈 수정확인 초안(개편 전 실행 기록에만 있다) |
 
 | 상태 값 | 화면 이름 | 뜻 |
@@ -3994,10 +4052,15 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 지침 프롬프트, 제품 규칙, 공통 규칙 순서로 따른다.
 4. 사람 없이 도는 실행이므로 질문은 결과 파일 `open_questions` 에 적는다.
 5. 근거 규칙:
+
    - Finding 마다 찾아갈 수 있는 위치가 있는 근거를 하나 이상 둔다. 위치는 작업 입력에 있는 번호·위치만 쓴다(REQ-QAINTEL-017).
+
    - 과거 이슈와의 관계(재발, 재등록, 판정 충돌)는 후보로만 쓴다.
+
    - Expected·Precondition·Step 의 근거는 현재 유효한 사양이다. 삭제·취소선·폐기 사양은 유효 여부를 `Deleted` 등으로 적고 Expected 근거로 쓰지 않는다.
+
    - 일부 파일만 찾아보고 "사양 없음", "전수조사 완료" 라고 쓰지 않는다. 오늘 SRS 전체를 찾아봤을 때만 없다고 쓴다.
+
    - 연구소 Comment·Resolution 은 단서일 뿐이고, Expected 의 유일한 근거가 될 수 없다.
 6. 하지 않는 일: 이슈 종료 제안, 기존 TC 원본 수정·덮어쓰기, TC 결과·이력 삭제 제안, 입력·`context/`·`rules/` 밖 자료 조회, 결과 파일 밖 쓰기.
 7. TC·이슈 문구를 쓰기 전에 제품 규칙 Skill 이 가리키는 절을 읽는다. VXvue 는 TC 설계 원칙, Step–Expected 번호, Title 분류 머리말 금지, QA 현업 문체, 내부 구현 추정 금지 절이다. Expected 는 볼 수 있는 화면·API 응답·로그·데이터 결과로 쓴다.
@@ -4156,13 +4219,21 @@ REQ-QAINTEL-019 가 대신한다.
   - 토큰 기록, 하루 한도, 할당량 소진 알림, 비용 추정: REQ-USAGE-001 ~ REQ-USAGE-004
 - 메일: 발송 공통, 정기 보고 메일, 설정 확인과 시험 발송. REQ-MAIL-001 ~ REQ-MAIL-003
 - Knowledge
+
   - 제품마다 자료가 어디서 들어오는지와 무엇이 꼭 있어야 하는지(출처 프로필): REQ-KNOW-018
+
   - 제품별 상태 판정(정상·주의·오류): REQ-KNOW-019
+
   - 화면(현황판, 제품 상세, 설정된 제품만 쓰기, 파일 등록·교체, TC 열 지정, 내려받기·지우기): REQ-KNOW-001 ~ REQ-KNOW-005, REQ-KNOW-020
+
   - 등록 문서를 분석에 넘기기와 파싱 결과 저장: REQ-KNOW-006, REQ-KNOW-007
+
   - 지식 폴더 읽기(분류, 파일명 읽기, 하나만 고르기, 수집, 등록과 옛 판 정리): REQ-KNOW-008 ~ REQ-KNOW-012
+
   - 죽은 등록 정리, 스캔 결과 보기, 깨진 한글 파일명 바로잡기: REQ-KNOW-013 ~ REQ-KNOW-015
+
   - 사용법 화면: REQ-KNOW-017
+
   - 올라온 파일 이름을 경로로 믿지 않기: NFR-SEC-003
 - 동기화: 동기화 기록, 사양서 동기화, 지식 폴더 업로드. REQ-KNOW-016, REQ-SYNC-001, REQ-SYNC-002
 - 예약: 앱 안 예약 실행기와 등록된 예약 작업. REQ-SCHED-001, REQ-SCHED-002
@@ -5235,7 +5306,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 글에 `api`, `websocket`, `dicom`, `command`, `protocol`, `sop`, `generator` 중 하나가 있음 | API/DICOM/WebSocket 연동 의미 판단이 필요합니다 |
 | 연결된 SRS 가 3건 이상인데 사양 본문 정확 일치가 0건 | 연결된 SRS 가 여러 건인데 사양 본문에서 정확 일치를 찾지 못했습니다 |
 
-3. 등급의 모델 이름은 AI 제공자에 따라 읽는 곳이 다르다. `claude_cli` 는 `ai.claude.models.<등급>`, `gemini` 는 `models.<등급>` 이다. 없으면 제공자별 코드 기본값을 쓴다.
+3. 등급의 모델 이름은 AI 제공자에 따라 읽는 곳이 다르다. `claude_cli` 는 `ai.claude.models.<등급>`, `gemini` 는 `models.<등급>` 이다. 없으면 제공자별 코드 기본값을 쓴다. Claude 모델은 화면에서 바꾼 값이 먼저 적용된다(REQ-AICALL-007).
 
 **결과** 등급, 모델, 등급 이름(경량 (요약·분류) / 기본 QA 판단 / 복잡한 교차검증), 이유 목록이 나온다. 두 등급이 같은 모델이어도 판정과 이유는 결과에 남긴다.
 
@@ -5288,8 +5359,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `ai.claude.command` | `claude` | Claude CLI 실행 파일. 이름만 적었는데 PATH 에 없으면 Claude CLI 기본 설치 위치 `~/.local/bin/<이름>` 을 쓴다 |
 | `ai.claude.timeout_seconds` | `600` | 호출 한 번의 제한 시간(초) |
 | `ai.claude.workdir` | 빈 값 | 빈 작업 폴더. 비면 사용자 홈의 `~/.qa-ai-workspace` |
-| `ai.claude.effort` | `medium` | 추론 정도(`low`·`medium`·`high` 등). 일일 QA 점검 작업에도 쓴다(REQ-DAILY-016). 비면 CLI 기본값 |
-| `ai.claude.models.light` / `standard` / `complex` | `claude-opus-5-5` | 모델 등급별 모델 이름(REQ-AICALL-004) |
+| `ai.claude.effort` | `medium` | 추론 정도(`low`·`medium`·`high` 등). 일일 QA 점검 작업에도 쓴다(REQ-DAILY-016). 비면 CLI 기본값. 화면에서 바꾼 값이 먼저 적용된다(REQ-AICALL-007) |
+| `ai.claude.models.light` / `standard` / `complex` | `claude-opus-5-5` | 모델 등급별 모델 이름(REQ-AICALL-004). 화면에서 바꾼 값이 먼저 적용된다(REQ-AICALL-007) |
 | `CLAUDE_CODE_OAUTH_TOKEN` (secrets) | 없음 | 서버 인증 토큰. 비면 넣지 않고, 개발 PC 는 기존 로그인을 쓴다 |
 
 **안 될 때**
@@ -5313,6 +5384,34 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 - Claude 에게 도구를 주지 않는다. 판정에 필요한 자료는 모두 표준입력의 분석 입력에 있다.
 
 이유: 이 호출은 이미 골라 둔 근거로 판정만 받는다. 파일을 더 찾아볼 일이 없으므로 도구를 열어 둘 까닭이 없다.
+
+### REQ-AICALL-007 화면에서 AI 모델·추론 정도 바꾸기
+
+**하는 일** 운영 담당자가 `/settings/ai` 에서 Claude 모델 등급과 추론 정도를 확인하고 바꾼다. 홈과 비용 대시보드에서 연결한다.
+
+**언제** 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 일반 접속에서는 버튼을 끄고 SSH 터널 사용법을 안내한다.
+
+**순서**
+
+1. 각 설정의 현재 값·기본값·출처·고를 수 있는 값을 보여 준다.
+2. 아래 허용 키와 값만 받는다. 하나라도 틀리면 요청 전체를 거절한다(422).
+3. `data/app.db` 의 `app_setting_overrides` 에 저장하고, 이전 값·새 값·시각·접속 주소를 `app_setting_changes` 에 남긴다. 기본값 복구도 기록한다.
+4. 웹 설정 캐시를 다시 읽는다. 다음 AI 호출과 다음 별도 점검 프로세스 실행부터 새 값을 쓴다. 진행 중인 실행은 시작할 때 값을 끝까지 쓴다.
+5. 최근 변경 기록 10건과 진행 중인 일일 점검 번호를 보여 준다. 실행 기록에는 분석 모델·현재 상태 점검 모델·추론 정도를 남긴다.
+
+**설정**
+
+| 바꿀 수 있는 키 | 고를 수 있는 값 |
+|---|---|
+| `ai.claude.models.light` / `standard` / `complex` | `ai.claude.allowed_models` 의 모델 |
+| `ai.claude.effort` | 빈 값(CLI 기본), `low`, `medium`, `high`, `xhigh`, `max` |
+| `daily_qa.intelligence.audit_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
+
+허용 모델의 기본 목록은 `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` 이다. DB 에 저장한 값이 설정 파일보다 먼저 적용된다(REQ-AICALL-004·005, REQ-DAILY-016).
+
+**안 될 때** DB 읽기에 실패하면 경고를 남기고 설정 파일 값을 쓴다. 저장 실패는 화면에 알린다. 외부 또는 프록시 접속의 저장·복구는 403 으로 거절한다.
+
+**지킬 것** TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청도 저장할 수 없다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. 설정 파일은 수정하지 않는다.
 
 ### REQ-AICALL-006 Claude 사용량 남은 양 보기
 
@@ -5538,7 +5637,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 2. 글 본문을 넣고, HTML 본문이 있으면 함께 넣는다.
 3. 예외를 올리지 않는다.
 
-**결과** `sent`(수신자 수), `not_configured`, `failed`(오류 종류 이름만) 중 하나를 돌려준다.
+**결과** `sent`(수신자 수), `not_configured`, `failed`(오류 종류·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·토큰은 로그와 결과에서 가린다.
+
+정기 점검은 메일 단계가 끝날 때까지 `RUNNING`으로 남긴다. 메일 실패는 실행 상세의 메일 단계에 기록하며, 앞 단계가 성공했어도 실행 결과는 `PARTIAL`이다. 앞 단계의 실패 결과는 그대로 유지한다.
 
 ### REQ-MAIL-003 메일 설정 확인·시험 발송
 
@@ -5611,6 +5712,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 | 매뉴얼 개정 검증 | `/manual-review` |
 | Knowledge — 사양서·TC·규칙 관리 | `/knowledge` |
 | 비용 대시보드 | `/cost-dashboard` |
+| AI 모델 설정 | `/settings/ai` (REQ-AICALL-007) |
 | 하위 서비스 카드 | REQ-WEB-002 |
 
 **지킬 것** 허브에는 내비게이션이 없다. 기능 사이를 옮겨 갈 때는 허브를 거친다.
@@ -5897,17 +5999,20 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 ```text
 .\scripts\deploy.ps1            # 파일 전송 + 의존성 설치
 .\scripts\deploy.ps1 -Restart   # 위 + 재기동 + 헬스체크
+.\scripts\deploy.ps1 -Restart -ManualRestart # 전송 뒤 사용자가 sudo 재기동
 ```
 
-**입력** `.deploy.env`(Git 제외)에 `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_TARGET_DIRECTORY` 를 둔다. `-Restart` 에는 `secrets.txt` 의 `SERVER_SUDO_PASSWORD` 가 필요하다.
+**입력** `.deploy.env`(Git 제외)에 `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_TARGET_DIRECTORY` 를 둔다. 자동 `-Restart` 에는 `secrets.txt` 의 `SERVER_SUDO_PASSWORD` 가 필요하다. `-ManualRestart`도 주면 인증 정보를 읽거나 입력하지 않고 사용자가 서버에서 재기동한다.
 
 **순서**
 
 1. 로컬 `pytest` 를 돌린다. 실패하면 멈춘다.
-2. 대상 폴더를 만들고 `app`, `scripts`, `tests`, `config`, `docs`, `deploy`, `requirements.txt`, `config.yaml`, `pytest.ini`, `.env.example`, `secrets.example.txt`, `secrets.example.json`, `README.md`, `SECURITY.md` 만 복사한다.
+2. 서버 안에서 모든 등록 제품의 QA 실행 잠금과 핵심 앱의 대기·실행 중인 분석을 확인한다. 하나라도 있거나 상태 확인이 실패하면 전송을 멈춘다. 대상 폴더를 만들고 `app`, `scripts`, `tests`, `config`, `docs`, `deploy`, `requirements.txt`, `config.yaml`, `pytest.ini`, `.env.example`, `secrets.example.txt`, `secrets.example.json`, `README.md`, `SECURITY.md` 만 복사한다.
+
+   > **예외** 최초 설치에서 대상 폴더에 `.venv`만 있는 것을 확인하면 앱 실행 자료가 없는 것으로 보고 첫 상태 검사를 통과한다. 다른 파일이나 폴더가 하나라도 있으면 정상 상태 검사를 생략하지 않는다.
 3. 서버에서 `.venv/bin/pip install -q -r requirements.txt` 를 돌린다. 실패하면 멈춘다.
 4. `-Restart` 가 없으면 여기서 끝나고 재기동 방법을 안내한다.
-5. `-Restart` 면 sudo 비밀번호를 SSH 표준입력으로 넘겨 `systemctl restart qa-verification` 을 한다. 비밀번호 끝에 CR·BOM 이 붙지 않게 한다.
+5. 재기동 전에 같은 실행 상태를 다시 확인한다. `-ManualRestart`면 아직 재기동하지 않았다고 알리고 사용자가 실행할 sudo 명령을 보인다. 여기서는 배포 완료로 판정하지 않는다. 자동 `-Restart`면 sudo 비밀번호를 SSH 표준입력으로 넘겨 `systemctl restart qa-verification` 을 한다. 비밀번호 끝에 CR·BOM 이 붙지 않게 한다.
 6. `config.yaml` 에서 포트를 읽어, 서버 안에서 `/health` 를 2초 간격으로 15번까지 부른다. `"status":"ok"` 가 오면 성공이다.
 
 **안 될 때**
@@ -6006,10 +6111,15 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
    > **참고** 서버 구분이 없던 옛 상태 값은 보존한다. 대상별 기록이 없는 첫 실행에서는 한 번 다시 등록한다.
 5. 바뀐 파일마다 차례로 다음을 한다.
+
    1. 원본을 `data/specifications/vxvue/original/<날짜>/` 에 복사한다.
+
    2. 텍스트를 뽑아 `normalized/<날짜>/<이름>.md` 로 쓴다.
+
    3. 서버 `POST /knowledge/specification` 으로 등록한다(제품 `VXvue`, 버전은 제품 설정의 `version`, 출처 `source=alm_crawler`, 제한 60초). 200 또는 303 이면 성공이다. 서버는 새 판을 등록한 뒤 같은 논리 문서의 옛 판을 스스로 뺀다(REQ-KNOW-003).
+
    4. 서버 `GET /knowledge/documents?kind=specification&product=VXvue` 로 목록을 받는다. 이름에서 `(YYMMDD)` 만 뺀 부분이 같고 이름 전체는 다른 등록이 남아 있으면 `POST /knowledge/delete/{번호}`(`source=alm_crawler`) 로 지운다. 옛 서버와도 동작하도록 남긴 단계다.
+
    5. 상태 파일에 그 파일의 크기·수정 시각을 적는다.
 6. 상태 파일을 저장한다.
 7. 결과를 서버 `POST /knowledge/sync-log` 로 보고한다(`kind=specification`, `source=alm_crawler`).
@@ -7962,7 +8072,10 @@ NFR-IMPACT-001. `tests/test_gemini_client.py::test_gemini_client_accumulates_tok
 
 ### TEST-IMPACT-016
 
-REQ-WEB-004, REQ-WEB-006. `tests/test_secrets_file.py::test_config_status_endpoint_hides_the_key` 가 상태 주소에 키 값이 없는지 본다. `tests/test_web.py::test_removed_impact_analyzer_addresses_redirect_to_qa_agent`, `test_legacy_guide_redirects_to_qa_agent_guide`, `test_no_screen_links_to_removed_impact_analyzer` 가 없앤 화면의 옛 주소와 링크를 본다.
+REQ-WEB-004, REQ-WEB-006. 다음 시험으로 본다.
+
+- `tests/test_secrets_file.py::test_config_status_endpoint_hides_the_key` 가 상태 주소에 키 값이 없는지 본다.
+- `tests/test_web.py::test_removed_impact_analyzer_addresses_redirect_to_qa_agent`, `test_legacy_guide_redirects_to_qa_agent_guide`, `test_no_screen_links_to_removed_impact_analyzer` 가 없앤 화면의 옛 주소와 링크를 본다.
 
 ### TEST-IMPACT-017
 
@@ -8004,13 +8117,20 @@ REQ-PARSE-006 ~ REQ-PARSE-008.
 
 REQ-PARSE-009. `tests/test_document_cache.py::test_cache_round_trip_and_text`, `test_corrupt_cache_is_treated_as_miss`, `test_delete_removes_both_cache_files`.
 
+### TEST-PARSE-006 Excel 사양서 전문과 근거 위치
+
+REQ-PARSE-010, REQ-KNOW-006, REQ-KNOW-007을 `tests/test_excel_specification_parser.py`로 확인한다. 두 시트, 40행 이후 본문, 빈 셀·행, 숫자 0, 수식, 긴 행과 깨진 파일을 합성한다.
+
+등록된 임시 XLSX를 공용 로더와 일일 점검의 `default_spec_chunks`로 읽는다. 전문·조각·검색 결과의 시트·행 위치가 맞고, 저장본을 다시 읽을 때도 같아야 한다. 원본은 바뀌지 않아야 한다.
+
 ### 11.2 QA Agent (이슈 검증 범위 산정)
 
 ### TEST-ISSUE-001
 
 REQ-ISSUE-001 을 `tests/test_polarion_issue.py` 로 검증한다.
 
-- 합성 폴더: `backup.json` 이 있는 폴더만 목록에 든다(`test_list_exported_issues_finds_folders_with_backup`), 폴더가 없으면 빈 목록(`test_missing_export_dir_is_not_an_error`), 실행 폴더 구조(`test_issues_inside_run_folders_are_found`), 같은 이슈가 여러 실행에 있으면 최근 실행 우선(`test_latest_run_folder_wins_for_the_same_issue`), `.staging-`·`.previous-` 제외(`test_staging_and_previous_run_folders_are_ignored`).
+- 합성 폴더: `backup.json` 이 있는 폴더만 목록에 든다(`test_list_exported_issues_finds_folders_with_backup`). 폴더가 없으면 빈 목록이다(`test_missing_export_dir_is_not_an_error`).
+- 실행 폴더 구조(`test_issues_inside_run_folders_are_found`), 같은 이슈가 여러 실행에 있으면 최근 실행 우선(`test_latest_run_folder_wins_for_the_same_issue`), `.staging-`·`.previous-` 제외(`test_staging_and_previous_run_folders_are_ignored`).
 - 실데이터(이 PC 에 Export 폴더가 있을 때만): 목록 수가 디스크의 `backup.json` 을 목록 코드와 다른 방법으로 센 값과 같다(`test_real_export_lists_every_backup_on_disk`). "목록이 비어 있지 않다"만 보면 예전 구조만 읽어도 통과하기 때문이다.
 
 ```text
@@ -8022,20 +8142,34 @@ python -m pytest tests/test_polarion_issue.py -q
 REQ-ISSUE-002 를 `tests/test_polarion_issue.py` 로 검증한다.
 
 - HTML 변환: 줄바꿈(`test_html_breaks_become_lines`), 문자 참조·NBSP(`test_html_entities_and_nbsp_are_resolved`), 이미지 표시 유지(`test_images_are_kept_as_markers_not_dropped`), 인라인 스타일 제거(`test_inline_styles_are_stripped_but_text_kept`).
-- 필드: 번호·메타데이터(`test_parse_extracts_identity_and_metadata`), 연결 항목 분리(`test_linked_work_items_are_split_by_target_type`), 버전(`test_versions_are_extracted`), 발생원인·조치내역(`test_cause_and_resolution_are_extracted`), 댓글·첨부(`test_comments_and_attachments_are_extracted`), 필드가 없어도 예외 없음(`test_missing_fields_do_not_raise`), 파일 읽기(`test_load_issue_reads_a_backup_file`).
+- 필드: 번호·메타데이터(`test_parse_extracts_identity_and_metadata`), 연결 항목 분리(`test_linked_work_items_are_split_by_target_type`), 버전(`test_versions_are_extracted`).
+- 발생원인·조치내역(`test_cause_and_resolution_are_extracted`), 댓글·첨부(`test_comments_and_attachments_are_extracted`).
+- 필드가 없어도 예외 없음(`test_missing_fields_do_not_raise`), 파일 읽기(`test_load_issue_reads_a_backup_file`).
 - 실데이터: 모든 이슈가 오류 없이 읽힌다(`test_real_export_parses_every_issue_without_error`).
 
 ### TEST-ISSUE-003
 
-REQ-ISSUE-003 을 `tests/test_polarion_issue.py` 로 검증한다: 표준 마커 분리(`test_standard_markers_are_split_into_sections`, `test_parse_extracts_standard_body_sections`), 한국어 별칭(`test_korean_marker_aliases_are_recognised`), 모르는 대괄호는 내용(`test_unknown_bracket_tags_stay_as_content`), 마커 밖 본문 보존(`test_text_outside_markers_is_kept_as_preamble`), Step 번호 떼기(`test_step_numbers_are_stripped_for_comparison`), 마커 없는 본문은 재현 절차(`test_body_without_markers_is_treated_as_steps`), Step 없으면 표준 형식 아님(`test_missing_step_marker_is_reported_by_has_standard_body`), 실데이터 대부분 표준 형식(`test_real_export_mostly_uses_the_standard_body_format`).
+REQ-ISSUE-003 을 `tests/test_polarion_issue.py` 로 검증한다.
+
+- 표준 마커 분리(`test_standard_markers_are_split_into_sections`, `test_parse_extracts_standard_body_sections`), 한국어 별칭(`test_korean_marker_aliases_are_recognised`).
+- 모르는 대괄호는 내용(`test_unknown_bracket_tags_stay_as_content`), 마커 밖 본문 보존(`test_text_outside_markers_is_kept_as_preamble`), Step 번호 떼기(`test_step_numbers_are_stripped_for_comparison`).
+- 마커 없는 본문은 재현 절차(`test_body_without_markers_is_treated_as_steps`), Step 없으면 표준 형식 아님(`test_missing_step_marker_is_reported_by_has_standard_body`).
+- 실데이터 대부분 표준 형식(`test_real_export_mostly_uses_the_standard_body_format`).
 
 ### TEST-ISSUE-004
 
-REQ-ISSUE-004 를 `tests/test_polarion_issue.py` 로 검증한다: 연구소 검토 결과별 유형(`test_lab_review_result_maps_to_issue_type_without_llm`, 매개변수 여러 개), `lab_noact` 는 확정하지 않음(`test_ambiguous_lab_result_is_not_guessed`), 모르는 값은 미분류(`test_unknown_lab_result_is_unclassified`), B 유형 Runtime TC 차단(`test_spec_type_blocks_auto_runtime_tc`), A 유형 허용(`test_program_fixed_allows_runtime_tc`), 실데이터 대부분 AI 없이 분류(`test_real_export_classifies_most_issues_without_llm`).
+REQ-ISSUE-004 를 `tests/test_polarion_issue.py` 로 검증한다.
+
+- 연구소 검토 결과별 유형(`test_lab_review_result_maps_to_issue_type_without_llm`, 매개변수 여러 개), `lab_noact` 는 확정하지 않음(`test_ambiguous_lab_result_is_not_guessed`).
+- 모르는 값은 미분류(`test_unknown_lab_result_is_unclassified`), B 유형 Runtime TC 차단(`test_spec_type_blocks_auto_runtime_tc`), A 유형 허용(`test_program_fixed_allows_runtime_tc`).
+- 실데이터 대부분 AI 없이 분류(`test_real_export_classifies_most_issues_without_llm`).
 
 ### TEST-ISSUE-005
 
-REQ-ISSUE-005 를 `tests/test_polarion_issue.py` 로 검증한다: 연결·언급 번호 포함(`test_search_terms_include_linked_and_mentioned_ids`), 자기 번호 제외(`test_search_terms_exclude_the_issue_itself`), DICOM Tag·Command(`test_search_terms_pick_up_dicom_tags_and_commands`), 따옴표 문구(`test_search_terms_pick_up_quoted_ui_labels`), 대소문자 무시 중복 제거(`test_search_terms_are_deduplicated_case_insensitively`).
+REQ-ISSUE-005 를 `tests/test_polarion_issue.py` 로 검증한다.
+
+- 연결·언급 번호 포함(`test_search_terms_include_linked_and_mentioned_ids`), 자기 번호 제외(`test_search_terms_exclude_the_issue_itself`).
+- DICOM Tag·Command(`test_search_terms_pick_up_dicom_tags_and_commands`), 따옴표 문구(`test_search_terms_pick_up_quoted_ui_labels`), 대소문자 무시 중복 제거(`test_search_terms_are_deduplicated_case_insensitively`).
 
 ### TEST-QAAGENT-001
 
@@ -8060,8 +8194,11 @@ REQ-QAAGENT-003·007·008·009 와 NFR-QAAGENT-003 을 `tests/test_qa_agent_anal
 
 - 관문이 막으면 AI 호출 0회와 이유가 남는다(`test_gate_block_means_zero_llm_calls`, `test_gate_block_records_the_reason`, `test_missing_execution_context_blocks_the_call`, `test_no_specification_evidence_blocks_the_call`), 초안 허용이면 진행(`test_draft_permission_lets_it_proceed`).
 - 정상 경로는 호출 정확히 1회(`test_pipeline_makes_exactly_one_llm_call`), 관문 5개 결과(`test_result_carries_gate_report_for_all_five_gates`), 8축 항상 포함·빠진 축 QA 확인 표시(`test_regression_matrix_always_contains_every_axis`, `test_unjudged_axes_are_marked_for_qa`).
-- 근거: 모든 판정에 근거, 문서·위치 기록, 검색 요약(`test_evidence_is_attached_to_every_claim`, `test_evidence_records_document_and_locator`, `test_retrieval_summary_is_recorded`), 취소선 주의(`test_deprecated_specification_is_noted`), 유사도만 주의(`test_similarity_only_evidence_is_noted_not_blocked`), 연결 SRS 미발견(`test_linked_srs_not_found_in_documents_is_noted`).
-- 응답 검사: 없는 TC 제외, 없는 조각 제외와 확신도 하향, 근거 없는 근본 원인 검출 불인정, Step–Expected 번호 불일치(`test_unknown_tc_id_is_dropped_and_recorded`, `test_unknown_chunk_id_is_dropped_and_confidence_lowered`, `test_root_cause_coverage_is_not_accepted_without_evidence`, `test_step_expected_number_mismatch_is_reported`). 취소선 근거를 쓴 판정의 확신도 하향은 `tests/test_qa_agent_validation.py` 가 본다.
+- 근거: 모든 판정에 근거, 문서·위치 기록, 검색 요약(`test_evidence_is_attached_to_every_claim`, `test_evidence_records_document_and_locator`, `test_retrieval_summary_is_recorded`).
+- 취소선 주의(`test_deprecated_specification_is_noted`), 유사도만 주의(`test_similarity_only_evidence_is_noted_not_blocked`), 연결 SRS 미발견(`test_linked_srs_not_found_in_documents_is_noted`).
+- 응답 검사: 없는 TC 제외(`test_unknown_tc_id_is_dropped_and_recorded`), 없는 조각 제외와 확신도 하향(`test_unknown_chunk_id_is_dropped_and_confidence_lowered`).
+- 근거 없는 근본 원인 검출 불인정(`test_root_cause_coverage_is_not_accepted_without_evidence`), Step–Expected 번호 불일치(`test_step_expected_number_mismatch_is_reported`).
+- 취소선 근거를 쓴 판정의 확신도 하향은 `tests/test_qa_agent_validation.py` 가 본다.
 - 보내는 것: 규칙은 발췌만, 규칙 없으면 빈 발췌, TC 수행 결과 미전송, 댓글 제한, 감사 기록, 같은 입력 캐시(`test_rule_suffix_*`, `test_prompt_does_not_include_tc_result_history`, `test_prompt_limits_issue_comments`, `test_audit_snapshot_records_what_was_sent`, `test_second_identical_run_hits_the_cache`).
 - 근거 수준: 사양은 Expected 근거 가능, 이슈 댓글은 불가, TC 위치는 시트·행, 근거 없는 판정 집계(`test_specification_evidence_can_support_expected`, `test_issue_comment_evidence_cannot_support_expected`, `test_testcase_evidence_locator_uses_sheet_and_row`, `test_store_reports_unsourced_claims`).
 
@@ -8071,11 +8208,22 @@ python -m pytest tests/test_qa_agent_analyzer.py -q
 
 ### TEST-QAAGENT-003
 
-REQ-QAAGENT-007 의 모델 등급 선택을 `tests/test_model_router.py` 로 검증한다: 기본 등급(`test_ordinary_analysis_uses_the_standard_model`), 근본 원인 불명·근거 분산·연동 낱말·연결 SRS 다수+정확 일치 0 이면 상위 등급(`test_unknown_root_cause_escalates`, `test_evidence_spread_across_documents_escalates`, `test_integration_terms_escalate`, `test_many_linked_srs_without_exact_evidence_escalates`), 정확 일치가 있으면 기본(`test_many_linked_srs_with_exact_evidence_stays_standard`), 등급 고정(`test_forced_tier_wins`, `test_unknown_forced_tier_is_ignored`), 이유 저장(`test_decision_serialises_with_reasons`), 연동 낱말 판별, 설정에서 모델 읽기, 비용 추정.
+REQ-QAAGENT-007 의 모델 등급 선택을 `tests/test_model_router.py` 로 검증한다.
+
+- 기본 등급(`test_ordinary_analysis_uses_the_standard_model`).
+- 근본 원인 불명·근거 분산·연동 낱말·연결 SRS 다수+정확 일치 0 이면 상위 등급(`test_unknown_root_cause_escalates`, `test_evidence_spread_across_documents_escalates`, `test_integration_terms_escalate`, `test_many_linked_srs_without_exact_evidence_escalates`).
+- 정확 일치가 있으면 기본(`test_many_linked_srs_with_exact_evidence_stays_standard`), 등급 고정(`test_forced_tier_wins`, `test_unknown_forced_tier_is_ignored`).
+- 이유 저장(`test_decision_serialises_with_reasons`), 연동 낱말 판별, 설정에서 모델 읽기, 비용 추정.
 
 ### TEST-QAAGENT-004
 
-REQ-QAAGENT-004 를 `tests/test_retrieval_hybrid.py` 로 검증한다: 번호 모양 판별, 경계 일치(`test_identifier_match_respects_boundaries`), DICOM Tag(`test_dicom_tag_with_punctuation_is_found`), 번호 일치가 문구 일치보다 앞(`test_identifier_hit_outranks_phrase_hit`), 정확 일치가 앞자리·남은 자리 유사도·중복 없음(`test_exact_hits_take_the_front_positions`, `test_bm25_fills_the_remaining_slots`, `test_no_duplicates_between_exact_and_bm25`), 개수 줄이기(`test_adaptive_shrinks_total_when_exact_evidence_exists`, `test_adaptive_does_not_shrink_when_no_exact_hit`), 유사도 몫 남기기(`test_bm25_slots_are_reserved_even_with_many_exact_hits`), 걸린 이유(`test_result_reports_why_each_item_was_selected`).
+REQ-QAAGENT-004 를 `tests/test_retrieval_hybrid.py` 로 검증한다.
+
+- 번호 모양 판별, 경계 일치(`test_identifier_match_respects_boundaries`), DICOM Tag(`test_dicom_tag_with_punctuation_is_found`).
+- 번호 일치가 문구 일치보다 앞(`test_identifier_hit_outranks_phrase_hit`).
+- 정확 일치가 앞자리·남은 자리 유사도·중복 없음(`test_exact_hits_take_the_front_positions`, `test_bm25_fills_the_remaining_slots`, `test_no_duplicates_between_exact_and_bm25`).
+- 개수 줄이기(`test_adaptive_shrinks_total_when_exact_evidence_exists`, `test_adaptive_does_not_shrink_when_no_exact_hit`).
+- 유사도 몫 남기기(`test_bm25_slots_are_reserved_even_with_many_exact_hits`), 걸린 이유(`test_result_reports_why_each_item_was_selected`).
 
 ### TEST-QAAGENT-005
 
@@ -8137,7 +8285,8 @@ REQ-RULE-001·002·003 을 `tests/test_qa_rules.py` 로 검증한다.
 
 - 글 고치기: 제목 역슬래시·문자 참조·빈 줄·표 보존(`test_normalize_*`).
 - 절 나누기: 번호·제목(`test_sections_are_parsed_with_numbers_and_titles`), 판 번호(`test_revision_is_read_from_document_header`), 본문 없는 제목 제외(`test_container_headings_without_body_are_not_emitted`), 인용 이름(`test_anchor_identifies_document_and_section`).
-- 꼬리표: 제목의 Skill 번호 우선, 주제 낱말, 부모 상속, 관문 번호, 공통 절, 공백 무시(`test_explicit_skill_number_in_title_wins`, `test_topic_keyword_maps_section_to_skill`, `test_subsection_inherits_parent_tags`, `test_gate_number_in_title_is_tagged`, `test_framework_sections_stay_untagged_as_common_rules`, `test_keyword_matching_ignores_whitespace_differences`).
+- 꼬리표: 제목의 Skill 번호 우선(`test_explicit_skill_number_in_title_wins`), 주제 낱말(`test_topic_keyword_maps_section_to_skill`), 부모 상속(`test_subsection_inherits_parent_tags`).
+- 관문 번호(`test_gate_number_in_title_is_tagged`), 공통 절(`test_framework_sections_stay_untagged_as_common_rules`), 공백 무시(`test_keyword_matching_ignores_whitespace_differences`).
 - 발췌: 그 Skill 절만, 예산 지키기, Skill 절 먼저, 공통 절 추가, 빠진 절 보고, 관문 기준, 머리말, 빈 결과, 인용 이름으로 찾기(`test_slice_*`, `test_dropped_sections_are_reported_not_silently_cut`, `test_render_*`, `test_find_resolves_anchor_back_to_section`).
 - 불러오기: 수집 사본 읽기, 없으면 빈 묶음, 판 번호를 수집 기록에서(`test_load_rule_set_*`, `test_revision_falls_back_to_filename_when_document_lacks_header`), 두 문서 모두 읽기(`test_instruction_prompt_and_guide_are_both_loaded`).
 - 실데이터(수집된 VXvue 규칙이 있을 때): 발췌가 예산 대부분을 줄이고 모든 Skill 을 덮는다(`test_real_vxvue_rules_*`).
@@ -8148,7 +8297,12 @@ python -m pytest tests/test_qa_rules.py -q
 
 ### TEST-RULE-002
 
-REQ-RULE-004·006 을 `tests/test_rule_capability.py` 로 검증한다: 방식·상태 값(`test_every_entry_uses_a_known_mode_and_status`), 설명 있음(`test_every_entry_explains_itself`), 구현 위치 파일 존재(`test_implemented_entries_point_at_files_that_exist`, `test_implemented_entries_declare_where`), 합계(`test_summary_counts_match_the_table`), 새 절·사라진 절 판별(`test_unclassified_detects_new_sections`, `test_stale_detects_removed_sections`), 실제 VXvue 규칙과 대조(`test_real_guide_has_no_unclassified_section`, `test_real_guide_still_contains_every_classified_section`).
+REQ-RULE-004·006 을 `tests/test_rule_capability.py` 로 검증한다.
+
+- 방식·상태 값(`test_every_entry_uses_a_known_mode_and_status`), 설명 있음(`test_every_entry_explains_itself`).
+- 구현 위치 파일 존재(`test_implemented_entries_point_at_files_that_exist`, `test_implemented_entries_declare_where`), 합계(`test_summary_counts_match_the_table`).
+- 새 절·사라진 절 판별(`test_unclassified_detects_new_sections`, `test_stale_detects_removed_sections`).
+- 실제 VXvue 규칙과 대조(`test_real_guide_has_no_unclassified_section`, `test_real_guide_still_contains_every_classified_section`).
 
 ```text
 python -m pytest tests/test_rule_capability.py -q
@@ -8597,9 +8751,11 @@ python -m pytest tests/test_product_knowledge.py tests/test_knowledge_upload.py 
 REQ-KNOW-008, 009, 010, 011, 015 를 `tests/test_product_knowledge.py` 로 확인한다.
 
 - 분류: `test_classify_follows_filename_convention`, `test_tc_prefix_wins_over_checklist_pattern`, `test_classify_can_be_overridden_per_product`, `test_unknown_filenames_are_reported_not_silently_dropped`, `test_ignore_patterns_skip_files_entirely`, `test_office_lock_files_are_skipped`.
-- 이름 나누기: `test_parse_asset_name_extracts_revision`, `test_doc_number_is_not_truncated_before_underscore`, `test_doc_number_is_not_confused_with_revision`, `test_status_note_in_parentheses_is_stripped`, `test_version_revision_case_is_normalised`, `test_language_is_separated_so_ko_and_en_are_distinct_documents`.
+- 이름 나누기: `test_parse_asset_name_extracts_revision`, `test_doc_number_is_not_truncated_before_underscore`, `test_doc_number_is_not_confused_with_revision`.
+- 상태·버전·언어 나누기: `test_status_note_in_parentheses_is_stripped`, `test_version_revision_case_is_normalised`, `test_language_is_separated_so_ko_and_en_are_distinct_documents`.
 - 하나 고르기: `test_older_revision_is_excluded_with_reason`, `test_manual_text_extract_loses_to_original_pdf`, `test_same_revision_prefers_original_format_over_extract`, `test_different_languages_are_kept_as_separate_documents`.
-- 수집: `test_sync_copies_originals_and_writes_normalised_text`, `test_sync_is_idempotent_when_nothing_changed`, `test_sync_recollects_when_content_changes`, `test_manifest_records_exclusions_for_qa_review`, `test_dry_run_writes_nothing`, `test_sync_reports_failure_per_file_and_keeps_going`, `test_missing_source_dir_is_not_an_error`, `test_missing_source_dir_yields_needs_config`.
+- 수집: `test_sync_copies_originals_and_writes_normalised_text`, `test_sync_is_idempotent_when_nothing_changed`, `test_sync_recollects_when_content_changes`, `test_manifest_records_exclusions_for_qa_review`.
+- 시험 실행·수집 실패: `test_dry_run_writes_nothing`, `test_sync_reports_failure_per_file_and_keeps_going`, `test_missing_source_dir_is_not_an_error`, `test_missing_source_dir_yields_needs_config`.
 - 이름 바로잡기: `test_nfd_name_*`, `test_mojibake_name_*`, `test_english_name_is_never_touched`, `test_unrecoverable_name_is_reported_not_silently_dropped`, `test_scan_uses_the_normalised_name`, `test_ignore_pattern_matches_nfd_names`, `test_sync_writes_the_normalised_name`.
 - 선택 테스트(실제 폴더가 있을 때만): `test_real_knowledge_dir_has_no_unclassified_assets`, `test_real_knowledge_dir_selects_one_file_per_logical_document`.
 
@@ -8609,7 +8765,11 @@ REQ-KNOW-004 를 `tests/test_knowledge_testcase_mapping.py` 로 확인한다. �
 
 ### TEST-KNOW-003
 
-REQ-KNOW-005, 006, 016 을 `tests/test_persistent_analyses.py` 로 확인한다: `test_delete_document_removes_row_and_file`, `test_delete_missing_document_returns_404`, `test_active_documents_keeps_multiple_distinct_documents`, `test_sync_log_tracks_running_and_finish`, `test_record_sync_log_endpoint`, `test_trigger_specification_sync_blocked_when_unavailable`, `test_trigger_specification_sync_blocked_when_already_running`.
+REQ-KNOW-005, 006, 016 을 `tests/test_persistent_analyses.py` 로 확인한다.
+
+- 문서 삭제·활성 문서: `test_delete_document_removes_row_and_file`, `test_delete_missing_document_returns_404`, `test_active_documents_keeps_multiple_distinct_documents`.
+- 동기화 기록: `test_sync_log_tracks_running_and_finish`, `test_record_sync_log_endpoint`.
+- 동기화 실행 거절: `test_trigger_specification_sync_blocked_when_unavailable`, `test_trigger_specification_sync_blocked_when_already_running`.
 
 ### TEST-KNOW-004
 
@@ -8619,7 +8779,10 @@ REQ-KNOW-007 을 `tests/test_document_cache.py` 로 확인한다: 저장·읽기
 
 ### TEST-KNOW-005
 
-REQ-KNOW-012 를 `tests/test_knowledge_upload.py` 로 확인한다: `test_the_same_bytes_registered_under_another_kind_are_removed`, `test_a_different_version_under_another_kind_is_reported_not_deleted`, `test_same_spec_uploaded_by_both_paths_ends_as_one_document`, `test_readable_new_revision_still_replaces_the_old_one`.
+REQ-KNOW-012 를 `tests/test_knowledge_upload.py` 로 확인한다.
+
+- 종류가 다른 등록: `test_the_same_bytes_registered_under_another_kind_are_removed`, `test_a_different_version_under_another_kind_is_reported_not_deleted`.
+- 두 업로드 경로·새 판 교체: `test_same_spec_uploaded_by_both_paths_ends_as_one_document`, `test_readable_new_revision_still_replaces_the_old_one`.
 
 ### TEST-KNOW-006
 
@@ -8654,7 +8817,11 @@ REQ-CONF-002 와 REQ-WEB-004 를 `tests/test_secrets_file.py` 로 확인한다: 
 
 ### TEST-CONF-002
 
-REQ-CONF-003 을 `tests/test_product_config.py`(VXvue 설정 읽기, 없는 제품은 없음, 목록)와 `tests/test_product_knowledge.py` 의 `test_env_var_in_dir_is_expanded`, `test_unset_env_var_becomes_empty_not_literal_path`, `test_env_default_is_used_when_variable_is_unset`, `test_env_default_is_overridden_on_the_server`, `test_windows_default_path_with_colon_is_not_truncated`, `test_product_slug_is_path_safe` 로 확인한다.
+REQ-CONF-003 을 다음 시험으로 확인한다.
+
+- `tests/test_product_config.py`: VXvue 설정 읽기, 없는 제품은 없음, 목록.
+- `tests/test_product_knowledge.py`: `test_env_var_in_dir_is_expanded`, `test_unset_env_var_becomes_empty_not_literal_path`, `test_env_default_is_used_when_variable_is_unset`.
+- 같은 파일의 `test_env_default_is_overridden_on_the_server`, `test_windows_default_path_with_colon_is_not_truncated`, `test_product_slug_is_path_safe`.
 
 ### TEST-CONF-003
 
@@ -8685,6 +8852,16 @@ REQ-AICALL-003 의 재시도 설정은 `tests/test_gemini_client_core.py::test_r
 1. `models.standard` 를 계정에 없는 모델 이름으로 바꾸고 분석을 한 번 돌린다.
 2. 분석이 `GEMINI_MODEL` 로 끝나고, 감사 화면에 요청 모델·쓴 모델·이유가 남는지 본다.
 3. 원래대로 되돌린다.
+
+### TEST-AICALL-006
+
+REQ-AICALL-007 을 `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` 로 확인한다.
+
+1. 허용 키·모델·추론 정도만 저장되고 잘못된 묶음은 전체 거절되는지 본다.
+2. 설정 파일 기본값·DB 우선 적용·기본값 복구·변경 기록·DB 읽기 실패 시 기본값을 본다.
+3. 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다.
+4. 새 프로세스가 DB 값을 읽고 이미 읽은 설정 객체는 바뀌지 않는지 본다.
+5. 390px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.
 
 ### TEST-AICALL-005
 
@@ -8734,7 +8911,9 @@ REQ-MAIL-002, 003 은 자동 테스트가 없다. 사람이 확인하는 절차:
 
 ### TEST-SCHED-001
 
-REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/test_qa_intel_schedule.py::test_one_job_per_product_plus_catchup_watch`, `tests/test_daily_qa_pipeline.py::test_scheduler_launches_detached_process_only_with_credentials`). 사람이 확인하는 절차: 앱을 띄운 뒤 `output/logs/app.log` 에 `scheduled_job_registered id=sync_vxvue_specification`, `id=sync_product_knowledge_vxvue`, `id=qa_agent_vxvue`, `id=qa_agent_limit_catchup` 네 줄이 있는지 본다.
+REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/test_qa_intel_schedule.py::test_one_job_per_product_plus_catchup_watch`, `tests/test_daily_qa_pipeline.py::test_scheduler_launches_detached_process_only_with_credentials`).
+
+사람이 확인하는 절차: 앱을 띄운 뒤 `output/logs/app.log` 에 `scheduled_job_registered id=sync_vxvue_specification`, `id=sync_product_knowledge_vxvue`, `id=qa_agent_vxvue`, `id=qa_agent_limit_catchup` 네 줄이 있는지 본다.
 
 ### TEST-WEB-001
 
@@ -8829,7 +9008,11 @@ NFR-SEC-002 는 TEST-CONF-001 의 `test_secret_status_never_exposes_the_key`, `t
 
 ### TEST-SEC-003
 
-NFR-SEC-003 은 `tests/test_knowledge_upload.py` 의 `test_names_containing_a_path_are_rejected`, `test_windows_paths_are_caught_on_a_posix_server`, `test_hidden_and_empty_names_are_rejected`, `test_unsupported_extension_is_rejected`, `test_http_rejects_path_traversal_in_the_uploaded_name`, `test_commit_rejects_traversal_in_the_manifest` 와 `tests/test_knowledge_testcase_mapping.py::test_mapping_page_rejects_path_traversal_filename` 으로 확인한다.
+NFR-SEC-003 은 다음 시험으로 확인한다.
+
+- `tests/test_knowledge_upload.py`: `test_names_containing_a_path_are_rejected`, `test_windows_paths_are_caught_on_a_posix_server`, `test_hidden_and_empty_names_are_rejected`.
+- 같은 파일의 `test_unsupported_extension_is_rejected`, `test_http_rejects_path_traversal_in_the_uploaded_name`, `test_commit_rejects_traversal_in_the_manifest`.
+- `tests/test_knowledge_testcase_mapping.py::test_mapping_page_rejects_path_traversal_filename`.
 
 ### TEST-SEC-004
 
@@ -9147,6 +9330,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-PARSE-007 | `app/parsers/excel_parser.py`, `app/core/document_schemas.py` | TEST-PARSE-004: `tests/test_excel_parser.py`, `tests/test_excel_multisheet.py` | implemented |
 | REQ-PARSE-008 | `app/parsers/excel_parser.py`, `app/core/knowledge_documents.py` | TEST-PARSE-004: `tests/test_excel_parser.py` | implemented |
 | REQ-PARSE-009 | `app/core/document_cache.py`, `app/core/knowledge_documents.py` | TEST-PARSE-005: `tests/test_document_cache.py` | implemented |
+| REQ-PARSE-010 | `app/parsers/document_parser.py`, `app/core/knowledge_documents.py` | TEST-PARSE-006: `tests/test_excel_specification_parser.py` | implemented |
 | REQ-CORE-001 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
 | REQ-CORE-002 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
 | REQ-CORE-003 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
@@ -9270,6 +9454,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html` | TEST-AICALL-005: `tests/test_claude_usage.py` | verified |
+| REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
@@ -9407,7 +9592,9 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - REQ-CONF-002: `APP_SECRET_KEY` | 읽기만 하고 쓰는 곳 없음(미정, 13절 참조) | 영향 없음 |
 - REQ-SCHED-001: 제품 설정의 시각이 `HH:MM` 숫자가 아님 | 등록 중 오류로 앱이 뜨지 않는다(미정, 13절 참조) |
 
-### 13.1 Regression 영향 분석과 추천 평가
+### 13.1 폐기된 Regression 영향 분석과 추천 평가의 결정 기록
+
+2026-10-01에 화면·API·추천 평가를 제거했다(REQ-WEB-006, 5.1절). 아래는 제거 전의 결정과 질문을 보존한 기록이며 현재 기능의 결정 대기 항목이 아니다. 공통으로 유지하는 하루 토큰 한도는 REQ-USAGE-002와 13.5절을 따른다.
 
 1. 결정됨 (2026-09-30): 영어로 쓴 변경 문서. (가) 영어 낱말(change·add·improve·fix·support·update·modify)을 낱말 단위로 더했다(REQ-IMPACT-006).
 2. (TBD) 영향도 `MEDIUM`·`LOW` 의 판단 기준. 지시문(`impact_analysis.yaml`)과 사용법 화면 어디에도 기준이 없어 AI가 스스로 정한다. 결정 필요: (가) 지시문에 기준을 적는다(예: MEDIUM = 간접 영향이지만 같은 화면·데이터 공유, LOW = 간접 영향이고 공유 요소가 적음), (나) 두지 않는다. 추천: (가). 지시문을 고치면 `version` 을 올려야 한다.
@@ -9461,7 +9648,13 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 
 변경 감지·다섯 가지 분석·대시보드의 미확정 사항은 [기능 사양](specs/qa-intelligence.md) 13절에 있다. 아래는 5.4절 공통 부분의 것이다.
 
-- 결정됨 (2026-10-01): 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)는 기능 사양에 새 카드 REQ-QAINTEL-028 로 둔다(선택지 가). 아래는 결정 전 기록이다. 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)를 정하는 카드. 이 계산은 REQ-DAILY-003 의 일부였고, REQ-DAILY-003 은 deprecated 가 됐다. 코드는 계속 돌며 Finding 을 Skill 이름 `qa-spec-coverage-analysis`, 작업 ID `COV-removed`, 판정 `UPDATE_EXISTING` 으로 저장한다. REQ-QAINTEL-005 는 이 계산을 아직 REQ-DAILY-003 으로 가리킨다. 선택지: (가) 기능 사양에 새 카드를 더한다, (나) REQ-DAILY-005 에 넣는다. 추천: (가).
+- 결정됨 (2026-10-01): 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)는 기능 사양에 새 카드 REQ-QAINTEL-028 로 둔다(선택지 가).
+
+  > **참고** 아래는 결정 전 기록이다. 삭제된 SRS 를 가리키는 TC 찾기(AI 없음, 매일)를 정하는 카드. 이 계산은 REQ-DAILY-003 의 일부였고, REQ-DAILY-003 은 deprecated 가 됐다.
+  >
+  > 코드는 계속 돌며 Finding 을 Skill 이름 `qa-spec-coverage-analysis`, 작업 ID `COV-removed`, 판정 `UPDATE_EXISTING` 으로 저장한다. REQ-QAINTEL-005 는 이 계산을 아직 REQ-DAILY-003 으로 가리킨다.
+  >
+  > 선택지: (가) 기능 사양에 새 카드를 더한다, (나) REQ-DAILY-005 에 넣는다. 추천: (가).
 - 결정됨 (2026-09-30): TC 옛 번호 → 새 번호 대응표는 만들지 않는다. 새 번호(`VP-…`)를 기준으로 삼는다. 사양–TC 연결 점검의 번호 맞추기(REQ-DAILY-005)는 지금 방식(VP 번호와 맞는 옛 번호)을 유지한다. VP 번호만으로 바꿀지는 확인 필요다(결정 대기 목록 5절의 수치).
 - 결정 필요: Claude 에게 보이는 자료 범위. 작업 폴더에 SRS·TC 전체를 둘지 후보만 둘지(보안 문서 3절의 결정 대기 항목). 선택지: (가) 전체(후보 밖 TC 찾기가 강하다, 나가는 양이 작업마다 다르다), (나) 후보만(양이 고정된다, 후보 밖 TC 를 못 찾는다). 추천: 첫 서버 실행의 `claude_logs/` 로 실제 읽은 양을 보고 정한다.
 - 확인 필요: 초안 Excel 의 `버전` 열. 파이프라인이 버전 값을 넘기지 않아 늘 빈칸이다. 이슈의 목표 버전(`target_versions`)을 넣을지 사람이 채울지 정해야 한다.

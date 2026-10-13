@@ -139,6 +139,7 @@ ai:
       refresh_model: "claude-haiku-5-5"
     # 모델 등급별 모델 (app/core/model_router.py). 사용량 한도에 자주 닿으면
     # claude-sonnet-5-5 로 낮춘다.
+    allowed_models: ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1"]
     models:
       light: "claude-opus-5-5"
       standard: "claude-opus-5-5"

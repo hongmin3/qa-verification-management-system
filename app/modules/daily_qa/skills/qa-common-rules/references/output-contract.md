@@ -83,13 +83,19 @@
 | spec-change-summary, coverage | `change` | `{summary, changed_requirements: [..]}` — 요구사항 5개까지 |
 | spec-change-summary | `related_issues` | `[{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]` — 5개까지 |
 | coverage | `issue_coverage` | `{has_related, issues: [{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]}` |
-| coverage | `checklist_coverage` | `{tcs: [{tc_id, location, decision: KEEP/UPDATE_EXISTING, reason, recommended_change}]}` |
+| coverage | `checklist_coverage` | `{tcs: [{tc_id, location, decision: KEEP/UPDATE_EXISTING, reason, recommended_change, expected_conflict?: {classification, reason, issue_id}}]}` |
 | coverage | `gaps` | `[{perspective, description}]` |
 | coverage | `alerts` | `[{type: ISSUE_WITHOUT_TC/TC_EXPECTED_OUTDATED/FIXED_ISSUE_WITHOUT_REGRESSION_TC/SPEC_ISSUE_BEHAVIOR_CHANGED, detail}]` |
 | tc-draft, coverage (요청) | `tc_hold` | `{reason, questions: [..]}` — 초안을 만들지 않은 이유 |
 
 댓글 분류: ROOT_CAUSE_INFORMATION / RESOLUTION_INFORMATION / REPRODUCTION_INFORMATION / SPEC_CLAIM /
 REQUIREMENT_INFORMATION / QA_ACTION_REQUIRED / OTHER_SIGNIFICANT_INFORMATION / NOT_SIGNIFICANT.
+
+`expected_conflict`는 제품 규칙 §17의 기존 TC·이슈 Expected 충돌 분석이다.
+`classification`은 `Issue만 수정 필요` / `기존 TC 수정 필요` / `Issue + TC 모두 수정 필요` / `사양 확인 필요`다.
+이유(`reason`)와 입력으로 받은 이슈 번호(`issue_id`)를 함께 쓴다. 구형 결과에는 없어도 된다.
+코드는 알 수 없는 분류·대상 이슈·빈 이유를 원문과 함께 검증 기록에 남기고 이 필드만 제외한다.
+분류를 자동으로 정정하거나 완료 TC의 Pass/Fail을 바꾸지 않는다.
 
 ## `draft_tcs`
 

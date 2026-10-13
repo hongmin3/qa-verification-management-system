@@ -62,7 +62,7 @@ from app.modules.daily_qa.schema import (
 )
 from app.modules.daily_qa.settings import WEEKDAYS, DailyQaSettings
 from app.modules.daily_qa.srs_snapshot import diff_snapshots
-from app.modules.daily_qa.store import RUN_STATUSES, DailyQaStore
+from app.modules.daily_qa.store import RUN_STATUSES, DailyQaStore, now_iso
 from app.modules.daily_qa.tc_index import build_index
 from app.modules.daily_qa.workspace import WorkspaceError, prepare, write_context, write_task_input
 
@@ -169,7 +169,8 @@ def _stage(status: str, note: str = "", **counts) -> dict:
 
 
 def _is_weekly(today: datetime, weekly_day: str) -> bool:
-    return WEEKDAYS[today.weekday()] == weekly_day
+    local = today.astimezone(claude_limits.KST) if today.tzinfo else today
+    return WEEKDAYS[local.weekday()] == weekly_day
 
 
 def run_daily(
@@ -197,7 +198,7 @@ def run_daily(
     기준은 `since` 날짜(또는 그 전 가장 가까운) 스냅샷이다. `until` 이 오늘이면 Polarion 을 새로 읽고,
     지난 날이면 그날(또는 그 전 가장 가까운) 저장 스냅샷을 쓴다. 지난 날 기간은 스냅샷을 저장하지 않는다.
     """
-    today = today or datetime.now(timezone.utc).astimezone()
+    today = today or datetime.now(claude_limits.KST)
     store = store or DailyQaStore(cfg.db_path)
     with _Lock(cfg.lock_path):
         run_id = f"{today.strftime('%Y%m%d-%H%M%S')}-{cfg.slug}"
@@ -217,21 +218,35 @@ def run_daily(
                                 "token_usage": run.token_usage})
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
-        store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
         if on_demand:
             # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
             store.set_email_status(run_id, "skipped")
+            store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
+            progress = (store.get_run(run_id) or {}).get("progress") or {}
+            store.update_progress(run_id, {**progress, "phase": "finished", "label": "완료", "updated_at": now_iso()})
             outcome.update({"run_id": run_id, "email": {"status": "skipped"}})
             return outcome
         base = cfg.review_base_url
         review_url = f"{base}/qa-agent/runs/{run_id}" if base else f"/qa-agent/runs/{run_id}"
-        subject, text, body = report.build_email(
-            run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
-            product=cfg.product,
-        )
         sender = send_email or _default_sender
-        email = sender(subject, text, body, cfg.email_to)
+        progress = (store.get_run(run_id) or {}).get("progress") or {}
+        store.update_progress(run_id, {**progress, "phase": "email", "label": "메일", "updated_at": now_iso()}, outcome["stages"])
+        try:
+            subject, text, body = report.build_email(
+                run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
+                product=cfg.product,
+            )
+            email = sender(subject, text, body, cfg.email_to)
+        except Exception as exc:
+            # 사용자 제공 발송기도 실행 잠금과 종료 기록을 남긴다.
+            email = {"status": "failed", "error": type(exc).__name__}
         store.set_email_status(run_id, str(email.get("status", "")))
+        outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok"
+                                            if email.get("status") == "sent" else "skipped", str(email.get("error") or ""))
+        if email.get("status") == "failed" and outcome["status"] != "FAILED":
+            outcome["status"] = "PARTIAL"
+        store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
+        store.update_progress(run_id, {**progress, "phase": "finished", "label": "완료", "updated_at": now_iso()})
         outcome.update({"run_id": run_id, "email": email})
         return outcome
 
@@ -356,8 +371,12 @@ class _Run:
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,
                                   "cache_read_input_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}
         self.out_dir = cfg.output_dir / run_id
-        self.run_date = today.strftime("%Y-%m-%d")
+        self.run_date = (today.astimezone(claude_limits.KST) if today.tzinfo else today).strftime("%Y-%m-%d")
         self.audit: dict = {"run_id": run_id, "product": cfg.slug, "dry_run": dry_run, "trigger": trigger, "tasks": []}
+        self.audit["ai_settings"] = {"analysis_model": cfg.claude_model, "audit_model": cfg.intelligence.audit_model,
+                                     "effort": cfg.claude_effort}
+        self.ai_done = 0
+        self.ai_total = 0
         self.snapshots = snapshots.for_settings(cfg)
         self.findings_box = _OpenFindings(store, dry_run=dry_run, product=cfg.slug, include_legacy=cfg.is_legacy_product)
         self.limit: claude_limits.LimitInfo | None = None
@@ -395,6 +414,10 @@ class _Run:
             self.audit["period"] = {"since": since.isoformat() if since else "", "until": (until or local_today).isoformat()}
 
     # -- 흐름 --------------------------------------------------------------
+    def _progress(self, phase: str, label: str) -> None:
+        self.store.update_progress(self.run_id, {"phase": phase, "label": label,
+                                   "done": self.ai_done, "total": self.ai_total, "updated_at": now_iso()}, self.stages)
+
     def execute(self) -> dict:
         if self.on_demand:
             return self._execute_on_demand()
@@ -416,6 +439,7 @@ class _Run:
         return self._finish()
 
     def _preflight(self) -> None:
+        self._progress("preflight", "준비")
         cfg = self.cfg
         self.rules_state = self.rules_state or rules.check(cfg.product, cfg.root, self.profile.supported_rules_rev)
         marker = (self.profile.checklist or {}).get("template_name_contains") or ""
@@ -515,6 +539,7 @@ class _Run:
         return IssueCollection(items=items, previous=previous, previous_collected_at=self.snapshots.meta(base_path).get("collected_at", ""))
 
     def _collect_srs(self, client):
+        self._progress("collect_srs", "SRS 수집")
         if self.until is not None:
             return self._stored_collection(snapshots.KIND_SRS)
         if client is None:
@@ -536,6 +561,7 @@ class _Run:
         return result
 
     def _collect_issues(self, client):
+        self._progress("collect_issues", "이슈 수집")
         if self.until is not None:
             return self._stored_collection(snapshots.KIND_ISSUES)
         if client is None:
@@ -563,6 +589,7 @@ class _Run:
         return result
 
     def _tc_index(self):
+        self._progress("tc_index", "TC 색인")
         tc_rows, tc_errors = build_index(self.inputs.tc_paths)
         if not self.inputs.tc_paths:
             self.stages["tc_index"] = _stage("failed", "수집된 TC 파일이 없습니다. 지식 폴더 동기화를 확인하세요.")
@@ -589,6 +616,7 @@ class _Run:
 
     # -- 스냅샷·이벤트 (REQ-QAINTEL-006) ------------------------------------------
     def _persist(self, srs, issues) -> None:
+        self._progress("events", "이벤트")
         intel = self.cfg.intelligence
         events: dict[str, list[ChangeEvent]] = {}
         if srs is not None:
@@ -671,6 +699,7 @@ class _Run:
 
     # -- AI 없는 계산 ------------------------------------------------------------
     def _deterministic(self, srs, srs_items, tc_rows) -> None:
+        self._progress("trace", "사양–TC 연결 점검")
         if srs is not None and tc_rows:
             removed_ids = {event.entity_id: event for event in self.new_events if event.event_type == SRS_REMOVED}
             for finding in packages.removed_srs_findings(srs.diff, tc_rows):
@@ -716,6 +745,7 @@ class _Run:
         return self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed"))
 
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
+        self._progress("prepare_ai", "AI 분석 준비")
         events = self._target_events()
         grouped = group_targets(events)
         self.targets_found = sum(len(targets) for targets in grouped.values())
@@ -739,6 +769,7 @@ class _Run:
             return comment_cache[issue_id]
 
         answers = {kind: self._answers(self._skill(kind)) for kind in ANALYSIS_ORDER}
+        planned = []
         for kind in ANALYSIS_ORDER:
             targets = grouped[kind] if self.only_kind in (None, kind) else {}
             if not targets:
@@ -770,11 +801,18 @@ class _Run:
             selected = tasks[:max(self.budget, 0)]
             self.budget -= len(selected)
             overflow = len(tasks) - len(selected)
+            planned.append((kind, selected, item_events, overflow))
+        self.ai_total = sum(len(selected) for _, selected, _, _ in planned)
+        self._progress("ai", "AI 분석")
+        for kind, selected, item_events, overflow in planned:
+            if self.limit is not None:
+                self._blocked_stage(kind, len(selected))
+                continue
             if self.on_demand:
                 self._write_context(srs_items, tc_rows, self.inputs.manuals)
             else:
                 self._write_context(srs_items, [], {})
-            outcomes = [self._run_task(task, known, kind) for task in self._until_limit(selected)]
+            outcomes = self._run_tasks(selected, known, kind)
             self._record_events(kind, outcomes, item_events)
             self.stages[kind] = self._stage_result(kind, selected, outcomes, overflow)
         if corpus.unreadable_documents:
@@ -825,6 +863,17 @@ class _Run:
         if self.workspace is not None and not self.context_written:
             self.audit["context"] = write_context(self.workspace, srs_items, [row.as_dict() for row in tc_rows], manuals)
             self.context_written = True
+
+    def _run_tasks(self, selected, known, kind):
+        outcomes = []
+        for task in self._until_limit(selected):
+            self._progress("ai", "AI 분석")
+            outcome = self._run_task(task, known, kind)
+            outcomes.append(outcome)
+            if outcome.limit is None:
+                self.ai_done += 1
+            self._progress("ai", "AI 분석")
+        return outcomes
 
     def _run_task(self, task: packages.Task, known, kind: str | None) -> _TaskOutcome:
         """작업 하나. 형식 오류면 한 번 더 돈다. 사용량 한도면 다시 돌지 않고 멈춘다."""
@@ -1005,7 +1054,8 @@ class _Run:
         selected = tasks[: max(self.budget, 0)]
         self.budget -= len(selected)
         self._write_context(srs_items, [], manuals)
-        outcomes = [self._run_task(task, None, None) for task in self._until_limit(selected)]
+        self.ai_total = len(selected)
+        outcomes = self._run_tasks(selected, None, None)
         self.stages["F"] = self._stage_result("F", selected, outcomes, max(len(tasks) - len(selected), 0))
 
     # -- 사람이 버튼으로 요청한 실행 (REQ-QAINTEL-016·032·034) ---------------------------
@@ -1044,6 +1094,7 @@ class _Run:
 
     # -- 초안 Excel (REQ-QAINTEL-018) ---------------------------------------------
     def _draft_excel(self) -> None:
+        self._progress("results", "결과 저장")
         if self.dry_run:
             return
         findings = list(reversed(self.store.list_findings(run_id=self.run_id, limit=10_000)))
@@ -1101,6 +1152,7 @@ class _Run:
             return self._finish()
         base_path = self._baseline(snapshots.KIND_SRS)
         diff = srs.diff if srs is not None else diff_snapshots(self.snapshots.load(base_path), srs_items)
+        self._progress("events", "이벤트")
         local_today = self.today.astimezone(claude_limits.KST).date() if self.today.tzinfo else self.today.date()
         start = self.since or local_today
         end = self.until or local_today
@@ -1136,6 +1188,7 @@ class _Run:
         summary["rules"] = self.rules_state.as_dict()
         summary["product"] = self.cfg.slug
         summary["events"] = self.audit.get("events", {})
+        summary["ai_settings"] = self.audit["ai_settings"]
         summary["claude_calls"] = self.claude_calls
         summary["token_usage"] = self.token_usage
         summary["trigger"] = self.trigger

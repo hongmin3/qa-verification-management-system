@@ -47,7 +47,7 @@ EVENT_STATUSES = {
 }
 
 _ADDED_COLUMNS = {
-    "daily_qa_runs": {"product": "TEXT NOT NULL DEFAULT ''"},
+    "daily_qa_runs": {"product": "TEXT NOT NULL DEFAULT ''", "progress_json": "TEXT NOT NULL DEFAULT '{}'"},
     "daily_qa_findings": {
         "product": "TEXT NOT NULL DEFAULT ''",
         "analysis_type": "TEXT NOT NULL DEFAULT ''",
@@ -148,6 +148,30 @@ class DailyQaStorageMixin:
         with self.connect() as db:
             db.execute("UPDATE daily_qa_runs SET email_status=? WHERE id=?", (email_status, run_id))
 
+    def daily_qa_interrupt_run(self, run_id: str) -> None:
+        """실행 잠금이 사라진 기록만 닫는다. 동시 종료된 결과는 덮어쓰지 않는다."""
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM daily_qa_runs WHERE id=? AND status='RUNNING'", (run_id,)).fetchone()
+            if not row:
+                return
+            data = self._daily_qa_run_dict(row)
+            stages = data["stages"]
+            stages["interrupted"] = {"status": "failed", "note": "실행 잠금이 사라져 점검이 중단됐습니다. 다시 실행해 주세요."}
+            finished = now_iso()
+            progress = {**data["progress"], "phase": "finished", "label": "중단", "updated_at": finished}
+            db.execute("UPDATE daily_qa_runs SET finished_at=?, status='FAILED', stages_json=?, progress_json=? "
+                       "WHERE id=? AND status='RUNNING'",
+                       (finished, json.dumps(stages, ensure_ascii=False), json.dumps(progress, ensure_ascii=False), run_id))
+
+    def daily_qa_update_progress(self, run_id: str, progress: dict, stages: dict | None = None) -> None:
+        with self.connect() as db:
+            if stages is None:
+                db.execute("UPDATE daily_qa_runs SET progress_json=? WHERE id=?",
+                           (json.dumps(progress, ensure_ascii=False), run_id))
+            else:
+                db.execute("UPDATE daily_qa_runs SET progress_json=?, stages_json=? WHERE id=?",
+                           (json.dumps(progress, ensure_ascii=False), json.dumps(stages, ensure_ascii=False), run_id))
+
     def daily_qa_get_run(self, run_id: str) -> dict | None:
         with self.connect() as db:
             row = db.execute("SELECT * FROM daily_qa_runs WHERE id=?", (run_id,)).fetchone()
@@ -173,6 +197,7 @@ class DailyQaStorageMixin:
         data = dict(row)
         data["stages"] = json.loads(data.pop("stages_json") or "{}")
         data["summary"] = json.loads(data.pop("summary_json") or "{}")
+        data["progress"] = json.loads(data.pop("progress_json", "{}") or "{}")
         data["status_label"] = RUN_STATUSES.get(data["status"], data["status"])
         return data
 

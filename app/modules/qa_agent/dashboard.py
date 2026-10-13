@@ -336,12 +336,41 @@ def status(choice: ProductChoice) -> dict:
     cfg, store = choice.cfg, choice.store
     runs = store.list_runs(limit=1, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
+    running = is_running(cfg)
+    if last and last["status"] == "RUNNING" and not running:
+        try:
+            started = datetime.fromisoformat(last["started_at"])
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - started).total_seconds() >= 30:
+                store.interrupt_run(last["id"])
+                last = store.get_run(last["id"])
+        except (ValueError, TypeError):
+            pass
+    progress = None
+    if last:
+        end = last.get("finished_at") if last["status"] != "RUNNING" else None
+        try:
+            started = datetime.fromisoformat(last["started_at"])
+            elapsed = (datetime.fromisoformat(end) if end else datetime.now(timezone.utc)) - started
+            seconds = max(0, int(elapsed.total_seconds()))
+        except (ValueError, TypeError):
+            seconds = 0
+        progress = {**last.get("progress", {}), "run_id": last["id"], "started_at": last["started_at"],
+                    "elapsed_seconds": seconds, "url": f"/qa-agent/runs/{last['id']}"}
+        if running and last["status"] != "RUNNING":
+            progress = {"phase": "preflight", "label": "준비", "elapsed_seconds": 0, "done": 0, "total": 0}
     return {
         "product": cfg.product,
         "slug": cfg.slug,
-        "running": is_running(cfg),
+        "running": running,
+        "progress": progress,
         "last_run": {"id": last["id"], "status": last["status"], "status_label": last["status_label"],
-                     "started": kst(last["started_at"]), "finished": kst(last.get("finished_at"))} if last else None,
+                     "started": kst(last["started_at"]), "finished": kst(last.get("finished_at")),
+                     "result": " · ".join(filter(None, (last["status_label"],
+                         "메일 발송 실패" if last.get("email_status") == "failed" else "",
+                         claude_limits.KIND_LABELS.get(last["summary"]["claude_limit"].get("kind"), "AI 분석 중단")
+                         if last.get("summary", {}).get("claude_limit") else "")))} if last else None,
         "next_run": next_run_text(cfg),
         "claude_limit": limit_info(choice),
         # 앞선 현재 상태 점검이 한도로 남긴 대상 (REQ-QAINTEL-030 순서 5).

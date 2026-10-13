@@ -130,6 +130,18 @@ DRAFT_PERSPECTIVES = (
     "INTEGRATION", "CONFIGURATION", "ENVIRONMENT",
 )
 
+#: QA 규칙 §17. 기존 TC와 이슈 Expected 충돌을 별도 분석 결과로 기록한다.
+EXPECTED_CONFLICT_CLASSES = (
+    "Issue만 수정 필요", "기존 TC 수정 필요", "Issue + TC 모두 수정 필요", "사양 확인 필요",
+)
+
+
+class TcExpectedConflict(BaseModel):
+    # 알 수 없는 분류도 먼저 받는다. evidence_validation이 원문을 기록하고 제외한다.
+    classification: str
+    reason: str = Field(min_length=1)
+    issue_id: str = Field(min_length=1)
+
 
 class DraftTc(BaseModel):
     kind: Literal["수정확인", "Regression"]

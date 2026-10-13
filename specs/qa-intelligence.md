@@ -573,6 +573,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
   3. 관련 과거 이슈 번호가 적힌 TC
   4. BM25 로 찾은 같은 기능·Workflow 의 TC
 - 매뉴얼 문단 후보(제목과 바뀐 문장 기준)
+- 요청 실행에는 관련 이슈의 재현 절차를 Precondition·Step·Expected·Actual·Log/Data로 구분해 넣는다. 긴 요약 뒤에 있는 Expected·Actual도 비교할 수 있어야 한다.
 
 **순서**
 
@@ -592,6 +593,27 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 |---|---|
 | `KEEP` | 그대로 둔다 |
 | `UPDATE_EXISTING` | 거의 덮지만 Step 이나 Expected 가 옛 사양 기준이다. 고칠 곳을 적는다 |
+
+관련 이슈 Expected와 기존 TC Expected가 충돌하면 제품 QA 규칙 §17에 따라 아래 중 하나를 기록한다. 유효 사양과 제공된 관찰 자료로 판단한다.
+
+근거가 부족해 판단을 보류할 때의 저장값과 화면 표시 이름은 다음과 같다. 아래 표의 마지막 행은 이 이름을 쓴다.
+
+```text
+사양 확인 필요
+```
+
+| 분류 | 뜻 |
+|---|---|
+| `Issue만 수정 필요` | 기존 TC Expected가 사양에 맞고 이슈 Expected를 고쳐야 한다 |
+| `기존 TC 수정 필요` | 이슈 Expected에 근거가 있고 기존 TC Expected를 고쳐야 한다 |
+| `Issue + TC 모두 수정 필요` | 양쪽 Expected를 고쳐야 한다 |
+| 위 표시 이름 예시의 분류 | 근거가 부족하거나 사양이 충돌해 어느 쪽도 정할 수 없다 |
+
+TC 결과에 분류·이유·대상 이슈 번호(`expected_conflict.classification`, `reason`, `issue_id`)를 함께 저장하고 상세 화면의 TC 표에 표시한다. 충돌 대상 이슈도 관련 번호(`related_ids`)에 남긴다.
+
+Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 관찰 자료가 없으면 추정하지 않는다.
+
+> **주의** 충돌 분류는 수정 제안이다. 완료 TC의 결과·ID·행·Sheet·Issue 이력을 보존하고 기존 Pass/Fail을 바꾸지 않는다.
 
 4. Coverage 를 판정한다.
 
@@ -659,11 +681,16 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 7. 판정을 뒷받침해야 하는데 근거가 하나도 남지 않으면 Finding 을 버린다. 근거가 없음을 뜻하는 판정(`SPEC_UNDEFINED`, `SPEC_AMBIGUOUS`, `INSUFFICIENT_EVIDENCE`, `SPEC_NOT_FOUND`, `SPEC_REVIEW_REQUIRED`, `NO_DUPLICATE_FOUND`, `SPEC_UNCLEAR`)은 근거 없이도 남기되 신뢰도를 `Review Needed` 보다 높이지 않는다.
 8. 중복 판정이 `STRONG_DUPLICATE`·`POSSIBLE_DUPLICATE` 인데 남은 후보가 없으면 `INSUFFICIENT_EVIDENCE` 로 바꾼다.
 9. TC 초안 규칙
+
    - 신규 이슈·Spec 판정·댓글·현재 상태 점검이 초안을 내면 Finding 을 버린다.
+
    - 자동 실행의 수정 완료 이슈 분석·사양 변경 분석이 초안이나 TC 비교 구획을 내면 그 부분만 빼고 메모를 남긴다.
+
    - 검증 TC 초안 요청(REQ-QAINTEL-032)에서 대상 이슈의 오늘 연구소 결과가 `FIXED` 가 아니면 Finding 을 버린다.
+
    - 사양 판정이 `SPEC_UNDEFINED`·`INSUFFICIENT_EVIDENCE`·`SPEC_AMBIGUOUS` 이거나 Coverage 가 `FULLY_COVERED`·`SPEC_REVIEW_REQUIRED` 면 초안을 빼고 "Checklist TC 생성 보류" 를 남긴다.
 10. 조치 문장이 QA 규칙 §55 금지 조치(이슈 닫기, TC 덮어쓰기, 결과·이력 삭제)를 담으면 Finding 을 버린다(REQ-DAILY-007 과 같다).
+11. 기존 TC Expected 충돌 분류는 네 분류 중 하나이고 이유와 오늘 스냅샷의 이슈 번호가 있어야 한다. 맞지 않으면 충돌 필드만 빼고 원문과 이유를 검증 기록에 남긴다. 분류를 다른 값으로 바꾸지 않으며 신뢰도를 `Review Needed`로 낮춘다. 구형 결과에 필드가 없어도 허용한다.
 
 **결과** 저장한 Finding, 버린 Finding 수(단계 비고 "규칙 위반으로 버린 Finding N건"), Finding 별 검증 기록.
 
@@ -728,11 +755,33 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 - 개편 전 Finding 은 판정·요약·근거·초안만 보인다.
 - 실행 상세(`/qa-agent/runs/<실행 ID>`)는 처음 보는 사람이 위에서부터 읽으면 무슨 일이 있었는지 알 수 있게 아래 순서로 보인다.
 
-  1. **결과 한 줄**: 결과 배지와 한두 문장 설명. 예: "Polarion 에서 SRS 437건·이슈 647건을 읽어 바뀐 SRS 1건을 찾았습니다. 시험 실행이라 저장·AI 분석·메일은 하지 않았습니다."
-  2. **숫자 카드**: 읽은 SRS, 바뀐 SRS, 읽은 이슈, TC 행, 새 변경, 분석 결과, Claude 호출·토큰. 값이 없는 카드는 `-` 다.
-  3. **진행 흐름**: `① 자료 모으기 → ② 바뀐 것 찾기 → ③ AI 분석 → ④ 결과` 네 칸. 칸마다 그 안 단계의 상태를 색(완료 초록, 주의 노랑, 실패 빨강, 건너뜀 회색)으로 보인다.
-  4. **단계별 설명**: 단계마다 상태와, 숫자를 풀어 쓴 문장 한 줄("SRS 437건을 읽었고 1건이 바뀌었습니다"). 내부 이름의 숫자(`total`, `type_SRS_UPDATED` 등)는 한국어 이름으로 바꿔 `자세히` 를 펼칠 때만 보인다.
-  5. 변경 이벤트, 분석 결과, 내려받기. 내려받을 파일은 뜻을 쓴다(예: `srs_diff.json` → "SRS 변경 내용").
+  1. **결과 한 문장**: 상태 색과 결과 배지를 보인다. 실패가 있으면 실패한 일을 먼저 쓰고, 수집 실패를 변경 0건이나 성공으로 설명하지 않는다.
+
+  2. **QA 담당자 할 일**: 문제가 있을 때 원인별로 확인하거나 관리자에게 요청할 일을 보인다. 성공 실행에는 이 상자가 없다.
+
+  3. **핵심 숫자 3개**: 아래 표시 이름 예시의 카드 3개로 보인다. 바뀐 것은 이벤트 수, AI가 분석한 것은 분석 작업의 완료 수이며 규칙 점검 결과 수와 구분한다. 수집 실패로 변경을 확인하지 못했으면 바뀐 것은 `-` 다.
+
+  4. **확인할 결과**: REQ-QAINTEL-033의 결론 단계 중 사양과 다름 → 검토 필요 → 근거 부족 순으로 10개까지 짧게 보인다. 같은 단계는 최신 결과가 먼저다. 나머지 개수와 해당 실행만 필터한 [모두 보기] 링크를 보인다. 문제 없음·참고는 개수만 보인다. 모두 보기 목록은 50개씩 나누고 개편 전 결과도 포함한다.
+
+  5. **자세히(접힘)**: 기존 숫자, 진행 흐름 네 칸, 단계별 설명, 변경 이벤트, 모든 분석 결과, 내려받기, 실행 번호·시각·메일 상태를 보존한다. 실패한 단계만 별도 상자에서 펼친다. 내려받을 파일은 뜻을 쓴다(예: `srs_diff.json` → "SRS 변경 내용").
+
+핵심 숫자 카드에 쓰는 화면 표시 이름은 다음과 같다.
+
+```text
+바뀐 것
+AI가 분석한 것
+확인 필요
+```
+
+| 확인된 원인 | 결과 설명과 QA 담당자가 할 일 |
+|---|---|
+| Polarion 연결 실패 | 오늘 변경을 확인하지 못했다고 알린다. 관리자에게 서버의 Polarion 연결·주소·네트워크 확인을 요청하고 해결 후 다시 실행한다. `ConnectError`만으로 DNS 실패를 단정하지 않는다 |
+| 주소 풀이 실패 문장이 있음 | 관리자에게 서버 DNS와 Polarion 주소 확인을 요청한다 |
+| 인증 실패(401·403·로그인) | 관리자에게 Polarion 토큰 또는 Claude 로그인 확인을 요청한다 |
+| Claude 한도 | 남은 분석이 대기임을 알린다. 자동 실행은 초기화 후 이어서 하고, 요청 점검은 한도 해제 후 다시 요청한다 |
+| QA 규칙 판 확인 실패 | 관리자에게 지원하는 QA 규칙 판과 파일 등록 확인을 요청한다 |
+| 메일 실패 | 화면에서 결과를 확인하고 관리자에게 메일 설정·전송 오류 확인을 요청한다 |
+| 그 밖의 단계 실패 | 실패한 단계와 기록을 확인하고 관리자에게 전달한다. 확인되지 않은 원인을 확정하지 않는다 |
 
 - 화면에 내부 값을 그대로 쓰지 않는다. `dry-run` 은 "시험 실행", 메일 상태 `disabled` 는 "메일 보내지 않음", 요일 `mon` 은 "월요일" 이다.
 - 시험 실행에서 AI 를 부르지 않은 작업은 "실패"가 아니라 "준비한 작업 N개(시험 실행이라 AI 를 부르지 않음)"로 보인다.
@@ -753,7 +802,13 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 1. 버튼은 `POST /qa-agent/runs` 에 제품 이름을 보낸다.
 2. 서버는 그 제품의 실행 잠금(`data/daily_qa/<slug>/run.lock`)을 확인한다. 잠금이 있고 6시간이 지나지 않았으면 409 "QA Agent가 이미 실행 중입니다." 로 답한다.
 3. 잠금이 없으면 예약 실행과 같은 함수(`launch_detached`)로 분리된 별도 프로세스를 띄우고 바로 답한다. 웹 프로세스는 분석을 기다리지 않는다.
-4. 화면은 `GET /qa-agent/status` 를 몇 초마다 읽어 실행 상태를 갱신한다.
+4. 실행 프로세스는 SQLite 실행 기록에 현재 단계와 갱신 시각을 남긴다. 단계는 준비, SRS 수집, 이슈 수집, TC 색인, 이벤트, 사양–TC 연결 점검, AI 분석, 결과 저장, 메일이다. AI 분석은 이번 실행에서 준비한 작업의 전체 수와 끝낸 작업 수(`n/N`)를 남긴다. 재시도는 같은 작업으로 센다. 한도에 걸려 남은 작업은 끝낸 것으로 세지 않는다.
+5. 화면은 `GET /qa-agent/status` 를 3초마다 읽는다. API는 실행 번호, 시작 시각, 현재 단계, 작업 수, 지난 초, 실행 상세 주소를 준다. 진행 원과 단계·지난 시간을 보이며 다른 사람이 실행 중일 때 새로 연 화면에서도 같다. 준비 중에는 0건을 완료로 오해하지 않도록 시작 응답 뒤 새 실행 기록을 기다린다.
+6. 메일을 보내는 동안에도 실행 중으로 보인다. 메일까지 끝나면 진행 원을 멈추고 성공·일부 실패·실패·한도 결과 한 줄과 실행 상세 링크를 보인다. 접속 실패는 완료로 처리하지 않고 연결 확인 중이라고 알린 뒤 다시 읽는다.
+7. 실행 잠금이 사라졌는데 시작 후 30초가 지난 기록이 계속 `RUNNING`이면 상태 조회 때 중단 실패로 기록한다. 이미 끝난 실행의 결과는 바꾸지 않는다. 시작 요청 뒤 정상 상태 조회 10회 동안 새 실행을 확인하지 못해도 진행 원을 멈추고 확인 안내를 보인다.
+8. [현재 상태 점검], [TC 점검], [검증 TC 초안]도 제품별 같은 진행 표시를 쓴다. CLI로 요청한 매뉴얼 점검도 대시보드에서 같은 기록을 읽는다. 실행 중에는 그 제품의 요청 버튼을 잠근다. TC 요청은 메일을 보내지 않고 결과 저장 뒤 끝난다.
+
+**지킬 것** 진행 기록은 제품과 실행 번호별로 저장한다. 다른 제품의 진행을 섞지 않으며 결과·이벤트·스냅샷을 진행 기록으로 덮어쓰지 않는다. 390px 화면과 데스크톱에서 단계 문구·시간·링크를 읽을 수 있어야 한다.
 
 **결과** 202 `{"status": "launched", "pid": <번호>}`.
 
@@ -1086,10 +1141,15 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 6. AI 분석(`qa-issue-spec-audit` Skill)은 토큰을 아끼려고 다음처럼 묶는다.
 
    - SRS 하나와 그 SRS 에 연결된 이슈 요약 카드를 한 작업에 넣는다. SRS 내용은 작업마다 한 번만 넣는다. 한 작업의 이슈는 `daily_qa.intelligence.audit_batch_size`(기본 10)건까지다.
+
    - SRS 는 바뀐 문장과 이슈 내용에 가까운 문단 3개만 넣는다. 바뀌지 않은 SRS 도 가까운 문단만 넣는다.
+
    - TC 후보는 넣지 않는다(사용자 결정 2026-10-02). 모델이 TC 영향을 쓰면 코드가 빼고 기록을 남긴다.
+
    - QA 규칙은 Skill 이 정한 절(§6·7·10·11·38·43)만 읽는다.
+
    - 점검 작업은 `daily_qa.intelligence.audit_model` 모델로 부른다. 비우면 `ai.claude.models.light` 다.
+
    - 결과가 `충돌`·`부분 일치` 인 이슈는 상세 화면에서 단일 이슈 분석(REQ-QAAGENT-001)으로 깊게 볼 수 있다.
 
 7. 판정은 이슈마다 하나다.
@@ -1345,9 +1405,11 @@ REQ-QAINTEL-017
 
 #### 절차
 없는 이슈·SRS·TC 번호, 자기 자신 중복 후보, `FIXED` 가 아닌 이슈의 초안, 근거 없는 판정을 담은 결과를 검증한다.
+네 Expected 충돌 분류, 알 수 없는 분류, 없는 이슈, 빈 이유, 구형 결과를 검사한다.
 
 #### Expected Result
 없는 번호는 빠지고 검증 기록에 남는다. 규칙을 어긴 Finding 은 버려진다.
+정상 충돌 분류는 저장한다. 잘못된 충돌 필드는 원문과 함께 검증 기록에 남고 TC 조치는 유지된다. 구형 결과는 그대로 표시한다.
 
 ### TEST-QAINTEL-008 사양 변경 Coverage
 
@@ -1356,9 +1418,11 @@ REQ-QAINTEL-016, REQ-QAINTEL-018
 
 #### 절차
 자동 실행으로 사양 변경 분석을 만든 뒤 [TC 점검] 요청 실행을 돌린다. 신규 SRS + TC 없음, 기존 TC 완전 커버, Expected 만 옛 사양, 과거 이슈만 있음, 사양 불명확, 같은 버튼 다시 누름을 만든다.
+긴 합성 이슈의 Step 뒤에 Expected·Actual을 두고 요청 실행의 입력·저장 결과·HTTP 상세 화면을 확인한다. 실행 전후 원본 합성 TC 파일의 바이트를 비교한다.
 
 #### Expected Result
 각각 `NOT_COVERED`+초안, `FULLY_COVERED`+초안 없음, `UPDATE_EXISTING`, 이슈 Coverage 있음+`NOT_COVERED`, 초안 없음, 두 번째 실행에 새 초안 없음. 초안 Excel 에 `Coverage` 시트가 있다.
+Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·이슈 번호를 저장·표시한다. 원본 TC 파일은 바뀌지 않는다.
 
 ### TEST-QAINTEL-009 대시보드와 지금 실행
 
@@ -1366,10 +1430,10 @@ REQ-QAINTEL-016, REQ-QAINTEL-018
 REQ-QAINTEL-019, REQ-QAINTEL-020, REQ-QAINTEL-021, REQ-QAINTEL-022, REQ-QAINTEL-024
 
 #### 절차
-대시보드·상세·실행 상세·기간 조회를 열고, 지금 실행을 잠금 없음·잠금 있음으로 부른다. 기간 조회에 잘못된 날짜를 넣는다.
+대시보드·상세·실행 상세·기간 조회를 열고, 지금 실행을 잠금 없음·잠금 있음으로 부른다. 기간 조회에 잘못된 날짜를 넣는다. 수집·인증·규칙·한도·메일 실패와 성공 실행을 열어 첫 문장·할 일·숫자를 확인한다. 결과 10개 초과 및 개편 전 결과가 있는 실행의 모두 보기 목록을 연다.
 
 #### Expected Result
-화면에 요약·카드·지식 문서 업로드 날짜가 보이고 승인·거절 양식이 없다. 지금 실행은 202, 잠금이 있으면 409 "QA Agent가 이미 실행 중입니다.".
+화면에 요약·카드·지식 문서 업로드 날짜가 보이고 승인·거절 양식이 없다. 지금 실행은 202, 잠금이 있으면 409 "QA Agent가 이미 실행 중입니다.". 실행 상세는 실패를 먼저 설명하며 확인할 결과 10개까지 보인다. 기존 정보는 접힌 자세히 안에 남고 실패 단계만 펼쳐진다. 모두 보기에는 해당 실행의 결과만 있으며 개편 전 결과도 빠지지 않는다.
 
 ### TEST-QAINTEL-010 분석 종류별 입력과 결과
 
@@ -1439,7 +1503,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 
 **기대 결과** 모든 테스트 통과. 실제 `srs-spec` 12개 날짜로 돌린 결과는 `progress.md` 에 적는다.
 
-### TEST-QAINTEL-017 현재 상태 기준 이슈 정합성 점검
+### TEST-QAINTEL-017 현재 상태 기준 이슈와 사양이 맞는지 점검
 
 **목적** 이슈 기록이 없는 기간에 이슈를 코드로 나누고, SRS 단위로 묶어 AI 를 부르며, 알림이 붙는지 확인한다.
 
@@ -1513,6 +1577,17 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 
 **기대 결과** 모든 테스트 통과. 만회 코드를 빼면 1·3번이 실패한다.
 
+### TEST-QAINTEL-020 여러 사용자의 실행 진행 표시
+
+**절차** `tests/test_qa_run_progress.py`와 브라우저에서 다음을 확인한다.
+
+1. 수집·이벤트·AI 실행·메일 중 기록을 다른 저장소 연결로 읽는다. AI 작업은 재시도를 포함해 작업당 한 번 세고 한도로 남은 작업을 완료로 세지 않는다.
+2. 메일 발송 중에는 실행이 `RUNNING`이고 메일 실패 응답 문장이 가려져 저장된다. 구형 실행의 진행 기록 결측도 읽을 수 있다.
+3. [지금 실행] 뒤 진행 원과 단계·시간이 보인다. 다른 사용자가 새로 연 화면도 같다. 첫 조회 전에 끝난 실행도 종료 결과를 보인다. 접속 오류 뒤 다시 연결해 완료 결과를 읽는다.
+4. [현재 상태 점검]·[TC 점검]·[검증 TC 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 390px·1920px 화면에서 시간·링크를 읽는다.
+
+**기대 결과** 실행이 끝날 때 진행 원이 멈추고 결과 한 줄과 실행 상세 링크가 남는다. 수집된 운영 결과와 합성 브라우저 경계 시험은 구분해 기록한다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -1534,12 +1609,12 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-013 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/skills/qa-fixed-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-014 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-spec-decision-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
 | REQ-QAINTEL-015 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-comment-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
-| REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
-| REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py` | verified |
+| REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/daily_qa/schema.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
+| REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
+| REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
+| REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py`, TEST-QAINTEL-020: `tests/test_qa_run_progress.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-023 | `app/modules/daily_qa/settings.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/snapshots.py` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |

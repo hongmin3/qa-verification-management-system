@@ -248,7 +248,8 @@ class Corpus:
                 label = self.chunk_labels.get(chunk.document_id, chunk.document_id)
                 ref = f"spec:{chunk.chunk_id}"
                 known.spec_refs.add(ref)
-                docs.append({"ref": ref, "location": f"{label} · p.{chunk.page} · {chunk.heading}".strip(" ·"),
+                location = " · ".join(part for part in (label, f"p.{chunk.page}" if chunk.page else "", chunk.heading) if part)
+                docs.append({"ref": ref, "location": location,
                              "text": _cut(chunk.text, 1200), "match": entry.reason})
         return {"srs": srs, "spec_docs": docs, "search": {"terms": terms[:20], "srs_hits": srs_hits.summary()}}
 
@@ -365,6 +366,16 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
         spec = corpus.spec_candidates(terms, query, intel.spec_candidates, intel.spec_doc_candidates, known)
         candidates = {"issues": related, "srs": spec["srs"], "spec_docs": spec["spec_docs"]}
         if with_tc:
+            # TC Expected와 이슈 Expected·Actual을 대조한다(§17). 600자 요약 뒤에
+            # 있는 Expected도 빠지지 않도록 요청 실행에서만 구획별로 전달한다.
+            for candidate in related:
+                original = corpus.issue_by_id[candidate["id"]]
+                candidate["reproduction"] = {
+                    key: [_cut(text, TEXT_LIMIT) for text in texts]
+                    for key, texts in issue_sections(original).items()
+                }
+                candidate["occurrence_cause"] = _cut(original.get("occurrence_cause", ""), TEXT_LIMIT)
+                candidate["action_details"] = _cut(original.get("action_details", ""), TEXT_LIMIT)
             candidates["tcs"] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=(srs["id"], srs.get("old_id", "")),
                                                      related_issue_ids=tuple(item["id"] for item in related))
             candidates["manuals"] = corpus.manual_candidates(query, intel.manual_candidates)
