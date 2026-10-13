@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app.core import claude_usage
 from app.core.config import get_settings, reload_settings
 from app.core.model_router import ai_status
 from app.core.scheduler import start_scheduler, stop_scheduler
@@ -60,6 +61,12 @@ def operations_status() -> dict:
     timeout = int(get_settings().get("analysis.job_timeout_minutes", 30) or 30)
     stale_before = (datetime.now(timezone.utc) - timedelta(minutes=timeout)).isoformat()
     return storage.operations_status(stale_before)
+
+
+@app.get("/claude/usage")
+def claude_usage_status() -> dict:
+    """Claude 구독 계정의 5시간·주간 사용률과 초기화 시각 (REQ-AICALL-006). 토큰 값은 넣지 않는다."""
+    return claude_usage.get_usage()
 
 
 @app.get("/config/status")

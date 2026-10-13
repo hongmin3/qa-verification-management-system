@@ -96,7 +96,7 @@
 ## 규칙 절별 구현현황은 코드가 원천이다
 <!-- akela: id=rule-capability-table scope=qa-agent-dev,documentation tier=should -->
 
-- `app/modules/qa_agent/rule_capability.py`가 규칙 최상위 절(Rev1.17 기준 79개)의 구현 방식·상태·위치를 담는다.
+- `app/modules/qa_agent/rule_capability.py`가 규칙 최상위 절(Rev1.18 기준 79개)의 구현 방식·상태·위치를 담는다.
 - 규칙 Rev가 올라가 새 절이 생기면 `tests/test_rule_capability.py`가 실패한다 — 재분류를 강제한다.
 - `status=IMPLEMENTED`인데 `where` 파일이 없으면 실패한다 — 구현 주장과 코드가 어긋나지 않게 한다.
 - 문서에 숫자를 손으로 적지 않고 `scripts/rule_capability_report.py`를 인용한다.

@@ -15,9 +15,9 @@
 ## 사내 고유 정보는 공개 문서에 적지 않는다
 <!-- akela: id=local-only-docs scope=documentation tier=must -->
 
-- 이 저장소는 공개된다. 서버 IP·계정·사내 경로·자격증명 위치 같은 정보는 `docs/local/`(Git 제외)에 두고, 공개 문서에는 일반 규칙만 남긴다.
-- `docs/local/*.example.md`만 저장소에 포함된다.
-- 새 운영 절차를 적을 때 고유명사가 필요하면 `<서버 IP>`처럼 자리표시자를 쓴다.
+- 이 저장소는 공개 저장소다(2026-10-13 사용자 결정, NFR-PRIV-002). 서버 주소·계정·사내 경로 같은 운영 정보는 `docs/local/` 에 두고 함께 올린다. 일반 문서(`README.md`, `docs/*.md`)에는 일반 규칙만 남긴다.
+- 비밀값(토큰·비밀번호·키)은 공개 여부와 관계없이 어떤 문서에도 적지 않는다. "어디에 있는지"만 적는다. 비밀 설정 파일은 `.gitignore` 대상이다.
+- 일반 문서에 고유명사가 필요하면 `<서버 IP>`처럼 자리표시자를 쓰고 실제 값은 `docs/local/` 에 둔다.
 
 ## 에이전트용 지식과 사람용 문서는 다르다
 <!-- akela: id=knowledge-vs-docs scope=documentation tier=should -->

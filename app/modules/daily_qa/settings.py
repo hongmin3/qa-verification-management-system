@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
+from app.core.claude_cli import resolve_command
 from app.modules.daily_qa.product_adapter import ProductProfile, build_profile, load_profile, slug_of
 
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -195,7 +196,7 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         enabled=bool(get("daily_qa.enabled", True)) and profile.enabled,
         product=profile.product,
         workspace_dir=Path(workspace).expanduser() if workspace else Path.home() / ".qa-daily-workspace",
-        claude_command=str(get("daily_qa.claude_command", "claude") or "claude"),
+        claude_command=resolve_command(str(get("daily_qa.claude_command", "claude") or "claude")),
         claude_token=str(secrets.claude_code_oauth_token or ""),
         claude_model=str(get("ai.claude.models.standard", "") or ""),
         claude_effort=str(get("ai.claude.effort", "") or ""),

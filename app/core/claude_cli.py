@@ -57,6 +57,17 @@ class ClaudeCliError(RuntimeError):
         super().__init__(ERROR_PREFIX + detail)
 
 
+def resolve_command(command: str) -> str:
+    """CLI 실행 파일. 이름만 적었는데 PATH 에 없으면 기본 설치 위치 `~/.local/bin/<이름>` (REQ-AICALL-005).
+
+    운영 서버의 systemd 서비스는 PATH 에 `~/.local/bin` 이 없다. 경로를 적었으면 그대로 쓴다.
+    """
+    if not command or "/" in command or "\\" in command or shutil.which(command):
+        return command
+    candidate = Path.home() / ".local" / "bin" / command
+    return str(candidate) if candidate.is_file() else command
+
+
 def build_env(token: str, base: dict[str, str] | None = None) -> dict[str, str]:
     source = base if base is not None else os.environ
     env = {name: source[name] for name in PASSED_ENV if name in source}
@@ -144,7 +155,7 @@ def _redact(text: str, token: str) -> str:
 
 def request_structured(prompt: str, *, system_prompt: str, schema: dict, model: str, settings, runner: Runner | None = None) -> dict:
     """`claude -p` 를 한 번 실행하고 응답 JSON 에 `token_usage` 를 붙여 돌려준다. 실패하면 ClaudeCliError."""
-    command = str(settings.get("ai.claude.command", DEFAULT_COMMAND) or DEFAULT_COMMAND)
+    command = resolve_command(str(settings.get("ai.claude.command", DEFAULT_COMMAND) or DEFAULT_COMMAND))
     timeout = int(settings.get("ai.claude.timeout_seconds", DEFAULT_TIMEOUT_SECONDS) or DEFAULT_TIMEOUT_SECONDS)
     effort = str(settings.get("ai.claude.effort", "") or "")
     token = str(settings.secrets.claude_code_oauth_token or "")
@@ -186,7 +197,7 @@ def login_status(command: str = DEFAULT_COMMAND, timeout: int = 20, runner: Runn
     (SPEC REQ-DAILY-001 4번). 이메일·조직 번호는 돌려주지 않는다. 기록에 남기지 않기 위해서다.
     """
     try:
-        completed = (runner or _default_runner)([command, "auth", "status"], input="", env=build_env(""), cwd=None, timeout=timeout)
+        completed = (runner or _default_runner)([resolve_command(command), "auth", "status"], input="", env=build_env(""), cwd=None, timeout=timeout)
     except (OSError, subprocess.SubprocessError) as exc:
         return {"logged_in": False, "method": "", "subscription": "", "error": type(exc).__name__}
     text = completed.stdout or ""
@@ -199,9 +210,9 @@ def login_status(command: str = DEFAULT_COMMAND, timeout: int = 20, runner: Runn
 
 def status(settings) -> dict:
     """`/config/status` 용. 명령을 찾았는지와 토큰이 있는지만 알리고 값은 넣지 않는다."""
-    command = str(settings.get("ai.claude.command", DEFAULT_COMMAND) or DEFAULT_COMMAND)
+    command = resolve_command(str(settings.get("ai.claude.command", DEFAULT_COMMAND) or DEFAULT_COMMAND))
     return {
         "claude_command": command,
-        "claude_command_found": shutil.which(command) is not None,
+        "claude_command_found": shutil.which(command) is not None or Path(command).is_file(),
         "claude_token_configured": bool(settings.secrets.claude_code_oauth_token),
     }

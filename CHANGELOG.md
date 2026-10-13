@@ -2,6 +2,10 @@
 
 ## 2026-10-13
 
+- REQ-AICALL-006: `/qa-agent` 와 비용 대시보드 위쪽에 Claude 사용량 칸을 더했다. 5시간 한도와 주간 한도의 사용 비율·남은 비율·초기화 시각을 보인다. 서버에 로그인된 Claude CLI 계정으로 지금 조회하고, 안 되면 일일 점검이 받은 마지막 값(`rate_limit_event`)을 보인다. 조회 API 는 `GET /claude/usage` 다.
+- REQ-AICALL-006: 로그인 토큰이 만료돼 조회가 안 되면 60분에 한 번까지 작은 CLI 호출(약 1천 토큰)로 CLI 가 토큰을 새로 받게 한다. `ai.claude.usage.refresh_with_cli: false` 로 끌 수 있다.
+- REQ-DEPLOY-001: 담당자 PC 테스트 서버도 `app.port`(24357)를 읽어 `127.0.0.1:24357` 에 뜬다. 옛 포트 12000 은 쓰지 않는다.
+- NFR-PRIV-002: 사용자 결정으로 저장소를 공개로 유지한다. 운영 메모(`docs/local/`)도 함께 올린다. 비밀 설정 파일은 계속 Git 밖에 둔다.
 - REQ-QAINTEL-035: 예약 시각(07:30)에 앱이 꺼져 있었거나 PC가 절전 중이었으면, 앱이 다시 돌 때 오늘 몫의 예약 실행을 한 번 띄운다. 앱 시작 1분 뒤와 10분마다 확인한다. 예약을 처리한 날짜를 제품별 상태(`<slug>:scheduled_date`)에 남겨 하루 한 번만 띄운다. 지난 날은 만회하지 않는다. 끄려면 `daily_qa.schedule.run_missed: false` 로 둔다.
 - REQ-QAINTEL-001: 정시 예약도 같은 날짜 기록을 남긴다. 정시 예약과 만회 확인이 같은 순간에 깨어나도 실행은 하나만 뜬다.
 
@@ -9,6 +13,8 @@
 
 - REQ-DAILY-016: 일일 QA 점검 작업도 화면 AI 기능과 같은 모델(`ai.claude.models.standard`)과 추론 정도(`ai.claude.effort`)로 Claude CLI 를 부른다. 예전에는 `--model`·`--effort` 없이 CLI 기본값으로 돌았다. 현재 상태 점검은 모델만 `audit_model` 을 쓰고 추론 정도는 같다.
 - REQ-DAILY-016: 사용자 결정으로 모델을 Opus 5.5(`claude-opus-5-5`), 추론 정도를 `medium` 으로 통일했다(`config.yaml` `ai.claude.effort: "medium"`).
+- REQ-DAILY-010, REQ-DAILY-024: VXvue QA 규칙이 Rev1.18(2026-10-06)로 바뀌어 오늘 예약 실행(`20261013-091846-vxvue`)의 AI 단계가 모두 `규칙 판 불일치` 로 멈췄다. 사용자 승인으로 제품 규칙 Skill `vxvue-qa-rules` 를 새 판에 맞추고 기준 판(`supported_rev`)을 `1.18` 로 올렸다.
+- REQ-DAILY-024: Rev1.18 은 최상위 절을 더하지 않았고 Gate 구조(G1~G7)도 그대로다. 바뀐 것은 Generator·Console·Viewer 상태 동기화 이슈를 보는 법이다(§3.9 S09, §17 Expected 충돌 분류, §29 Issue 작성, §52 자체검토, G3·G4·G7 확인 항목). 제품 규칙 Skill 에 이 절들을 읽을 곳과 지킬 것을 더했다. 공통 Skill 이 가리키는 절은 바뀌지 않아 그대로 두었다.
 
 ## 2026-10-02
 

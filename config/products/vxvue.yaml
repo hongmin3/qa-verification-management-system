@@ -95,7 +95,7 @@ qa_intelligence:
   rules:
     # 제품 규칙 Skill(config/products/vxvue/skills/vxvue-qa-rules)이 기준으로 삼는 QA 규칙 판.
     # Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다 (REQ-DAILY-010).
-    supported_rev: "1.17"
+    supported_rev: "1.18"
     product_skill: "vxvue-qa-rules"
   # 수정 완료 이슈 분석의 Regression 축. GENERATOR(X-ray Generator 조건)는 VXvue 제품에만 있다.
   regression_axes: [DIRECT, STATE, DATA, PERSISTENCE, INTEGRATION, PERMISSION, PRIOR_ISSUE, GENERATOR]

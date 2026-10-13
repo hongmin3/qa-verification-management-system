@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3, FastAPI + Jinja2, SQLite, pytest.
 
-**Spec:** `SPEC.md` 5.5절 새 요구사항 REQ-AICALL-006(설정 화면). REQ-AICALL-004(모델 등급), REQ-AICALL-005(Claude CLI), REQ-DAILY-016 순서 5(일일 QA 의 모델·추론 정도), REQ-WEB-004(설정 상태)와 연결된다.
+**Spec:** `SPEC.md` 5.5절 새 요구사항 REQ-AICALL-007(설정 화면). REQ-AICALL-004(모델 등급), REQ-AICALL-005(Claude CLI), REQ-DAILY-016 순서 5(일일 QA 의 모델·추론 정도), REQ-WEB-004(설정 상태)와 연결된다.
 
 ## 현재 상태 (2026-10-13)
 
@@ -69,8 +69,8 @@
 
 ### Task 1: SPEC 먼저
 
-- [ ] `SPEC.md` 5.5절에 `REQ-AICALL-006 화면에서 AI 모델·추론 정도 바꾸기` 카드(하는 일·언제·순서·결과·설정·안 될 때·지킬 것)를 더한다. 5절 기능 그룹 표와 12절 추적성 행, 11절 `TEST-AICALL-0NN` 을 더한다.
-- [ ] REQ-AICALL-004·005, REQ-DAILY-016 의 설정 표에 "화면에서 바꾼 값이 이긴다(REQ-AICALL-006)" 한 줄을 더한다.
+- [ ] `SPEC.md` 5.5절에 `REQ-AICALL-007 화면에서 AI 모델·추론 정도 바꾸기` 카드(하는 일·언제·순서·결과·설정·안 될 때·지킬 것)를 더한다. 5절 기능 그룹 표와 12절 추적성 행, 11절 `TEST-AICALL-006` 을 더한다.
+- [ ] REQ-AICALL-004·005, REQ-DAILY-016 의 설정 표에 "화면에서 바꾼 값이 이긴다(REQ-AICALL-007)" 한 줄을 더한다.
 - [ ] `node .project-check/render-spec-html.js .`
 
 ### Task 2: 덮어쓰기 저장소와 `Settings.get()`
@@ -107,7 +107,7 @@
 
 - [ ] 전체 pytest, `node .project-check/project-readiness.js .`
 - [ ] 12000 테스트 서버에서 값을 바꾸고 [지금 실행] 한 번(또는 `--dry-run` 이 아닌 소량 실행)의 `claude_logs` 명령 인자에 새 모델·effort 가 들어갔는지 확인한다.
-- [ ] `CHANGELOG.md`(REQ-AICALL-006), `progress.md`, `docs/README.md` 문서 지도, 사용법 화면 갱신. 커밋·push.
+- [ ] `CHANGELOG.md`(REQ-AICALL-007), `progress.md`, `docs/README.md` 문서 지도, 사용법 화면 갱신. 커밋·push.
 
 ## 확인 필요
 

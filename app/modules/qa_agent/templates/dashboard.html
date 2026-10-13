@@ -2,6 +2,7 @@
 {% block main_class %}wide{% endblock %}
 {% block content %}
 {% include "_intel_style.html" %}
+{% include "_claude_usage.html" %}
 
 <section>
   <h2>지식 문서 업로드 현황 <span class="hint">담당자가 직접 올려야 하는 문서: {{ knowledge.kinds|join(', ') }}</span></h2>

@@ -78,7 +78,9 @@ def _cap(section: str, title: str, mode: str, status: str, where: str = "", note
     return section, RuleCapability(section=section, title=title, mode=mode, status=status, where=where, note=note)
 
 
-# 규칙 Rev1.17 기준 79개 최상위 절(1~56 은 Rev1.12 때, 57~79 는 2026-09-28 에 분류). 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
+# 규칙 Rev1.18 기준 79개 최상위 절(1~56 은 Rev1.12 때, 57~79 는 2026-09-28 에 분류). 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
+# Rev1.18(2026-10-06)은 최상위 절을 더하지 않았다. §3.9 S09 를 Generator/Device 상태 동기화로 넓히고 §3·§17·§22·§29·§52·§62·§76 안에
+# Generator 문단을 더했다. 새 문단은 모두 Generator 쪽이라 아래 분류(§22~§26 S09 확장 시)는 그대로다.
 RULE_CAPABILITY: dict[str, RuleCapability] = dict(
     [
         _cap("1", "전체 Agentic Workflow", MODE_CODE, STATUS_IMPLEMENTED,
@@ -252,7 +254,7 @@ RULE_CAPABILITY: dict[str, RuleCapability] = dict(
         _cap("75", "Rev.1.17 실행용 TC와 분석용 Review 분리", MODE_CODE, STATUS_IMPLEMENTED,
              where="app/modules/daily_qa/checklist_xlsx.py",
              note="일일 QA 초안 Excel 의 'Checklist 초안' 시트에는 등록 가능한 열만, AI 판단·근거는 'Review' 시트에 둔다 (tests/test_daily_qa_outputs.py). QA Agent 산출물에는 미적용."),
-        _cap("76", "Rev.1.17 Agentic Workflow Gate 재정의 (G1~G7)", MODE_CODE, STATUS_PLANNED,
+        _cap("76", "Agentic Workflow Gate 재정의 (G1~G7, Rev.1.17 도입·Rev.1.18 유지)", MODE_CODE, STATUS_PLANNED,
              note="일일 QA Skill 은 §76 기준 G1~G7 로 gate_status 를 쓴다(skills/vxvue-qa-rules/references/gates.md). QA Agent 의 gates.py 는 G1~G5 그대로다."),
         _cap("77", "Rev.1.17 Issue 간결 작성 표준", MODE_DRAFT_ONLY, STATUS_NOT_PLANNED, note="S06 확장 시. 초안까지만 (§29 와 같다)."),
         _cap("78", "Rev.1.17 최종 자체검토 추가 항목", MODE_CODE, STATUS_PLANNED, note="QA Agent 미반영."),

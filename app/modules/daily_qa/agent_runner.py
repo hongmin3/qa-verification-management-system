@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core.claude_cli import PASSED_ENV, QUIET_ENV, build_env  # noqa: F401  (세 화면 기능의 Claude 호출과 같은 환경 규칙)
+from app.core import claude_usage
 from app.modules.daily_qa import claude_limits
 from app.modules.daily_qa.packages import Task
 from app.modules.daily_qa.workspace import ALLOWED_TOOLS, DENIED_TOOLS, RunWorkspace
@@ -103,10 +104,12 @@ def parse_output(stdout: str) -> tuple[dict, list[dict]]:
     """CLI 출력에서 감사 기록에 남길 값(`meta`)과 도구 호출 목록을 고른다.
 
     stream-json 은 한 줄에 사건 하나다: 도구 호출은 `assistant` 메시지의 `tool_use` 블록,
-    마지막 줄은 `result`. 예전 json 형식(한 덩어리)이 와도 읽는다.
+    마지막 줄은 `result`. 예전 json 형식(한 덩어리)이 와도 읽는다. 구독 계정이면 사용량 창 정보가
+    `rate_limit_event` 로 오고, 마지막 것을 `meta["rate_limit"]` 에 남긴다 (REQ-AICALL-006).
     """
     meta: dict = {}
     calls: list[dict] = []
+    rate_limit: dict | None = None
     lines = [line for line in (stdout or "").splitlines() if line.strip()]
     events = []
     for line in lines:
@@ -123,11 +126,15 @@ def parse_output(stdout: str) -> tuple[dict, list[dict]]:
                     calls.append(_tool_call(block))
         elif event.get("type") == "result":
             meta = _result_meta(event)
+        elif event.get("type") == "rate_limit_event" and isinstance(event.get("rate_limit_info"), dict):
+            rate_limit = event["rate_limit_info"]
     if not meta and len(events) == 1 and isinstance(events[0], dict) and "subtype" in events[0]:
         meta = _result_meta(events[0])
     if not meta:
         meta = {"parse_error": True}
     meta["tool_calls"] = len(calls)
+    if rate_limit is not None:
+        meta["rate_limit"] = rate_limit
     return meta, calls
 
 
@@ -166,6 +173,12 @@ class ClaudeRunner:
                                             token_fingerprint=claude_limits.token_fingerprint(self.token))
             return RunnerOutcome(False, -1, 0.0, message, limit=limit)
         meta, calls = parse_output(completed.stdout or "")
+        if meta.get("rate_limit"):
+            # 화면의 사용량 칸이 지금 조회에 실패할 때 보일 값 (REQ-AICALL-006). 저장 실패가 분석을 멈추지 않는다.
+            try:
+                claude_usage.record_rate_limit_event(meta["rate_limit"])
+            except Exception:  # noqa: BLE001
+                pass
         log = {**meta, "tool_call_log": calls}
         (log_dir / f"{task.task_id}.claude.json").write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
         error = ""

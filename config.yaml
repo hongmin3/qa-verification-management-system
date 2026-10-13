@@ -127,6 +127,16 @@ ai:
     # 추론 정도 (low / medium / high / xhigh / max). 빈 값이면 CLI 기본값.
     # 일일 QA 점검 작업에도 쓴다(REQ-DAILY-016). 2026-10-13 사용자 결정: Opus 5.5 · medium 으로 통일.
     effort: "medium"
+    # Claude 사용량 남은 양 보기 (REQ-AICALL-006). /qa-agent·비용 대시보드 위쪽 칸.
+    usage:
+      enabled: true
+      # 비우면 앱을 돌리는 계정의 ~/.claude/.credentials.json (Claude CLI 로그인 파일, 읽기만 한다).
+      credentials_path: ""
+      cache_seconds: 120
+      # 토큰이 만료됐으면 작은 CLI 호출(약 1천 토큰)로 CLI 가 새로 받게 한다. 최소 간격(분)과 그 호출의 모델.
+      refresh_with_cli: true
+      refresh_interval_minutes: 60
+      refresh_model: "claude-haiku-5-5"
     # 모델 등급별 모델 (app/core/model_router.py). 사용량 한도에 자주 닿으면
     # claude-sonnet-5-5 로 낮춘다.
     models:

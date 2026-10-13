@@ -12,6 +12,12 @@
 - 실제 실행: 재시작 1분 뒤 만회 확인이 `20261013-091846-vxvue`(trigger `scheduled`)를 띄웠고 상태 기록이 `2026-10-13` 이 됐다. 실행은 PARTIAL. 수집·이벤트는 정상이고 AI 단계는 QA 규칙 판 불일치(지식 폴더 Rev1.18, Skill 기준 Rev1.17)로 모두 멈췄다(Claude 호출 0). 대기 이벤트 92건. 메일은 SMTP 미설정으로 `failed`.
 - Knowledge: `REF-workflow#execution-flow` 를 현재 흐름으로 다시 썼다(제거된 Regression 흐름 삭제). CURATE 검토의 나머지 4개는 사용자 승인으로 이어서 고친다.
 - 계획: AI 모델·추론 정도 화면 설정 `docs/superpowers/plans/2026-10-13-ai-model-settings-ui.md`. 다음: 남은 Knowledge 4개, Skill Rev1.18, 사용량 잔여 표시, 포트 통일(12000 → 24357), 운영 서버 배포.
+- Knowledge CURATE: 사용자 승인으로 `purpose`·`known-issues`·`local-only-docs`·`filename-convention` 4개를 현재 사실로 다시 썼다. `akela check` ok.
+- 저장소 공개: `gh api` 로 공개(PUBLIC) 상태를 확인했다. 사용자 결정으로 공개를 유지하고 NFR-PRIV-002·SECURITY.md 를 그 결정에 맞췄다. 비밀 설정 파일은 Git 밖이다(`git check-ignore` 확인).
+- QA 규칙 Rev1.18: 하위 에이전트가 Rev1.17→1.18 차이(새 최상위 절 없음, Generator 상태 동기화 S09·§17·§29·§52·Gate G3·G4·G7 보강)를 반영해 `vxvue-qa-rules`·`gates.md`·`supported_rev: 1.18` 을 고쳤다. `run_daily_qa.py --check` 9줄 OK, 실제 Rev1.18 문서 79절 대조 테스트 통과. 대기 이벤트 92건은 다음 실행에서 분석된다.
+- 포트: 이 PC 테스트 서버를 12000 에서 `app.port`(24357)로 옮겼다. 감시 스크립트가 `config.yaml` 에서 포트를 읽는다. `http://127.0.0.1:24357/health` ok, 12000 닫힘. REQ-DEPLOY-001 에 명시.
+- 사용량 칸(REQ-AICALL-006): `/qa-agent`·비용 대시보드에 5시간·주간 사용률을 보인다. 이 PC 로그인 토큰이 4.7일 전에 만료돼 있어 작은 CLI 호출(924 토큰, 9초)로 CLI 가 새로 받게 하는 단계를 더했다. 실제 화면에서 "5시간 0% 사용 · 주간 9% 사용" 을 확인했다.
+- 운영 서버 읽기 점검: Claude CLI 2.1.296(`~/.local/bin/claude`)이 Team 계정으로 로그인돼 있다. systemd PATH 에 그 폴더가 없어 실행 파일을 `~/.local/bin` 에서도 찾게 했다(REQ-AICALL-005). 서버 `secrets.txt` 에 Polarion 접속 정보가 없다. sudo 는 비밀번호가 필요하다.
 
 ## 2026-10-02 Claude 후속 작업 재개 · 자동 분석과 요청 점검 분리
 

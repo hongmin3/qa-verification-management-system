@@ -66,4 +66,6 @@
 ## 알려진 이슈
 <!-- akela: id=known-issues scope=core-development tier=should -->
 
-Gemini Key가 없으면 실제 분석은 실패하지만 Web 서비스는 유지된다. Python 3.14 개발 환경에서는 PyYAML 6.0.3 및 Pydantic 2.12.5 이상이 필요하다.
+기본 AI 는 Claude CLI(`ai.provider: claude_cli`)라 Gemini Key 가 없어도 분석이 돈다. 분석을 막는 것은 Claude CLI 없음, 로그인·토큰 인증 실패, 5시간·주간 사용량 한도다(REQ-AICALL-005, REQ-QAINTEL-025). 이때도 Web 서비스는 유지된다.
+
+Python 3.14 개발 환경에서는 PyYAML 6.0.3 및 Pydantic 2.12.5 이상이 필요하다.

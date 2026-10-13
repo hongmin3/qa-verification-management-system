@@ -114,7 +114,7 @@ qa-verification-management-system/
 | `modules/qa_agent/evidence.py` | Evidence Store |
 | `modules/qa_agent/schemas.py` | 응답 스키마 · Regression 축 |
 | `modules/qa_agent/validation.py` | ID 교차검증 |
-| `modules/qa_agent/rule_capability.py` | 규칙 절별(Rev1.17 기준 79개) 구현현황 표 |
+| `modules/qa_agent/rule_capability.py` | 규칙 절별(Rev1.18 기준 79개) 구현현황 표 |
 | `modules/qa_agent/scheduled_jobs.py` | 지식 폴더 수집 cron |
 | `modules/qa_agent/router.py` + `templates/` | 화면 |
 | `prompts/qa_agent_issue_impact.yaml` | 단일 구조화 호출 프롬프트 |

@@ -1,0 +1,54 @@
+{# Claude 사용량 남은 양 (SPEC REQ-AICALL-006). 화면을 그린 뒤 /claude/usage 를 불러 채운다. #}
+<section class="claude-usage" id="claude-usage" aria-live="polite">
+  <h2>Claude 사용량 <span class="hint" id="claude-usage-meta">불러오는 중…</span></h2>
+  <div class="claude-usage-row">
+    <div class="claude-usage-item" data-window="five_hour"><b>5시간 한도</b> <span class="claude-usage-text">-</span>
+      <div class="claude-usage-track"><div class="claude-usage-fill"></div></div></div>
+    <div class="claude-usage-item" data-window="seven_day"><b>주간 한도</b> <span class="claude-usage-text">-</span>
+      <div class="claude-usage-track"><div class="claude-usage-fill"></div></div></div>
+  </div>
+</section>
+<style>
+.claude-usage{margin-bottom:18px}
+.claude-usage h2{margin:0 0 10px;font-size:18px}
+.claude-usage-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.claude-usage-item{padding:12px 14px;background:#f8fafc;border-radius:9px;border:1px solid #e2e8f0}
+.claude-usage-track{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:8px}
+.claude-usage-fill{height:100%;width:0;background:#176b87;transition:width .4s ease}
+.claude-usage-item.warn .claude-usage-fill{background:#d97706}
+.claude-usage-item.empty .claude-usage-fill{background:#b42318}
+.claude-usage-item.warn .claude-usage-text{color:#b45309}
+.claude-usage-item.empty .claude-usage-text{color:#b42318;font-weight:700}
+</style>
+<script>
+(function () {
+  var box = document.getElementById('claude-usage');
+  if (!box) return;
+  var SOURCE = {live: '지금 조회', last_run: '마지막 점검 값', none: ''};
+  function fill(name, w) {
+    var item = box.querySelector('[data-window="' + name + '"]');
+    var text = item.querySelector('.claude-usage-text');
+    var bar = item.querySelector('.claude-usage-fill');
+    item.classList.remove('warn', 'empty');
+    if (!w) { text.textContent = '알 수 없음'; bar.style.width = '0'; return; }
+    text.textContent = w.used_percent + '% 사용 (' + w.remaining_percent + '% 남음' +
+      (w.resets_at ? ', ' + w.resets_at + ' 초기화' : '') + ')';
+    bar.style.width = Math.min(100, w.used_percent) + '%';
+    if (w.remaining_percent <= 0) item.classList.add('empty');
+    else if (w.remaining_percent < 20) item.classList.add('warn');
+  }
+  fetch('/claude/usage', {headers: {Accept: 'application/json'}})
+    .then(function (r) { return r.json(); })
+    .then(function (u) {
+      fill('five_hour', u.five_hour);
+      fill('seven_day', u.seven_day);
+      var parts = [];
+      if (SOURCE[u.source]) parts.push(SOURCE[u.source]);
+      if (u.measured_at) parts.push(u.measured_at + ' 측정 (한국 시간)');
+      if (u.error) parts.push(u.error);
+      if (u.source === 'none' && !u.error) parts.push('사용량을 아직 알 수 없습니다');
+      document.getElementById('claude-usage-meta').textContent = parts.join(' · ');
+    })
+    .catch(function () { document.getElementById('claude-usage-meta').textContent = '사용량을 불러오지 못했습니다'; });
+})();
+</script>

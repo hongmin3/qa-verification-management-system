@@ -275,3 +275,21 @@ def test_config_status_reports_ai_provider_without_secret_values(monkeypatch):
     assert status["claude_token_configured"] is True
     assert status["model"]
     assert TOKEN not in json.dumps(body)
+
+
+def test_command_falls_back_to_local_bin_when_not_on_path(tmp_path, monkeypatch):
+    """Validates: REQ-AICALL-005 지킬 것 — systemd PATH 에 ~/.local/bin 이 없는 서버."""
+    from app.core import claude_cli
+
+    local_bin = tmp_path / ".local" / "bin"
+    local_bin.mkdir(parents=True)
+    (local_bin / "claude").write_text("", encoding="utf-8")
+    monkeypatch.setattr(claude_cli.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr(claude_cli.shutil, "which", lambda name: None)
+    assert claude_cli.resolve_command("claude") == str(local_bin / "claude")
+    assert claude_cli.resolve_command("/opt/claude/bin/claude") == "/opt/claude/bin/claude"   # 경로는 그대로
+    monkeypatch.setattr(claude_cli.shutil, "which", lambda name: "/usr/bin/claude")
+    assert claude_cli.resolve_command("claude") == "claude"                                   # PATH 에 있으면 그대로
+    (local_bin / "claude").unlink()
+    monkeypatch.setattr(claude_cli.shutil, "which", lambda name: None)
+    assert claude_cli.resolve_command("claude") == "claude"                                   # 어디에도 없으면 원래 이름

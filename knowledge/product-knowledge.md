@@ -9,7 +9,7 @@
 - 분류는 파일 이름 패턴으로 한다. 기본 목록은 `app/core/product_knowledge.py` 의 `DEFAULT_CLASSIFIERS` 다. 대표 규약은 접두사 `(사양서)` / `(매뉴얼)` / `(TC)` / `[QA 작성 규칙]` 과, 이름 안의 `지침 프롬프트` 다.
 - 띄어쓰기 대신 밑줄로 이어 쓴 이름(`…_지침_프롬프트_Rev1.17.txt`)도 같은 종류다. 새 표기를 만나면 목록에 패턴을 더하고 테스트를 추가한다. 2026-09-28 에 밑줄 표기가 `unknown` 으로 빠져 서버에서 지침 프롬프트가 사라진 일이 있었다.
 - VXvue와 Bellalun Viewer가 이미 같은 규약을 쓰고 있어 그것을 기준으로 삼았다.
-- 새 제품은 `config/products/<slug>.yaml`에 `knowledge_source.dir`만 넣으면 **코드 변경 없이** 편입된다.
+- 새 제품은 `config/products/<slug>.yaml` 한 장으로 **코드 변경 없이** 편입된다. `knowledge_source.dir` 와 함께 자료 종류별 출처 프로필(`source`·`required`, REQ-KNOW-018)을 적어야 화면 등록과 상태 판정이 맞게 나온다(`docs/PRODUCT_ONBOARDING.md` 1절).
 - 분류 우선순위가 있다: `(TC)` 접두사가 있으면 `*Checklist*` 패턴보다 먼저 testcase로 확정된다.
 - 규약에 맞지 않는 파일은 **조용히 버리지 않고** `unknown`으로 보고한다.
 - 제품 이름으로 분기하는 코드를 넣지 않는다. 그러면 제품이 늘 때마다 코드가 늘어난다.

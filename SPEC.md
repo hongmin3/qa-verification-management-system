@@ -123,6 +123,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
 | 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 07:30 줄과 같다 | 아래 07:30 줄과 같다 | REQ-QAINTEL-025 |
+| 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 07:30 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 07:30 (평일, 공휴일 제외) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 일일 점검 | Polarion 을 직접 읽어 어제와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-SCHED-002 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`ALM_QA_Automation_Daily`) | ALM 통합 수집. 다른 저장소 ALM-QA-Automation 의 기능 | SRS 와 이슈를 모아 어제와 비교하고, 바뀐 사양에 연결된 이슈에 우선순위를 붙인다. 사양서 PDF 를 크롤러 output 과 지식 폴더에 놓는다 | 크롤러 output 폴더, 지식 폴더 | 그 저장소가 보내는 알림 메일 | 이 저장소 밖 |
 | 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
@@ -3491,7 +3492,7 @@ REQ-QAINTEL-019 가 대신한다.
 
 1. 지식 사본에서 QA 규칙 종류의 파일들을 모은다. 파일 이름의 `Rev<숫자.숫자>` 로 판을 읽고, 판이 가장 높은 것 가운데 파일이 있는 것을 고른다. 지침 프롬프트도 같은 방법으로 고른다.
 2. 규칙 파일이 없으면 불일치로 본다.
-3. 기준 판은 제품 설정 `config/products/<slug>.yaml` 의 `qa_intelligence.rules.supported_rev` 다(VXvue 는 `1.17`). 고른 규칙 파일의 판이 기준 판과 다르면 불일치로 본다. 기준 판이 비어 있으면 판은 보지 않고 규칙 파일이 있는지만 본다.
+3. 기준 판은 제품 설정 `config/products/<slug>.yaml` 의 `qa_intelligence.rules.supported_rev` 다(VXvue 는 2026-10-13 부터 `1.18`). 고른 규칙 파일의 판이 기준 판과 다르면 불일치로 본다. 기준 판이 비어 있으면 판은 보지 않고 규칙 파일이 있는지만 본다.
 4. 불일치면 분석 대상이 있는 AI 단계(다섯 가지 분석, 매뉴얼 누락 후보 점검)를 돌리지 않고, 그 단계를 `규칙 판 불일치` 로 남긴다. 분석 대상이 없는 단계는 `건너뜀` 이다. 분석하지 못한 이벤트는 `pending` 으로 남아 다음 실행에서 다시 분석한다(REQ-QAINTEL-006).
 5. AI 없는 계산(삭제된 SRS 를 가리키는 TC, 사양–TC 연결 점검)은 그대로 돈다.
 6. 사전 점검 단계는 `일부 실패` 가 되고 비고에 이유가 들어간다. 실행 결과는 `일부 실패` 다.
@@ -3722,7 +3723,7 @@ python scripts/run_daily_qa.py --dry-run
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `daily_qa.claude_command` | `claude` | Claude CLI 실행 파일 |
+| `daily_qa.claude_command` | `claude` | Claude CLI 실행 파일. 이름만 적었는데 PATH 에 없으면 `~/.local/bin/<이름>` 을 쓴다(REQ-AICALL-005) |
 | `daily_qa.task_timeout_seconds` | `900` | 작업 한 번의 제한 시간(초) |
 | `ai.claude.models.standard` | `claude-opus-5-5` | 분석 작업의 모델(`--model`) |
 | `ai.claude.effort` | `medium` | 분석 작업의 추론 정도(`--effort`) |
@@ -4150,7 +4151,7 @@ REQ-QAINTEL-019 가 대신한다.
 - 설정: 설정 파일·비밀 설정·제품 설정을 읽고, 비밀값은 밖으로 내지 않는다. REQ-CONF-001 ~ REQ-CONF-003, NFR-SEC-002
 - 저장: 데이터를 두는 곳, DB 표 만들기, 분석 작업 상태와 재시작 처리. REQ-STORE-001 ~ REQ-STORE-003
 - AI 호출·사용량
-  - 호출 통로, 같은 입력 응답 다시 쓰기, 재시도, 모델 등급 고르기, Claude CLI 로 부르기: REQ-AICALL-001 ~ REQ-AICALL-005
+  - 호출 통로, 같은 입력 응답 다시 쓰기, 재시도, 모델 등급 고르기, Claude CLI 로 부르기, Claude 사용량 남은 양: REQ-AICALL-001 ~ REQ-AICALL-006
   - 밖으로 보내는 글 가리기: NFR-PRIV-001
   - 토큰 기록, 하루 한도, 할당량 소진 알림, 비용 추정: REQ-USAGE-001 ~ REQ-USAGE-004
 - 메일: 발송 공통, 정기 보고 메일, 설정 확인과 시험 발송. REQ-MAIL-001 ~ REQ-MAIL-003
@@ -4169,7 +4170,7 @@ REQ-QAINTEL-019 가 대신한다.
 - 운영
   - 운영 점검, 백업, 로그, 지식 폴더 마운트 설정: REQ-OPS-001 ~ REQ-OPS-004
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
-  - 공개 저장소에 사내 정보 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: NFR-PRIV-002, NFR-OPS-001, NFR-OPS-002
+  - 저장소에 비밀값·사내 문서 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: NFR-PRIV-002, NFR-OPS-001, NFR-OPS-002
 
 문서가 분석에 쓰이기까지 세 갈래가 있다. 지식 폴더 업로드, ALM 사양서 동기화, 사람이 화면에서 올리기다. 어느 길이든 문서 표에 등록돼야 분석이 검색한다. 어느 제품의 어느 자료가 어느 길로 들어오는지는 제품 설정의 출처 프로필(REQ-KNOW-018)이 정한다.
 
@@ -5276,7 +5277,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 키 | 기본값 | 뜻 |
 |---|---|---|
 | `ai.provider` | `claude_cli` | `claude_cli` 또는 `gemini`. 모르는 값이면 `claude_cli` 로 본다 |
-| `ai.claude.command` | `claude` | Claude CLI 실행 파일 |
+| `ai.claude.command` | `claude` | Claude CLI 실행 파일. 이름만 적었는데 PATH 에 없으면 Claude CLI 기본 설치 위치 `~/.local/bin/<이름>` 을 쓴다 |
 | `ai.claude.timeout_seconds` | `600` | 호출 한 번의 제한 시간(초) |
 | `ai.claude.workdir` | 빈 값 | 빈 작업 폴더. 비면 사용자 홈의 `~/.qa-ai-workspace` |
 | `ai.claude.effort` | `medium` | 추론 정도(`low`·`medium`·`high` 등). 일일 QA 점검 작업에도 쓴다(REQ-DAILY-016). 비면 CLI 기본값 |
@@ -5295,11 +5296,81 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **지킬 것**
 
+- 실행 파일 이름(`claude`)을 PATH 에서 찾지 못하면 Claude CLI 기본 설치 위치 `~/.local/bin/claude` 를 쓴다. 경로를 직접 적었으면 그대로 쓴다.
+
+  이유: 운영 서버의 systemd 서비스는 PATH 에 `~/.local/bin` 이 없다. 서버 설정을 바꾸려면 관리자 권한이 필요하다.
+
 - 분석 한 건의 호출 수는 Gemini 때와 같다. QA Agent 단일 이슈 분석은 1회, 매뉴얼 개정 검증은 변경마다 1~2회다.
 - 오류 문장에서 인증 토큰 문자열을 지운다.
 - Claude 에게 도구를 주지 않는다. 판정에 필요한 자료는 모두 표준입력의 분석 입력에 있다.
 
 이유: 이 호출은 이미 골라 둔 근거로 판정만 받는다. 파일을 더 찾아볼 일이 없으므로 도구를 열어 둘 까닭이 없다.
+
+### REQ-AICALL-006 Claude 사용량 남은 양 보기
+
+**하는 일** 운영 담당자가 화면에서 Claude 구독 계정의 5시간 한도와 주간 한도를 얼마나 썼는지, 언제 초기화되는지 본다. 한도에 걸려 분석이 멈추기 전에 미리 알 수 있다.
+
+> **예시** `/qa-agent` 맨 위에 "Claude 사용량 · 5시간 35% 사용(65% 남음, 15:00 초기화) · 주간 62% 사용(38% 남음, 10월 20일 09:00 초기화) · 09:41 측정" 이 보인다.
+
+**언제** `/qa-agent` 대시보드와 비용 대시보드(`/cost-dashboard`)를 열 때. 화면이 `GET /claude/usage` 를 불러 채운다. 화면을 그리는 일은 이 조회를 기다리지 않는다.
+
+**순서**
+
+1. 저장해 둔 값이 `ai.claude.usage.cache_seconds`(기본 120초)보다 새것이면 그 값을 돌려준다.
+2. 아니면 그 서버에 로그인된 Claude CLI 계정의 인증 파일(`ai.claude.usage.credentials_path`, 비면 `~/.claude/.credentials.json`)에서 접근 토큰을 읽어 사용량 조회 주소(`https://api.anthropic.com/api/oauth/usage`)를 한 번 부른다. 제한 시간은 5초다.
+3. 응답의 5시간(`five_hour`)·주간(`seven_day`) 사용률과 초기화 시각을 읽는다. 사용률은 0~100 으로 맞춘다.
+4. 조회가 "토큰 만료"(401)로 실패하면, 마지막 시도 뒤 `ai.claude.usage.refresh_interval_minutes`(기본 60분)가 지났을 때만 아주 작은 Claude CLI 호출을 한 번 한다. 가벼운 모델(`ai.claude.usage.refresh_model`)에 `{"ok": true}` 만 돌려받는다. 이 호출 때 CLI 가 토큰을 새로 받는다. 그 뒤 2번을 한 번 더 한다.
+
+   > **예시** 2026-10-13 이 PC 에서 이 호출은 924 토큰, 9초가 걸렸고 토큰 유효 시간이 8시간으로 늘었다.
+
+   이유: 접근 토큰은 몇 시간 뒤 만료되고, CLI 는 실행될 때만 토큰을 새로 받는다. 일일 점검만 도는 서버에서는 하루 대부분 토큰이 만료돼 있다.
+
+5. 그래도 조회가 실패하면 일일 QA 점검이 Claude CLI 출력에서 받은 마지막 한도 정보(`rate_limit_event`)를 돌려준다. 이 값은 `data/claude_usage.json` 에 저장돼 있다.
+6. 둘 다 없으면 "사용량을 아직 알 수 없습니다" 와 이유를 돌려준다.
+
+**결과** `GET /claude/usage` 의 응답이다.
+
+| 칸 | 뜻 |
+|---|---|
+| `five_hour` / `seven_day` | `used_percent`(사용 비율), `remaining_percent`(남은 비율), `resets_at`(초기화 시각, 한국 시간). 모르면 `null` |
+| `source` | `live`(지금 조회), `last_run`(일일 점검이 받은 마지막 값), `none` |
+| `measured_at` | 값을 잰 시각(한국 시간) |
+| `error` | 조회하지 못한 이유 한 줄. 성공하면 빈 값 |
+
+화면은 남은 비율이 20% 아래면 주황, 0% 면 빨강으로 보인다.
+
+**설정**
+
+| 키 | 기본값 | 뜻 |
+|---|---|---|
+| `ai.claude.usage.enabled` | `true` | `false` 면 조회하지 않고 `source: none` 을 돌려준다 |
+| `ai.claude.usage.credentials_path` | 빈 값 | 인증 파일 위치. 비면 앱을 돌리는 계정의 `~/.claude/.credentials.json` |
+| `ai.claude.usage.cache_seconds` | `120` | 같은 값을 다시 쓰는 시간(초) |
+| `ai.claude.usage.refresh_with_cli` | `true` | 토큰이 만료됐을 때 작은 CLI 호출로 새로 받게 할지 |
+| `ai.claude.usage.refresh_interval_minutes` | `60` | 그 호출을 다시 시도하기까지의 최소 간격(분) |
+| `ai.claude.usage.refresh_model` | `claude-haiku-5-5` | 그 호출에 쓰는 모델. 분석 모델 설정과 별개다 |
+
+**안 될 때**
+
+| 경우 | 동작 | 사용자에게 보이는 것 |
+|---|---|---|
+| 인증 파일이 없음 | 마지막 저장값을 쓴다 | "로그인 정보 없음 · 마지막 점검 값" |
+| 조회 주소가 401(토큰 만료) | 4번의 작은 CLI 호출 뒤 한 번 더 조회한다. 그래도 안 되면 마지막 저장값 | "로그인 토큰 만료 · 마지막 점검 값" |
+| 조회 주소가 403 | 마지막 저장값을 쓴다 | "조회 권한 없음 · 마지막 점검 값" |
+| 응답 모양이 다름 | 읽을 수 있는 칸만 채운다 | 못 읽은 칸은 "알 수 없음" |
+| 네트워크 오류·5초 초과 | 마지막 저장값을 쓴다 | "조회 실패 · 마지막 점검 값" |
+
+**지킬 것**
+
+- 접근 토큰 값은 응답·로그·화면·저장 파일 어디에도 남기지 않는다. 오류 문장에서도 지운다.
+- 인증 파일은 읽기만 한다. 토큰을 새로 받는(refresh) 일은 Claude CLI 가 한다. 앱은 CLI 를 부를 뿐 토큰 갱신 주소를 직접 부르지 않는다.
+- 작은 CLI 호출의 시각과 쓴 토큰 수는 `data/claude_usage.json` 의 `last_refresh_at`·`last_refresh_tokens` 와 앱 로그 `claude_usage_token_refresh` 에 남긴다. 비용 대시보드 합계에는 들어가지 않는다.
+
+  이유: 앱과 CLI 가 동시에 토큰을 새로 받으면 한쪽 로그인이 끊긴다.
+
+- 조회는 화면을 열 때만 한다. 예약으로 계속 부르지 않는다.
+
+> **주의** 사용량 조회 주소는 공식 문서에 없는 주소다. 응답 모양이 바뀌면 그 칸만 "알 수 없음" 으로 보이고 분석 기능에는 영향이 없다. `claude setup-token` 으로 받은 토큰(`CLAUDE_CODE_OAUTH_TOKEN`)은 이 조회 권한이 없어, 그 방식으로 인증한 서버는 마지막 점검 값만 보인다.
 
 ### REQ-USAGE-001 토큰 사용량 기록
 
@@ -5800,6 +5871,10 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 **지킬 것**
 
 - 진입점에 포트를 적지 않는다.
+- 담당자 PC 의 테스트 서버(작업 스케줄러 `QA-Verification-Test-Web`)도 같은 `app.port` 를 읽어 `127.0.0.1:24357` 에만 뜬다. 다른 PC 에서는 접속할 수 없고, 사내 사용자는 운영 서버 주소(`http://<서버 주소>:24357` 또는 nginx 80)로 들어간다.
+
+  이유: 2026-10-13 전에는 테스트 서버만 옛 포트 12000 에 남아 있었다. 그래서 담당자 PC 의 사양서 동기화 기본 대상(`app.port`)과 테스트 서버가 달랐고, 운영 서버 12000 으로 접속하려는 시도도 있었다.
+
 - nginx 는 YAML 을 읽지 못하므로 `deploy/nginx/qa-platform.conf` 의 upstream 포트만 자동으로 따라가지 않는다. 두 값이 다르면 검사가 실패해야 한다.
 - 운영 포트는 `24357` 이다.
 
@@ -6166,21 +6241,21 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 이유: 잘못 잡는 경우가 많다.
 
-### NFR-PRIV-002 사내 문서와 비밀값을 저장소에 두지 않기
+### NFR-PRIV-002 비밀값과 사내 문서 사본을 저장소에 두지 않기
 
-**하는 일** 이 저장소는 2026-09-30 부터 비공개다. 그래도 비밀값과 사내 문서 사본은 커밋하지 않는다. 서버 주소·계정 이름·사내 경로 같은 운영 정보는 비공개 저장소의 `docs/local/` 에 둔다.
+**하는 일** 이 저장소는 공개 저장소다. 서버 주소·계정 이름·사내 경로 같은 운영 정보는 `docs/local/` 에 두고 저장소에 함께 올린다. 비밀값과 사내 문서 사본은 공개 여부와 관계없이 커밋하지 않는다.
+
+> **참고** 2026-09-30 에 비공개로 바꿨다가, 2026-10-13 사용자 결정으로 공개를 유지한다. 운영 메모(`docs/local/`)가 공개되는 것도 사용자가 받아들인 결과다.
 
 **결과**
 
-- 비밀 설정 파일(`secrets.txt`, `secrets.json`, `.env`, `.deploy.env`)은 `.gitignore` 대상이다. 운영 메모에도 비밀값은 적지 않고 "어디에 있는지"만 적는다.
+- 비밀 설정 파일(`secrets.txt`, `secrets.json`, `.env`, `.deploy.env`, `real_fixtures.local.env`)은 `.gitignore` 대상이다. 운영 메모에도 비밀값은 적지 않고 "어디에 있는지"만 적는다.
 - 수집 사본·정규화 텍스트·수집 기록(`data/product_knowledge/`), 업로드·DB·색인·로그·보고서·백업은 `.gitignore` 대상이다.
 - 서버 주소·계정·경로 같은 운영 정보는 `docs/local/OPERATIONS_LOCAL.md` 에 두고 저장소에 함께 올린다.
-
-이유: 저장소를 비공개로 바꿨지만, GitHub 계정이 뚫리거나 저장소를 다시 공개로 돌리면 비밀값과 사내 문서가 한꺼번에 나간다.
 - 테스트 자료는 합성 파일 이름·합성 규칙 글만 쓴다. 실제 폴더로 도는 확인은 `real_fixtures.local.env` 가 있을 때만 도는 선택 테스트로 둔다.
 - Polarion 주소처럼 사내 호스트인 값은 `config.yaml` 이 아니라 비밀 설정 파일에 둔다.
 
-> **주의** 지금 저장소의 여러 파일에 서버 주소와 담당자 PC 경로가 적혀 있다(브리프가 다루지 않은 결정 참고).
+이유: 비밀값이 한 번 공개 저장소에 올라가면 지워도 이력과 복제본에 남는다. 그래서 비밀값은 파일 단위로 Git 밖에 둔다.
 
 ### NFR-OPS-001 콘솔 인코딩 때문에 스크립트가 멈추지 않기
 
@@ -8574,6 +8649,18 @@ REQ-AICALL-003 의 재시도 설정은 `tests/test_gemini_client_core.py::test_r
 2. 분석이 `GEMINI_MODEL` 로 끝나고, 감사 화면에 요청 모델·쓴 모델·이유가 남는지 본다.
 3. 원래대로 되돌린다.
 
+### TEST-AICALL-005
+
+REQ-AICALL-006 을 `tests/test_claude_usage.py` 로 확인한다. 실제 주소 대신 가짜 HTTP 함수를 넣는다.
+
+- 실시간 응답(사용률 0~100, ISO 초기화 시각)을 읽어 남은 비율과 한국 시간을 만든다. `rate_limit_event` 의 사용률(0~1)은 0~100 으로 바꾼다
+- 캐시 시간 안에는 다시 부르지 않는다
+- 인증 파일 없음·403·네트워크 오류면 저장된 `rate_limit_event` 값을 `last_run` 으로 돌려주고, 그것도 없으면 `none` 이다
+- 401(토큰 만료)이면 CLI 갱신 호출을 한 번 하고 다시 조회한다. 간격 안에는 다시 호출하지 않고, 설정으로 끄면 호출하지 않는다
+- 응답·오류 문장·저장 파일에 접근 토큰 문자열이 없다
+- 일일 점검 실행기가 stream-json 의 `rate_limit_event` 줄(5시간·주간 창)을 읽어 저장한다. 깨진 줄은 건너뛴다
+- `/qa-agent` 화면에 사용량 칸과 조회 스크립트가 있다
+
 ### TEST-AICALL-004
 
 REQ-AICALL-005 를 `tests/test_claude_cli_provider.py` 로 확인한다. 실제 CLI 대신 가짜 실행기를 넣는다.
@@ -8711,7 +8798,7 @@ NFR-PRIV-001 을 `tests/test_security_filter.py` 로 확인한다: 민감 값이
 
 ### TEST-PRIV-002
 
-NFR-PRIV-002 는 자동 테스트가 없다. 사람이 확인하는 절차: `git ls-files data output backups` 가 비어 있는지, `git grep` 으로 서버 주소·담당자 PC 경로가 나오지 않는지 본다(지금은 나온다. 브리프 밖 결정 참고).
+NFR-PRIV-002 는 자동 테스트가 없다. 사람이 확인하는 절차: `git ls-files data output backups` 가 비어 있는지, `git ls-files` 에 비밀 설정 파일(`secrets.txt`·`secrets.json`·`.env`·`.deploy.env`·`real_fixtures.local.env`)이 없는지 본다. 서버 주소·운영 메모가 나오는 것은 공개 유지 결정(2026-10-13)에 따라 허용한다.
 
 ### TEST-OPS-004
 
@@ -9139,6 +9226,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-003 | `app/core/gemini_client.py` | TEST-AICALL-003, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
+| REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html` | TEST-AICALL-005: `tests/test_claude_usage.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |

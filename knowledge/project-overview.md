@@ -1,7 +1,13 @@
 ## 목적
 <!-- akela: id=purpose scope=all tier=must -->
 
-SW 변경사항, 제품 사양서/Manual, TC Excel을 분석해 Regression 검증 TC와 근거를 자동 추천한다. 사용자가 별도 AI 채팅에 질문하지 않는 업무 흐름이 핵심이다.
+QA 담당자가 별도 AI 채팅에 묻지 않고도 검증할 곳을 찾게 돕는다. 세 가지를 한다.
+
+- 평일 아침 Polarion 의 SRS·이슈 변화를 감지해 바뀐 것만 Claude 로 분석하고 대시보드·메일로 알린다(QA Intelligence Agent).
+- 이슈 하나의 검증 범위(관련 사양·TC·Regression 축)를 낸다(QA Agent).
+- 개정 매뉴얼의 변경마다 사양과 맞는지 판정한다(매뉴얼 개정 검증).
+
+변경 문서를 올려 Regression TC 를 추천하던 영향 분석 기능은 2026-10-01 에 제거했다.
 
 ## 주요 구성
 <!-- akela: id=components scope=core-development tier=should -->
