@@ -7,15 +7,18 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core import document_cache
-from app.core.product_config import KIND_LABELS, ProductConfig, registration_refusal
-from app.core.product_knowledge import document_logical_key, is_strictly_older_name, parse_asset_name
+from app.core.product_config import KIND_LABELS, SOURCE_ALM, SOURCE_EXTERNAL, ProductConfig, registration_refusal
+from app.core.product_knowledge import REGISTERABLE_KINDS, classify, document_logical_key, is_strictly_older_name, parse_asset_name
 
 SPEC_EXTENSIONS = {".pdf", ".docx"}
 TC_EXTENSIONS = {".xlsx"}
+#: 등록 부가 정보의 출처 가운데 사람이 올리지 않은 것. 나머지(`upload`, 빈 값)는 사람이 올린 등록이다 (REQ-KNOW-005).
+AUTOMATIC_DOCUMENT_SOURCES = frozenset({"product_knowledge", SOURCE_ALM, SOURCE_EXTERNAL})
 
 
 class RegistrationError(Exception):
@@ -45,11 +48,27 @@ def extensions_for(kind: str) -> set[str]:
     return TC_EXTENSIONS if kind == "testcase" else SPEC_EXTENSIONS
 
 
-def check_request(storage, config: ProductConfig, kind: str, declared_source: str = "", replace_id: int | None = None) -> dict | None:
+def kind_mismatch(config: ProductConfig, kind: str, file_name: str) -> str | None:
+    """파일 이름으로 보면 문서 표의 다른 종류일 때 그 종류. 규약에 맞지 않는 이름은 None (REQ-KNOW-003·019)."""
+    named = classify(re.split(r"[\\/]", file_name)[-1], config.knowledge_source.classify or None)
+    return named if named in REGISTERABLE_KINDS and named != kind else None
+
+
+def registered_by_person(document: dict) -> bool:
+    """사람이 올린 등록인가. 자동 출처 구역에 있어도 지울 수 있다 (REQ-KNOW-005)."""
+    return str(_metadata(document).get("source") or "") not in AUTOMATIC_DOCUMENT_SOURCES
+
+
+def check_request(storage, config: ProductConfig, kind: str, declared_source: str = "", replace_id: int | None = None,
+                  *, file_name: str = "") -> dict | None:
     """파일을 저장하기 전에 받을 수 있는 요청인지 본다. 교체 대상 문서를 돌려준다."""
     refusal = registration_refusal(config, kind, declared_source)
     if refusal:
         raise RegistrationError(409, refusal)
+    named = kind_mismatch(config, kind, file_name) if file_name else None
+    if named:
+        raise RegistrationError(400, f"파일 이름으로 보면 {KIND_LABELS[named]} 문서라 {KIND_LABELS.get(kind, kind)}(으)로 "
+                                     f"등록할 수 없습니다: {file_name}")
     if replace_id is None:
         return None
     target = storage.get_document(replace_id)

@@ -4327,13 +4327,18 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 **순서**
 
 1. 제품 설정을 찾는다. 출처 규칙(REQ-KNOW-018)으로 이 등록을 받을 수 있는지 먼저 본다. 받을 수 없으면 파일을 저장하지 않는다.
-2. 파일을 사양서 폴더(`storage.specification_dir`)에 `<무작위 32자>.<확장자>` 이름으로 저장한다. 사람이 준 파일 이름은 경로에 쓰지 않는다.
-3. 파일을 Chunk 로 나누고(`parse_document`) 전문 텍스트를 뽑는다. Chunk 가 하나도 없으면 읽지 못한 것으로 본다.
-4. 교체할 이전 등록을 고른다. `replace_id` 로 고른 등록과, 같은 제품·같은 종류에서 논리 문서(REQ-KNOW-009)가 같은 등록이 대상이다.
-5. 문서 표에 등록한다. 표시 이름은 올린 파일 이름이다. 부가 정보에 출처, 논리 문서 이름, 리비전 표기, 언어, 문서번호, sha256, Chunk 수(`chunk_count`)를 적는다.
-6. Chunk 목록과 전문 텍스트를 파싱 저장본으로 남긴다(REQ-KNOW-007).
-7. 5·6단계가 끝난 뒤에 4단계에서 고른 이전 등록과 그 파싱 저장본을 지운다. 이전 등록의 원본 파일이 사람이 올린 파일 폴더(`storage.specification_dir`, `storage.testcase_dir`) 안에 있고 다른 등록이 같은 파일을 쓰지 않으면 원본 파일도 지운다.
-8. 화면에서 왔으면 제품 상세 화면으로 돌아간다(303). 결과 문구에 "등록 1건, 교체 N건"이 보인다.
+2. 올린 파일 이름을 파일명 규약(REQ-KNOW-008, 제품 설정의 `knowledge_source.classify` 포함)으로 나눠 본다. 문서 표에 등록하는 다른 종류(`specification`·`manual`·`testcase`)로 나오면 거절하고 파일을 저장하지 않는다. 어느 규약에도 맞지 않는 이름은 받는다.
+
+   > **예시** `(매뉴얼) VXvue Web System Design & API Protocol Manual_EN 1.pdf` 를 사양서로 올리면 거절된다. 이 파일은 이름으로 보면 매뉴얼이다.
+
+   이유: 매뉴얼이 사양서로 등록되면 분석이 매뉴얼을 사양 근거로 읽는다. 나중에 같은 매뉴얼이 매뉴얼로 수집돼도 옛 등록이 남아 같은 문서가 두 번 쓰인다.
+3. 파일을 사양서 폴더(`storage.specification_dir`)에 `<무작위 32자>.<확장자>` 이름으로 저장한다. 사람이 준 파일 이름은 경로에 쓰지 않는다.
+4. 파일을 Chunk 로 나누고(`parse_document`) 전문 텍스트를 뽑는다. Chunk 가 하나도 없으면 읽지 못한 것으로 본다.
+5. 교체할 이전 등록을 고른다. `replace_id` 로 고른 등록과, 같은 제품·같은 종류에서 논리 문서(REQ-KNOW-009)가 같은 등록이 대상이다.
+6. 문서 표에 등록한다. 표시 이름은 올린 파일 이름이다. 부가 정보에 출처, 논리 문서 이름, 리비전 표기, 언어, 문서번호, sha256, Chunk 수(`chunk_count`)를 적는다.
+7. Chunk 목록과 전문 텍스트를 파싱 저장본으로 남긴다(REQ-KNOW-007).
+8. 6·7단계가 끝난 뒤에 5단계에서 고른 이전 등록과 그 파싱 저장본을 지운다. 이전 등록의 원본 파일이 사람이 올린 파일 폴더(`storage.specification_dir`, `storage.testcase_dir`) 안에 있고 다른 등록이 같은 파일을 쓰지 않으면 원본 파일도 지운다.
+9. 화면에서 왔으면 제품 상세 화면으로 돌아간다(303). 결과 문구에 "등록 1건, 교체 N건"이 보인다.
 
 **안 될 때**
 
@@ -4341,6 +4346,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|---|
 | 제품 설정이 없음 | 저장하지 않는다 | "'<제품>' 제품 설정(config/products/)이 없습니다."(400) |
 | 출처가 자동이거나 지식 폴더 전용 | 저장하지 않는다 | "<제품> <종류>는 <출처 이름>으로 관리하는 자료라 여기서 등록할 수 없습니다."(409) |
+| 파일 이름으로 보면 다른 종류의 문서 | 저장하지 않는다 | "파일 이름으로 보면 <그 종류 이름> 문서라 <요청한 종류 이름>(으)로 등록할 수 없습니다: <파일 이름>"(400) |
 | 확장자가 `.pdf`·`.docx` 가 아님 | 저장하지 않는다 | "지원하지 않는 파일 형식입니다: <확장자>"(400) |
 | 파일을 읽지 못함(Chunk 0개 포함) | 저장한 새 파일을 지운다. 기존 등록은 그대로 둔다 | "파일을 읽지 못해 등록하지 않았습니다. 기존 문서는 그대로 분석에 쓰입니다: <이유>"(422) |
 | 같은 논리 문서의 더 최신 판이 이미 등록됨(교체 대상을 고르지 않았을 때) | 저장한 새 파일을 지운다 | "같은 문서의 더 최신 판이 이미 등록돼 있습니다: <이름>. 이 파일로 바꾸려면 그 문서의 교체를 쓰세요."(409) |
@@ -4382,10 +4388,10 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **순서**
 
-1. 출처 규칙(REQ-KNOW-018)으로 이 등록을 받을 수 있는지 먼저 본다.
+1. 출처 규칙(REQ-KNOW-018)과 파일 이름의 종류(REQ-KNOW-003 의 2단계)로 이 등록을 받을 수 있는지 먼저 본다.
 2. 파일을 TC 폴더(`storage.testcase_dir`)에 무작위 이름으로 저장한다.
 3. TC 를 자동으로 읽는다(`parse_testcases`). 모든 시트를 보고 TC ID 열이 있는 시트만 쓴다.
-4. 성공하면 REQ-KNOW-003 의 4~7단계처럼 등록하고, 등록이 끝난 뒤 이전 등록을 뺀다.
+4. 성공하면 REQ-KNOW-003 의 5~8단계처럼 등록하고, 등록이 끝난 뒤 이전 등록을 뺀다.
 5. 실패하면 파일을 지우지 않고 열 지정 화면으로 보낸다(303). 교체 대상 번호도 함께 넘긴다. 이 단계에서는 기존 등록을 건드리지 않는다.
 6. 열 지정 화면은 시트 목록과 앞부분 행을 보여 준다. 제목 행을 넣으면 그 행의 칸 이름으로 항목을 추천한다.
 7. 확정하면 고른 열로 다시 읽는다. 성공하면 4단계처럼 등록·교체하고, 부가 정보에 열 선택(`column_mapping`)·시트(`sheet_name`)·제목 행(`header_row`)을 저장한다. 제품 상세 화면으로 돌아간다.
@@ -4425,12 +4431,17 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|
 | 없는 문서 번호 | "문서를 찾을 수 없습니다."(404) |
 | 내려받기에서 원본 파일이 없음 | "원본 파일을 찾을 수 없습니다."(404) |
-| 그 제품·종류의 출처가 `manual` 이 아니고, 보낸 `source` 가 설정의 출처와 다름 | "자동으로 관리하는 자료는 여기서 지울 수 없습니다. <출처 이름>에서 관리하세요."(409) |
+| 그 제품·종류의 출처가 `manual` 이 아니고, 보낸 `source` 가 설정의 출처와 다르고, 그 등록이 사람이 올린 등록도 아님 | "자동으로 관리하는 자료는 여기서 지울 수 없습니다. <출처 이름>에서 관리하세요."(409) |
 
 **지킬 것**
 
 - 지우기는 되돌릴 수 없다. 화면은 지우기 전에 "<이름> 파일을 삭제할까요? 되돌릴 수 없습니다."로 확인을 받아야 한다.
-- 화면은 출처가 `manual` 인 자료에만 `삭제` 를 보인다. 교체가 기본 동작이고 삭제는 잘못 올린 문서를 뺄 때만 쓴다.
+- 화면은 출처가 `manual` 인 자료와, 다른 출처 구역에 있는 사람이 올린 등록에만 `삭제` 를 보인다. 교체가 기본 동작이고 삭제는 잘못 올린 문서를 뺄 때만 쓴다.
+- 사람이 올린 등록은 등록 부가 정보의 출처가 지식 폴더(`product_knowledge`)·`alm_crawler`·`external_sync` 가 아닌 등록이다. 문서 표의 출처 칸에 `사람이 등록` 으로 보인다. 자동 출처 구역에 있어도 지울 수 있다.
+
+  > **예시** VXvue 사양서는 `alm_crawler` 로 관리한다. 출처를 바꾸기 전에 사람이 올린 `(매뉴얼) … API Protocol Manual_EN 1.pdf` 가 사양서 구역에 남아 있으면 그 줄에만 `삭제` 가 보인다. ALM 이 올린 사양서 줄에는 보이지 않는다.
+
+  이유: 자동 수집은 사람이 올린 등록을 교체하거나 지우지 않는다. 이 길이 없으면 잘못 올린 문서를 화면에서 뺄 방법이 없다.
 - 제품 설정이 없는 옛 등록은 출처를 판단할 수 없으므로 지우기를 막지 않는다.
 - 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보낸다.
 
@@ -4834,13 +4845,15 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 5 | 등록이 모두 쓸 수 없음(파일 없음, 읽지 못함, Chunk 0개) | 파싱 실패 | 꼭 있어야 하면 오류, 아니면 주의 |
 | 6 | 등록 일부를 쓸 수 없음, 또는 수집 기록에 "새 판을 읽지 못해 이전 판 유지"가 있음 | 파싱 실패 | 주의 |
 | 7 | 자동 출처(`alm_crawler`, `external_sync`)의 마지막 기록이 `PARTIAL` | 수집 실패(일부) | 주의 |
-| 8 | 같은 논리 문서가 두 개 이상 등록됨 | 중복 확인 요청 | 주의 |
-| 9 | 출처 값을 알 수 없음 | 출처 확인 요청 | 주의 |
-| 10 | 가장 최근 성공 수집이 `sync.stale_after_days`(기본 14일)보다 오래됨. 자동 출처인데 성공 기록이 하나도 없는 경우도 같다 | 업데이트 필요 | 주의 |
-| 11 | 위에 해당하지 않음 | 정상 | 정상 |
+| 8 | 등록 이름을 파일명 규약(REQ-KNOW-008)으로 나누면 이 구역과 다른 종류(`specification`·`manual`·`testcase`)가 나옴 | 종류 확인 요청 | 주의 |
+| 9 | 같은 논리 문서가 두 개 이상 등록됨 | 중복 확인 요청 | 주의 |
+| 10 | 출처 값을 알 수 없음 | 출처 확인 요청 | 주의 |
+| 11 | 가장 최근 성공 수집이 `sync.stale_after_days`(기본 14일)보다 오래됨. 자동 출처인데 성공 기록이 하나도 없는 경우도 같다 | 업데이트 필요 | 주의 |
+| 12 | 위에 해당하지 않음 | 정상 | 정상 |
 
 - "관련 동기화"는 REQ-KNOW-018 표의 마지막 열이다. 종류가 여럿이면 가장 최근 기록 하나로 판단한다. 그래서 오래전 ALM 동기화 실패 뒤에 지식 폴더 수집이 성공했으면 실패로 보지 않는다.
-- 사람이 등록하는 자료(`manual`)는 지식 폴더 기록이 없으면 10번을 보지 않는다. 언제 바꿔야 하는지 시스템이 알 수 없기 때문이다.
+- 사람이 등록하는 자료(`manual`)는 지식 폴더 기록이 없으면 11번을 보지 않는다. 언제 바꿔야 하는지 시스템이 알 수 없기 때문이다.
+- 8번의 이유 문구는 "파일 이름으로 보면 다른 종류인 문서가 있습니다: <이름>(<그 종류 이름>). 맞는 구역에 있는지 확인하고, 잘못 올린 등록이면 지우세요." 다. 그 문서 줄의 상태 칸에는 `종류 확인 요청` 이 보인다. 어느 규약에도 맞지 않는 이름은 보지 않는다.
 - 제품 단계는 자료 줄 가운데 가장 나쁜 단계다. `정상` < `주의` < `오류` 순이다.
 - 마지막 갱신 시각은 등록 시각(지식 폴더 자료는 수집 시각)과 성공 동기화 시각 가운데 가장 늦은 값이다.
 
@@ -4862,12 +4875,13 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 1. 화면 머리에 제품 이름, 상태, 마지막 갱신 시각이 있다.
 2. 자료 종류마다 한 구역이 있다. 구역마다 출처 이름, 관리 방식, 상태 문구, 판정 이유, 마지막 갱신이 보인다.
-3. 구역 안의 문서 표는 문서명, 종류, 출처(`ALM 자동`, `지식 폴더`, `사람이 등록`), 상태(`정상`, `파일 없음`, `읽지 못함`), 마지막 갱신을 보인다. 리비전은 표에 따로 열로 두지 않는다.
+3. 구역 안의 문서 표는 문서명, 종류, 출처(`ALM 자동`, `지식 폴더`, `사람이 등록`), 상태(`정상`, `파일 없음`, `읽지 못함`, `종류 확인 요청`), 마지막 갱신을 보인다. 리비전은 표에 따로 열로 두지 않는다.
 4. 구역 아래 동작은 출처로 정한다.
 
 | 출처 | 보이는 동작 |
 |---|---|
 | `manual`(사양서·매뉴얼·TC) | 문서마다 `교체`·`삭제`·`다운로드`, 구역 아래 `새 문서 등록` |
+| 그 밖의 출처에 있는 사람이 올린 등록(REQ-KNOW-005) | 그 문서 줄에만 `삭제`. 교체·새 문서 등록은 없다 |
 | `alm_crawler` | "ALM 에서 자동으로 수집합니다. 여기서 올릴 수 없습니다." 와 마지막 동기화 시각·결과. 업로드 버튼 없음 |
 | `external_sync` | "다른 자동화가 보내는 자료입니다." 와 마지막 동기화 결과 |
 | `knowledge_folder` | "담당자 PC 의 지식 폴더에서 수집합니다." 와 마지막 수집 시각. 이 서버가 폴더에 접근할 수 있으면 `지금 수집` 버튼(REQ-KNOW-011) |
@@ -8640,9 +8654,10 @@ REQ-KNOW-002, 003, 005, 018, 019, 020 을 `tests/test_knowledge_profiles.py` 로
 1. 출처: ALM 사양서 업로드는 409 이고 파일이 저장되지 않는다. `source=alm_crawler` 를 밝힌 동기화 요청은 등록된다. 지식 폴더 종류와 규칙 자산은 화면 등록이 없다.
 2. 교체: 같은 논리 문서의 새 파일만 남고 다른 문서는 남는다. 서로 다른 매뉴얼은 각자 최신 판이 남는다. 새 파일을 읽지 못하면 422 이고 기존 등록·파일이 그대로다. 더 최신 판이 있으면 409, 다른 제품의 `replace_id` 는 400, 파싱 저장본 쓰기 실패는 500 으로 되돌린다.
 3. 상태 판정: 꼭 필요한 자료가 다 있으면 `정상`, 없으면 `자료 없음`·`주의`, 등록 없이 마지막 수집이 실패면 `수집 실패`·`오류`. 뒤에 성공한 지식 폴더 수집이 있으면 옛 ALM 실패는 보지 않는다. 읽지 못함·일부 읽지 못함·중복·오래된 수집·알 수 없는 출처를 각각 판정한다.
-4. 격리: 한 제품의 등록이 다른 제품 판정과 분석 입력(`load_for_product`)에 섞이지 않는다. 등록한 문서를 분석 입력이 읽는다.
-5. 화면: 현황판이 설정마다 카드를 그리고(가짜 제품 포함), 설정 없는 제품은 이름·문서 수만 보인다. 기술 값(`configured`, `source_dir` 등)이 보이지 않는다. 상세 화면 동작이 출처를 따른다. 수집 제외 표가 수집 기록에서 나온다.
-6. 공통 Knowledge 코드에 제품 이름으로 비교·대입하는 줄이 없다.
+4. 종류 어긋남: 파일 이름이 다른 종류인 문서(예: `(매뉴얼) …` 를 사양서로)는 400 으로 거절되고 파일이 저장되지 않는다. 규약에 맞지 않는 이름은 받는다. 이미 잘못 들어간 등록은 그 구역을 `종류 확인 요청`·`주의` 로 판정한다. 자동 출처 구역의 사람이 올린 등록은 화면에 `삭제` 가 보이고 지워진다. 같은 구역의 자동 등록은 지울 수 없다(409).
+5. 격리: 한 제품의 등록이 다른 제품 판정과 분석 입력(`load_for_product`)에 섞이지 않는다. 등록한 문서를 분석 입력이 읽는다.
+6. 화면: 현황판이 설정마다 카드를 그리고(가짜 제품 포함), 설정 없는 제품은 이름·문서 수만 보인다. 기술 값(`configured`, `source_dir` 등)이 보이지 않는다. 상세 화면 동작이 출처를 따른다. 수집 제외 표가 수집 기록에서 나온다.
+7. 공통 Knowledge 코드에 제품 이름으로 비교·대입하는 줄이 없다.
 
 ```text
 python -m pytest tests/test_knowledge_profiles.py -q
@@ -9242,7 +9257,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-002 | `app/modules/knowledge/router.py`, `app/main.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_manual_review_router.py`, `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-003 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/core/uploads.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_knowledge_screens.py` | verified |
 | REQ-KNOW-004 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/testcase_mapping.html` | TEST-KNOW-002: `tests/test_knowledge_testcase_mapping.py` | verified |
-| REQ-KNOW-005 | `app/modules/knowledge/router.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py` | verified |
+| REQ-KNOW-005 | `app/modules/knowledge/router.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_status.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-003, TEST-KNOW-007: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py`, `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-006 | `app/core/knowledge_documents.py`, `app/core/storage.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py` | implemented |
 | REQ-KNOW-007 | `app/core/document_cache.py`, `app/core/product_knowledge.py` | TEST-KNOW-004: `tests/test_document_cache.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-008 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
@@ -9256,7 +9271,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-016 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/main.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
 | REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py` | verified |
-| REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/knowledge_registry.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |

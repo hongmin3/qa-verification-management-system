@@ -200,6 +200,73 @@ def test_cache_write_failure_rolls_back_new_registration(env, monkeypatch):
     assert env.storage.active_documents("specification", "Bellalun Viewer") == [] and not saved.exists()
 
 
+# -- 종류 어긋남 (REQ-KNOW-003, REQ-KNOW-005, REQ-KNOW-019, REQ-KNOW-020) -------------------
+# 운영 서버에서 실제로 나왔다: `(매뉴얼) … API Protocol Manual_EN 1.pdf` 가 사양서로 등록돼 남았고,
+# VXvue 사양서 구역은 ALM 자동이라 화면에서 지울 방법이 없었다.
+
+
+def _misfiled_manual(env, product: str = "VXvue") -> dict:
+    path = env.uploads["storage.specification_dir"] / "8f2c.pdf"
+    path.write_bytes(b"%PDF-")
+    env.storage.ensure_product(product)
+    document_id = env.storage.add_document("specification", product, "1.0", "", "(매뉴얼) VXvue API Protocol Manual_EN 1.pdf", path, {})
+    return env.storage.get_document(document_id)
+
+
+def test_file_named_as_another_kind_is_refused_before_saving(env):
+    response = _upload(env, "bellalun-viewer", "specification", "(매뉴얼) Bellalun Viewer Operation Manual.V1.0_KO.docx", _docx("매뉴얼"))
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert "Manual / Protocol" in detail and "(매뉴얼) Bellalun Viewer Operation Manual.V1.0_KO.docx" in detail
+    assert not any(env.uploads["storage.specification_dir"].iterdir())
+    assert env.storage.active_documents("specification", "Bellalun Viewer") == []
+    # TC 구역에 사양서를 올려도 같다.
+    assert _upload(env, "bellalun-viewer", "testcase", "(사양서) Bellalun Viewer 사양서1(260930).xlsx", b"PK").status_code == 400
+    assert not any(env.uploads["storage.testcase_dir"].iterdir())
+
+
+def test_name_matching_no_convention_is_still_accepted(env):
+    assert _upload(env, "bellalun-viewer", "specification", "Bellalun 요구사항 초안.docx", _docx("본문")).status_code == 303
+
+
+def test_check_request_refuses_a_misnamed_file(env):
+    config = product_config.load_product_config("bellalun-viewer")
+    with pytest.raises(RegistrationError) as caught:
+        check_request(env.storage, config, "specification", file_name="(TC) Bellalun.xlsx")
+    assert caught.value.status == 400
+    # 브라우저에 따라 파일 이름 앞에 Windows 경로가 붙어 온다. 경로를 떼고 본다.
+    with pytest.raises(RegistrationError):
+        check_request(env.storage, config, "specification", file_name="C:\\upload\\(TC) Bellalun.xlsx")
+
+
+def test_misfiled_registration_marks_the_section_for_review(env):
+    _misfiled_manual(env)
+    spec = _asset(_health(env, "vxvue"), "specification")
+    assert spec.status == "종류 확인 요청" and spec.level == knowledge_status.ATTENTION
+    assert "(매뉴얼) VXvue API Protocol Manual_EN 1.pdf" in spec.reason
+    [row] = spec.documents
+    assert row.status == "종류 확인 요청" and row.can_delete
+
+
+def test_person_registered_row_in_an_automatic_section_can_be_deleted(env):
+    misfiled = _misfiled_manual(env)
+    alm = env.client.post("/knowledge/specification", data={"product": "VXvue", "source": "alm_crawler"},
+                          files={"file": ("(사양서) VXvue 사양서1(260930).docx", _docx("SRS 본문"))}, follow_redirects=False)
+    assert alm.status_code == 303
+    alm_doc = next(d for d in env.storage.active_documents("specification", "VXvue") if d["id"] != misfiled["id"])
+
+    text = env.client.get("/knowledge/products/vxvue").text
+    spec = text[text.index('id="kind-specification"'):text.index('id="kind-testcase"')]
+    assert f'action="/knowledge/delete/{misfiled["id"]}"' in spec
+    assert f'action="/knowledge/delete/{alm_doc["id"]}"' not in spec
+    assert "새 문서 등록" not in spec and "교체" not in spec
+
+    assert env.client.post(f"/knowledge/delete/{alm_doc['id']}", follow_redirects=False).status_code == 409
+    assert env.client.post(f"/knowledge/delete/{misfiled['id']}", follow_redirects=False).status_code == 303
+    assert env.storage.get_document(misfiled["id"]) is None
+    assert env.storage.get_document(alm_doc["id"]) is not None
+
+
 # -- 상태 판정 (REQ-KNOW-019) ----------------------------------------------------------
 
 

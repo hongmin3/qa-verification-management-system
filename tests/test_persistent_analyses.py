@@ -208,7 +208,8 @@ def test_delete_automatic_source_document_is_refused_without_its_source(tmp_path
     storage = Storage(tmp_path / "app.db")
     file_path = tmp_path / "spec.pdf"
     file_path.write_bytes(b"%PDF-")
-    doc_id = storage.add_document("specification", "VXvue", "1.0", "", "spec.pdf", file_path)
+    # ALM 동기화가 등록하면 부가 정보에 출처가 남는다. 출처가 없으면 사람이 올린 등록으로 보고 지울 수 있다.
+    doc_id = storage.add_document("specification", "VXvue", "1.0", "", "spec.pdf", file_path, {"source": "alm_crawler"})
     monkeypatch.setattr(knowledge_routes, "storage", storage)
     monkeypatch.setattr(knowledge_routes.document_cache, "delete", lambda document_id: None)
     client = TestClient(app)
