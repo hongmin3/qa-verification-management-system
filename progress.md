@@ -12,6 +12,7 @@
 
 ## 2026-10-13 놓친 오늘 예약 만회 (REQ-QAINTEL-035)
 
+- 서버 첫 실행(`20261012-221801-vxvue`, 한국 시간 11:18): PARTIAL. 서버가 `alm.vieworks.com` 이름을 찾지 못해(DNS) SRS·이슈 수집이 ConnectError 로 실패했다. IP `10.1.1.195:443` 은 연결된다. 메일 failed. 후속 작업과 다른 세션용 프롬프트는 `docs/local/CONTINUE_2026-10-13.md`.
 - 담당자 PC 예약 끄기(사용자 결정): `config.local.yaml`(Git 제외)에 `daily_qa.schedule.enabled: false`. 이 PC 테스트 서버를 다시 띄웠다. 대시보드는 "예약 꺼짐" 을 보인다.
 - 서버 Polarion 정보: 사용자가 PowerShell 에서 Git Bash 용 명령을 실행해 명령 글자 두 줄이 서버 `secrets.txt` 에 들어갔다(값은 들어가지 않음). 백업 뒤 두 줄을 지웠고 PowerShell 용 명령을 가짜 값으로 확인해 다시 안내했다. 넣은 뒤 `/config/reload` 가 필요하다(웹 프로세스는 시작 때 읽은 설정을 쓴다).
 - 운영 서버 배포(10:29, 사용자 요청): 서버 백업(`backups/qa-backup-20261013T004831Z.zip`, `~/qa-app-backup-20261012-204831.tgz`, 설정·비밀 사본) → `scripts/deploy.ps1 -Restart`(테스트 1202 passed) → 옛 Regression 파일 39개·빈 폴더 5개 삭제 → 이 PC 의 SRS·이슈 스냅샷 17개 복사(해시 일치).
