@@ -1,6 +1,7 @@
 <style>
 .qa-progress{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;border:1px solid #b9cddd;border-radius:8px;margin:12px 0;overflow-wrap:anywhere}
-.qa-progress[hidden]{display:none}.qa-spinner{width:18px;height:18px;flex:0 0 18px;border:3px solid #d2e0ee;border-top-color:#2563eb;border-radius:50%;animation:qa-spin 1s linear infinite}
+.qa-progress[hidden],.qa-progress [hidden]{display:none}.qa-spinner{width:18px;height:18px;flex:0 0 18px;border:3px solid #d2e0ee;border-top-color:#2563eb;border-radius:50%;animation:qa-spin 1s linear infinite}
+.qa-cancel-message{color:#991b1b;flex-basis:100%}
 .qa-spinner[hidden]{display:none}@keyframes qa-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.qa-spinner{animation:none}}
 </style>
@@ -8,5 +9,7 @@
   <span class="qa-spinner" id="qa-spinner" aria-hidden="true"></span>
   <b id="qa-progress-step">준비</b><span id="qa-progress-time"></span>
   <a id="qa-progress-link" hidden>실행 상세</a>
+  <button type="button" id="qa-cancel" hidden>분석 중단</button>
+  <span id="qa-cancel-message" class="qa-cancel-message" role="alert" hidden></span>
 </div>
-<script src="/static/qa-run-progress.js?v=20261013"></script>
+<script src="/static/qa-run-progress.js?v=20261013-cancel"></script>

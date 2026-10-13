@@ -6,7 +6,7 @@
 
 ## 1. 프로젝트 목적
 
-QA 담당자가 사양·이슈의 바뀐 부분과 확인할 검증 범위를 앱에서 찾도록 돕는다. 평일 일일 점검, 단일 이슈 분석, 매뉴얼 개정 검증을 제공한다. TC 점검과 검증 TC 초안은 사람이 결과 화면에서 요청할 때 수행한다.
+QA 담당자가 사양·이슈의 바뀐 부분과 확인할 검증 범위를 앱에서 찾도록 돕는다. 일일·주간 QA 점검과 매뉴얼 개정 검증을 제공한다. TC 점검과 검증 TC 초안은 사람이 결과 화면에서 요청할 때 수행한다.
 
 Regression 영향 분석 화면·API·추천 평가는 2026-10-01 제거됐다(`0fdf2f2`). 기존 DB·분석·평가 기록은 남아 있다. 기본 AI 제공자는 Claude CLI이며 Gemini도 설정으로 선택할 수 있다.
 
@@ -38,12 +38,13 @@ WorkingDirectory도 새 경로로 갱신되어 있음을 실제로 확인했다(
 ## 4. 현재 구현 상태 (2026-10-13, 상세 변경·실행 근거는 `progress.md`)
 
 - 루트(`/`)는 QA 자동화 허브이며 QA Agent(`/qa-agent`)와 매뉴얼 개정
-  검증(`/manual-review`)으로 진입한다. 단일 이슈 분석은 `/qa-agent/issue-analysis`다. 옛 `/impact-analyzer` 주소는 QA Agent로 308 이동한다. 공용 HTML 골격·스타일은 `app/web/`이 소유하고,
+  검증(`/manual-review`)으로 진입한다. 단일 이슈 분석은 사용을 종료했다. 옛 `/impact-analyzer` 주소는 QA Agent로 308 이동한다. 공용 HTML 골격·스타일은 `app/web/`이 소유하고,
   기능별 브랜드·내비게이션·사용법·화면·로직은 `app/modules/*`가 소유한다.
   `app/modules/knowledge/`가 사양서·TC 등록/삭제/동기화를 전담하며 두 검증 기능이 같은
   문서를 사용한다. 핵심 앱 내부의 공통 DB와 하위 서비스 분리 원칙은 `docs/SHARED_PLATFORM_ARCHITECTURE.md`.
 - **QA Intelligence Agent**: 평일 07:30(한국 시간)에 운영 서버가 Polarion SRS·이슈를 수집하고 스냅샷과 비교한다. 바뀐 자료만 Claude로 분석해 결론·근거·QA 할 일을 남긴다. 일일 자동 분석은 TC·매뉴얼을 보내지 않는다. TC 점검·수정 완료 이슈의 검증 TC 초안은 상세 화면의 요청 버튼으로 수행한다.
-- **단일 이슈 분석**: 이슈 한 건을 등록 지식과 대조해 사양·TC·Regression 검증 범위를 정한다. Exact와 BM25로 근거 후보를 찾고 코드가 검증 관문과 모델 응답의 번호·근거를 확인한다. 핵심 앱의 QA 승인 기록은 별도 이력으로 보존한다.
+- **단일 이슈 분석 종료**: 전용 화면·API·엔진을 제거하며 과거 분석·입력·결과·승인·사용량 기록은 DB에 보존한다. 공용 자료 읽기·QA 규칙·Regression 축은 현재 기능에서 사용한다(REQ-QAAGENT-016).
+- **자동 점검 정책**: 제품별 [자동 점검 사용]·[검증 기간] 저장으로 일일·주간·중지를 선택한다(REQ-QAINTEL-038). 담당자 PC의 `daily_qa.schedule.enabled: false`는 계속 우선 적용한다. 현재 실행 강제 중단은 별도 [분석 중단]을 사용한다.
 - **폐기 기능의 역사**: Regression 영향 분석은 변경 문서·등록 사양서·TC로 추천 목록과 초안을 만들고 QA 평가값을 적립하던 기능이다. 현재 새 요청을 접수하지 않으며 과거 기록은 보존한다.
 - **매뉴얼 개정 검증**: DOCX Track Changes/PDF Baseline-Round diff 추출 → NON_FUNCTIONAL
   필터 → 2단계(quick/detail) AI 판정(PASS면 상세 호출 생략) → SRS 근거는 공용 Knowledge가

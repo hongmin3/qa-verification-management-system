@@ -26,8 +26,9 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.claude_cli import login_status as claude_login_status
-from app.modules.daily_qa import claude_limits, issue_audit, packages, report, rules, snapshots
+from app.modules.daily_qa import automation_policy, claude_limits, issue_audit, packages, report, result_cache, rules, snapshots
 from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
+from app.modules.daily_qa.cancellation import RunCancelled, bind_lock
 from app.modules.daily_qa.change_events import (
     ANALYSIS_ORDER,
     ENTITY_SRS,
@@ -120,10 +121,18 @@ class _Lock:
             raise RunLocked(f"다른 QA Agent 점검이 실행 중입니다 ({self.path}).") from exc
         os.write(descriptor, str(os.getpid()).encode())
         os.close(descriptor)
+        self.owner = self.path.read_text(encoding="utf-8")
         return self
 
+    def bind(self, run_id: str, product: str) -> None:
+        if self.path.read_text(encoding="utf-8") != self.owner:
+            raise RunLocked("실행 잠금의 소유자가 바뀌었습니다.")
+        bind_lock(self.path, run_id, product)
+        self.owner = self.path.read_text(encoding="utf-8")
+
     def __exit__(self, *_):
-        self.path.unlink(missing_ok=True)
+        if self.path.exists() and self.path.read_text(encoding="utf-8") == self.owner:
+            self.path.unlink(missing_ok=True)
 
 
 def lock_is_stale(path: Path) -> bool:
@@ -200,49 +209,70 @@ def run_daily(
     """
     today = today or datetime.now(claude_limits.KST)
     store = store or DailyQaStore(cfg.db_path)
-    with _Lock(cfg.lock_path):
+    with _Lock(cfg.lock_path) as lock:
         run_id = f"{today.strftime('%Y%m%d-%H%M%S')}-{cfg.slug}"
         store.create_run(run_id, dry_run, cfg.slug)
+        lock.bind(run_id, cfg.slug)
         run = None
         try:
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
                        rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit,
                        on_demand=on_demand, finding_id=finding_id)
             outcome = run.execute()
+            run._check_cancel()
+        except RunCancelled:
+            outcome = run._cancelled_outcome()
         except Exception as exc:  # 예상 못 한 오류도 실행 기록과 메일에 남긴다
             logger.exception("daily_qa_crashed run=%s", run_id)
             summary = report.summarize([], 0)
             if run is not None:
                 # 멈추기 전에 쓴 Claude 사용량도 비용 대시보드에 남긴다 (REQ-QAINTEL-026).
                 summary.update({"product": cfg.slug, "trigger": trigger, "claude_calls": run.claude_calls,
-                                "token_usage": run.token_usage})
+                                "token_usage": run.token_usage, "result_cache_hits": run.result_cache["hits"],
+                                "result_cache": run.result_cache})
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
-        if on_demand:
+        if on_demand or outcome["status"] == "CANCELLED":
             # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
             store.set_email_status(run_id, "skipped")
-            store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
+            outcome["status"] = store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
             progress = (store.get_run(run_id) or {}).get("progress") or {}
-            store.update_progress(run_id, {**progress, "phase": "finished", "label": "완료", "updated_at": now_iso()})
+            cancelled = outcome["status"] == "CANCELLED"
+            store.update_progress(run_id, {**progress, "phase": "cancelled" if cancelled else "finished",
+                                          "label": "사용자 중단" if cancelled else "완료", "updated_at": now_iso()})
             outcome.update({"run_id": run_id, "email": {"status": "skipped"}})
             return outcome
         base = cfg.review_base_url
         review_url = f"{base}/qa-agent/runs/{run_id}" if base else f"/qa-agent/runs/{run_id}"
         sender = send_email or _default_sender
         progress = (store.get_run(run_id) or {}).get("progress") or {}
-        store.update_progress(run_id, {**progress, "phase": "email", "label": "메일", "updated_at": now_iso()}, outcome["stages"])
+        if not store.begin_email(run_id, {**progress, "phase": "email", "label": "메일", "updated_at": now_iso()}, outcome["stages"]):
+            outcome = run._cancelled_outcome()
+            store.set_email_status(run_id, "skipped")
+            store.finish_run(run_id, "CANCELLED", outcome["stages"], outcome["summary"])
+            store.update_progress(run_id, {**progress, "phase": "cancelled", "label": "사용자 중단", "updated_at": now_iso()})
+            outcome.update({"run_id": run_id, "email": {"status": "skipped"}})
+            return outcome
         try:
+            from app.modules.daily_qa.scheduled_jobs import schedule_settings
+            outcome["summary"]["automation_policy"] = automation_policy.get_policy(store, cfg.slug)
+            outcome["summary"]["automatic_resume_enabled"] = bool(cfg.enabled and schedule_settings()["enabled"])
+            outcome["summary"]["pending_analysis_events"] = len(store.list_events(product=cfg.slug, statuses=("pending", "failed")))
             subject, text, body = report.build_email(
                 run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
                 product=cfg.product,
             )
-            email = sender(subject, text, body, cfg.email_to)
+            # 진행 중인 분석은 끝내고, 발송 직전에 현재 제품 설정을 다시 읽는다 (REQ-QAINTEL-038).
+            if automation_policy.get_policy(store, cfg.slug)["mode"] == "off":
+                email = {"status": "skipped", "reason": "자동 점검이 중지되어 메일을 보내지 않았습니다."}
+            else:
+                email = sender(subject, text, body, cfg.email_to)
         except Exception as exc:
             # 사용자 제공 발송기도 실행 잠금과 종료 기록을 남긴다.
             email = {"status": "failed", "error": type(exc).__name__}
         store.set_email_status(run_id, str(email.get("status", "")))
         outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok"
-                                            if email.get("status") == "sent" else "skipped", str(email.get("error") or ""))
+                                            if email.get("status") == "sent" else "skipped", str(email.get("error") or email.get("reason") or ""))
         if email.get("status") == "failed" and outcome["status"] != "FAILED":
             outcome["status"] = "PARTIAL"
         store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
@@ -367,6 +397,7 @@ class _Run:
         self.all_findings: list[dict] = []
         self.question_count = 0
         self.claude_calls = 0
+        self.result_cache = {"hits": 0, "reused_findings": 0, "sources": []}
         #: Claude CLI 가 돌려준 사용량 합계. 비용 대시보드·하루 토큰 한도가 읽는다 (REQ-QAINTEL-026).
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "cache_creation_input_tokens": 0,
                                   "cache_read_input_tokens": 0, "total_tokens": 0, "cost_usd": 0.0}
@@ -410,13 +441,20 @@ class _Run:
         self.on_demand_events: list[dict] | None = None
         self.only_kind: str | None = None
         self.source_finding: dict | None = None
+        self._partial_outcomes: list[_TaskOutcome] = []
+        self._active_event_ids: list[int] = []
         if self.period:
             self.audit["period"] = {"since": since.isoformat() if since else "", "until": (until or local_today).isoformat()}
 
     # -- 흐름 --------------------------------------------------------------
     def _progress(self, phase: str, label: str) -> None:
+        self._check_cancel()
         self.store.update_progress(self.run_id, {"phase": phase, "label": label,
                                    "done": self.ai_done, "total": self.ai_total, "updated_at": now_iso()}, self.stages)
+
+    def _check_cancel(self) -> None:
+        if (self.store.get_run(self.run_id) or {}).get("cancel_requested_at"):
+            raise RunCancelled("사용자 중단")
 
     def execute(self) -> dict:
         if self.on_demand:
@@ -481,11 +519,13 @@ class _Run:
             self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)
         if self.runner is None:
             self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                                                  model=cfg.claude_model, effort=cfg.claude_effort)
+                                                                                  model=cfg.claude_model, effort=cfg.claude_effort,
+                                                                                  cancel_check=self._check_cancel)
             if not self.dry_run:
                 # 이슈 정합성 점검은 요약 카드 판정이라 가벼운 모델로 부른다 (REQ-QAINTEL-030 순서 6).
                 self.audit_runner = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                 model=cfg.intelligence.audit_model, effort=cfg.claude_effort)
+                                                 model=cfg.intelligence.audit_model, effort=cfg.claude_effort,
+                                                 cancel_check=self._check_cancel)
                 self.audit["audit_model"] = cfg.intelligence.audit_model
 
     def _client(self):
@@ -496,7 +536,9 @@ class _Run:
             self.stages["collect_issues"] = _stage("skipped", "Polarion 연결이 없어 건너뜁니다.")
             return None
         try:
-            return self.polarion_factory() if self.polarion_factory else ReadOnlyPolarionClient(cfg.polarion)
+            client = self.polarion_factory() if self.polarion_factory else ReadOnlyPolarionClient(cfg.polarion, cancel_check=self._check_cancel)
+            from app.modules.daily_qa.cancellation import CheckedClient
+            return CheckedClient(client, self._check_cancel)
         except PolarionError as exc:
             self.stages["collect_srs"] = _stage("failed", str(exc))
             self.stages["collect_issues"] = _stage("failed", str(exc))
@@ -747,6 +789,7 @@ class _Run:
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
         self._progress("prepare_ai", "AI 분석 준비")
         events = self._target_events()
+        self._active_event_ids = [event["id"] for event in events if event.get("id")]
         grouped = group_targets(events)
         self.targets_found = sum(len(targets) for targets in grouped.values())
         if not self.targets_found:
@@ -755,6 +798,9 @@ class _Run:
             return
         corpus = self._corpus(srs_items, issue_items, tc_rows)
         known = corpus.known()
+        self.audit["result_cache_corpus"] = result_cache.corpus_digest(corpus)
+        if any(item.get("comments_error") or item.get("comments_deferred") for item in issue_items):
+            self.audit["result_cache_unreadable"] = True
         comment_cache: dict[str, list[dict]] = {}
         issues_by_id = {item.get("id"): item for item in issue_items}
 
@@ -763,6 +809,8 @@ class _Run:
             if issue_id not in comment_cache:
                 comments, ok = fetch_all_comments(client, issue_id) if client is not None else ([], False)
                 if not ok:
+                    if client is not None:
+                        self.audit["result_cache_unreadable"] = True
                     saved = (issues_by_id.get(issue_id) or {}).get("comments") or []
                     comments = [comment for comment in saved if comment.get("text")][-20:]
                 comment_cache[issue_id] = comments
@@ -812,7 +860,13 @@ class _Run:
                 self._write_context(srs_items, tc_rows, self.inputs.manuals)
             else:
                 self._write_context(srs_items, [], {})
-            outcomes = self._run_tasks(selected, known, kind)
+            try:
+                outcomes = self._run_tasks(selected, known, kind)
+            except RunCancelled:
+                self._record_events(kind, self._partial_outcomes, item_events)
+                self.stages[kind] = self._stage_result(kind, selected, self._partial_outcomes, overflow)
+                self.stages[kind].update(status="cancelled", note="사용자 중단. 남은 분석은 대기로 남깁니다.")
+                raise
             self._record_events(kind, outcomes, item_events)
             self.stages[kind] = self._stage_result(kind, selected, outcomes, overflow)
         if corpus.unreadable_documents:
@@ -866,6 +920,7 @@ class _Run:
 
     def _run_tasks(self, selected, known, kind):
         outcomes = []
+        self._partial_outcomes = outcomes
         for task in self._until_limit(selected):
             self._progress("ai", "AI 분석")
             outcome = self._run_task(task, known, kind)
@@ -886,11 +941,31 @@ class _Run:
         result_path = workspace.out_dir / f"{task.task_id}.json"
         checked = None
         limit = None
-        for attempt in (1, 2):
+        self._check_cancel()
+        runner = self.audit_runner if kind == ISSUE_AUDIT and self.audit_runner is not None else self.runner
+        model = getattr(runner, "model", None) or (self.cfg.intelligence.audit_model if kind == ISSUE_AUDIT else "") or self.cfg.claude_model
+        effort = getattr(runner, "effort", None) or self.cfg.claude_effort
+        cache_key = None
+        cache_source = None
+        if (self.cfg.result_cache_enabled and not self.dry_run and not self.audit.get("result_cache_unreadable")
+                and kind and task.skill in ANALYSIS_SKILL_NAMES and model and effort):
+            try:
+                cache_key = result_cache.fingerprint(task, workspace, self.cfg.slug, kind, self.on_demand, model, effort,
+                                                     {"axes": self.profile.regression_axes, "checklist": self.profile.checklist,
+                                                      "corpus": self.audit.get("result_cache_corpus", "")})
+                hit = result_cache.load(self.store.storage, cache_key, result_path, task, kind, known,
+                                        tuple(self.profile.regression_axes), bool(self.on_demand), entry)
+                if hit is not None:
+                    checked, cache_source = hit
+            except (OSError, ValueError, TypeError) as exc:
+                cache_key = None
+                entry["cache_error"] = f"input: {type(exc).__name__}"
+        self._check_cancel()
+        for attempt in (() if checked is not None else (1, 2)):
+            self._check_cancel()
             result_path.unlink(missing_ok=True)
-            runner = self.audit_runner if kind == ISSUE_AUDIT and self.audit_runner is not None else self.runner
             outcome = runner.run(task, workspace)
-            self.claude_calls += 0 if self.dry_run else 1
+            self.claude_calls += 0 if self.dry_run or (outcome.meta or {}).get("cli_started") is False else 1
             self._add_usage(outcome.meta)
             entry[f"attempt{attempt}"] = {"ok": outcome.ok, "seconds": round(outcome.seconds, 1), "error": outcome.error[:300], "meta": outcome.meta}
             # Claude 가 읽고 검색한 기록(도구 호출)을 보낸 입력과 같은 실행 폴더에 모은다 (NFR-SEC-001).
@@ -898,6 +973,13 @@ class _Run:
             if claude_log.is_file():
                 (out_dir / "claude_logs").mkdir(exist_ok=True)
                 shutil.copy2(claude_log, out_dir / "claude_logs" / f"{task.task_id}.attempt{attempt}.claude.json")
+            if getattr(outcome, "cancelled", False):
+                entry["status"] = "cancelled"
+                self.audit["tasks"].append(entry)
+                if (outcome.meta or {}).get("cli_started") is not False and not (outcome.meta or {}).get("usage"):
+                    self.token_usage["usage_unknown_calls"] = self.token_usage.get("usage_unknown_calls", 0) + 1
+                raise RunCancelled("사용자 중단")
+            self._check_cancel()
             if not outcome.ok and outcome.limit is not None and not self.dry_run:
                 limit = outcome.limit
                 entry["limit"] = limit.as_dict()
@@ -940,6 +1022,8 @@ class _Run:
                     data["sections"]["source_finding"] = self.source_finding["id"]
                 data["event_ids"] = next((item.get("event_ids") or [] for item in task.payload["items"]
                                           if item.get("target") == data["subject"]), [])
+                if cache_source is not None:
+                    data["sections"]["result_cache"] = cache_source
             dedupe = task.skill in (SKILL_COVERAGE, SKILL_TC_DRAFT) or task.skill not in ANALYSIS_SKILL_NAMES
             finding_id = self.findings_box.save(self.run_id, task.skill, task.task_id, data, dedupe=dedupe)
             if finding_id:
@@ -951,8 +1035,20 @@ class _Run:
             self.question_count += 1
         entry.update({"status": "ok", "accepted": sum(len(ids) for ids in saved.values()), "rejected": rejected,
                       "not_significant": not_significant, "gate_status": checked.result.gate_status})
+        if cache_source is not None:
+            entry["result_cache"] = cache_source
+            self.result_cache["hits"] += 1
+            self.result_cache["reused_findings"] += sum(len(ids) for ids in saved.values())
+            if cache_source not in self.result_cache["sources"]:
+                self.result_cache["sources"].append(cache_source)
+        elif cache_key and outcome.ok and not rejected and saved and result_cache.eligible(
+                checked, task, kind, known, tuple(self.profile.regression_axes), bool(self.on_demand)):
+            source = {"run_id": self.run_id, "task_id": task.task_id,
+                      "finding_ids": [value for ids in saved.values() for value in ids]}
+            result_cache.save(self.store.storage, cache_key, checked, source, entry)
         self.audit["tasks"].append(entry)
         outcome = _TaskOutcome(task, True, finding_ids=saved)
+        outcome.cache_hit = cache_source is not None  # type: ignore[attr-defined]
         outcome.rejected = len(rejected)  # type: ignore[attr-defined]
         return outcome
 
@@ -1026,7 +1122,8 @@ class _Run:
             note = (note + f" · 상한 초과로 {overflow}개 묶음 다음 실행으로 미룸").strip(" ·")
         if rejected:
             note = (note + f" · 규칙 위반으로 버린 Finding {rejected}건").strip(" ·")
-        return _stage(status, note.strip(), tasks=len(selected), done=done, failed=failed, accepted=accepted, rejected=rejected)
+        return _stage(status, note.strip(), tasks=len(selected), done=done, failed=failed, accepted=accepted, rejected=rejected,
+                      cache_hits=sum(bool(getattr(outcome, "cache_hit", False)) for outcome in outcomes))
 
     # -- 매뉴얼 누락 후보 점검 (REQ-DAILY-006, REQ-QAINTEL-034) --------------------------
     def _manual_check(self, srs_items) -> None:
@@ -1119,6 +1216,30 @@ class _Run:
                                                         self.inputs.checklist_template, coverage_rows, checklist)
 
     # -- 마무리 -------------------------------------------------------------------
+    def _cancelled_outcome(self) -> dict:
+        row = self.store.get_run(self.run_id) or {}
+        reason = row.get("cancel_reason") or "사용자가 실행 중단을 요청했습니다."
+        cancellation = {"requested_at": row.get("cancel_requested_at", ""), "reason": reason,
+                        "done": self.ai_done, "total": self.ai_total}
+        self.stages["cancel"] = _stage("cancelled", reason, done=self.ai_done, total=self.ai_total)
+        if not self.dry_run and not self.on_demand and self._active_event_ids:
+            pending = [event["id"] for event in self.store.list_events(ids=self._active_event_ids)
+                       if event["analysis_status"] in ("pending", "failed")]
+            self.store.update_events(pending, "pending", error="사용자 중단으로 대기")
+        summary = report.summarize(self.all_findings, self.question_count)
+        summary.update({"product": self.cfg.slug, "trigger": self.trigger, "events": self.audit.get("events", {}),
+                        "ai_settings": self.audit["ai_settings"], "claude_calls": self.claude_calls,
+                        "token_usage": self.token_usage, "cancelled": cancellation,
+                        "result_cache_hits": self.result_cache["hits"], "result_cache": self.result_cache})
+        if self.rules_state is not None:
+            summary["rules"] = self.rules_state.as_dict()
+        self.audit["cancelled"] = cancellation
+        self.store.update_progress(self.run_id, {**(row.get("progress") or {}), "phase": "cancelled", "label": "사용자 중단",
+                                   "done": self.ai_done, "total": self.ai_total, "updated_at": now_iso()}, self.stages)
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        (self.out_dir / "audit.json").write_text(json.dumps(self.audit, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+        return {"stages": self.stages, "status": "CANCELLED", "summary": summary, "rules_warning": ""}
+
     def _collected(self) -> bool:
         """SRS·이슈 수집이 모두 성공했는가. 건너뛴 수집은 변경을 확인하지 못한 것이다 (REQ-QAINTEL-007 순서 2)."""
         return all(self.stages.get(key, {}).get("status") == "ok" for key in ("collect_srs", "collect_issues"))
@@ -1190,6 +1311,8 @@ class _Run:
         summary["events"] = self.audit.get("events", {})
         summary["ai_settings"] = self.audit["ai_settings"]
         summary["claude_calls"] = self.claude_calls
+        summary["result_cache_hits"] = self.result_cache["hits"]
+        summary["result_cache"] = self.result_cache
         summary["token_usage"] = self.token_usage
         summary["trigger"] = self.trigger
         if self.limit is not None:

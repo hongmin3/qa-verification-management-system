@@ -109,7 +109,11 @@ foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requ
     if ($copyExit -ne 0) { throw "파일 전송 실패: $item" }
 }
 
-Write-Host "파일 전송 완료. 서버에서 의존성 동기화 중..."
+Write-Host "파일 전송 완료. 사용을 종료한 단일 이슈 분석 파일을 확인합니다."
+Assert-QaIdle
+$retiredExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/python scripts/remove_retired_qa_agent.py --apply" }
+if ($retiredExit -ne 0) { throw "사용 종료 파일 정리 실패. 프로젝트 밖 경로나 파일 상태를 확인하세요." }
+Write-Host "서버에서 의존성 동기화 중..."
 $pipExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/pip install -q -r requirements.txt" }
 if ($pipExit -ne 0) { throw "서버 의존성 설치 실패." }
 Write-Host "의존성 동기화 완료."

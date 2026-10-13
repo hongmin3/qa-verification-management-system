@@ -34,6 +34,7 @@ RUN_STATUSES = {
     "SUCCESS": "성공",
     "PARTIAL": "일부 실패",
     "FAILED": "실패",
+    "CANCELLED": "사용자 중단",
     "NO_CHANGE": "변경사항 없음",
     "BASELINE": "기준 스냅샷 생성",
 }
@@ -47,7 +48,8 @@ EVENT_STATUSES = {
 }
 
 _ADDED_COLUMNS = {
-    "daily_qa_runs": {"product": "TEXT NOT NULL DEFAULT ''", "progress_json": "TEXT NOT NULL DEFAULT '{}'"},
+    "daily_qa_runs": {"product": "TEXT NOT NULL DEFAULT ''", "progress_json": "TEXT NOT NULL DEFAULT '{}'",
+                      "cancel_requested_at": "TEXT NOT NULL DEFAULT ''", "cancel_reason": "TEXT NOT NULL DEFAULT ''"},
     "daily_qa_findings": {
         "product": "TEXT NOT NULL DEFAULT ''",
         "analysis_type": "TEXT NOT NULL DEFAULT ''",
@@ -137,12 +139,41 @@ class DailyQaStorageMixin:
                 (run_id, now_iso(), int(dry_run), product),
             )
 
-    def daily_qa_finish_run(self, run_id: str, status: str, stages: dict, summary: dict) -> None:
+    def daily_qa_finish_run(self, run_id: str, status: str, stages: dict, summary: dict) -> str:
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT cancel_requested_at,cancel_reason,progress_json FROM daily_qa_runs WHERE id=?", (run_id,)).fetchone()
+            if row and row["cancel_requested_at"]:
+                status = "CANCELLED"
+                summary = {**summary, "cancelled": {**summary.get("cancelled", {}), "requested_at": row["cancel_requested_at"], "reason": row["cancel_reason"]}}
+                progress = json.loads(row["progress_json"] or "{}")
+                stages = {**stages, "cancel": {"status": "cancelled", "note": row["cancel_reason"],
+                          "counts": {"done": progress.get("done", 0), "total": progress.get("total", 0)}}}
             db.execute(
                 "UPDATE daily_qa_runs SET finished_at=?, status=?, stages_json=?, summary_json=? WHERE id=?",
                 (now_iso(), status, json.dumps(stages, ensure_ascii=False), json.dumps(summary, ensure_ascii=False), run_id),
             )
+        return status
+
+    def daily_qa_request_cancel(self, run_id: str, reason: str = "사용자가 실행 중단을 요청했습니다.") -> bool:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT status,progress_json FROM daily_qa_runs WHERE id=?", (run_id,)).fetchone()
+            if not row or row["status"] != "RUNNING" or json.loads(row["progress_json"] or "{}").get("phase") in ("email", "finished"):
+                return False
+            db.execute("UPDATE daily_qa_runs SET cancel_requested_at=CASE WHEN cancel_requested_at='' THEN ? ELSE cancel_requested_at END, "
+                       "cancel_reason=CASE WHEN cancel_reason='' THEN ? ELSE cancel_reason END WHERE id=?", (now_iso(), reason, run_id))
+        return True
+
+    def daily_qa_begin_email(self, run_id: str, progress: dict, stages: dict) -> bool:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT status,cancel_requested_at FROM daily_qa_runs WHERE id=?", (run_id,)).fetchone()
+            if not row or row["status"] != "RUNNING" or row["cancel_requested_at"]:
+                return False
+            db.execute("UPDATE daily_qa_runs SET progress_json=?,stages_json=? WHERE id=?",
+                       (json.dumps(progress, ensure_ascii=False), json.dumps(stages, ensure_ascii=False), run_id))
+        return True
 
     def daily_qa_set_email_status(self, run_id: str, email_status: str) -> None:
         with self.connect() as db:
@@ -372,6 +403,28 @@ class DailyQaStorageMixin:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
                 (key, value, now_iso()),
             )
+
+    def daily_qa_save_automation_policy(self, product: str, enabled: bool, validation_period: bool,
+                                        changed_by: str = "") -> dict:
+        """제품 설정과 변경 이력을 같은 트랜잭션에서 남긴다 (REQ-QAINTEL-038)."""
+        key, history_key = f"{product}:automation_policy", f"{product}:automation_policy_history"
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT value FROM daily_qa_state WHERE key=?", (key,)).fetchone()
+            previous = json.loads(row["value"]) if row else {"enabled": True, "validation_period": True}
+            if row and previous.get("enabled") == enabled and previous.get("validation_period") == validation_period:
+                return previous
+            current = {"enabled": enabled, "validation_period": validation_period, "updated_at": now_iso()}
+            row = db.execute("SELECT value FROM daily_qa_state WHERE key=?", (history_key,)).fetchone()
+            events = json.loads(row["value"]) if row else []
+            events.append({**current, "changed_by": changed_by})
+            for state_key, value in ((key, current), (history_key, events)):
+                db.execute(
+                    "INSERT INTO daily_qa_state (key,value,updated_at) VALUES (?,?,?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+                    (state_key, json.dumps(value, ensure_ascii=False), current["updated_at"]),
+                )
+        return current
 
     # -- 변경 이벤트 (REQ-QAINTEL-006) ------------------------------------------
     def daily_qa_add_events(self, product: str, run_id: str, events: list[dict], skip_known_after: bool = False) -> list[int]:

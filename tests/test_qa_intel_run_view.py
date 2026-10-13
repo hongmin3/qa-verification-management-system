@@ -74,3 +74,51 @@ def test_failed_run_without_stage_details_remains_failure():
 def test_failed_tc_file_named_401_is_not_an_authentication_failure():
     view = run_view.build({"stages": {"tc_index": {"status": "failed", "note": "TC401.xlsx 파일 읽기 실패"}}}, [], [], [])
     assert view["actions"][0]["kind"] == "stage"
+
+
+def test_cancelled_run_does_not_describe_saved_results_as_completed_analysis():
+    view = run_view.build({"status": "CANCELLED", "stages": {
+        "collect_srs": {"status": "ok", "counts": {"total": 437}},
+        "NEW_ISSUE": {"status": "ok", "counts": {"tasks": 18, "done": 4}}}}, [], cards(1), [])
+    assert view["headline"].startswith("사용자가 분석을 중단했습니다.")
+    assert "저장" in view["headline"] and view["tone"] == "warn"
+    assert view["actions"] == []
+
+
+def test_cancelled_call_without_final_usage_is_visible_beside_recorded_tokens():
+    view = run_view.build({"status": "CANCELLED", "summary": {
+        "claude_calls": 2, "token_usage": {"total_tokens": 0, "usage_unknown_calls": 1}}}, [], [], [])
+    tile = next(item for item in view["tiles"] if item["label"] == "Claude 호출")
+    assert "기록된 토큰 0" in tile["hint"]
+    assert "사용량을 확인하지 못한 중단 호출 1회" in tile["hint"]
+
+
+def test_cached_task_is_separate_from_new_ai_work_and_links_origin():
+    """Validates: REQ-QAINTEL-037. 재사용을 신규 분석으로 세지 않는다."""
+    view = run_view.build({"status": "SUCCESS", "stages": {
+        "NEW_ISSUE": {"status": "ok", "counts": {"tasks": 2, "done": 2}}},
+        "summary": {"claude_calls": 1, "result_cache": {"hits": 1, "reused_findings": 5,
+            "sources": [{"run_id": "20261013-origin-vxvue", "task_id": "NEW-001", "finding_ids": [42]}]}}},
+        [], cards(6), [])
+    assert view["key_tiles"][1]["value"] == "1"
+    assert "재사용 1" in view["key_tiles"][1]["hint"]
+    assert view["cache"]["reused_findings"] == 5
+    assert view["cache"]["sources"][0]["url"] == "/qa-agent/runs/20261013-origin-vxvue"
+    assert next(tile for tile in view["tiles"] if tile["label"] == "Claude 호출")["value"] == "1"
+
+
+def test_cache_only_run_has_zero_new_ai_work():
+    view = run_view.build({"status": "SUCCESS", "stages": {
+        "NEW_ISSUE": {"status": "ok", "counts": {"tasks": 1, "done": 1}}},
+        "summary": {"claude_calls": 0, "result_cache": {"hits": 1, "reused_findings": 1, "sources": []}}},
+        [], cards(1), [])
+    assert view["key_tiles"][1]["value"] == "0"
+    assert next(tile for tile in view["tiles"] if tile["label"] == "Claude 호출")["value"] == "0"
+
+
+def test_weekly_limit_actions_explain_next_week_or_manual_resume():
+    view = run_view.build({"status": "PARTIAL", "stages": {"NEW_ISSUE": {"status": "limit"}},
+        "summary": {"claude_limit": {"kind": "SESSION"}, "automation_policy": {"mode": "weekly"}}}, [], [], [])
+    assert "다음 주 첫 업무일" in view["actions"][0]["todo"]
+    assert "지금 실행" in view["actions"][0]["todo"]
+    assert "한도가 풀리면" not in view["headline"]

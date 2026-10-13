@@ -32,6 +32,7 @@
   </label></form>
   {% endif %}
   <h2>분석 실행 <span class="hint">· {{ selected }}</span></h2>
+  {% include '_automation_policy.html' %}
   {% if status.claude_limit %}
   <p class="qa-banner" id="limit-banner"><b>{{ status.claude_limit.label }}</b> — {{ status.claude_limit.description }}
     그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.</p>
@@ -107,7 +108,6 @@
     {% endfor %}
     </tbody>
   </table></div>
-  <p class="hint">사람이 이슈 하나를 골라 깊게 보려면 <a href="/qa-agent/issue-analysis">단일 이슈 분석</a>을 쓰세요.</p>
 </section>
 
 <script>

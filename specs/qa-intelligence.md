@@ -83,7 +83,7 @@ Claude Skill -(사용량 한도)-> 남은 AI 중지·초기화 시각 표시 -> 
 - Polarion 에 쓰기. 이슈 닫기, 필드 수정, 댓글 달기 같은 일은 하지 않는다(REQ-DAILY-002).
 - 원본 TC·Checklist 파일 수정. 초안은 별도 Excel 로만 만든다.
 - 승인·거절·근거 추가 필요·검토자 입력·질문 답변 화면. 1차 개편에서 화면에 보이지 않는다. 옛 기록은 표에 그대로 남는다.
-- 사람이 이슈 하나를 골라 돌리는 QA Agent 단일 이슈 분석(상위 SPEC 5.2절). 이 기능은 `/qa-agent/issue-analysis` 로 옮겨 그대로 둔다.
+- 사용을 종료한 단일 이슈 분석. 현재 화면·API는 상위 SPEC의 REQ-QAAGENT-016을 따른다.
 
 ## 5. 기능 요구사항
 
@@ -109,7 +109,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 ### REQ-QAINTEL-001 예약 실행과 공휴일 건너뛰기
 
-**하는 일** 평일 아침마다 제품별로 점검 프로세스를 한 번 띄운다. 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
+**하는 일** 제품별 자동 점검 모드(REQ-QAINTEL-038)에 맞춰 아침에 점검 프로세스를 띄운다. 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
 
 **언제** 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 요일·시각(기본 `mon-fri`, `07:30`, 한국 시간)에 깨어난다.
 
@@ -126,7 +126,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `daily_qa.schedule.enabled` | `true` | `false` 면 07:30 예약(`qa_agent_<slug>`)과 놓친 예약 만회 감시(REQ-QAINTEL-035)를 등록하지 않는다. [지금 실행]과 한도 뒤 다시 돌기는 그대로다 |
+| `daily_qa.schedule.enabled` | `true` | `false` 면 정시 예약·예약 만회·사용량 한도 뒤 자동 재개를 모두 막는다. 제품별 화면 설정으로 켤 수 없다. [지금 실행]은 가능하다 |
 | `daily_qa.products` | `[daily_qa.product]` | 예약을 등록할 제품 이름 목록 |
 | `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛸지 |
 | `daily_qa.schedule.holiday_calendar` | `kr` | 공휴일 표 이름(`config/holidays/<이름>.yaml`) |
@@ -416,6 +416,7 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 4. 비슷한 과거 이슈는 새 이슈와 발생 버전 또는 목표 버전이 같은 후보를 앞에 둔다. 현재 검증 중인 버전의 중복을 먼저 보기 위해서다.
 5. 후보마다 "왜 걸렸는지"(`'VP-5500' 정확 일치`, `용어 유사도 0.42`, `연결 항목`)를 함께 넘긴다.
 6. 사양서 문서를 읽지 못하면 SRS 후보만으로 진행하고, 읽지 못한 문서 이름을 작업 입력과 단계 비고에 남긴다.
+7. CLI 호출 안내에도 입력 후보를 먼저 비교하도록 적는다. 근거가 부족하거나 서로 충돌할 때 전체 색인을 추가로 검색할 수 있다. 후보 수·본문·근거 검사는 줄이지 않는다. 같은 작업에서 이미 읽은 공통 출력 형식은 재사용한다.
 
 **결과** 작업 입력 파일(`in/<작업 ID>.json`). 마스킹한 뒤 격리 작업 폴더에 쓰고, 같은 파일을 실행 폴더 `sent/` 에 남긴다(REQ-DAILY-021).
 
@@ -727,7 +728,7 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 **지킬 것**
 
 - 승인·거절·근거 추가 필요·검토자 입력·질문 답변은 보이지 않는다.
-- 사람이 이슈 하나를 골라 돌리는 단일 이슈 분석은 `/qa-agent/issue-analysis` 에서 연다.
+- 사용을 종료한 단일 이슈 분석의 버튼과 링크는 제공하지 않는다(REQ-QAAGENT-016).
 
 > **참고** 실행 구역의 제목은 `분석 실행 · <제품>` 이다. 마지막 실행, 실행 결과, 다음 자동 실행, 분석 기간, [지금 실행]이 이 구역에 있다.
 
@@ -945,11 +946,13 @@ AI가 분석한 것
 
 4. 한도 정보를 상태 값 `<slug>:claude_limit` 에 저장한다. 다음 실행은 초기화 시각 전이면 Claude 를 부르지 않고 AI 단계를 `Claude 사용량 한도` 로 남긴다. 사전 점검 단계는 `일부 실패`(`partial`)이고 비고에 한도 설명이 들어간다. 인증 실패·CLI 없음은 토큰(또는 CLI)이 바뀔 때까지 같다. 초기화 시각을 모르면 다음 실행이 한 번 다시 시도한다.
 
-5. 세션 한도이고 초기화가 `daily_qa.intelligence.catchup_max_hours`(기본 12)시간 안이면, 초기화 `catchup_delay_minutes`(기본 5)분 뒤에 한 번 다시 돈다. 앱 안의 감시 예약(`qa_agent_limit_catchup`, 10분마다)이 시각이 지난 제품을 [지금 실행]과 같은 함수로 띄운다.
+5. 일일 모드이고 세션 한도 초기화가 `daily_qa.intelligence.catchup_max_hours`(기본 12)시간 안이면, 초기화 `catchup_delay_minutes`(기본 5)분 뒤에 한 번 다시 돈다. 앱 안의 감시 예약(`qa_agent_limit_catchup`, 10분마다)이 시각이 지난 제품을 [지금 실행]과 같은 함수로 띄운다.
+
+   - 주간 모드·자동 점검 중지·`daily_qa.schedule.enabled: false` 에서는 자동 재개를 하지 않는다(REQ-QAINTEL-038). 주간 모드의 대기 작업은 다음 주 첫 업무일 또는 사용자의 [지금 실행]에서 이어 간다.
 
    - 그 제품의 다른 실행이 돌고 있어 띄우지 못하면 catch-up 기록을 지우지 않는다. 10분 뒤 감시 예약이 다시 띄운다.
    - 토큰 없이 Claude CLI 로그인으로 부르는 PC 는 토큰 지문이 늘 같다. 그래서 사전 점검이 로그인을 다시 확인하면 남아 있던 인증 실패 기록을 지우고 분석을 이어 간다(REQ-DAILY-001 4번).
-6. 주간 한도는 다시 돌지 않는다. 평일 예약 실행이 그대로 돌며 변경 감지와 이벤트 저장만 하고, 초기화 뒤 첫 실행이 밀린 이벤트를 상한(NFR-DAILY-001) 안에서 분석한다. 상한을 넘은 것은 다음 실행으로 넘어간다.
+6. 주간 사용량 한도는 자동 재개하지 않는다. 선택한 일일·주간 모드의 예약 실행은 변경 감지와 이벤트 저장만 하고, 초기화 뒤 첫 실행이 밀린 이벤트를 상한(NFR-DAILY-001) 안에서 분석한다. 상한을 넘은 것은 다음 실행으로 넘어간다.
 
 **결과**
 
@@ -957,7 +960,7 @@ AI가 분석한 것
 |---|---|
 | 대시보드 맨 위 알림 | "Claude 세션(5시간) 사용량 한도 초과. 2026-09-30 15:00(한국 시간)에 초기화됩니다. 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다." |
 | [지금 실행] 응답 | 202 에 `warning` 으로 같은 문장. 실행은 변경 감지만 한다 |
-| 요약 메일 | 첫 줄에 같은 문장 |
+| 요약 메일 | 제목에 `Claude 사용량 한도`, 본문 앞에 한도 종류·가린 사유·초기화 시각·남은 대기와 모드별 재개 방법(REQ-DAILY-008). 자동 점검 중지·사용자 중단이면 보내지 않음 |
 | 실행 상세·단계 | 단계 상태 `Claude 사용량 한도`, 실행 결과 `일부 실패` |
 | CLI(`--check`) | `[주의] Claude 사용량 한도 — <설명>` |
 
@@ -977,7 +980,7 @@ AI가 분석한 것
 | Claude 작업 실패(형식 오류 2회, 시간 초과) | 그 작업만 실패 | 옮김 | `failed`, 3회면 `abandoned` |
 | 분석 대상이 오늘 스냅샷에 없음 | 분석하지 않음 | 옮김 | `abandoned`(횟수 그대로) |
 | 결과의 번호가 실제 자료에 없음 | 그 번호만 뺌 | 옮김 | `done` |
-| 메일 발송 실패 | 실행 기록의 메일 결과에 남김 | 옮김 | 정상 |
+| 메일 발송 실패 | 실행 기록·화면·가린 로그에 남김. 메일 오류 알림을 다시 메일로 보내지 않음 | 옮김 | 정상 |
 
 **설정**
 
@@ -1150,7 +1153,7 @@ AI가 분석한 것
 
    - 점검 작업은 `daily_qa.intelligence.audit_model` 모델로 부른다. 비우면 `ai.claude.models.light` 다.
 
-   - 결과가 `충돌`·`부분 일치` 인 이슈는 상세 화면에서 단일 이슈 분석(REQ-QAAGENT-001)으로 깊게 볼 수 있다.
+   - 결과가 `충돌`·`부분 일치` 인 이슈도 현재 분석의 근거와 QA 할 일을 상세 화면에서 확인한다. 사용을 종료한 단일 이슈 분석으로 이동하는 링크는 없다.
 
 7. 판정은 이슈마다 하나다.
 
@@ -1290,10 +1293,10 @@ AI가 분석한 것
 
 **순서**
 
-1. 활성 제품마다 오늘(한국 시간)이 예약 요일(`daily_qa.schedule.day_of_week`)인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다.
+1. 활성 제품마다 오늘(한국 시간)이 제품별 모드의 실행일(REQ-QAINTEL-038)인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다. 자동 점검 중지 또는 서버 예약 비활성화 상태에서도 실행하지 않는다.
 2. 오늘 예약을 이미 처리했는지 제품별 상태 기록(`<slug>:scheduled_date`, 한국 시간 날짜)으로 본다. 오늘 날짜가 적혀 있으면 아무것도 하지 않는다.
 3. 처리하지 않았으면 REQ-QAINTEL-001 의 예약 실행과 같은 함수를 부른다. 공휴일 건너뛰기, 실행 잠금, Polarion 설정 확인이 그대로 적용된다. 앱 로그에 `qa_agent_missed_schedule product=<slug> date=<날짜> time=<예약 시각>` 을 남긴다.
-4. 결과가 `running`(다른 실행이 도는 중)이 아니면 상태 기록에 오늘 날짜를 적는다. `running` 이면 적지 않고 10분 뒤 다시 본다.
+4. 실행을 띄웠거나 휴일·기존 필수 설정 확인으로 오늘 몫을 처리했으면 상태 기록에 오늘 날짜를 적는다. 다른 실행이 진행 중이거나 자동 점검 중지·선택한 모드의 실행일 아님·서버 예약 비활성화면 적지 않는다. 같은 날 다시 켰을 때 오늘 만회를 확인할 수 있다.
 
 **지킬 것**
 
@@ -1313,6 +1316,84 @@ AI가 분석한 것
 | `daily_qa.schedule.enabled` | `true` | `false` 면 정시 예약과 함께 만회 감시도 등록하지 않는다(REQ-QAINTEL-001) |
 
 > **주의** 이 기능을 처음 설치한 날에는 상태 기록이 비어 있다. 예약 시각이 지난 평일에 설치하면 그날 예약 실행이 한 번 뜬다.
+
+### REQ-QAINTEL-036 진행 중인 실행 중단
+
+**하는 일** 사용자가 진행 표시의 [분석 중단]으로 현재 제품의 공유 실행을 중단한다. 다른 사용자가 시작한 실행도 현재 실행이면 중단할 수 있다.
+
+**언제** 실행 번호가 있는 실행이 진행 중일 때. 메일 발송을 이미 시작한 실행은 중단할 수 없다.
+
+**순서**
+
+1. `POST /qa-agent/runs/<실행 번호>/cancel?product=<제품>` 을 받는다. 해당 제품의 현재 실행인지 DB 와 실행 잠금으로 확인한다.
+2. 잠금의 실행 번호·제품·PID·프로세스 시작 식별값과 운영체제의 실제 Python 실행 명령을 대조한다. 이 저장소의 `scripts/run_daily_qa.py --product <제품>` 실행만 허용한다.
+3. DB 에 중단 요청 시각과 이유를 한 번 기록하고 202(`status: cancelling`)을 돌려준다. 상태 조회는 `current_run_id` 와 `cancel_requested` 를 보여 준다.
+4. 실행 프로세스가 요청을 확인한다. Claude 를 기다리는 동안에도 확인하며, 자신이 실행한 Claude 하위 프로세스만 종료한다. Polarion 요청 중이면 현재 요청이 끝난 뒤 다음 단계로 넘어가기 전에 중단한다.
+5. 이미 수집·저장한 자료와 Finding·사용량·완료 작업 수를 보존한다. 끝낸 분석의 이벤트는 완료로 남기고, 아직 끝내지 못한 분석은 대기로 남긴다. 실패 횟수는 중단 때문에 늘리지 않는다.
+6. 상태를 `CANCELLED`(사용자 중단)로 저장하고 잠금을 해제한다. 진행 원은 멈추고 중단 결과·진행 숫자·상세 링크를 보여 준다. 중단 실행은 메일을 보내지 않는다.
+
+**안 될 때**
+
+| 경우 | 응답 |
+|---|---|
+| 없는 실행 또는 다른 제품의 실행 | 404 |
+| 이미 완료한 실행, 현재 실행이 아님, 잠금·PID·시작 식별값·실행 명령 불일치 | 409. 상태를 바꾸지 않는다 |
+| 메일 발송 시작 뒤 | 409. 진행을 계속 조회한다 |
+| 중단 요청을 반복함 | 실행 중이면 같은 202. 중단을 마쳤으면 200(`status: CANCELLED`) |
+
+**지킬 것** PID 만으로 외부 프로세스를 종료하지 않는다. PID 가 다른 프로세스에 다시 쓰이면 중단을 거절한다. Linux 와 Windows 에서 같은 DB 요청을 쓰며, 중단 요청과 메일 발송 시작은 동시에 확정되지 않게 한다. 웹 서비스는 중단하거나 재시작하지 않는다.
+
+Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하면 Claude를 시작하지 않는다. 실행이 끝나거나 중단돼도 해당 실행이 만든 하위 프로세스만 정리한다.
+
+### REQ-QAINTEL-037 같은 분석 결과 다시 쓰기
+
+**하는 일** 작업 묶음의 입력과 분석 조건이 모두 같으면 검사를 통과한 성공 결과를 다시 쓴다. Claude 호출과 새 토큰 사용은 0이며 원본 실행을 확인할 수 있다.
+
+**순서**
+
+1. 제품·분석 종류·요청 실행 모드, 모델·추론 정도, 대상 본문·댓글·변경 전후 값·후보·사용자 답변을 비교한다. 사양과 검색 가능한 색인, 제품 규칙·Skill·출력 형식의 내용도 같은지 확인한다.
+2. 실행·작업·이벤트 번호만 비교에서 제외한다. 대상과 근거 번호, 후보 순서, 현재 유효 상태는 보존한다. 작업 묶음 전체가 같은 경우만 다시 쓴다.
+3. 저장본이 있으면 현재 작업 번호로 읽고 현재 형식과 근거를 다시 검사한다. 맞지 않으면 Claude 로 새로 분석한다.
+4. 현재 실행과 이벤트에 결과를 연결한다. 원본 실행·작업·Finding 번호를 기록하고 이전 승인 상태는 옮기지 않는다.
+5. 작업 묶음이 성공하고 모든 Gate 가 `PASS` 인 결과만 다시 쓴다. 실패·중단·한도·미해결 질문·제거된 근거·근거 부족·접근 불가 결과는 제외한다. 비교용 해시가 없는 과거 결과는 자동으로 편입하지 않는다.
+
+> **참고** 완료한 작업 뒤에 다른 작업이 실패하거나 전체 실행이 중단돼도 완료한 작업의 성공 결과는 보존하고 다시 쓸 수 있다.
+
+**결과** 재사용한 작업 수와 Finding 수, 원본 실행 링크를 실행 결과에 표시한다. 재사용 횟수와 새 Claude 호출·사용량은 따로 센다. 중단 요청은 재사용 전에도 확인한다.
+
+| 설정 | 기본값 | 뜻 |
+|---|---|---|
+| `daily_qa.result_cache.enabled` | `true` | 같은 성공 결과를 다시 쓴다. 설정이 없을 때도 켜진다 |
+
+**지킬 것** 공용 응답 저장본(`ai_cache`)에서 일일 QA 결과를 따로 구분한다. 모델은 기존 설정을 유지한다. 저장본이 없거나 검사를 통과하지 못하면 기존 분석 경로를 따른다.
+
+**안 될 때** 저장본 조회·저장에 문제가 생기면 감사 기록에 남긴다. 조회 실패는 새 분석으로 진행하고, 저장 실패는 이미 성공한 분석 결과를 유지한다.
+
+### REQ-QAINTEL-038 자동 점검 일일·주간·중지 설정
+
+**하는 일** 관리자가 QA Agent 화면의 [자동 점검 사용]과 [검증 기간]을 저장해 제품별 자동 분석과 요약 메일 주기를 정한다. 사내 웹 화면에서 변경할 수 있다.
+
+| 자동 점검 사용 | 검증 기간 | 자동 분석과 메일 |
+|---|---|---|
+| 켜짐 | 켜짐 | 매 업무일 예약 시각에 실행한다 |
+| 켜짐 | 꺼짐 | 매주 첫 업무일 예약 시각에 한 번 실행한다 |
+| 꺼짐 | 어느 값이든 | 자동 분석과 메일 전송을 중지한다 |
+
+**입력** 제품과 두 참·거짓 값(`enabled`, `validation_period`)을 받는다. 처음 저장하기 전에는 둘 다 참으로 간주해 기존 일일 동작을 유지한다. 화면의 두 체크박스와 [저장]으로 적용한다.
+
+**순서**
+
+1. `GET /qa-agent/automation-policy?product=<제품>`은 현재 설정을 JSON으로 반환한다. `POST /qa-agent/automation-policy`는 제품과 두 값을 폼으로 받고 저장 후 해당 제품의 대시보드로 303 이동한다. 체크하지 않은 값은 거짓이다.
+2. 설정은 공용 DB에 제품별로 저장한다. 변경 시각·요청 위치·두 값을 변경 이력에 남긴다. 읽기와 변경 모두 일반 웹 접속을 허용한다. AI 모델 설정의 서버 안에서만 저장하는 제한(REQ-AICALL-007)은 그대로 유지한다.
+3. 업무일은 한국 시간의 월~금에서 등록된 공휴일과 추가 휴일을 뺀 날짜다. 주간 모드는 월요일이 쉬는 날이면 같은 주의 다음 업무일에 실행한다. 그 주에 업무일이 없으면 실행하지 않는다.
+4. 다음 실행 시각·놓친 예약 만회·정시 실행이 같은 정책을 사용한다. 주간 만회는 그 주 첫 업무일의 놓친 예약만 당일에 한 번 처리한다. 지난 실행일의 예약은 만회하지 않는다(REQ-QAINTEL-035).
+5. 세션 한도 뒤 자동 재개는 일일 모드에서만 가능하다(REQ-QAINTEL-025). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [지금 실행]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.
+6. 서버의 `daily_qa.schedule.enabled: false`는 모든 자동 실행 경로에서 우선 적용한다. 제품 설정을 켜도 담당자 PC의 `config.local.yaml`에 저장된 예약 비활성화를 바꾸지 않는다.
+7. [지금 실행]은 자동 점검 중지 중에도 분석할 수 있다. 메일을 보내기 직전에 현재 설정을 다시 읽으며 중지 중에는 메일을 생략하고 이유를 실행 기록에 남긴다.
+
+**결과** 화면에 저장한 두 값, 현재 모드, 다음 자동 실행 시각 또는 중지 이유를 표시한다. 주간 한도 대기는 다음 주 예약 또는 수동 실행에서 이어 간다는 안내를 표시한다.
+
+**지킬 것** 중지로 바꿔도 진행 중인 분석을 강제로 종료하지 않는다. 다음 자동 실행과 다음 메일부터 막는다. 진행 중인 실행의 종료는 [분석 중단](REQ-QAINTEL-036)을 사용한다. 기존 기록·대기 이벤트·결과·수신자는 설정 변경으로 지우거나 바꾸지 않는다.
 
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
@@ -1573,7 +1654,8 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 5. 공휴일: 뜨지 않고 상태 기록은 오늘 날짜가 된다.
 6. 정시 예약이 띄운 날: 상태 기록이 오늘 날짜이고 만회 확인이 띄우지 않는다.
 7. 감시 예약 `qa_agent_missed_schedule` 이 10분 간격으로 등록되고 첫 확인이 앱 시작 직후에 잡힌다.
-8. `daily_qa.schedule.enabled: false` 면 `qa_agent_<slug>` 와 `qa_agent_missed_schedule` 이 등록되지 않고, 한도 뒤 다시 돌기(`qa_agent_limit_catchup`)는 등록된다.
+8. `daily_qa.schedule.enabled: false` 면 정시 예약·놓친 예약 만회·한도 뒤 자동 재개가 실행되지 않는다. 감시 예약 등록 여부와 별개로 실행 시점에 다시 확인한다.
+9. 자동 점검 중지·모드의 실행일 아님·서버 예약 비활성화는 처리 날짜를 쓰지 않는다. 같은 날 다시 켜면 실행일인 오늘 예약을 한 번 만회한다(REQ-QAINTEL-038).
 
 **기대 결과** 모든 테스트 통과. 만회 코드를 빼면 1·3번이 실패한다.
 
@@ -1587,6 +1669,46 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 4. [현재 상태 점검]·[TC 점검]·[검증 TC 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 390px·1920px 화면에서 시간·링크를 읽는다.
 
 **기대 결과** 실행이 끝날 때 진행 원이 멈추고 결과 한 줄과 실행 상세 링크가 남는다. 수집된 운영 결과와 합성 브라우저 경계 시험은 구분해 기록한다.
+
+### TEST-QAINTEL-021 공유 실행 중단
+
+**절차** `tests/test_qa_run_cancel.py`, `tests/test_qa_run_progress_ui.py`, `tests/qa_run_progress_ui.cjs`, `tests/test_qa_run_progress_browser.py` 와 격리된 실제 HTTP 서버에서 확인한다.
+
+1. 실행 번호·제품·잠금·PID·프로세스 시작값·실행 명령이 맞는 현재 실행만 중단 요청을 받는다. 다른 실행·PID 재사용·메일 시작 뒤는 거절한다.
+2. 요청을 반복해도 첫 시각과 이유를 보존한다. 완료 실행은 409, 이미 중단된 실행은 200 이다.
+3. 진행 중인 합성 하위 프로세스를 중단하고 종료를 기다린다. 다른 프로세스는 그대로다. Linux·Windows 전용 경로를 각각 확인한다.
+4. 파이프라인에서 수집 자료·저장 결과·진행 숫자·사용량을 보존하고 잠금을 해제한다. 미처리 이벤트는 대기이며 메일은 0회다.
+5. 다른 브라우저의 요청 표시와 `CANCELLED` 종료·상세 링크를 실제 HTTP 로 확인한다. 외부 Claude·Polarion·메일 실행 증거와 구분한다.
+
+### TEST-QAINTEL-022 분석 결과 재사용
+
+#### 검증 대상
+REQ-QAINTEL-037
+
+#### 절차
+1. 합성 자료와 가짜 Claude 로 같은 작업을 실행 번호·작업 번호·이벤트 번호만 바꿔 두 번 실행한다.
+2. 본문·댓글·사양·색인·규칙·출력 형식·모델·추론 정도·제품·사용자 답변·요청 실행 모드를 각각 바꾼다.
+3. 실패·중단·한도·질문·잘못된 근거·근거 부족·접근 불가 결과와 해시 없는 과거 저장본을 확인한다.
+4. 저장본의 근거를 현재 자료에서 빼거나 형식을 손상시키고 다시 실행한다. 중단 요청과 재사용 비활성화도 확인한다.
+
+#### Expected Result
+조건이 모두 같은 성공만 다시 쓰며 두 번째 Claude 호출·새 토큰·비용은 0이다. 현재 실행·작업·이벤트에 다시 연결되고 원본 번호를 남긴다. 조건이 다르거나 검사를 통과하지 못하면 새 분석을 한다. 중단 요청이 있으면 재사용하지 않는다.
+
+### TEST-QAINTEL-023 자동 점검 주기와 중지 경계
+
+#### 검증 대상
+REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
+
+#### 절차
+1. 새 DB의 일일 기본값과 제품별 설정 저장·조회·변경 이력을 확인한다. 체크하지 않은 폼 값, 잘못된 제품·값, 일반 사내 웹 요청도 확인한다.
+2. 한국 시간의 평일·주말·월요일 공휴일·연속 휴일·업무일 없는 주로 시각을 고정해 다음 예약과 정시·만회 실행을 검사한다. 일일은 매 업무일, 주간은 첫 업무일 한 번이며 같은 날 중복 실행은 없다.
+   자동 점검 중지·실행일 아님·서버 예약 비활성화·다른 실행 진행 중에는 처리 날짜를 쓰지 않는다. 같은 날 다시 켜면 남은 오늘 예약을 한 번 만회할 수 있다.
+3. 한도 초기화 뒤 일일 모드는 기존 자동 재개를 유지하고 주간·중지·서버 예약 비활성화는 재개하지 않는지 확인한다. 주간 대기 이벤트는 다음 주 예약 또는 수동 실행에서 처리한다.
+4. 중지 상태의 [지금 실행]은 분석 가능하지만 메일은 0회인지 확인한다. 실행 도중 중지로 바꿔도 분석과 저장은 이어지고, 메일 직전의 설정 확인으로 전송을 생략한다.
+5. 합성 DB와 가짜 분석·메일 실행기로 실제 HTTP에서 두 체크박스의 저장 후 이동과 다시 읽은 설정을 확인한다. AI 설정의 저장 제한과 담당자 PC의 예약 비활성화가 유지되는지도 확인한다.
+
+#### Expected Result
+저장한 모드가 예약·만회·한도 재개·다음 실행 표시·메일에 함께 적용된다. 기존 데이터는 보존되고 자동 중지와 사용자 실행 중단은 구분된다. 외부 AI와 메일을 호출하지 않는다.
 
 ## 12. 요구사항 추적성
 
@@ -1604,7 +1726,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-008 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/collector.py` | TEST-QAINTEL-003: `tests/test_qa_intel_pipeline.py` | verified |
 | REQ-QAINTEL-009 | `app/modules/daily_qa/collector.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-006: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | verified |
 | REQ-QAINTEL-010 | `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-004: `tests/test_qa_intel_events.py` | verified |
-| REQ-QAINTEL-011 | `app/modules/daily_qa/intelligence.py`, `app/retrieval/hybrid.py` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
+| REQ-QAINTEL-011 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/agent_runner.py`, `app/retrieval/hybrid.py` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, `tests/test_daily_qa_runner.py` | verified |
 | REQ-QAINTEL-012 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-new-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
 | REQ-QAINTEL-013 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/skills/qa-fixed-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-014 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-spec-decision-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
@@ -1629,6 +1751,9 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-034 | `app/modules/daily_qa/pipeline.py`, `scripts/run_daily_qa.py` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_failures.py`, `tests/test_daily_qa_pipeline.py` | verified |
 | REQ-QAINTEL-035 | `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-019: `tests/test_qa_intel_schedule.py` | verified |
+| REQ-QAINTEL-036 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/cancellation.py`, `app/modules/daily_qa/windows_job.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-021: `tests/test_qa_run_cancel.py`, `tests/test_qa_run_progress_ui.py`, `tests/qa_run_progress_ui.cjs`, `tests/test_qa_run_progress_browser.py` | implemented |
+| REQ-QAINTEL-037 | `app/modules/daily_qa/result_cache.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/finding_detail.html` | TEST-QAINTEL-022: `tests/test_daily_qa_result_cache.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_run_progress_browser.py` | implemented |
+| REQ-QAINTEL-038 | `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-023: `tests/test_qa_automation_policy.py`, `tests/test_qa_automation_ui.py`, `tests/test_qa_run_progress_browser.py`, `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_dashboard.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

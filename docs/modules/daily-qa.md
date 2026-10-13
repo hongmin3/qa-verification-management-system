@@ -2,7 +2,7 @@
 
 > 상위 문서: [README](../../README.md) · [문서 지도](../README.md) · 사양: [QA Intelligence 사양](../../specs/qa-intelligence.md) `REQ-QAINTEL-*`, [SPEC](../../SPEC.md) `REQ-DAILY-*`, `NFR-SEC-001` · 보안: [AI 점검 보안 통제](../SECURITY_AI_AGENT.md) · 새 제품: [제품 추가](../PRODUCT_ONBOARDING.md)
 
-운영 서버가 평일 아침마다 스스로 돌리는 **변경 탐지 기반 QA 점검**이다. Polarion 에서 SRS 와 이슈를
+운영 서버가 제품별 일일·주간 설정에 따라 돌리는 **변경 탐지 기반 QA 점검**이다. Polarion 에서 SRS 와 이슈를
 **전부** 읽어 어제 스냅샷과 비교하고, 바뀐 것(Change Event)만 골라 Claude Skill 로 분석한다.
 바뀐 것이 없으면 Claude 를 한 번도 부르지 않는다. 결과는 `/qa-agent` 대시보드와 요약 메일로 본다.
 사람의 승인·거절 화면은 없다. 결과는 참고 초안이고, Polarion·원본 TC 에 옮기는 일은 사람이 한다.
@@ -18,7 +18,8 @@
 분리 프로세스 -> 제품 잠금 -> Polarion 읽기(GET) -> SRS·이슈 스냅샷 -> 어제 스냅샷과 비교 -> Change Event 저장
 Change Event 저장 -(분석이 필요한 이벤트 없음)-> NO_CHANGE(Claude 0회)
 Change Event 저장 -> 분석 5종 작업 묶음 -> Claude CLI(제품별 격리 작업 폴더, Skill) -> 근거 검증 -> Finding 저장
-Finding 저장 -> 초안 Excel(FIXED 이슈·사양 변경) -> 요약 메일
+Finding 저장 -> 요약 메일(자동 점검 켜짐일 때)
+Finding 상세의 수동 요청 -> TC 점검·검증 TC 초안
 Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
 ```
 
@@ -166,8 +167,18 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.intelligence.comment_fetch_limit` | `300` | 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에 |
 | `daily_qa.intelligence.comment_min_chars` | `15` | 이보다 짧은 댓글은 의미 없는 댓글로 본다 |
 | `daily_qa.intelligence.event_max_attempts` | `3` | 같은 이벤트의 분석 실패가 이 횟수면 포기(`abandoned`) |
-| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 세션 한도 초기화가 이 시간 안이면 초기화 몇 분 뒤 한 번 다시 돈다 |
+| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 일일 모드에서 세션 한도 초기화 뒤 자동 재개 조건. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
 | `daily_qa.intelligence.use_knowledge_documents` | `true` | 등록된 사양서 문서 조각도 후보로 찾는다 |
+
+## 자동 점검 모드
+
+제품별 정책은 대시보드의 [자동 점검 사용]·[검증 기간]으로 저장한다(REQ-QAINTEL-038). 둘 다 켜면 매 업무일, 검증 기간만 끄면 매주 첫 업무일에 분석과 메일을 수행한다. 자동 점검을 끄면 자동 실행과 메일을 중지한다. 처음 저장하기 전에는 기존 일일 모드다.
+
+주간 실행일은 한국 시간의 월~금에서 등록 공휴일과 추가 휴일을 뺀 첫 날짜다. 놓친 예약은 그 실행일 당일에만 만회한다. 주간 사용량 한도 대기는 다음 주 예약 또는 [지금 실행]에서 이어 간다. 일일 한도 자동 재개는 유지한다.
+
+설정은 제품별 공용 DB에 저장하며 일반 사내 웹에서 변경할 수 있다. 서버의 `daily_qa.schedule.enabled: false`는 우선 적용하므로 담당자 PC를 화면 설정으로 자동 실행 서버로 바꾸지 않는다.
+
+자동 중지 중에도 [지금 실행]은 분석할 수 있다. 진행 중인 분석은 계속 저장하지만 메일 직전에 중지 설정을 확인하면 전송을 생략한다. 현재 실행을 끝내려면 [분석 중단]을 사용한다. 세부 조작은 앱 안 `/qa-agent/guide`에 있다.
 
 ## 운영
 

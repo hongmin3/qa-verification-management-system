@@ -107,7 +107,7 @@
 
 - [x] 전체 pytest, `node .project-check/project-readiness.js .` (1341 passed·7 skipped, 준비 검사 오류 0건)
 - [x] 운영 서버 반영 뒤 [지금 실행]의 실제 Claude 프로세스 인수에서 `--model claude-opus-5-5 --effort medium`을 확인했다. 담당자 PC 테스트 서버는 `127.0.0.1:24357`이다. 격리 서버에서는 저장·적용·복구와 390px·1920px 화면을 확인했다.
-- [ ] `CHANGELOG.md`(REQ-AICALL-007), `progress.md`, `docs/README.md` 문서 지도, 사용법 화면 갱신. 커밋·push.
+- [x] `CHANGELOG.md`(REQ-AICALL-007), `progress.md`, `docs/README.md` 문서 지도, 사용법 화면 갱신. 커밋·push(`b001827`, `codex/qa-followup-20261013`).
 
 ## 확인 필요
 

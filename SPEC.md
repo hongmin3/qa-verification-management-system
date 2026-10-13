@@ -31,7 +31,7 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 ### 한눈에 보기
 
 ```flow
-QA 담당자 화면 요청 -> 이슈·개정 매뉴얼 -> 사양서·TC·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
+QA 담당자 화면 요청 -> 개정 매뉴얼 -> 사양서·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
 평일 07:30 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
@@ -39,13 +39,12 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 결과 형식 검증 -(형식 오류 또는 한도)-> 작업 실패·건너뜀 기록 -> 요약 메일
 ```
 
-> **참고** 화면 요청은 QA Agent 단일 이슈 분석(5.2절, `/qa-agent/issue-analysis`), 매뉴얼 개정 검증(5.3절)이다. 예약 점검은 QA Intelligence Agent(5.4절과 [기능 사양](specs/qa-intelligence.md))다. 동기화와 공통 기반은 5.5절, 매뉴얼 서버 QA Manual Hub 는 5.6절에 있다. 자세한 예약 순서는 4절에 있다.
+> **참고** 화면 요청은 매뉴얼 개정 검증(5.3절)과 QA Intelligence Agent의 [지금 실행]이다. 예약 점검은 QA Intelligence Agent(5.4절과 [기능 사양](specs/qa-intelligence.md))다. 5.2절은 사용을 종료한 단일 이슈 분석의 요구사항과 공용 자료·규칙 기능을 보존한다. 동기화와 공통 기반은 5.5절, 매뉴얼 서버 QA Manual Hub 는 5.6절에 있다.
 
 ### 기능 한눈에 보기
 
 | 기능 | 누가, 언제 | 넣는 것 | 얻는 것 | 절 |
 |---|---|---|---|---|
-| QA Agent (이슈 검증 범위) | QA 담당자가 이슈 하나를 검증하기 전에 화면에서 | Polarion 이슈 번호(이슈 Export) | 이슈 유형, 관련 사양·TC, 수정확인·Regression 범위, 모자란 정보 질문 | 5.2 |
 | 매뉴얼 개정 검증 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정, 결과 Excel, Word Comment 파일 | 5.3 |
 | 비용 대시보드 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
 | QA Intelligence Agent 일일 점검 | 서버가 평일 07:30 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [지금 실행]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
@@ -124,7 +123,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 07:30 줄과 같다 | 아래 07:30 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 07:30 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
-| 07:30 (평일, 공휴일 제외) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 일일 점검 | Polarion 을 직접 읽어 어제와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-SCHED-002 |
+| 07:30 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
 | 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`) | 지식 폴더 업로드(`scripts/sync_product_knowledge.py`) | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 최신본을 서버 지식 사본으로 올린다. 다음 날 07:30 점검이 이것을 쓴다 | 서버 `/knowledge` 화면의 "마지막 수집" | 없음 | REQ-SYNC-002 |
@@ -677,6 +676,8 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 ### 5.2 QA Agent (이슈 검증 범위 산정)
 
+> **참고** 2026-10-13 단일 이슈 분석의 사용을 종료했다. 아래 전용 요구사항 본문은 당시 동작을 설명하는 기록이며 현재 화면·API로 제공하지 않는다(REQ-QAAGENT-016). 제품 지식 수집(REQ-QAAGENT-015), 공용 자료 읽기, QA 규칙과 자동 확정 금지 원칙은 현재 기능에서도 유지한다.
+
 **이 기능은**
 
 - QA 담당자가 Polarion 이슈 하나를 검증하기 전에 `/qa-agent` 화면에서 분석을 요청할 때 쓴다.
@@ -767,6 +768,8 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 ### REQ-ISSUE-001 이슈 Export 폴더 읽기
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** 이슈 Export 폴더에 쌓인 이슈를 분석 화면에서 고를 수 있게 한다. 예를 들어 VXvue 제품 설정에 이슈 Export 폴더가 있으면, 분석 화면의 Issue ID 목록에 그 폴더의 이슈 번호가 모두 채워진다. 이슈 하나를 고르면 그 이슈의 `backup.json` 을 찾아 읽는다.
 
 **언제**
@@ -824,6 +827,8 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 - 산출물 파일만 읽고, 폴더에 쓰지 않는다.
 
 ### REQ-ISSUE-002 이슈 항목 읽기
+
+> **참고** 공용 이슈 자료 읽기 도구를 보존한다. 단일 이슈 분석 화면에서 호출하던 경로는 사용을 종료했다.
 
 **하는 일** 내려받은 이슈 파일(`backup.json`) 한 건을 분석에 쓰는 이슈 기록(`IssueRecord`) 하나로 바꾼다. 예를 들어 연결된 작업 항목 가운데 종류가 `srs` 인 것은 연결 SRS 로, 나머지는 연결 이슈로 나눈다.
 
@@ -998,6 +1003,8 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 ### REQ-QAAGENT-001 분석 요청
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** QA 가 이슈 하나와 검증 환경을 넣고 분석을 시작한다. 예를 들어 제품 VXvue, 이슈 `VP-1234`, 실제 수행 `가능`, Test Data `준비됨` 을 넣고 `분석 실행` 을 누르면 작업 번호를 받고 진행 막대가 움직인다.
 
 **언제** `GET /qa-agent` 화면의 입력 폼에서 `분석 실행` 버튼을 누를 때(`POST /qa-agent/analyses`).
@@ -1062,6 +1069,8 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 
 ### REQ-QAAGENT-002 분석 준비 상태 확인
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** 분석 전에 그 제품으로 무엇이 준비됐고 무엇이 없는지 보여준다. 예를 들어 QA 규칙이 수집되지 않았으면 입력 폼 위에 `QA 규칙 미수집` 과 Knowledge 화면 연결이 보인다.
 
 **언제** `/qa-agent` 화면 위쪽에 보인다. 같은 내용을 JSON 으로도 준다(`GET /qa-agent/readiness?product=<제품>`).
@@ -1095,6 +1104,8 @@ JSON 항목:
 이유: 늘 켜져 있는 경고는 진짜 경고까지 무시하게 만든다.
 
 ### REQ-QAAGENT-003 분석 처리 순서
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** 분석 요청 하나를 여덟 단계로 처리하고, 단계마다 진행 상태를 남긴다. 예를 들어 사양서가 없는 제품이면 5단계에서 멈추고, AI 를 부르지 않은 채 결과를 저장한다.
 
@@ -1151,6 +1162,8 @@ QA 규칙 54절의 10단계 가운데 1~8단계를 이 기능이 맡는다. 9단
 
 ### REQ-QAAGENT-004 근거 검색
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** 이슈와 관련된 사양 조각과 TC 후보를 찾는다. 예를 들어 이슈에 연결 SRS `SRS-120` 이 있으면 그 번호가 적힌 사양 조각이 앞자리를 차지하고, 남은 자리는 용어 유사도가 높은 조각이 채운다.
 
 **언제** 분석 4단계.
@@ -1193,6 +1206,8 @@ QA 규칙 54절의 10단계 가운데 1~8단계를 이 기능이 맡는다. 9단
 이유: 외부 임베딩 API 를 쓰면 사양서 원문이 밖으로 나간다. 정확 일치+용어 유사도로 충분한지 먼저 재야 한다.
 
 ### REQ-QAAGENT-005 AI 호출 전 관문 판정 (G1·G2·G4)
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** AI 를 부르기 전에 자료와 환경이 갖춰졌는지 코드가 센다. 예를 들어 등록된 TC 가 0건이면 G1 이 `BLOCK` 이 되고 AI 호출 없이 끝난다.
 
@@ -1267,6 +1282,8 @@ AI 로 넘어갈지는 이렇게 정한다.
 
 ### REQ-QAAGENT-006 초안 모드
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** QA 입력이 모자라도 초안이 필요하면 AI 판단까지 진행한다. 예를 들어 실제 수행 가능 여부를 모름으로 두고 `초안으로 작성` 을 체크하면, G4 가 `NEED_INPUT` 이어도 AI 를 부르고 결과 제목 옆에 `초안 모드` 가 붙는다.
 
 **언제** `/qa-agent` 폼에서 `정보가 부족해도 초안으로 작성` 을 체크했을 때.
@@ -1284,6 +1301,8 @@ AI 로 넘어갈지는 이렇게 정한다.
 이유: QA 규칙 53절의 예외는 입력 대기까지만 넘긴다. 중단 조건은 넘기지 않는다.
 
 ### REQ-QAAGENT-007 AI 의미 판단 1회 호출
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** 코드로 셀 수 없는 뜻 판단 네 가지를 Gemini 구조화 호출 한 번으로 받는다. S01 이슈 의미 분석, S02 사양 관련도, S03 기존 TC 판정, S05 Regression 축이다. 예를 들어 VXvue 이슈 1건 실측에서 등록 문서 전체 약 2.11MB 가운데 30,207자(약 1.37%)만 보냈다.
 
@@ -1379,6 +1398,8 @@ Regression 축(QA 규칙 32절):
 
 ### REQ-QAAGENT-008 AI 응답 검사
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** AI 가 만든 번호를 그대로 믿지 않고 입력과 맞대어 본다. 예를 들어 AI 가 입력에 없던 `TC-9999` 를 판정하면 그 판정을 결과에서 빼고, 뺐다는 사실을 `Gate 상세` 탭에 남긴다.
 
 **언제** 분석 7단계.
@@ -1412,6 +1433,8 @@ Regression 축(QA 규칙 32절):
 이유: 취소선이 그 사양이 없어졌다는 뜻인지는 사람만 확정할 수 있다(QA 규칙 11절). 이 규칙은 없앤 Regression 영향 분석에서 옮겨 왔다.
 
 ### REQ-QAAGENT-009 판정마다 근거 붙이기
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** 모든 판정에 근거 위치와 근거 수준을 붙여, QA 가 원문을 찾아가 확인할 수 있게 한다. 예를 들어 TC 판정에는 근거 사양 조각(`문서명 · p.12 · 4.3.2 로그인`)과 그 TC 자신(`파일명 · 시트명 · 12행`)이 붙는다.
 
@@ -1454,6 +1477,8 @@ Regression 축(QA 규칙 32절):
 - 근거가 없으면 `근거 없음 — 규칙 §55에 따라 이 판정만으로 확정하지 않습니다.` 가 보인다.
 
 ### REQ-QAAGENT-010 AI 호출 후 관문 판정 (G3·G5)
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** AI 판단이 나온 뒤 코드가 두 가지를 검사한다. TC 가 근본 원인을 덮는지, 그리고 판정끼리 어긋나거나 근거 없이 확정한 것이 없는지다. 예를 들어 근거 없는 판정 글에 `타임아웃` 이 있으면 G5 에 `근거 없이 'Timeout'을 확정했습니다` 가 남는다.
 
@@ -1499,6 +1524,8 @@ G5 교차 검사(Cross-check):
 
 ### REQ-QAAGENT-011 결과 화면
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** 한 분석의 결과를 관문 막대와 6개 탭으로 보여준다. 예를 들어 `TC Coverage` 탭에서 TC 마다 판정·`Root Cause 검출 가능/불가`·확신도·근거를 보고, 그 자리에서 QA 결정을 적는다.
 
 **언제** 분석이 끝나면 이 화면으로 온다(`GET /qa-agent/analyses/<작업번호>?tab=<탭>`). 탭 값은 `issue`(기본)·`spec`·`tc`·`regression`·`gates`·`action`.
@@ -1531,6 +1558,8 @@ G5 교차 검사(Cross-check):
 - 이미지는 AI 가 판정하지 않는다. 파일 이름만 보여주고, 원본은 사람이 본다.
 
 ### REQ-QAAGENT-012 QA 결정 기록
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** QA 가 AI 판정마다 승인·거절·수정 후 승인·근거 추가 필요를 적는다. 예를 들어 TC `TC-0012` 판정 옆에서 `거절` 과 사유를 골라 `기록` 을 누르면 그 옆에 `거절 · <시각>` 이 붙는다.
 
@@ -1585,6 +1614,8 @@ G5 교차 검사(Cross-check):
 
 ### REQ-QAAGENT-013 분석 이력과 결과 내보내기
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
+
 **하는 일** QA Agent 분석만 모아 25건씩 보여주고, 한 분석의 결과 JSON 을 내려받게 한다.
 
 **언제** 이력 화면(`GET /qa-agent/analyses?page=<쪽>`)과 결과 화면의 `결과 JSON 내려받기`(`GET /qa-agent/analyses/<작업번호>/export`).
@@ -1603,6 +1634,8 @@ G5 교차 검사(Cross-check):
 | 분석이 없다 | 빈 표 | `아직 분석이 없습니다. 새 분석을 실행하세요.` |
 
 ### REQ-QAAGENT-014 사용법 화면
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** 앱 안에서 QA Agent 사용법을 보여준다. 예를 들어 `자주 막히는 경우` 표에서 `G1 BLOCK — 규칙 문서 미수집` 이면 Knowledge 화면에서 지식 폴더 수집을 하라고 안내한다.
 
@@ -1663,7 +1696,24 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 > **참고** 지식 폴더는 담당자 PC 에 있고 운영 서버에는 보통 없다. PC 쪽 자동 실행은 PC 의 작업 스케줄러가 `scripts/sync_product_knowledge.py` 로 한다. 수집·분류·등록 규칙 자체는 이 영역 밖이다(브리프가 다루지 않은 결정 참조).
 
+### REQ-QAAGENT-016 단일 이슈 분석 사용 종료
+
+**하는 일** 사용하지 않는 단일 이슈 분석의 화면과 실행 기능을 제거한다. QA Intelligence Agent의 점검과 공용 자료·규칙 기능은 계속 제공한다.
+
+**순서**
+
+1. 대시보드·분석 상세·사용법에서 단일 이슈 분석 버튼과 링크를 제거한다.
+2. 단일 이슈 분석의 첫 화면, 자료 선택·준비 상태·분석 요청·결과·승인·내보내기 주소는 GET·POST 모두 404를 돌려준다. 요청으로 AI나 작업 스레드를 시작하지 않는다.
+3. 전용 분석 엔진·관문·근거 판정·승인 처리·프롬프트·화면·비교 명령·난이도별 모델 선택 도구와 시작 시 대기 작업 재개를 제거한다. 공용 모델 이름 조회·제공자 선택·가격·비용 계산은 유지한다.
+4. 기존 분석·요청·결과·승인·승인 변경·사용량 기록은 DB에 남긴다. 대기 중인 단일 이슈 분석은 기록을 보존한 채 종료 상태로 표시하고 다시 실행하지 않는다.
+5. 일일 점검의 대시보드·Finding·실행·기간 조회·TC 요청, Knowledge·공용 자료 읽기·QA 규칙·제품 지식 수집, 매뉴얼 검증·비용 집계는 유지한다.
+6. 배포 때 사용 종료 파일 목록만 지운다. 먼저 모든 대상이 프로젝트 안인지 확인하며 DB·공용 파일·폴더는 지우지 않는다.
+
+**지킬 것** REQ-QAAGENT-001~014와 전용 요구사항의 번호·당시 본문은 보존한다. 공용 자료 형식과 기존 기록을 삭제하지 않는다.
+
 ### NFR-QAAGENT-001 자동 확정 금지
+
+> **참고** 자동 확정 금지 원칙은 일일 QA 점검과 매뉴얼 검증에도 적용한다. 아래 표의 G4·G5는 사용을 종료한 단일 이슈 엔진의 대응 기록이다. 현재 점검은 근거 검사와 읽기 전용 작업 폴더를 쓰며 원본 TC·Polarion을 바꾸지 않는다.
 
 **하는 일** AI 분석 결과가 사람 확인 없이 확정되지 않게 한다. QA 규칙 55절이 금지한 8가지는 코드에 그런 경로를 두지 않는다.
 
@@ -1695,15 +1745,17 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 **지킬 것**
 
-- 원본 PDF·Excel·DOCX·HTML 은 서버 밖으로 보내지 않는다. 보내는 것은 REQ-QAAGENT-007 표의 발췌뿐이다.
+- 원본 PDF·Excel·DOCX·HTML 은 서버 밖으로 보내지 않는다. 일일 QA 점검은 마스킹한 작업 입력과 격리된 작업 폴더를 쓰고, 매뉴얼 검증은 필요한 발췌를 공용 AI 통로로 보낸다(REQ-QAINTEL-024, NFR-SEC-001).
 - 보내기 직전 공용 통로가 이메일·IP·환자 정보·병원·고객명·일련번호·계정·키·사내 경로를 자리표로 바꾼다.
 - 이슈 번호·SRS 번호·16진수·DICOM Tag·버전은 가리지 않는다.
-- 감사 영역은 가림 처리까지 끝난 전송본을 보여준다.
+- 매뉴얼 검증 감사 영역과 일일 점검의 보낸 입력·Claude 로그에서 전송 내용을 확인한다.
 - 가림 보고에는 원래 값 없이 건수만 남긴다.
 
 이유: 사내 사양서와 이슈를 외부 AI 로 보내므로 무엇이 나갔는지 확인할 수 있어야 한다. 또 기록에 원래 값이 남으면 가린 의미가 없다.
 
 ### NFR-QAAGENT-003 분석당 AI 호출 수
+
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 엔진은 제공하지 않는다(REQ-QAAGENT-016). 기존 데이터와 공용 자료 읽기 도구는 보존한다.
 
 **하는 일** 분석 한 건이 쓰는 AI 호출 수와 토큰을 작게 묶어 둔다.
 
@@ -1720,7 +1772,7 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 **하는 일** 제품의 QA 규칙 문서 사본을 읽어 절 목록으로 만든다. 예를 들어 VXvue 규칙 문서에서 `Rev1.17` 과 절 목록을 얻는다.
 
-**언제** 분석 3단계, `/qa-agent` 준비 상태, `/qa-agent/rules` 화면에서 읽는다.
+**언제** 제품 지식 상태와 `/qa-agent/rules` 화면에서 읽는다. 일일 점검의 사전 규칙 확인에도 제품 지식 사본을 쓴다. 단일 이슈 분석의 3단계 적용은 사용을 종료했다.
 
 **입력** 지식 폴더 수집(REQ-QAAGENT-015)이 만든 사본(`data/product_knowledge/<제품 이름표>/original/<종류>/<파일>`)이다.
 
@@ -1775,9 +1827,9 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 ### REQ-RULE-003 필요한 규칙 절만 AI 에 넣기
 
-**하는 일** AI 를 부를 때 규칙 전문을 넣지 않고, 판단에 필요한 절만 글자 예산 안에서 골라 지시문 뒤에 붙인다. 예를 들어 VXvue 규칙 전문 30.7KB 가운데 Skill 별로 2.0~4.7KB 만 들어간다.
+**하는 일** 규칙 전문에서 판단에 필요한 절만 글자 예산 안에서 고르는 공용 발췌 도구를 제공한다. `/qa-agent/rules`에서 Skill 별 규칙의 수와 발췌량을 확인한다. 아래 네 Skill의 합산 절차는 옛 단일 분석의 지시문 구성 기록이며 현재 AI 호출 경로로 제공하지 않는다.
 
-**언제** 분석 6단계(REQ-QAAGENT-007). `/qa-agent/rules` 화면의 Skill 별 주입량 계산에도 같은 방법을 쓴다(예산 6,000자).
+**언제** `/qa-agent/rules` 화면의 Skill 별 발췌량 계산에 쓴다(예산 6,000자). 단일 이슈 분석의 6단계 적용은 사용을 종료했다.
 
 **순서**
 
@@ -1798,18 +1850,18 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `qa_agent.rule_char_budget` | `5000` | 한 호출의 규칙 발췌 상한(글자) |
+| 공용 발췌의 글자 예산(`char_budget`) | `6000` | `/rules` 화면이 Skill별로 계산할 때 사용하는 상한. 옛 `qa_agent.rule_char_budget` 설정은 사용을 종료했다 |
 
 **안 될 때**
 
 | 경우 | 동작 | 사용자에게 보이는 것 |
 |---|---|---|
-| 규칙이 없다 | 빈 발췌. 다만 G1 이 먼저 막으므로 호출까지 가지 않는다 | `(없음)` |
+| 규칙이 없다 | 빈 발췌와 자료 준비 안내. 이 도구 자체는 AI를 호출하지 않는다 | `(없음)` |
 | 고른 절이 없다 | 빈 발췌 | `(없음)` |
 
 ### REQ-RULE-004 규칙 절별 구현 현황표
 
-**하는 일** QA 작성 규칙 문서의 최상위 절마다 어떻게, 어디에 구현했는지 코드 안 표로 적어 둔다. 예를 들어 44절(관문 G1~G5)은 `결정적 코드`·`구현됨`·`app/modules/qa_agent/gates.py` 다.
+**하는 일** QA 작성 규칙 문서의 최상위 절마다 어떻게, 어디에 구현했는지 코드 안 표로 적어 둔다. 사용을 종료한 단일 이슈 분석의 관문·판정 엔진을 현재 구현으로 표시하지 않는다. 일일 점검의 구현 위치와 아직 지원하지 않는 규칙을 구분한다.
 
 **언제** 표는 `app/modules/qa_agent/rule_capability.py` 의 `RULE_CAPABILITY` 에 있다. 화면(REQ-RULE-005)·보고 명령(REQ-RULE-007)·검사(REQ-RULE-006)가 이 표를 읽는다.
 
@@ -3473,7 +3525,7 @@ Finding 하나의 필드:
 
 이유: 메일은 사내 시스템 밖으로 전달되기 쉽다. 자세한 내용은 `/qa-agent` 대시보드에서 본다.
 
-**언제** 실행 마지막(REQ-DAILY-001 14번). 예상 못 한 오류로 멈춘 실행에도 보낸다. CLI `--no-email` 이면 보내지 않는다.
+**언제** 실행 마지막(REQ-DAILY-001 14번). 예상 못 한 오류로 멈춘 실행에도 보낸다. CLI `--no-email`·자동 점검 중지(REQ-QAINTEL-038)·사용자 중단(REQ-QAINTEL-036)이면 보내지 않는다.
 
 **입력**
 
@@ -3487,12 +3539,14 @@ Finding 하나의 필드:
 
 제목: `[QA Agent] <제품> <실행 ID> <실행 결과> · Finding N건 · 질문 N건`
 
+한도 중단은 실행 결과를 `Claude 사용량 한도`로, 수집·분석 실패는 `일부 실패` 또는 `실패`로 표시한다. 새 결과가 0건이어도 실패나 한도를 `변경사항 없음`으로 알리지 않는다.
+
 > **예시** `[QA Agent] VXvue 20260930-073000-vxvue 변경사항 없음 · Finding 0건 · 질문 0건`
 
 글 본문은 이 순서다.
 
-1. 규칙 판 불일치면 첫 줄에 "※ <이유>" 와 빈 줄.
-2. Claude 사용량 한도가 걸렸으면 "※ <한도 설명> 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다." 와 빈 줄. 한도 설명에는 한도 종류와 초기화 시각이 들어간다(REQ-QAINTEL-025).
+1. 수집·분석 실패가 있으면 첫 줄에 실패 단계·가린 오류 사유와 확인할 실행 상세 링크를 넣는다. 규칙 판 불일치도 이 알림에 포함한다. 예상 못 한 실행 오류는 저장된 진행 숫자와 결과를 함께 알린다.
+2. Claude 사용량 한도가 걸렸으면 "※ <한도 설명> 그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다." 와 빈 줄. 한도 설명에는 한도 종류·초기화 시각·이번 실행에서 남긴 대기 작업 수를 넣는다. 일일 모드는 자동 재개 조건을, 주간 모드는 다음 주 첫 업무일 또는 [지금 실행]에서 이어 간다는 방법을 적는다(REQ-QAINTEL-025·038).
 3. 실행 ID, 실행 결과.
 4. "오늘 변경: <이벤트 이름> N, ..." 으로 이번 실행이 만든 변경 이벤트의 종류별 건수. 이벤트가 없으면 "오늘 변경: 변경 없음".
 5. `[단계]` 아래에 단계마다 "- <단계 이름>: <상태> (<비고>)". 비고는 200자까지.
@@ -3514,7 +3568,7 @@ HTML 본문도 같은 내용을 담는다. 단계는 표로, 점검별 건수는
 | `sent` | 보냈다 |
 | `not_configured` | 수신자나 메일 서버 설정이 없어 보내지 않았다 |
 | `failed` | 보내다가 오류가 났다 |
-| `disabled` | CLI `--no-email` 로 보내지 않았다 |
+| `disabled` | CLI `--no-email` 또는 자동 점검 중지로 보내지 않았다 |
 
 **안 될 때**
 
@@ -3522,6 +3576,8 @@ HTML 본문도 같은 내용을 담는다. 단계는 표로, 점검별 건수는
 |---|---|---|
 | 메일 발송 실패 | 실행 결과는 그대로 저장된다 | 실행 목록·상세의 메일 칸 `failed` |
 | 수신자 없음 | 보내지 않는다 | 메일 칸 `not_configured` |
+
+메일 오류는 화면과 가린 서버 로그에 남긴다. 메일 실패를 알리기 위한 메일을 다시 보내지 않는다. 전송 중 예상 못 한 오류가 나도 원래 실행 결과·진행 숫자·저장 자료를 보존한다. 오류 안내 작성은 추가 AI를 호출하지 않는다.
 
 ### REQ-DAILY-009 검토 화면
 
@@ -4513,7 +4569,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 > **예시** VXvue 에 사양서1~5 가 모두 버전 1.0 으로 등록돼 있으면 다섯 개가 모두 검색된다. 그중 사양서3 의 파일이 없어졌으면 나머지 넷으로 분석하고, 결과에 "사양서3: 파일이 없습니다"가 남는다.
 
-**언제** QA Agent 단일 이슈 분석과 일일 QA 점검이 자료를 읽을 때(`app/core/knowledge_documents.py::load_for_product`).
+**언제** 일일 QA 점검과 매뉴얼 개정 검증이 등록 자료를 읽을 때. 제품 공용 로더(`app/core/knowledge_documents.py`)와 파싱 저장본을 쓴다.
 
 **순서**
 
@@ -4856,7 +4912,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `qa_rules` | QA 규칙 | `knowledge_folder` | 예 |
 | `instruction_prompt` | 지침 프롬프트 | `knowledge_folder` | 아니오 |
 
-이유: QA Agent 는 사양서·TC·QA 규칙이 없으면 판정을 막는다(REQ-QAAGENT-005 의 관문 G1). 매뉴얼과 지침 프롬프트는 없는 제품도 있다.
+이유: 일일 QA 점검은 최신 사양서·TC·QA 규칙을 분석 자료로 쓴다. 매뉴얼과 지침 프롬프트는 없는 제품도 있다. 단일 이슈 분석의 G1 관문은 사용을 종료했다.
 
 `source` 값과 그 값이 정하는 동작:
 
@@ -5185,7 +5241,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-001 AI 구조화 호출 공통 통로
 
-**하는 일** QA Agent 단일 이슈 분석과 매뉴얼 개정 검증의 AI 호출이 지나는 공통 통로다. 프롬프트 파일 읽기, 가리기, 응답 저장본, 재시도, 토큰 합산을 여기서 한다. 도메인 판정을 해석하는 일은 부르는 쪽이 한다.
+**하는 일** 매뉴얼 개정 검증의 AI 호출이 지나는 공통 통로다. 프롬프트 파일 읽기, 가리기, 응답 저장본, 재시도, 토큰 합산을 여기서 한다. 도메인 판정을 해석하는 일은 부르는 쪽이 한다. 일일 QA 점검은 별도 실행기(REQ-DAILY-016)를 쓴다.
 
 어느 AI 를 부를지는 `ai.provider` 로 정한다. 기본값 `claude_cli` 는 Claude CLI 를 부르고(REQ-AICALL-005), `gemini` 는 Gemini API 를 부른다. 부르는 쪽 코드는 어느 AI 인지 몰라도 된다.
 
@@ -5198,7 +5254,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | 값 | 뜻 |
 |---|---|
 | 본문(`prompt`) | 보낼 글(보통 JSON 글자) |
-| 프롬프트 이름(`prompt_name`) | `app/prompts/<이름>.yaml` 의 이름. 지금 `impact_analysis`, `manual_revision_quick`, `manual_revision_detail`, `qa_agent_issue_impact` 가 있다 |
+| 프롬프트 이름(`prompt_name`) | `app/prompts/<이름>.yaml` 의 이름. 현재 `manual_revision_quick`, `manual_revision_detail`을 쓴다. 과거 분석의 프롬프트 이름은 사용량 기록에 보존한다 |
 | 응답 형식(`response_schema`) | Pydantic 모델. AI 에 JSON 응답 형식으로 넘긴다 |
 | 추가 지시(`system_suffix`) | 실행 때 정해지는 지시(예: 해당 Skill 의 QA 규칙 발췌). 시스템 지시 뒤에 붙인다 |
 | 모델(`model`) | 쓸 모델 이름. 비면 기본 모델이다. `claude_cli` 는 `ai.claude.models.standard`, `gemini` 는 `GEMINI_MODEL` 이다 |
@@ -5292,6 +5348,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-004 모델 등급 고르기
 
+> **참고** 2026-10-13 사용을 종료한 단일 이슈 분석의 동작 기록이다. 현재 화면·API와 전용 난이도별 모델 선택 도구는 제공하지 않는다(REQ-QAAGENT-016). 공용 모델 이름 조회·제공자 선택·가격·비용 계산은 유지한다.
+
 **하는 일** 요청이 어려운지 판단해 모델 등급을 고른다. LLM 을 부르지 않고 입력에서 세는 신호로만 판단한다. QA Agent 가 쓴다.
 
 **순서**
@@ -5316,9 +5374,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-005 Claude CLI 로 AI 판정 받기
 
-**하는 일** QA Agent 단일 이슈 분석과 매뉴얼 개정 검증의 AI 판정을 Gemini API 대신 Claude CLI 로 받는다. 회사 Claude Team 계정 하나로 일일 QA 점검과 같은 AI 를 쓴다.
+**하는 일** 매뉴얼 개정 검증의 AI 판정을 Gemini API 대신 Claude CLI 로 받는다. 회사 Claude Team 계정으로 일일 QA 점검과 같은 AI 를 쓴다.
 
-> **예시** QA 가 단일 이슈 분석을 시작하면, 공통 통로가 `claude -p` 를 한 번 실행한다. 시스템 지시와 응답 JSON 형식을 인자로, 분석 입력 JSON 을 표준입력으로 넘긴다. Claude 가 형식에 맞는 JSON 을 돌려주면 기존과 똑같이 검증·보고서 단계로 넘어간다.
+> **예시** QA 가 매뉴얼 개정 검증을 시작하면, 공통 통로가 `claude -p` 를 실행한다. 시스템 지시와 응답 JSON 형식을 인자로, 분석 입력 JSON 을 표준입력으로 넘긴다. Claude 가 형식에 맞는 JSON 을 돌려주면 검증·보고서 단계로 넘어간다.
 
 이유: Gemini 는 사내 사용 승인과 결제가 따로 필요했다. Claude CLI 로 바꾸면 일일 QA 점검과 같은 계정·같은 승인으로 모든 AI 기능을 쓸 수 있다.
 
@@ -5379,7 +5437,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
   이유: 운영 서버의 systemd 서비스는 PATH 에 `~/.local/bin` 이 없다. 서버 설정을 바꾸려면 관리자 권한이 필요하다.
 
-- 분석 한 건의 호출 수는 Gemini 때와 같다. QA Agent 단일 이슈 분석은 1회, 매뉴얼 개정 검증은 변경마다 1~2회다.
+- 매뉴얼 개정 검증의 호출 수는 변경마다 1~2회다.
 - 오류 문장에서 인증 토큰 문자열을 지운다.
 - Claude 에게 도구를 주지 않는다. 판정에 필요한 자료는 모두 표준입력의 분석 입력에 있다.
 
@@ -5509,11 +5567,10 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 하루에 쓴 토큰이 한도를 넘으면 새 분석을 시작하기 전에 막는다. 이미 도는 분석에는 영향이 없다.
 
-> **예시** 한도가 500 이고 오늘 끝난 분석들이 350+200 토큰을 썼다고 하자. 그러면 다음 QA Agent 단일 이슈 분석 요청은 429 "오늘 AI 누적 토큰 사용량(550)이 설정한 한도(500)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요."를 받는다.
+> **예시** 한도가 500 이고 오늘 끝난 분석들이 350+200 토큰을 썼다고 하자. 그러면 다음 매뉴얼 개정 검증 요청은 429 "오늘 AI 누적 토큰 사용량(550)이 설정한 한도(500)를 초과해 분석을 실행할 수 없습니다. config.yaml의 analysis.daily_token_limit을 조정하세요."를 받는다.
 
 **언제** 다음 요청을 받을 때 확인한다.
 
-- QA Agent 분석 시작(`POST /qa-agent/analyses`)
 - 매뉴얼 개정 검증 시작(`POST /manual-review/revisions`)
 
 **순서**
@@ -8090,7 +8147,7 @@ NFR-IMPACT-002. `tests/test_security_filter.py` 전체(자리표 바꾸기, QA �
 NFR-IMPACT-003. 자동 테스트 없음. 사람이 확인하는 절차:
 
 1. `ai.provider` 를 `gemini` 로 두고 `GEMINI_MODEL` 을 계정에서 쓸 수 없는 모델 이름으로 바꾼다.
-2. QA Agent 단일 이슈 분석을 돌린다.
+2. 매뉴얼 개정 검증을 돌린다.
 3. 분석이 `models.standard` 로 끝나고 분석 상세 감사 기록에 대신 쓴 모델 기록이 남는지 본다.
 
 ### TEST-PARSE-001
@@ -8173,7 +8230,9 @@ REQ-ISSUE-005 를 `tests/test_polarion_issue.py` 로 검증한다.
 
 ### TEST-QAAGENT-001
 
-REQ-QAAGENT-005·006·010 과 NFR-QAAGENT-001 의 목록 부분을 `tests/test_qa_agent_gates.py` 로 검증한다.
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
+
+REQ-QAAGENT-005·006·010 과 NFR-QAAGENT-001 의 목록 부분을 당시 전용 관문 테스트(현재 폐기) 로 검증한다.
 
 - 표준 표현·금지 추론 20개·중단 조건·금지 항목이 코드에 있다(`test_standard_findings_use_the_rule_wording`, `test_all_forbidden_inferences_from_the_rule_are_encoded`, `test_stop_conditions_and_prohibitions_are_encoded`).
 - 금지 추론은 근거 없을 때만 걸린다, 범위 넘는 표현을 잡는다(`test_forbidden_inference_is_*`, `test_overclaim_is_detected`, `test_no_spec_claim_is_detected`).
@@ -8185,12 +8244,14 @@ REQ-QAAGENT-005·006·010 과 NFR-QAAGENT-001 의 목록 부분을 `tests/test_q
 - 판정 값 정하기(`test_gate_result_*`, `test_gate_status_per_severity`), AI 호출 여부는 G1·G2·G4 만 본다(`test_report_ignores_post_llm_gates_when_deciding_llm_call`).
 
 ```text
-python -m pytest tests/test_qa_agent_gates.py -q
+python -m pytest tests/test_qa_agent_retired.py -q
 ```
 
 ### TEST-QAAGENT-002
 
-REQ-QAAGENT-003·007·008·009 와 NFR-QAAGENT-003 을 `tests/test_qa_agent_analyzer.py` 로 검증한다. 가짜 AI 응답기를 넣어 API 를 부르지 않는다.
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
+
+REQ-QAAGENT-003·007·008·009 와 NFR-QAAGENT-003 을 당시 전용 분석 엔진 테스트(현재 폐기) 로 검증한다. 가짜 AI 응답기를 넣어 API 를 부르지 않는다.
 
 - 관문이 막으면 AI 호출 0회와 이유가 남는다(`test_gate_block_means_zero_llm_calls`, `test_gate_block_records_the_reason`, `test_missing_execution_context_blocks_the_call`, `test_no_specification_evidence_blocks_the_call`), 초안 허용이면 진행(`test_draft_permission_lets_it_proceed`).
 - 정상 경로는 호출 정확히 1회(`test_pipeline_makes_exactly_one_llm_call`), 관문 5개 결과(`test_result_carries_gate_report_for_all_five_gates`), 8축 항상 포함·빠진 축 QA 확인 표시(`test_regression_matrix_always_contains_every_axis`, `test_unjudged_axes_are_marked_for_qa`).
@@ -8198,15 +8259,17 @@ REQ-QAAGENT-003·007·008·009 와 NFR-QAAGENT-003 을 `tests/test_qa_agent_anal
 - 취소선 주의(`test_deprecated_specification_is_noted`), 유사도만 주의(`test_similarity_only_evidence_is_noted_not_blocked`), 연결 SRS 미발견(`test_linked_srs_not_found_in_documents_is_noted`).
 - 응답 검사: 없는 TC 제외(`test_unknown_tc_id_is_dropped_and_recorded`), 없는 조각 제외와 확신도 하향(`test_unknown_chunk_id_is_dropped_and_confidence_lowered`).
 - 근거 없는 근본 원인 검출 불인정(`test_root_cause_coverage_is_not_accepted_without_evidence`), Step–Expected 번호 불일치(`test_step_expected_number_mismatch_is_reported`).
-- 취소선 근거를 쓴 판정의 확신도 하향은 `tests/test_qa_agent_validation.py` 가 본다.
+- 취소선 근거를 쓴 판정의 확신도 하향은 당시 전용 응답 검사 테스트(현재 폐기) 가 본다.
 - 보내는 것: 규칙은 발췌만, 규칙 없으면 빈 발췌, TC 수행 결과 미전송, 댓글 제한, 감사 기록, 같은 입력 캐시(`test_rule_suffix_*`, `test_prompt_does_not_include_tc_result_history`, `test_prompt_limits_issue_comments`, `test_audit_snapshot_records_what_was_sent`, `test_second_identical_run_hits_the_cache`).
 - 근거 수준: 사양은 Expected 근거 가능, 이슈 댓글은 불가, TC 위치는 시트·행, 근거 없는 판정 집계(`test_specification_evidence_can_support_expected`, `test_issue_comment_evidence_cannot_support_expected`, `test_testcase_evidence_locator_uses_sheet_and_row`, `test_store_reports_unsourced_claims`).
 
 ```text
-python -m pytest tests/test_qa_agent_analyzer.py -q
+python -m pytest tests/test_qa_agent_retired.py -q
 ```
 
 ### TEST-QAAGENT-003
+
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
 
 REQ-QAAGENT-007 의 모델 등급 선택을 `tests/test_model_router.py` 로 검증한다.
 
@@ -8216,6 +8279,8 @@ REQ-QAAGENT-007 의 모델 등급 선택을 `tests/test_model_router.py` 로 검
 - 이유 저장(`test_decision_serialises_with_reasons`), 연동 낱말 판별, 설정에서 모델 읽기, 비용 추정.
 
 ### TEST-QAAGENT-004
+
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
 
 REQ-QAAGENT-004 를 `tests/test_retrieval_hybrid.py` 로 검증한다.
 
@@ -8227,9 +8292,13 @@ REQ-QAAGENT-004 를 `tests/test_retrieval_hybrid.py` 로 검증한다.
 
 ### TEST-QAAGENT-005
 
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
+
 REQ-QAAGENT-013 의 이력 분리를 `tests/test_persistent_analyses.py` 의 `test_analysis_history_is_separated_by_module`, `test_legacy_rows_without_module_belong_to_impact_analyzer` 로 검증한다.
 
 ### TEST-QAAGENT-006
+
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
 
 REQ-QAAGENT-001·002 는 자동 테스트 없음. 사람이 확인한다.
 
@@ -8241,6 +8310,8 @@ REQ-QAAGENT-001·002 는 자동 테스트 없음. 사람이 확인한다.
 
 ### TEST-QAAGENT-007
 
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
+
 REQ-QAAGENT-011·012·013 의 화면 흐름을 사람이 확인한다. 결정 기록·탭 복귀·읽지 못한 문서 목록은 TEST-QAAGENT-010 이 자동으로 본다.
 
 1. 끝난 분석의 결과 화면에서 6개 탭을 차례로 열어 REQ-QAAGENT-011 표의 내용이 보이는지 본다.
@@ -8250,6 +8321,8 @@ REQ-QAAGENT-011·012·013 의 화면 흐름을 사람이 확인한다. 결정 �
 5. 없는 작업 번호로 결과 화면·내보내기·승인을 부르면 404 인지 본다.
 
 ### TEST-QAAGENT-008
+
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
 
 REQ-QAAGENT-014 의 조사 범위 안내는 TEST-QAAGENT-010 이 자동으로 본다. 나머지는 `/qa-agent/guide` 를 열어 REQ-QAAGENT-014 의 절이 모두 있고 Regression 축 표가 8줄인지 본다.
 
@@ -8262,7 +8335,9 @@ REQ-QAAGENT-015 는 자동 테스트 없음. 사람이 확인한다.
 
 ### TEST-QAAGENT-010
 
-REQ-QAAGENT-001·003·005·010·011·012·014, REQ-ISSUE-004, NFR-QAAGENT-001 의 2026-09-30 수정을 `tests/test_qa_agent_fixes.py` 로 확인한다. 가짜 AI 응답기를 쓰고 API 를 부르지 않는다.
+> **참고** 사용 종료 전의 시험 기록이다. 현재 전용 기능의 제거와 공용 기능 보존은 TEST-QAAGENT-011로 확인한다.
+
+REQ-QAAGENT-001·003·005·010·011·012·014, REQ-ISSUE-004, NFR-QAAGENT-001 의 2026-09-30 수정을 당시 전용 수정 회귀 테스트(현재 폐기) 로 확인한다. 가짜 AI 응답기를 쓰고 API 를 부르지 않는다.
 
 - G4: Test Data 준비 여부가 모름이면 `test_data_unknown`, 미준비면 `test_data_missing`(`test_g4_asks_for_input_when_test_data_is_unknown`, `test_g4_keeps_asking_when_test_data_is_missing`).
 - G5: B·C·D 유형 이슈의 `NEW_TC` 판정은 `new_tc_for_spec_issue` 주의, A 유형은 남기지 않음(`test_g5_notes_new_tc_for_spec_issue`, `test_g5_does_not_note_new_tc_for_program_fixed_issue`, `test_pipeline_notes_new_tc_judgment_for_spec_issue`).
@@ -8276,8 +8351,17 @@ REQ-QAAGENT-001·003·005·010·011·012·014, REQ-ISSUE-004, NFR-QAAGENT-001 �
 - 사용법 화면의 조사 범위 안내(`test_guide_explains_scope_note_does_not_narrow_search`).
 
 ```text
-python -m pytest tests/test_qa_agent_fixes.py -q
+python -m pytest tests/test_qa_agent_retired.py -q
 ```
+
+### TEST-QAAGENT-011 단일 이슈 분석 사용 종료
+
+REQ-QAAGENT-016과 사용을 종료한 전용 요구사항을 `tests/test_qa_agent_retired.py`로 확인한다.
+
+1. 옛 첫 화면·자료 선택·준비 상태·분석 요청·이력·결과·승인·내보내기 주소가 404이며 AI와 작업 스레드를 시작하지 않는다.
+2. 현재 대시보드·Finding·실행 상세·사용법에 단일 이슈 분석 버튼과 링크가 없다.
+3. 전용 엔진·화면·프롬프트·대기 작업 재개가 제거되고 공용 파서·규칙·축·자료 수집·점검·매뉴얼 검증은 동작한다.
+4. 기존 분석·승인·사용량 데이터는 보존하고 대기 분석은 다시 시작하지 않는다.
 
 ### TEST-RULE-001
 
@@ -8648,6 +8732,7 @@ REQ-COST-004 확인. `tests/test_cost_dashboard.py::test_guide_does_not_claim_on
 | `test_runner_hides_token_in_errors_and_records_usage` | 오류 문장의 토큰 지우기, 사용량 기록 | NFR-SEC-001, REQ-DAILY-021 |
 | `test_rules_revision_mismatch_blocks` | 규칙 판이 다르면 막는다 | REQ-DAILY-010 |
 | `test_email_contains_counts_and_link_but_no_spec_text` | 메일에 건수·링크만, 사양 본문 없음 | REQ-DAILY-008 |
+| 한도·수집 실패·분석 실패·예상 못 한 실행 오류 메일 | 결과 0건이어도 실패 우선 제목·가린 사유·남은 대기·일일/주간 재개 방법. 중지·사용자 중단은 전송 0회, 메일 실패는 저장하며 알림 재전송·추가 AI 호출 없음 | REQ-DAILY-008, REQ-QAINTEL-025, REQ-QAINTEL-038 |
 | `test_stream_output_records_tool_calls_without_written_content` | 도구 호출 기록에 경로·검색어만, 쓴 내용은 길이만 | REQ-DAILY-021 |
 | `test_usage_limit_is_a_failure_with_its_reason_recorded` | 사용량 한도 초과를 실패로 보고 이유를 남긴다 | REQ-DAILY-016, 021 |
 
@@ -8843,7 +8928,9 @@ REQ-AICALL-001, 002, REQ-USAGE-001 을 `tests/test_gemini_client.py` 의 `test_g
 
 ### TEST-AICALL-002
 
-REQ-AICALL-004, REQ-USAGE-004 를 `tests/test_model_router.py` 로 확인한다: 등급 올림 조건 네 가지, 사용자 지정 등급, 모르는 등급 무시, 설정의 모델 이름, Pro 계열 미설정, 점이 든 모델 이름의 단가, 모르는 모델의 단가, 비용 계산.
+REQ-USAGE-004와 공용 모델 조회를 `tests/test_model_router.py`로 확인한다: 설정의 모델 이름·제공자 선택, 점이 든 모델 이름의 단가, 모르는 모델의 단가, 비용 계산.
+
+> **참고** 사용을 종료한 REQ-AICALL-004의 등급 올림 네 조건·사용자 지정·모르는 등급 무시는 당시 테스트 기록이다. 전용 도구가 다시 노출되지 않는지는 TEST-QAAGENT-011로 확인한다.
 
 ### TEST-AICALL-003
 
@@ -8889,7 +8976,7 @@ REQ-AICALL-005 를 `tests/test_claude_cli_provider.py` 로 확인한다. 실제 
 
 실제 CLI 로는 사람이 한 번 확인한다.
 
-1. `ai.provider: claude_cli` 로 앱을 띄우고 QA Agent 단일 이슈 분석·매뉴얼 개정 검증을 한 번씩 돌린다.
+1. `ai.provider: claude_cli` 로 앱을 띄우고 매뉴얼 개정 검증을 한 번 돌린다.
 2. 분석이 끝나고, 감사 화면의 AI 제공자가 `claude_cli`, 토큰 사용량이 0 보다 큰지 본다.
 
 ### TEST-USAGE-001
@@ -8899,7 +8986,7 @@ REQ-USAGE-002 를 `tests/test_persistent_analyses.py` 의 `test_tokens_used_sinc
 - 한국 시간 0시 기준: `tests/test_cost_dashboard.py::test_today_starts_at_midnight_korea_time`, `test_daily_token_status_counts_early_morning_korea_usage_as_today`
 - 실패한 분석의 토큰: `tests/test_cost_dashboard.py::test_failed_analysis_tokens_count_toward_the_daily_total`
 
-> **참고** QA Agent의 공용 계산 호출은 `tests/test_qa_agent_fixes.py::test_start_uses_the_core_daily_token_status`, 매뉴얼 검증의 한도 차단은 `tests/test_manual_review_router.py::test_start_revision_rejected_when_daily_token_limit_exceeded`가 확인한다.
+> **참고** 매뉴얼 검증의 한도 차단은 `tests/test_manual_review_router.py::test_start_revision_rejected_when_daily_token_limit_exceeded`가 확인한다. 단일 이슈 분석의 한도 차단 절차는 사용을 종료했다.
 
 ### TEST-USAGE-002
 
@@ -9337,32 +9424,33 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-CORE-004 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
 | REQ-CORE-005 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
 | REQ-CORE-006 | `app/web/router.py` | TEST-IMPACT-016: `tests/test_web.py` | deprecated |
-| REQ-ISSUE-001 | `app/parsers/polarion_issue.py`, `app/modules/qa_agent/analyzer.py`, `app/modules/qa_agent/router.py` | TEST-ISSUE-001: `tests/test_polarion_issue.py` | implemented |
+| REQ-ISSUE-001 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-ISSUE-002 | `app/parsers/polarion_issue.py` | TEST-ISSUE-002: `tests/test_polarion_issue.py` | implemented |
 | REQ-ISSUE-003 | `app/parsers/polarion_issue.py` | TEST-ISSUE-003: `tests/test_polarion_issue.py` | implemented |
-| REQ-ISSUE-004 | `app/parsers/polarion_issue.py`, `app/modules/qa_agent/analyzer.py`, `app/modules/qa_agent/templates/index.html` | TEST-ISSUE-004: `tests/test_polarion_issue.py`, TEST-QAAGENT-010, `tests/test_qa_agent_fixes.py` | implemented |
+| REQ-ISSUE-004 | `app/parsers/polarion_issue.py` | TEST-ISSUE-004: `tests/test_polarion_issue.py` | implemented |
 | REQ-ISSUE-005 | `app/parsers/polarion_issue.py` | TEST-ISSUE-005: `tests/test_polarion_issue.py` | implemented |
-| REQ-QAAGENT-001 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/index.html`, `app/core/uploads.py`, `app/modules/qa_agent/analyzer.py` | TEST-QAAGENT-006, TEST-QAAGENT-010, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-002 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/index.html` | TEST-QAAGENT-006 | implemented |
-| REQ-QAAGENT-003 | `app/modules/qa_agent/analyzer.py`, `app/modules/qa_agent/router.py`, `app/core/storage.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py`, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-004 | `app/modules/qa_agent/analyzer.py`, `app/retrieval/hybrid.py`, `app/retrieval/exact_retriever.py` | TEST-QAAGENT-004: `tests/test_retrieval_hybrid.py` | implemented |
-| REQ-QAAGENT-005 | `app/modules/qa_agent/gates.py`, `app/modules/qa_agent/standard_findings.py`, `app/modules/qa_agent/analyzer.py` | TEST-QAAGENT-001: `tests/test_qa_agent_gates.py`, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-006 | `app/modules/qa_agent/gates.py`, `app/modules/qa_agent/ai_client.py` | TEST-QAAGENT-001: `tests/test_qa_agent_gates.py` | implemented |
-| REQ-QAAGENT-007 | `app/modules/qa_agent/ai_client.py`, `app/modules/qa_agent/schemas.py`, `app/prompts/qa_agent_issue_impact.yaml`, `app/core/model_router.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py`, TEST-QAAGENT-003: `tests/test_model_router.py` | implemented |
-| REQ-QAAGENT-008 | `app/modules/qa_agent/validation.py`, `app/modules/qa_agent/analyzer.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py`, `tests/test_qa_agent_validation.py` | implemented |
-| REQ-QAAGENT-009 | `app/modules/qa_agent/evidence.py`, `app/modules/qa_agent/analyzer.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py` | implemented |
-| REQ-QAAGENT-010 | `app/modules/qa_agent/gates.py`, `app/modules/qa_agent/standard_findings.py`, `app/modules/qa_agent/analyzer.py` | TEST-QAAGENT-001: `tests/test_qa_agent_gates.py`, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-011 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/analysis.html` | TEST-QAAGENT-007, TEST-QAAGENT-010, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-012 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/modules/qa_agent/templates/analysis.html`, `app/modules/qa_agent/approval_history.py` | TEST-QAAGENT-007, TEST-QAAGENT-010, `tests/test_qa_agent_fixes.py` | implemented |
-| REQ-QAAGENT-013 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/history.html`, `app/core/storage.py` | TEST-QAAGENT-005: `tests/test_persistent_analyses.py`, TEST-QAAGENT-007 | implemented |
-| REQ-QAAGENT-014 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/guide.html` | TEST-QAAGENT-008, TEST-QAAGENT-010, `tests/test_qa_agent_fixes.py` | implemented |
+| REQ-QAAGENT-001 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-002 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-003 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-004 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-005 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-006 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-007 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-008 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-009 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-010 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-011 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-012 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-013 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
+| REQ-QAAGENT-014 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-QAAGENT-015 | `app/modules/qa_agent/scheduled_jobs.py`, `app/main.py` | TEST-QAAGENT-009 | implemented |
-| NFR-QAAGENT-001 | `app/modules/qa_agent/standard_findings.py`, `app/modules/qa_agent/gates.py`, `app/modules/qa_agent/schemas.py` | TEST-QAAGENT-001: `tests/test_qa_agent_gates.py`, `tests/test_qa_agent_fixes.py` | implemented |
-| NFR-QAAGENT-002 | `app/modules/qa_agent/ai_client.py`, `app/core/gemini_client.py`, `app/core/security_filter.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py` | implemented |
-| NFR-QAAGENT-003 | `app/modules/qa_agent/analyzer.py`, `app/core/gemini_client.py` | TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py` | implemented |
+| REQ-QAAGENT-016 | `app/modules/qa_agent/router.py`, `app/main.py`, `app/core/storage.py`, `scripts/remove_retired_qa_agent.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py`, `tests/test_remove_retired_qa_agent.py` | implemented |
+| NFR-QAAGENT-001 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/workspace.py`, `app/modules/qa_agent/schemas.py` | `tests/test_qa_intel_analysis.py`, `tests/test_daily_qa_runner.py`, `tests/test_qa_agent_retired.py` | implemented |
+| NFR-QAAGENT-002 | `app/core/gemini_client.py`, `app/core/security_filter.py`, `app/modules/daily_qa/workspace.py` | `tests/test_security_filter.py`, `tests/test_daily_qa_runner.py` | implemented |
+| NFR-QAAGENT-003 | `app/modules/qa_agent/router.py`, `app/main.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-RULE-001 | `app/core/qa_rules.py` | TEST-RULE-001: `tests/test_qa_rules.py` | implemented |
 | REQ-RULE-002 | `app/core/qa_rules.py` | TEST-RULE-001: `tests/test_qa_rules.py` | implemented |
-| REQ-RULE-003 | `app/core/qa_rules.py`, `app/modules/qa_agent/ai_client.py` | TEST-RULE-001: `tests/test_qa_rules.py`, TEST-QAAGENT-002: `tests/test_qa_agent_analyzer.py` | implemented |
+| REQ-RULE-003 | `app/core/qa_rules.py`, `app/modules/qa_agent/router.py` | TEST-RULE-001: `tests/test_qa_rules.py` | implemented |
 | REQ-RULE-004 | `app/modules/qa_agent/rule_capability.py` | TEST-RULE-002: `tests/test_rule_capability.py` | implemented |
 | REQ-RULE-005 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/rules.html` | TEST-RULE-003 | implemented |
 | REQ-RULE-006 | `app/modules/qa_agent/rule_capability.py` | TEST-RULE-002: `tests/test_rule_capability.py` | implemented |
@@ -9400,7 +9488,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-005 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-006 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/skills/qa-manual-completeness/SKILL.md` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | implemented |
 | REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
-| REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
+| REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_qa_exception_notifications.py` | implemented |
 | REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
 | REQ-DAILY-011 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
@@ -9413,7 +9501,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-018 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-019 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | implemented |
 | REQ-DAILY-020 | `app/modules/daily_qa/pipeline.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py` | implemented |
-| REQ-DAILY-021 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py` | implemented |
+| REQ-DAILY-021 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_qa_exception_notifications.py` | implemented |
 | REQ-DAILY-022 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | implemented |
 | REQ-DAILY-023 | `app/modules/daily_qa/workspace.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-024 | `app/modules/daily_qa/skills/qa-common-rules/SKILL.md`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md`, `config/products/vxvue/skills/vxvue-qa-rules/SKILL.md`, `config/products/vxvue/skills/vxvue-qa-rules/references/gates.md` | TEST-DAILY-009, `tests/test_daily_qa_runner.py` | implemented |
@@ -9451,7 +9539,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-001 | `app/core/gemini_client.py`, `app/core/prompt_manager.py`, `app/core/claude_cli.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-002 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-003 | `app/core/gemini_client.py` | TEST-AICALL-003, `tests/test_gemini_client_core.py` | implemented |
-| REQ-AICALL-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
+| REQ-AICALL-004 | `app/core/model_router.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html` | TEST-AICALL-005: `tests/test_claude_usage.py` | verified |
 | REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |

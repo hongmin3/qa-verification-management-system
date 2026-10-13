@@ -27,6 +27,9 @@
   <h2>[{{ finding.subject }}] {{ finding.subject_title }}</h2>
   <p class="hint">{{ card.kind }} · 실행 <a href="/qa-agent/runs/{{ finding.run_id }}">{{ finding.run_id }}</a> · {{ kst(finding.created_at) }}
     {% if s.source_finding %} · <a href="/qa-agent/findings/{{ s.source_finding }}">원래 분석 보기</a>{% endif %}</p>
+  {% if s.result_cache %}<p class="qa-banner">기존 분석 결과를 재사용하고 현재 근거를 다시 확인했습니다.
+    원본 실행 <a href="/qa-agent/runs/{{ s.result_cache.run_id|urlencode }}">{{ s.result_cache.run_id }}</a> · {{ s.result_cache.task_id }}
+  </p>{% endif %}
 
   <div class="qa-key" id="key-result">
     <div class="qa-card-head"><span class="level {{ card.level_class }}">{{ card.level }}</span>

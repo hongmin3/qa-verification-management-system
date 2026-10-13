@@ -45,7 +45,9 @@
   - `srs`: `location` 에 SRS 번호(`VP-1234`) 또는 Legacy 번호(`01-20-05`).
   - `spec_doc`: `ref` 에 입력 `candidates.spec_docs[].ref` 를 그대로, `location` 에 그 조각의 `location`.
   - `tc`: `location` 에 입력 TC 의 `location`(`파일 / 시트 / N행`) 또는 `tc_id`.
-  - `issue`: `location` 에 이슈 번호. `comment`: `ref` 에 입력 댓글의 `id`.
+  - `issue`: `location` 에 이슈 번호.
+  - `comment`: `ref` 와 `location` 에 입력 댓글의 `id` 를 그대로 쓴다. 예: `{"source_type":"comment","ref":"c1","location":"c1"}`. 입력에 없는 댓글 번호를 만들지 않는다.
+    - `location` 필드를 빠뜨린 댓글 근거는 코드가 비어 있지 않은 문자열 `ref` 를 그대로 복사한 뒤 입력 댓글 번호와 대조한다. 입력에 없는 번호는 근거에서 빼고 이유를 남긴다. 명시한 위치는 바꾸지 않으며, 다른 출처의 위치는 `ref` 로 복원하지 않는다.
   - `rules`: `location` 에 규칙 절(`§61`).
 - `summary`: 결론부터 한두 문장. 카드에 그대로 보인다.
 - `action`: QA 할 일. 줄바꿈으로 3줄까지(카드에 3줄까지 보인다). 이슈 종료·Close, TC 덮어쓰기, 결과·이력 삭제는 쓰지 않는다(쓰면 버려진다).

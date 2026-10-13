@@ -27,17 +27,20 @@ Transport = Callable[[str, dict[str, Any]], dict[str, Any]]
 
 
 class ReadOnlyPolarionClient:
-    def __init__(self, config: PolarionSettings, transport: Transport | None = None) -> None:
+    def __init__(self, config: PolarionSettings, transport: Transport | None = None, cancel_check: Callable | None = None) -> None:
         if not config.configured:
             raise PolarionError("POLARION_HOST / POLARION_TOKEN / project_id 가 설정되지 않았습니다.")
         self.config = config
         self._transport = transport or self._http_get
+        self._cancel_check = cancel_check
 
     # -- 유일한 요청 경로 ------------------------------------------------------
     def _http_get(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self.config.token}", "Accept": "application/json"}
         last_error = ""
         for attempt in range(1, 4):
+            if self._cancel_check is not None:
+                self._cancel_check()
             try:
                 response = httpx.get(
                     url, params=params, headers=headers,
@@ -60,8 +63,13 @@ class ReadOnlyPolarionClient:
         raise PolarionError(f"Polarion 요청이 3회 실패했습니다 ({last_error}): {url.split('/rest/v1')[-1]}")
 
     def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if self._cancel_check is not None:
+            self._cancel_check()
         url = f"{self.config.host}/polarion/rest/v1{path}"
-        return self._transport(url, dict(params or {}))
+        result = self._transport(url, dict(params or {}))
+        if self._cancel_check is not None:
+            self._cancel_check()
+        return result
 
     # -- 조회 ----------------------------------------------------------------
     def iter_workitems(self, query: str, fields: str = "@all", sort: str = "id") -> Iterator[dict[str, Any]]:

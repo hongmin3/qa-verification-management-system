@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import quote
 
 from app.modules.daily_qa.change_events import ANALYSIS_LABELS, EVENT_LABELS
 from app.modules.daily_qa.report import STAGE_LABELS, STATUS_LABELS
@@ -121,8 +122,11 @@ def _actions(run: dict) -> list[dict]:
             add("cli", "Claude 실행 도구가 없어 분석을 끝내지 못했습니다.",
                 "관리자에게 서버의 Claude CLI 설치와 실행 경로 확인을 요청하세요.")
         else:
+            weekly = (summary.get("automation_policy") or {}).get("mode") == "weekly"
             add("limit", "Claude 사용량 한도에 걸려 남은 분석은 대기입니다.",
-                "한도가 풀린 뒤 다시 요청하세요." if "on_demand" in stages else "사용량 초기화 시각을 확인하세요. 한도가 풀리면 남은 분석을 이어서 합니다.")
+                "한도가 풀린 뒤 다시 요청하세요." if "on_demand" in stages else
+                "다음 주 첫 업무일의 예정 점검이나 [지금 실행]에서 이어 갑니다." if weekly else
+                "사용량 초기화 시각을 확인하세요. 한도가 풀리면 남은 분석을 이어서 합니다.")
 
     for key, stage in stages.items():
         state = stage.get("status")
@@ -170,6 +174,15 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     srs, issues, tc, ev = counts("collect_srs"), counts("collect_issues"), counts("tc_index"), counts("events")
     changed_srs = (srs.get("added", 0) + srs.get("removed", 0) + srs.get("modified", 0)) if srs else None
     tokens = (summary.get("token_usage") or {}).get("total_tokens")
+    unknown_calls = (summary.get("token_usage") or {}).get("usage_unknown_calls", 0)
+    cache = summary.get("result_cache") or {}
+    cache_hits = cache.get("hits", summary.get("result_cache_hits", 0))
+    cache_sources = [{**source, "url": f"/qa-agent/runs/{quote(str(source['run_id']), safe='')}"}
+                     for source in cache.get("sources", []) if source.get("run_id")]
+    token_hint = f"토큰 {tokens:,}" if isinstance(tokens, int) and tokens else ""
+    if unknown_calls:
+        recorded = f"기록된 토큰 {tokens:,} · " if isinstance(tokens, int) else ""
+        token_hint = f"{recorded}사용량을 확인하지 못한 중단 호출 {unknown_calls}회"
 
     rows = []
     for key, stage in stages.items():
@@ -219,6 +232,8 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
             headline += " 한도가 풀린 뒤 다시 요청하세요."
     if not headline:
         headline = "이번 실행에서 확인한 변경이 없습니다." if run.get("status") == "NO_CHANGE" else "실행 기록을 확인하세요."
+    if run.get("status") == "CANCELLED":
+        headline = "사용자가 분석을 중단했습니다. 이미 저장한 결과를 확인하세요."
     audit = summary.get("issue_audit") or {}
     audit_box = None
     if audit:
@@ -234,7 +249,7 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         _tile("읽은 이슈", issues.get("total")), _tile("TC 행", tc.get("rows")),
         _tile("AI 분석이 필요한 변경", ev.get("analysis_required") if ev else None),
         _tile("분석 결과", len(cards)),
-        _tile("Claude 호출", summary.get("claude_calls"), f"토큰 {tokens:,}" if isinstance(tokens, int) and tokens else ""),
+        _tile("Claude 호출", summary.get("claude_calls"), token_hint),
     ]
     downloads = [{"name": name, "label": FILE_LABELS.get(name, "검증 TC 초안(Excel)" if name.endswith(".xlsx") else name)} for name in files]
     ordered = sort_cards(cards)
@@ -242,12 +257,14 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     collection_failed = any((stages.get(key) or {}).get("status") in {"failed", "partial"} for key in ("collect_srs", "collect_issues"))
     analyzed = 0 if dry_run else sum((stage.get("counts") or {}).get("done", 0)
                                    for stage in stages.values() if "tasks" in (stage.get("counts") or {}))
+    analyzed = max(0, analyzed - cache_hits)
     return {
         "headline": headline, "tiles": tiles, "flow": flow, "stages": rows, "downloads": downloads,
-        "tone": "bad" if run.get("status") == "FAILED" or any(row["tone"] == "bad" for row in rows) or run.get("email_status") == "failed" else "warn" if actions else "good",
+        "tone": "warn" if run.get("status") == "CANCELLED" else "bad" if run.get("status") == "FAILED" or any(row["tone"] == "bad" for row in rows) or run.get("email_status") == "failed" else "warn" if actions else "good",
         "actions": actions, "failed_stages": [row for row in rows if row["tone"] == "bad"],
         "key_tiles": [_tile("바뀐 것", None if collection_failed else ev.get("total", len(events))),
-                      _tile("AI가 분석한 것", analyzed), _tile("확인 필요", len(attention))],
+                      _tile("AI가 분석한 것", analyzed, f"재사용 {cache_hits}묶음" if cache_hits else ""), _tile("확인 필요", len(attention))],
+        "cache": {"hits": cache_hits, "reused_findings": cache.get("reused_findings", 0), "sources": cache_sources},
         "priority_cards": attention[:10], "attention_count": len(attention), "remaining": max(0, len(attention) - 10),
         "other_counts": [(name, sum(item["level"] == name for item in cards)) for name in ("참고", "문제 없음")],
         "ai_settings": summary.get("ai_settings") or {},

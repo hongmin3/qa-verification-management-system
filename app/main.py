@@ -14,7 +14,6 @@ from app.modules.knowledge.scheduled_jobs import register_scheduled_jobs as regi
 from app.modules.qa_agent.scheduled_jobs import register_scheduled_jobs as register_knowledge_jobs
 from app.modules.daily_qa.scheduled_jobs import register_scheduled_jobs as register_daily_qa_jobs
 from app.modules.manual_review.router import resume_queued_jobs as resume_queued_manual_jobs
-from app.modules.qa_agent.router import resume_queued_jobs as resume_queued_qa_agent_jobs
 from app.web.router import build_router
 from app.web.settings_router import router as settings_router
 
@@ -41,7 +40,6 @@ async def lifespan(_: FastAPI):
     storage.fail_running_syncs()
     _ensure_configured_products()
     resume_queued_manual_jobs()
-    resume_queued_qa_agent_jobs()
     start_scheduler([register_spec_sync_jobs, register_knowledge_jobs, register_daily_qa_jobs])
     yield
     stop_scheduler()

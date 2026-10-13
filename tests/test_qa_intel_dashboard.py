@@ -499,18 +499,19 @@ def test_expired_limit_is_not_shown(world):
     assert 'id="limit-banner"' not in world["client"].get("/qa-agent").text
 
 
-# -- 사용법 화면 (REQ-QAAGENT-014) ----------------------------------------------------
+# -- 사용법 화면 (REQ-QAAGENT-016, REQ-QAINTEL-019) -----------------------------------
 
 
 def test_guide_explains_dashboard_run_now_period_and_limits(world):
-    """사용법 화면이 대시보드·지금 실행·기간 조회·한도를 설명하고, 단일 이슈 분석 설명도 남아 있다."""
+    """사용법 화면은 현재 변경 분석·기간 조회·한도만 안내한다. Validates: REQ-QAAGENT-016."""
     page = world["client"].get("/qa-agent/guide").text
-    for heading in ("A. 매일 점검 대시보드", "B. 지금 실행", "C. 기간 조회", "D. Claude 사용량 한도", "단일 이슈 분석 사용법",
-                    "0. 이 기능이 대신하는 일"):
+    for heading in ("A. 매일 점검 대시보드", "B. 지금 실행", "C. 기간 조회", "D. Claude 사용량 한도"):
         assert heading in page, heading
     for column in ("신규 Issue", "Fixed", "Spec", "Comment Update", "SRS Update"):
         assert f"<td>{column}</td>" in page, column
-    assert 'href="/qa-agent/period"' in page and 'href="/qa-agent/issue-analysis"' in page
+    assert 'href="/qa-agent/period"' in page
+    assert '/qa-agent/issue-analysis' not in page
+    assert '단일 이슈 분석' not in page
 
 
 def test_guide_running_message_matches_run_now_conflict_response(world, launcher):

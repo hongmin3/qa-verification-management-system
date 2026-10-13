@@ -268,7 +268,7 @@ def test_gemini_failure_triggers_notification(configured, storage, monkeypatch: 
 
     client = GeminiClient(storage=storage, responder=boom)
     with pytest.raises(RuntimeError):
-        client.generate_structured("{}", prompt_name="qa_agent_issue_impact", response_schema=Response)
+        client.generate_structured("{}", prompt_name="manual_revision_quick", response_schema=Response)
 
     assert len(configured) == 1
     assert "할당량" in configured[0]["Subject"]

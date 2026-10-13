@@ -480,13 +480,13 @@ class Storage(DailyQaStorageMixin):
             return cursor.rowcount
 
     def fail_retired_queued_analyses(self) -> int:
-        """없앤 Regression 기능의 대기를 종료해 현재 기능의 실행 자리를 막지 않게 한다."""
+        """없앤 분석 기능의 대기를 종료해 현재 기능의 실행 자리를 막지 않게 한다."""
         now = datetime.now(timezone.utc).isoformat()
         with self.connect() as db:
             cursor = db.execute(
                 "UPDATE analyses SET status='FAILED',error=?,updated_at=? "
-                "WHERE status='QUEUED' AND (module='impact_analyzer' OR module IS NULL)",
-                ("Regression 영향 분석 기능이 제거되어 대기 작업을 실행하지 않습니다. 기존 기록은 보존됩니다.", now),
+                "WHERE status='QUEUED' AND (module IN ('impact_analyzer','qa_agent') OR module IS NULL)",
+                ("분석 기능이 제거되어 대기 작업을 실행하지 않습니다. 기존 기록은 보존됩니다.", now),
             )
             return cursor.rowcount
 
