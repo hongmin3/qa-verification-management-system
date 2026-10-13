@@ -1,3 +1,5 @@
+import re
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -10,11 +12,62 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
+def _nav_links(page: str) -> list[str]:
+    """화면 머리의 상단 메뉴(`<nav class="top-nav">`) 안 링크 주소를 순서대로 돌려준다."""
+    match = re.search(r'<nav class="top-nav">(.*?)</nav>', page, re.S)
+    assert match, "상단 메뉴가 없습니다"
+    return re.findall(r'href="([^"]+)"', match.group(1))
+
+
+FEATURE_MENU = ["/qa-agent", "/manual-review", "/knowledge", "/cost-dashboard"]
+LEGACY_MENU = ["/qa-agent/period", "/qa-agent/issue-analysis", "/qa-agent/analyses", "/qa-agent/rules"]
+
+
 def test_hub_links_to_qa_modules():
     response = TestClient(app).get("/")
     assert response.status_code == 200
-    assert "<nav>" not in response.text
     assert 'href="/manual-review"' in response.text
+
+
+def test_hub_shows_top_menu_without_home_link():
+    """Validates: REQ-WEB-001, REQ-WEB-007 — 허브에도 상단 메뉴가 있고, 자기 자신(QA 홈)·사용법은 없다."""
+    response = TestClient(app).get("/")
+    assert response.status_code == 200
+    assert _nav_links(response.text) == FEATURE_MENU
+
+
+def test_every_feature_page_shows_same_top_menu():
+    """Validates: REQ-WEB-007 — 기능 화면마다 같은 순서의 상단 메뉴와 자기 사용법 링크가 있다."""
+    client = TestClient(app)
+    pages = {
+        "/qa-agent": ("/qa-agent", "/qa-agent/guide"),
+        "/qa-agent/guide": ("/qa-agent", "/qa-agent/guide"),
+        "/qa-agent/period": ("/qa-agent", "/qa-agent/guide"),
+        "/manual-review": ("/manual-review", "/manual-review/guide"),
+        "/manual-review/guide": ("/manual-review", "/manual-review/guide"),
+        "/knowledge": ("/knowledge", "/knowledge/guide"),
+        "/knowledge/guide": ("/knowledge", "/knowledge/guide"),
+        "/cost-dashboard": ("/cost-dashboard", "/cost-dashboard/guide"),
+        "/cost-dashboard/guide": ("/cost-dashboard", "/cost-dashboard/guide"),
+    }
+    for path, (active, guide) in pages.items():
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert _nav_links(response.text) == ["/", *FEATURE_MENU, guide], path
+        nav = re.search(r'<nav class="top-nav">(.*?)</nav>', response.text, re.S).group(1)
+        assert f'<a href="{active}" class="active" aria-current="page">' in nav, path
+        assert nav.count('class="active"') == 1, path
+
+
+def test_legacy_qa_agent_screens_are_not_in_top_menu_but_still_open():
+    """Validates: REQ-WEB-007 — 기간 조회·단일 이슈 분석·분석 이력·규칙 구현현황은 메뉴에서 빠지고 주소로는 열린다."""
+    client = TestClient(app)
+    for path in ("/qa-agent", "/qa-agent/guide"):
+        links = _nav_links(client.get(path).text)
+        assert not set(links) & set(LEGACY_MENU), path
+    assert 'href="/qa-agent/issue-analysis"' not in client.get("/qa-agent").text
+    for path in LEGACY_MENU:
+        assert client.get(path).status_code == 200, path
 
 
 def test_hub_shows_configured_external_services():

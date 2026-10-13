@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="1d97feecfab531ace324f39d49a4d0dc4561f9a57852c3506e7071611ff3aa35">
+<meta name="spec-source-sha256" content="92e1758d2cb284ff66e6ec53c1370766ffcb07edae9586e03482cccd3986f38f">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>267</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>30</b><span>비기능 NFR</span></div><div class="stat"><b>165</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>217</b><span>implemented</span></div><div class="stat st-verified"><b>47</b><span>verified</span></div><div class="stat st-deprecated"><b>33</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>268</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>30</b><span>비기능 NFR</span></div><div class="stat"><b>165</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>217</b><span>implemented</span></div><div class="stat st-verified"><b>48</b><span>verified</span></div><div class="stat st-deprecated"><b>33</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -277,6 +277,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-WEB-004">REQ-WEB-004 <span>비밀 설정 상태와 다시 읽기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-WEB-005">REQ-WEB-005 <span>운영 상태 주소</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-WEB-006">REQ-WEB-006 <span>공용 화면 골격과 사용법 화면</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-WEB-007">REQ-WEB-007 <span>공통 상단 메뉴</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-001">REQ-OPS-001 <span>운영 상태 점검</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-002">REQ-OPS-002 <span>백업 만들기와 확인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-003">REQ-OPS-003 <span>앱 로그</span></a></li>
@@ -782,6 +783,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-004">REQ-WEB-004</a></td><td data-label="이름">비밀 설정 상태와 다시 읽기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/main.py</code>, <code>app/core/config.py</code>, <code>app/core/model_router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-CONF-001">TEST-CONF-001</a>: <code>tests/test_secrets_file.py</code>, <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-005">REQ-WEB-005</a></td><td data-label="이름">운영 상태 주소</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/main.py</code>, <code>app/core/storage.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-002">TEST-WEB-002</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a></td><td data-label="이름">공용 화면 골격과 사용법 화면</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/web/templates/base.html</code>, <code>app/web/static/app.css</code>, <code>app/web/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a></td><td data-label="이름">공통 상단 메뉴</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">OPS</span> 운영 점검·백업·로그</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="이름">운영 상태 점검</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="이름">백업 만들기와 확인</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
@@ -2149,13 +2151,14 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <section class="card kind-req" id="REQ-QAAGENT-001">
 <h3><span class="idtag">REQ-QAAGENT-001</span> 분석 요청</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/templates/index.html</code>, <code>app/core/uploads.py</code>, <code>app/modules/qa_agent/analyzer.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAAGENT-006">TEST-QAAGENT-006</a>, <a class="idref" href="#TEST-QAAGENT-010">TEST-QAAGENT-010</a>, <code>tests/test_qa_agent_fixes.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAAGENT-003">REQ-QAAGENT-003</a>, <a class="idref" href="#REQ-QAINTEL-030">REQ-QAINTEL-030</a>, <a class="idref" href="#TEST-QAAGENT-006">TEST-QAAGENT-006</a>, <a class="idref" href="#TEST-QAAGENT-010">TEST-QAAGENT-010</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-QAAGENT-001">REQ-QAAGENT-001</a>: 사양에 적힌 분석 요청 화면 주소를 실제 주소(<code>/qa-agent/issue-analysis</code>)로 바로잡았다. <code>/qa-agent</code> 는 매일 점검 대시보드다.</li>
 <li><span class="hist">2026-09-30 · 사양–코드 불일치 60건 수정 · 결정 대기 18건 반영</span> <a class="idref" href="#REQ-QAAGENT-001">REQ-QAAGENT-001</a>: Export 폴더가 없는 서버에서는 번호 입력칸을 없애고 <code class="term" title="이슈 하나를 담은 내려받기 파일이다. 이슈 번호 폴더 안에 있다" tabindex="0">backup.json</code> 첨부를 안내한다. 번호만 보내면 분석을 시작하기 전에 거절한다. 폴더 목록의 이름을 HTML 이스케이프한다.</li>
 </ul>
 </details>
 <p><strong>하는 일</strong> QA 가 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 하나와 검증 환경을 넣고 분석을 시작한다. 예를 들어 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> VXvue, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <code>VP-1234</code>, 실제 수행 <code>가능</code>, Test Data <code>준비됨</code> 을 넣고 <code>분석 실행</code> 을 누르면 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 번호를 받고 진행 막대가 움직인다.</p>
-<p><strong>언제</strong> <code>GET /qa-agent</code> 화면의 입력 폼에서 <code>분석 실행</code> 버튼을 누를 때(<code>POST /qa-agent/analyses</code>).</p>
+<p><strong>언제</strong> <code>GET /qa-agent/issue-analysis</code> 화면의 입력 폼에서 <code>분석 실행</code> 버튼을 누를 때(<code>POST /qa-agent/analyses</code>). 이 화면은 상단 메뉴에 없고 주소로 연다(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>).</p>
 <p><strong>입력</strong></p>
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>값</th><th>화면 이름</th><th>뜻</th><th>꼭 필요한가</th></tr></thead>
@@ -2791,7 +2794,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <h3><span class="idtag">REQ-QAAGENT-013</span> 분석 이력과 결과 내보내기</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/templates/history.html</code>, <code>app/core/storage.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAAGENT-005">TEST-QAAGENT-005</a>: <code>tests/test_persistent_analyses.py</code>, <a class="idref" href="#TEST-QAAGENT-007">TEST-QAAGENT-007</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-QAAGENT-005">TEST-QAAGENT-005</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
 <p><strong>하는 일</strong> QA Agent 분석만 모아 25건씩 보여주고, 한 분석의 결과 JSON 을 내려받게 한다.</p>
-<p><strong>언제</strong> 이력 화면(<code>GET /qa-agent/analyses?page=&lt;쪽&gt;</code>)과 결과 화면의 <code>결과 JSON 내려받기</code>(<code>GET /qa-agent/analyses/&lt;작업번호&gt;/export</code>).</p>
+<p><strong>언제</strong> 이력 화면(<code>GET /qa-agent/analyses?page=&lt;쪽&gt;</code>)과 결과 화면의 <code>결과 JSON 내려받기</code>(<code>GET /qa-agent/analyses/&lt;작업번호&gt;/export</code>). 이력 화면은 상단 메뉴에 없다(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>).</p>
 <p><strong>결과</strong></p>
 <ul>
 <li>이력 표: 분석 번호, <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 상태, <code>Gate 차단</code> 표시, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 번호, AI 호출 수, <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>, 생성 시각. 쪽이 둘 이상이면 이전·다음 연결이 있다.</li>
@@ -3080,7 +3083,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <h3><span class="idtag">REQ-RULE-005</span> 규칙 구현 현황 화면</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/templates/rules.html</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-RULE-003">TEST-RULE-003</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-RULE-004">REQ-RULE-004</a>, <a class="idref" href="#TEST-RULE-003">TEST-RULE-003</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
 <p><strong>하는 일</strong> <span class="term" title="규칙 절마다 &quot;무엇으로 구현했고 지금 구현됐는가&quot;를 적은 코드 안의 표다. 코드 이름 RULE_CAPABILITY" tabindex="0">규칙 구현 현황표</span>와 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 규칙 주입량을 화면으로 보여준다. 예를 들어 Bellalun Viewer 를 고르면 S09(발생기)가 <code>0절 — 이 제품 규칙에 해당 내용 없음</code> 으로 보인다.</p>
-<p><strong>언제</strong> <code>GET /qa-agent/rules?product=&lt;제품&gt;</code>. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 선택을 바꾸면 다시 불러온다.</p>
+<p><strong>언제</strong> <code>GET /qa-agent/rules?product=&lt;제품&gt;</code>. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 선택을 바꾸면 다시 불러온다. 상단 메뉴에는 없고 주소와 QA Agent 사용법의 링크로 연다(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>).</p>
 <p><strong>결과</strong> 화면에 차례로 보이는 것:</p>
 <ol>
 <li>최상위 절 수, 방식별 수, 상태별 수.</li>
@@ -3320,7 +3323,7 @@ python scripts/rule_capability_report.py --markdown
 </tbody>
 </table></div>
 <ol start="6">
-<li>상단 메뉴: QA 홈, QA Agent, Knowledge, 비용 대시보드, 사용법. <span class="term" title="한 곳을 고친 뒤 원래 되던 기능이 망가지지 않았는지 다시 시험하는 것" tabindex="0">Regression</span> 분석 전용 메뉴(분석, 분석 이력)는 넣지 않는다.</li>
+<li>상단 메뉴는 공통 상단 메뉴(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>)를 쓴다. <span class="term" title="한 곳을 고친 뒤 원래 되던 기능이 망가지지 않았는지 다시 시험하는 것" tabindex="0">Regression</span> 분석 전용 메뉴(분석, 분석 이력)는 넣지 않는다.</li>
 </ol>
 <p><strong>안 될 때</strong></p>
 <div class="table-wrap"><table>
@@ -6118,7 +6121,7 @@ python scripts/rule_capability_report.py --markdown
 </li>
 <li>동기화: <span class="term" title="동기화 한 번의 시작·끝·상태를 적는 DB 표(sync_log)다" tabindex="0">동기화 기록</span>, <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 동기화, <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 업로드. <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></li>
 <li>예약: 앱 안 <span class="term" title="앱 프로세스 안에서 정해진 시각에 작업을 부르는 부품(app/core/scheduler.py, APScheduler)이다" tabindex="0">예약 실행기</span>와 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>. <a class="idref" href="#REQ-SCHED-001">REQ-SCHED-001</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a></li>
-<li>화면 공통: <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>, <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 접속 범위. <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a> ~ <a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a>, <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></li>
+<li>화면 공통: <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>, <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 접속 범위. <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a> ~ <a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>, <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></li>
 <li>운영
 <ul>
 <li><span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>, 백업, 로그, <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 마운트 설정: <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a> ~ <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a></li>
@@ -7867,8 +7870,9 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <section class="card kind-req" id="REQ-WEB-001">
 <h3><span class="idtag">REQ-WEB-001</span> 허브 화면</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/web/router.py</code>, <code>app/web/templates/hub.html</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>: 사용자 요청으로 홈에도 상단 메뉴를 보인다. 홈에서는 <code>QA 홈</code>·<code>사용법</code> 없이 기능 네 개만 보인다. 예전 사양의 &quot;<span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>에는 내비게이션이 없다&quot; 를 바꿨다.</li>
 <li><span class="hist">2026-10-01 · 별도 Regression 영향 분석 제거 · 공용 기능 유지</span> <a class="idref" href="#REQ-IMPACT-001">REQ-IMPACT-001</a>, <a class="idref" href="#REQ-CORE-001">REQ-CORE-001</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a>: 별도 <span class="term" title="한 곳을 고친 뒤 원래 되던 기능이 망가지지 않았는지 다시 시험하는 것" tabindex="0">Regression</span> 영향 분석 화면·API·보고서 생성·추천 정답 평가를 없앴다. 관련 요구사항 번호는 추적성 표에 <code>deprecated</code>로 남겼다. 옛 <code>/impact-analyzer</code> 주소는 QA Agent로, <code>/guide</code>는 QA Agent 사용법으로 연결된다. 과거 DB 기록·평가 표·결과 파일은 보존한다.</li>
 <li><span class="hist">2026-10-01 · QA Intelligence Agent 코드 리뷰 반영과 사용자 결정</span> <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-USAGE-001">REQ-USAGE-001</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>: 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 표·하루 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 합계·<span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드 표를 개편 뒤 구조에 맞췄다.</li>
 </ul>
@@ -7886,7 +7890,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <tr><td><span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드</td><td><a class="idref" href="#REQ-WEB-002">REQ-WEB-002</a></td></tr>
 </tbody>
 </table></div>
-<p><strong>지킬 것</strong> <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>에는 내비게이션이 없다. 기능 사이를 옮겨 갈 때는 <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>를 거친다.</p>
+<p><strong>지킬 것</strong> <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 머리에도 공통 상단 메뉴(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>)가 보인다. <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 자신을 가리키는 <code>QA 홈</code>과 <code>사용법</code>은 빼고 기능 네 개만 보인다.</p>
 </section>
 <section class="card kind-req" id="REQ-WEB-002">
 <h3><span class="idtag">REQ-WEB-002</span> 하위 서비스 카드와 앱 포트로 들어온 요청 되돌리기</h3>
@@ -7978,7 +7982,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <p><strong>순서</strong></p>
 <ol>
 <li>공용 골격은 <code>app/web/templates/base.html</code> 하나다. 블록은 <code>page_title</code>, <code>header_title</code>, <code>header_subtitle</code>, <code>header_nav</code>, <code>main_class</code>, <code>content</code> 이다.</li>
-<li>각 모듈은 자기 기본 템플릿에서 골격을 이어받아 자기 내비게이션만 채운다.</li>
+<li>각 모듈은 자기 기본 템플릿에서 골격을 이어받고, <code>header_nav</code> 블록에서 공통 상단 메뉴(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>)를 부른다. 메뉴 목록을 모듈마다 따로 적지 않는다.</li>
 <li>정적 파일은 <code>/static/app.css</code>, <code>/static/app.js</code> 둘이다. 빌드 도구를 쓰지 않는다.</li>
 <li>기능별 사용법은 <code>/&lt;기능&gt;/guide</code> 화면에 둔다. <code>/guide</code> 는 <code>/qa-agent/guide</code> 로 이동시킨다(308).</li>
 </ol>
@@ -7997,6 +8001,44 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <p><code>app.css</code>·<code>app.js</code> 를 고치면 <code>base.html</code> 의 주소 뒤 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 표시(<code>?v=</code>)도 바꾼다. 바꾸지 않으면 사용자 브라우저가 예전 파일을 계속 쓴다.</p>
 </aside>
 <p><strong>지킬 것</strong> 공용 골격에 모듈 전용 요소나 기능 사이 링크를 넣지 않는다.</p>
+</section>
+<section class="card kind-req" id="REQ-WEB-007">
+<h3><span class="idtag">REQ-WEB-007</span> 공통 상단 메뉴</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MANUAL-001">REQ-MANUAL-001</a>, <a class="idref" href="#REQ-QAAGENT-001">REQ-QAAGENT-001</a>, <a class="idref" href="#REQ-QAAGENT-013">REQ-QAAGENT-013</a>, <a class="idref" href="#REQ-QAINTEL-019">REQ-QAINTEL-019</a>, <a class="idref" href="#REQ-RULE-005">REQ-RULE-005</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a></span></div>
+<details class="history"><summary>변경 이력 2</summary>
+<ul>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>: 화면마다 따로 적혀 순서가 달랐던 상단 메뉴를 하나로 합쳤다. 모든 화면에 <code>QA 홈 · QA Agent · 매뉴얼 검증 · Knowledge · 비용 대시보드 · 사용법</code> 이 같은 순서로 보이고, 지금 보는 기능은 강조된다. QA Agent 화면에 없던 <code>매뉴얼 검증</code> 이 생겼다.</li>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>: QA Agent 메뉴에서 <code>대시보드</code>(<code>QA Agent</code> 와 같은 주소)와 <code>기간 조회</code>(대시보드에 같은 양식이 있음)를 뺐다. 예전 기능인 <code>단일 이슈 분석</code>·<code>분석 이력</code>·<code>규칙 구현현황</code> 도 메뉴와 대시보드 안내에서 뺐다. 세 화면은 지우지 않았고 주소와 QA Agent 사용법의 링크로 열린다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 어느 화면에 있든 머리 오른쪽에 같은 메뉴가 같은 순서로 보인다. 지금 보고 있는 기능은 강조해서 보인다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검증</span> 화면에서는 <code>QA 홈 · QA Agent · 매뉴얼 검증 · Knowledge · 비용 대시보드 · 사용법</code> 이 보이고 <code>매뉴얼 검증</code> 이 강조된다. <code>사용법</code> 은 <code>/manual-review/guide</code> 로 간다.</p>
+</aside>
+<p><strong>결과</strong></p>
+<div class="table-wrap"><table class="responsive">
+<thead><tr><th>순서</th><th>메뉴</th><th>주소</th><th><span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>에서</th></tr></thead>
+<tbody>
+<tr><td data-label="순서">1</td><td data-label="메뉴">QA 홈</td><td data-label="주소"><code>/</code></td><td data-label="허브에서">빠진다</td></tr>
+<tr><td data-label="순서">2</td><td data-label="메뉴">QA Agent</td><td data-label="주소"><code>/qa-agent</code></td><td data-label="허브에서">보인다</td></tr>
+<tr><td data-label="순서">3</td><td data-label="메뉴">매뉴얼 검증</td><td data-label="주소"><code>/manual-review</code></td><td data-label="허브에서">보인다</td></tr>
+<tr><td data-label="순서">4</td><td data-label="메뉴">Knowledge</td><td data-label="주소"><code>/knowledge</code></td><td data-label="허브에서">보인다</td></tr>
+<tr><td data-label="순서">5</td><td data-label="메뉴">비용 대시보드</td><td data-label="주소"><code>/cost-dashboard</code></td><td data-label="허브에서">보인다</td></tr>
+<tr><td data-label="순서">6</td><td data-label="메뉴">사용법</td><td data-label="주소">그 기능의 <code>/&lt;기능&gt;/guide</code></td><td data-label="허브에서">빠진다</td></tr>
+</tbody>
+</table></div>
+<p><strong>순서</strong></p>
+<ol>
+<li>메뉴 목록은 <code>app/web/templates/_nav.html</code> 의 <code>top_nav</code> 하나에만 적는다.</li>
+<li>각 화면은 자기 기능 이름(<code>qa_agent</code>·<code>manual_review</code>·<code>knowledge</code>·<code>cost_dashboard</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>는 <code>home</code>)과 사용법 주소를 넘겨 부른다.</li>
+<li>넘겨받은 기능의 메뉴에 강조 표시(<code>class=&quot;active&quot;</code>, <code>aria-current=&quot;page&quot;</code>)를 붙인다. 강조는 한 화면에 하나다.</li>
+</ol>
+<p><strong>지킬 것</strong></p>
+<ul>
+<li>QA Agent 의 하위 화면은 상단 메뉴에 넣지 않는다. 기간 조회(<code>/qa-agent/period</code>)는 대시보드의 기간 조회 양식으로 연다.</li>
+<li>예전 단일 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석(<code>/qa-agent/issue-analysis</code>), 그 결과 목록(<code>/qa-agent/analyses</code>), 규칙 구현현황(<code>/qa-agent/rules</code>)은 메뉴와 대시보드에 링크하지 않는다. 화면은 남아 있어 주소와 QA Agent 사용법의 링크로 연다.</li>
+</ul>
+<p class="why"><span class="why-label">이유</span> 같은 일을 하는 버튼(<code>대시보드</code>와 <code>QA Agent</code>)과 자주 쓰지 않는 예전 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.</p>
 </section>
 <section class="card kind-req" id="REQ-OPS-001">
 <h3><span class="idtag">REQ-OPS-001</span> 운영 상태 점검</h3>
@@ -11284,7 +11326,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-test" id="TEST-WEB-001">
 <h3><span class="idtag">TEST-WEB-001</span></h3>
-<p><a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, 002, 003, 006 을 <code>tests/test_web.py</code> 로 확인한다: <code>/health</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드 링크, 설정된 <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, <code>/guide</code> 308.</p>
+<p><a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, 002, 003, 006, 007 을 <code>tests/test_web.py</code> 로 확인한다: <code>/health</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드 링크, 설정된 <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, <code>/guide</code> 308, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>와 기능 화면의 상단 메뉴 순서·강조 표시, 예전 QA Agent 화면이 메뉴에 없고 주소로는 열림.</p>
 </section>
 <section class="card kind-test" id="TEST-WEB-002">
 <h3><span class="idtag">TEST-WEB-002</span></h3>
@@ -11857,6 +11899,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-004">REQ-WEB-004</a></td><td data-label="Implementation"><code>app/main.py</code>, <code>app/core/config.py</code>, <code>app/core/model_router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-CONF-001">TEST-CONF-001</a>: <code>tests/test_secrets_file.py</code>, <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-005">REQ-WEB-005</a></td><td data-label="Implementation"><code>app/main.py</code>, <code>app/core/storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-002">TEST-WEB-002</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a></td><td data-label="Implementation"><code>app/web/templates/base.html</code>, <code>app/web/static/app.css</code>, <code>app/web/router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a></td><td data-label="Implementation"><code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="Implementation"><code>scripts/monitor_health.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a>: <code>tests/test_monitor_health.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="Implementation"><code>scripts/backup_data.py</code>, <code>app/core/retention.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-002">TEST-OPS-002</a>: <code>tests/test_backup.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-003">REQ-OPS-003</a></td><td data-label="Implementation"><code>app/core/logger.py</code>, <code>deploy/systemd/qa-verification.service</code></td><td data-label="Test"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -12997,7 +13040,7 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <p><strong>지킬 것</strong></p>
 <ul>
 <li>승인·거절·<span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 추가 필요·검토자 입력·<span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span> 답변은 보이지 않는다.</li>
-<li>사람이 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 하나를 골라 돌리는 단일 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석은 <code>/qa-agent/issue-analysis</code> 에서 연다.</li>
+<li>사람이 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 하나를 골라 돌리는 예전 단일 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석은 대시보드와 상단 메뉴에 링크하지 않는다. 주소 <code>/qa-agent/issue-analysis</code> 로 연다(<a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>).</li>
 </ul>
 <aside class="callout callout-info"><span class="callout-label">참고</span>
 <p>실행 구역의 제목은 <code>분석 실행 · &lt;제품&gt;</code> 이다. 마지막 실행, 실행 결과, 다음 자동 실행, 분석 기간, [지금 실행]이 이 구역에 있다.</p>

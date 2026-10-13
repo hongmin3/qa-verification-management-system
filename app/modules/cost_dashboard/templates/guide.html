@@ -2,7 +2,7 @@
 {% block page_title %}비용 대시보드 사용법{% endblock %}
 {% block header_title %}비용 대시보드 사용법{% endblock %}
 {% block header_subtitle %}AI 호출이 실제로 얼마나 발생했는지, 무엇이 비용을 줄이고 있는지 확인합니다.{% endblock %}
-{% block header_nav %}<nav><a href="/">QA 홈</a><a href="/cost-dashboard">대시보드</a><a href="/qa-agent">QA Agent</a><a href="/manual-review">매뉴얼 검증</a><a href="/knowledge">Knowledge</a></nav>{% endblock %}
+{% block header_nav %}{% from "_nav.html" import top_nav %}{{ top_nav("cost_dashboard", "/cost-dashboard/guide") }}{% endblock %}
 {% block content %}
 <section>
   <h2>무엇을 보는 화면인가</h2>

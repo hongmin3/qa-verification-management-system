@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block header_nav %}{% endblock %}
+{% block header_nav %}{% from "_nav.html" import top_nav %}{{ top_nav("home") }}{% endblock %}
 {% block content %}
 <section>
   <h2>QA 자동화</h2>
