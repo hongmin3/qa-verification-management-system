@@ -10,7 +10,14 @@ from fastapi.templating import Jinja2Templates
 
 from app.core import document_cache, knowledge_status
 from app.core.config import app_self_url, get_settings
-from app.core.knowledge_registry import NeedsColumnMapping, RegistrationError, check_request, extensions_for, register_uploaded
+from app.core.knowledge_registry import (
+    NeedsColumnMapping,
+    RegistrationError,
+    check_request,
+    extensions_for,
+    register_uploaded,
+    registered_by_person,
+)
 from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
@@ -99,7 +106,7 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
     if kind not in REGISTERABLE_KINDS:
         raise HTTPException(400, f"등록할 수 없는 종류입니다: {kind}")
     try:
-        target = check_request(storage, config, kind, source, replace_id)
+        target = check_request(storage, config, kind, source, replace_id, file_name=file.filename or "")
     except RegistrationError as exc:
         raise HTTPException(exc.status, exc.message)
     directory = get_settings().path("storage.testcase_dir" if kind == "testcase" else "storage.specification_dir")
@@ -320,7 +327,7 @@ def register_testcase_with_mapping(
         }.items() if value
     }
     try:
-        target = check_request(storage, config, "testcase", "", _optional_id(replace_id))
+        target = check_request(storage, config, "testcase", "", _optional_id(replace_id), file_name=original_name)
         outcome = register_uploaded(storage, config, "testcase", path, original_name or filename, replace_target=target,
                                     version=version, owned_dirs=_owned_dirs(),
                                     tc_mapping={"mapping": mapping, "sheet": sheet, "header_row": header_row})
@@ -337,12 +344,12 @@ def register_testcase_with_mapping(
 
 @router.post("/knowledge/delete/{document_id}")
 def delete_document(document_id: int, source: str = Form(""), next: str = Form("")):
-    """지우기 (REQ-KNOW-005). 자동으로 관리하는 자료는 같은 출처를 밝힌 요청만 지운다."""
+    """지우기 (REQ-KNOW-005). 자동으로 관리하는 자료는 같은 출처를 밝힌 요청만 지운다. 사람이 올린 등록은 어느 구역이든 지운다."""
     document = storage.get_document(document_id)
     if not document:
         raise HTTPException(404, "문서를 찾을 수 없습니다.")
     config = resolve_config(document["product"])
-    if config is not None and document["kind"] in REGISTERABLE_KINDS:
+    if config is not None and document["kind"] in REGISTERABLE_KINDS and not registered_by_person(document):
         configured = config.source_of(document["kind"])
         declared = normalize_source(source) if source.strip() else SOURCE_MANUAL
         if configured != SOURCE_MANUAL and declared != configured:

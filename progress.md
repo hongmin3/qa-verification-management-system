@@ -19,6 +19,13 @@
 - 운영 배포 시도(14:35, 사용자 요청) → 보류: 원본 폴더를 `e4d1267` 로 빨리 감기(줄바꿈만 다른 `docs/SPEC.html` 되돌림)하고 서버 백업을 만들었다(`backups/qa-backup-20261013T053618Z.zip`, `~/qa-app-backup-20261013-053607.tgz`, `~/qa-app-config-backup-20261013-053607/`의 `config.yaml`·`secrets.txt`). 백업 도구가 보관 규칙대로 9월 초 옛 백업 12개를 정리했다. 서버 `config.yaml` 은 새 판과 `ai.claude.allowed_models` 한 줄만 다르다(코드가 읽지 않는 값).
 - `scripts/deploy.ps1 -Restart` 가 로컬 테스트에서 멈춰 서버에는 아무것도 올리지 않았다(2 failed·1310 passed). `test_pdf_worker_executes_native_package` 는 단독 재실행에서 통과(전체 실행 중 Chromium 렌더링 시간 초과로 보임). `test_real_knowledge_dir_has_no_unclassified_assets` 는 지식 폴더에 14:40 새로 생긴 `[Skill 지침] VXvue.md`(`qa-skill-export:v1` 머리글의 VXvue 스킬 내보내기, 이 저장소 밖 도구가 만든 것으로 보임)가 분류되지 않아 실패한다. 사용자 결정: 그 파일을 만든 쪽 작업이 끝날 때까지 배포 보류. 다음 배포 때 이 파일을 수집 제외(`ignore`)할지 규칙 문서로 분류할지 정한다.
 
+## 2026-10-13 사양서 구역에 남은 API 매뉴얼 정리와 재발 방지 (REQ-KNOW-003·005·019·020)
+
+- 원인: 운영 서버 VXvue 사양서 구역의 `(매뉴얼) VXvue Web System Design & API Protocol Manual_EN 1.pdf`(id 12)는 2026-08-31 에 사람이 올린 등록이다. 그때는 매뉴얼 종류가 없어(2026-09-08 `27ea5cb` 에서 생김) 사양서로 저장됐다. 같은 매뉴얼의 v1.4.4 는 매뉴얼(id 28)로 따로 수집돼 있었다. 사양서 구역이 ALM 자동이라 화면에서 지울 수 없었다.
+- 정리(사용자 승인): 서버에서 id 12 를 `source=alm_crawler` 로 지웠다(303). 사양서 목록에서 빠진 것을 확인했다. 서버 코드는 아직 바꾸지 않았다. 배포는 별도로 한다.
+- 재발 방지: 파일 이름이 다른 종류인 업로드는 400 으로 거절한다. 이미 들어간 등록은 구역을 `종류 확인 요청` 으로 보인다. 자동 출처 구역의 사람이 올린 줄에만 `삭제` 를 보인다.
+- 검증: `tests/test_knowledge_profiles.py` 29 passed(새 테스트 5개). 전체 1274 passed·7 skipped. 실패 1건(`test_pdf_worker_executes_native_package`, 90초 시간 초과)과 오류 1건(`test_qa_intel_schedule`)은 따로 다시 돌려 41 passed 로 통과했다. 이 worktree 에서 운영 DB 사본으로 앱을 띄워 상세 화면의 `종류 확인 요청` 과 그 줄만의 `삭제`, 삭제 뒤 `정상` 복귀, 잘못된 이름의 실제 업로드 거절(400)을 확인했다.
+
 ## 2026-10-13 SRS 자동 수집 통합과 읽을 수 없는 PDF 복구 (REQ-SYNC-003)
 
 - 지식 폴더의 최신 PDF 6개는 파일 접근 권한 때문에 읽을 수 없었다. 원본 수집 폴더 PDF는 정상이었다. 기존 폴더 전체를 VXvue `ORG/261013-before-permission-repair-e9ec09c0bf79`에 보관한 뒤 읽을 수 있는 폴더로 교체했다. 다른 문서 18개의 해시는 원본과 같다.

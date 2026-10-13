@@ -37,7 +37,7 @@
   {% if asset.documents %}
   <div class="table-wrap">
     <table class="history kn-docs">
-      <thead><tr><th>문서명</th><th>종류</th><th>출처</th><th>상태</th><th>마지막 갱신</th>{% if asset.can_upload %}<th>동작</th>{% endif %}</tr></thead>
+      <thead><tr><th>문서명</th><th>종류</th><th>출처</th><th>상태</th><th>마지막 갱신</th>{% set show_actions = asset.can_upload or asset.documents | selectattr('can_delete') | list %}{% if show_actions %}<th>동작</th>{% endif %}</tr></thead>
       <tbody>
         {% for doc in asset.documents %}
         <tr>
@@ -46,17 +46,21 @@
           <td>{{ doc.source_label }}</td>
           <td>{{ doc.status }}</td>
           <td>{% if doc.updated_at %}<span data-utc-time="{{ doc.updated_at }}">{{ doc.updated_at[:16].replace('T', ' ') }} UTC</span>{% endif %}</td>
-          {% if asset.can_upload %}
+          {% if show_actions %}
           <td class="kn-actions">
+            {% if asset.can_upload %}
             <form class="kn-upload-form" method="post" action="/knowledge/products/{{ health.slug }}/documents" enctype="multipart/form-data">
               <input type="hidden" name="kind" value="{{ asset.kind }}">
               <input type="hidden" name="replace_id" value="{{ doc.id }}">
               <label class="btn-link">교체<input type="file" name="file" accept="{{ asset.accept }}" hidden></label>
             </form>
+            {% endif %}
+            {% if doc.id and doc.can_delete %}
             <form method="post" action="/knowledge/delete/{{ doc.id }}" class="delete-form" data-confirm="{{ doc.name }} 파일을 삭제할까요? 되돌릴 수 없습니다.">
               <input type="hidden" name="next" value="/knowledge/products/{{ health.slug }}">
               <button type="submit" class="btn-danger-link">삭제</button>
             </form>
+            {% endif %}
           </td>
           {% endif %}
         </tr>

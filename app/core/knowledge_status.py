@@ -27,6 +27,7 @@ from app.core.product_config import (
     can_manual_upload,
     list_product_configs,
 )
+from app.core.knowledge_registry import kind_mismatch, registered_by_person
 from app.core.product_knowledge import REGISTERABLE_KINDS, collected_path, document_logical_key, load_manifest, source_available
 
 READY, ATTENTION, ERROR = "READY", "ATTENTION", "ERROR"
@@ -61,10 +62,12 @@ class DocumentRow:
     kind: str
     kind_label: str
     source_label: str
-    status: str            # 정상 | 파일 없음 | 읽지 못함
+    status: str            # 정상 | 파일 없음 | 읽지 못함 | 종류 확인 요청
     updated_at: str
     id: int | None = None  # 문서 표 번호. 규칙 자산(수집 기록에만 있음)은 없다.
     usable: bool = True
+    can_delete: bool = False
+    misfiled_as: str = ""  # 파일 이름으로 보면 다른 종류일 때 그 종류 (REQ-KNOW-019 8번)
 
 
 @dataclass
@@ -172,6 +175,9 @@ def _registered_rows(ctx: _Context, kind: str) -> tuple[list[DocumentRow], list[
                 usable, status = False, "읽지 못함"
         elif exists and kind != "testcase" and "chunk_count" in metadata and not metadata.get("chunk_count"):
             usable, status = False, "읽지 못함"
+        misfiled_as = kind_mismatch(ctx.config, kind, document["name"]) or ""
+        if usable and misfiled_as:
+            status = "종류 확인 요청"
         updated = document.get("created_at", "")
         if source == "product_knowledge":
             asset = ctx.manifest_by_name.get((kind, document["name"])) or {}
@@ -180,6 +186,7 @@ def _registered_rows(ctx: _Context, kind: str) -> tuple[list[DocumentRow], list[
             name=document["name"], kind=kind, kind_label=KIND_LABELS[kind],
             source_label=DOCUMENT_SOURCE_LABELS.get(source, SOURCE_LABELS[SOURCE_MANUAL]),
             status=status, updated_at=updated, id=document["id"], usable=usable,
+            can_delete=can_manual_upload(ctx.config, kind) or registered_by_person(document), misfiled_as=misfiled_as,
         ))
     return rows, documents
 
@@ -230,6 +237,11 @@ def _judge(ctx: _Context, kind: str) -> AssetStatus:
             auto = ctx.storage.latest_finished_sync(ctx.product, kind)
             if auto and auto.get("status") == "PARTIAL":
                 return "수집 실패(일부)", ATTENTION, f"마지막 자동 수집이 일부만 끝났습니다: {auto.get('detail') or ''}".rstrip(": ")
+        misfiled = [row for row in rows if row.misfiled_as]
+        if misfiled:
+            names = ", ".join(f"{row.name}({KIND_LABELS[row.misfiled_as]})" for row in misfiled)
+            return "종류 확인 요청", ATTENTION, (f"파일 이름으로 보면 다른 종류인 문서가 있습니다: {names}. "
+                                             "맞는 구역에 있는지 확인하고, 잘못 올린 등록이면 지우세요.")
         keys = [document_logical_key(kind, document["name"], _metadata(document)) for document in documents]
         if len(keys) != len(set(keys)):
             return "중복 확인 요청", ATTENTION, "같은 문서의 판이 두 개 이상 등록돼 있습니다. 하나만 남기세요."
