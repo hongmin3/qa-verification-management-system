@@ -1,4 +1,4 @@
-"""QA Agent 점검 예약 (SPEC REQ-DAILY-001, REQ-QAINTEL-001·021·025·035).
+"""QA Agent 점검 예약 (SPEC REQ-DAILY-001, REQ-QAINTEL-001·021·025·035·038).
 
 다른 모듈과 같은 방식이다 — `app/core/scheduler.py` 는 이 모듈을 모르고, `app/main.py` 가
 콜백으로 넘긴다. 신규 systemd 유닛을 만들지 않는다.
@@ -31,7 +31,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.core.config import get_settings
-from app.modules.daily_qa import holidays
+from app.modules.daily_qa import automation_policy, holidays
 from app.modules.daily_qa.settings import configured_products, load
 
 logger = logging.getLogger("regression_analyzer")
@@ -66,7 +66,7 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
                     on_demand: str = "", finding_id: int | None = None) -> dict:
     """점검 프로세스를 띄우고 바로 돌아온다. 돌려주는 `status` 로 화면·로그가 이유를 안다.
 
-    `holiday`·`running`·`disabled`·`not_configured` 이면 띄우지 않았다.
+    `launched` 이외의 상태는 휴일·진행 중·설정 없음·자동 점검 정책 등으로 띄우지 않은 결과다.
     """
     from app.modules.daily_qa.pipeline import is_running
 
@@ -74,6 +74,21 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
     if not cfg.enabled:
         logger.info("qa_agent_skipped reason=disabled product=%s", cfg.slug)
         return {"status": "disabled", "product": cfg.slug}
+    if trigger in ("scheduled", "catchup"):
+        from app.modules.daily_qa.store import DailyQaStore
+
+        sched = schedule_settings()
+        store = DailyQaStore(cfg.db_path)
+        if not sched.get("enabled", True):
+            logger.info("qa_agent_skipped reason=schedule_disabled product=%s", cfg.slug)
+            return {"status": "schedule_disabled", "product": cfg.slug}
+        policy = automation_policy.get_policy(store, cfg.slug)
+        if policy["mode"] == "off":
+            logger.info("qa_agent_skipped reason=policy_off product=%s", cfg.slug)
+            return {"status": "policy_off", "product": cfg.slug}
+        if trigger == "catchup" and not automation_policy.catchup_allowed(cfg, store, sched):
+            logger.info("qa_agent_skipped reason=weekly_catchup_disabled product=%s", cfg.slug)
+            return {"status": "not_due", "product": cfg.slug}
     # 종료일이 지난 날인 기간 실행과 버튼 요청 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
     if not cfg.polarion.configured and not until and not on_demand:
         logger.info("qa_agent_skipped reason=polarion_설정_없음 product=%s", cfg.slug)
@@ -87,6 +102,9 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         if sched["skip_holidays"] and check.holiday:
             logger.info("qa_agent_skipped reason=holiday product=%s date=%s name=%s", cfg.slug, day.isoformat(), check.name)
             return {"status": "holiday", "product": cfg.slug, "date": day.isoformat(), "name": check.name}
+        if not automation_policy.is_schedule_day(cfg, store, sched, day):
+            logger.info("qa_agent_skipped reason=not_due product=%s date=%s", cfg.slug, day.isoformat())
+            return {"status": "not_due", "product": cfg.slug}
     if is_running(cfg):
         logger.info("qa_agent_skipped reason=running product=%s", cfg.slug)
         return {"status": "running", "product": cfg.slug}
@@ -133,7 +151,7 @@ def launch_scheduled(product: str | None = None, *, now: datetime | None = None,
         if store.get_state(key) == today:
             return {"status": "already", "product": cfg.slug, "date": today}
         result = launch_detached(product, trigger="scheduled", today=now, popen=popen)
-        if result.get("status") != "running":
+        if result.get("status") not in ("running", "policy_off", "not_due", "schedule_disabled"):
             store.set_state(key, today)
     return result
 
@@ -143,7 +161,7 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
     from app.modules.daily_qa.store import DailyQaStore
 
     sched = schedule_settings()
-    if not sched.get("run_missed", True):
+    if not sched.get("run_missed", True) or not sched.get("enabled", True):
         return []
     now = now or datetime.now(timezone.utc)
     local = now.astimezone(holidays.KST)
@@ -155,7 +173,11 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
     results = []
     for product in configured_products():
         cfg = load(product=product)
-        if DailyQaStore(cfg.db_path).get_state(cfg.state_key(STATE_SCHEDULED_DATE)) == today:
+        store = DailyQaStore(cfg.db_path)
+        policy = automation_policy.get_policy(store, cfg.slug)
+        if policy["mode"] == "off" or (policy["mode"] == "weekly" and not automation_policy.is_schedule_day(cfg, store, sched, local.date())):
+            continue
+        if store.get_state(cfg.state_key(STATE_SCHEDULED_DATE)) == today:
             continue
         logger.info("qa_agent_missed_schedule product=%s date=%s time=%s", cfg.slug, today, sched["time"])
         result = launch_scheduled(product, now=now, popen=popen)
@@ -165,15 +187,20 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
 
 
 def catchup_due_products(now: datetime | None = None, clear: bool = True) -> list[str]:
-    """세션 한도가 풀린 뒤 다시 돌 차례인 제품 (REQ-QAINTEL-025). `clear` 면 차례 기록을 지운다."""
+    """일일 모드에서 세션 한도가 풀린 제품. `clear` 면 실행할 차례 기록만 지운다 (REQ-QAINTEL-025·038)."""
     from app.modules.daily_qa.pipeline import STATE_CATCHUP_AFTER
     from app.modules.daily_qa.store import DailyQaStore
 
     now = now or datetime.now(timezone.utc)
+    sched = schedule_settings()
+    if not sched.get("enabled", True):
+        return []
     due = []
     for product in configured_products():
         cfg = load(product=product)
         store = DailyQaStore(cfg.db_path)
+        if not automation_policy.catchup_allowed(cfg, store, sched):
+            continue
         after = store.get_state(cfg.state_key(STATE_CATCHUP_AFTER))
         if after:
             try:
@@ -195,7 +222,7 @@ def run_catchups() -> list[dict]:
     results = []
     for product in catchup_due_products(clear=False):
         result = launch_detached(product, trigger="catchup")
-        if result.get("status") != "running":
+        if result.get("status") not in ("running", "policy_off", "not_due", "schedule_disabled"):
             cfg = load(product=product)
             DailyQaStore(cfg.db_path).set_state(cfg.state_key(STATE_CATCHUP_AFTER), "")
         results.append(result)
@@ -205,7 +232,7 @@ def run_catchups() -> list[dict]:
 def register_scheduled_jobs(scheduler: BackgroundScheduler) -> None:
     sched = schedule_settings()
     hour, _, minute = sched["time"].partition(":")
-    # 예약은 한 곳에서만 켠다 (REQ-QAINTEL-001). 끈 곳에서도 [지금 실행] 뒤 한도 다시 돌기는 남긴다.
+    # 예약은 한 곳에서만 켠다. 감시는 등록해도 비활성 서버에서는 자동 재개하지 않는다 (REQ-QAINTEL-038).
     if not sched.get("enabled", True):
         scheduler.add_job(run_catchups, IntervalTrigger(minutes=10), id=CATCHUP_JOB_ID, replace_existing=True, max_instances=1)
         logger.info("scheduled_job_skipped reason=daily_qa.schedule.enabled=false registered=%s", CATCHUP_JOB_ID)

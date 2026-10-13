@@ -76,6 +76,8 @@ DEPLOY_TARGET_DIRECTORY=/path/to/qa-verification-management-system
 `.env`/`data/` 같은 개인 설정과 운영 데이터는 복사하지 않는다 (의도적 — 서버의 실제 데이터를
 덮어쓰지 않기 위함).
 
+기존 서버에서는 모든 등록 제품의 QA 점검과 핵심 앱의 대기·실행 중인 분석이 없는지 전송 전에 확인한다. 확인 실패도 배포를 중단한다. 최초 설치는 대상 폴더에 `.venv`만 있는 경우에만 첫 검사를 통과한다. 기존 자료가 있으면 검사를 생략하지 않는다.
+
 ### 4-3. 서비스 재기동
 
 파일 전송과 의존성 설치까지는 `deploy.ps1`이 항상 수행한다. **재기동은 기본적으로 하지
@@ -84,10 +86,13 @@ DEPLOY_TARGET_DIRECTORY=/path/to/qa-verification-management-system
 ```powershell
 .\scripts\deploy.ps1            # 파일 전송 + 의존성 설치만. 재기동 안 함
 .\scripts\deploy.ps1 -Restart   # 위 작업 + sudo systemctl restart qa-verification + 헬스체크
+.\scripts\deploy.ps1 -Restart -ManualRestart # 파일 반영 뒤 사용자가 서버에서 sudo 재기동
 ```
 
 `-Restart`는 로컬 `secrets.txt`의 `SERVER_SUDO_PASSWORD`를 읽어 SSH로 `sudo -S`에 전달한다(화면·로그에
 값을 출력하지 않음). 이 키가 없으면 아래처럼 서버에서 직접 재기동한다:
+
+인증정보를 에이전트가 읽거나 입력하지 않게 하려면 `-Restart -ManualRestart`를 쓴다. 스크립트는 파일 반영 뒤 실행 상태를 다시 확인하고 멈춘다. 사용자는 재시작 직전에 대시보드의 진행 표시와 분석 상태를 확인한다. 재시작은 실행 중인 점검 프로세스도 종료한다.
 
 ```bash
 ssh your-user@your-server
@@ -177,6 +182,19 @@ curl -fsS http://127.0.0.1:24357/health
 - `StandardOutput=append:` 로 journald 와 별개로 기존 로그 파일(`output/logs/uvicorn.out`)에도
   계속 남긴다. 운영 중 `tail -f` 하던 습관이 그대로 유지된다.
 - `Restart=on-failure` — 앱이 죽으면 5초 뒤 자동 재시작한다.
+
+선택 사항: 정상 종료 뒤에도 다시 띄우려면 서버 관리자가 아래 설정을 직접 적용한다. 이 명령은 실행 중인 앱을 재시작하지 않는다.
+
+```bash
+sudo mkdir -p /etc/systemd/system/qa-verification.service.d
+sudo tee /etc/systemd/system/qa-verification.service.d/qa-restart-policy.conf >/dev/null <<'EOF'
+[Service]
+Restart=always
+RestartSec=5
+EOF
+sudo systemctl daemon-reload
+systemctl show qa-verification -p Restart -p RestartUSec
+```
 - 앱은 시작할 때 재시작에 끊긴 `RUNNING` 분석을 정리하고 `QUEUED` 를 이어받으므로
   (`app/main.py` 의 `lifespan`), 강제 종료돼도 분석 상태가 깨지지 않는다.
 

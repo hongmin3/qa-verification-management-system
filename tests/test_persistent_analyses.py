@@ -63,13 +63,13 @@ def test_startup_releases_retired_queue_and_preserves_other_jobs(monkeypatch, tm
     storage.create_analysis("manual-queued", module="manual_review")
     monkeypatch.setattr(main_module, "storage", storage)
     # 다른 기능의 실제 대기 실행과 예약 작업은 이 임시 DB 시험에서 시작하지 않는다.
-    for name in ("_ensure_configured_products", "resume_queued_manual_jobs", "resume_queued_qa_agent_jobs", "stop_scheduler"):
+    for name in ("_ensure_configured_products", "resume_queued_manual_jobs", "stop_scheduler"):
         monkeypatch.setattr(main_module, name, lambda: None)
     monkeypatch.setattr(main_module, "start_scheduler", lambda callbacks: None)
 
     async def restart():
         async with main_module.lifespan(None):
-            assert storage.active_analysis_count() == 2
+            assert storage.active_analysis_count() == 1
             for job_id in ("retired", "legacy"):
                 job = storage.get_analysis(job_id)
                 assert job["status"] == "FAILED"
@@ -77,7 +77,7 @@ def test_startup_releases_retired_queue_and_preserves_other_jobs(monkeypatch, tm
                 assert job["request"] == request
             assert storage.get_analysis("old-done")["result"] == result
             assert storage.get_analysis("old-done")["status"] == "DONE"
-            assert storage.get_analysis("agent-queued")["status"] == "QUEUED"
+            assert storage.get_analysis("agent-queued")["status"] == "FAILED"
             assert storage.get_analysis("manual-queued")["status"] == "QUEUED"
 
     asyncio.run(restart())

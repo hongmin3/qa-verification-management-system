@@ -1,4 +1,4 @@
-# 매뉴얼 개정 검증 (`/manual-review`)
+# 매뉴얼 개정 검토 (`/manual-review`)
 
 > 코드: [`app/modules/manual_review/`](../../app/modules/manual_review)
 > · 앱 안 사용법: `/manual-review/guide`

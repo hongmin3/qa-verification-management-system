@@ -15,10 +15,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from pydantic import ValidationError
+
 from app.modules.daily_qa.change_events import COMMENT, FIXED_ISSUE, ISSUE_AUDIT, NEW_ISSUE, SPEC_COVERAGE, SPEC_DECISION
 from app.modules.daily_qa.intelligence import DEFAULT_AXES, LEGACY_RE, KnownIds
 from app.modules.daily_qa.product_adapter import RD_FIXED
-from app.modules.daily_qa.schema import DRAFT_PERSPECTIVES, FORBIDDEN_ACTION_RE
+from app.modules.daily_qa.schema import DRAFT_PERSPECTIVES, EXPECTED_CONFLICT_CLASSES, FORBIDDEN_ACTION_RE, TcExpectedConflict
 from app.parsers.polarion_issue import WORK_ITEM_ID_RE
 
 #: 근거가 없다는 것 자체가 판정인 값. 근거 없이도 남기되 신뢰도를 올리지 않는다.
@@ -164,6 +166,32 @@ def _clean_audit(sections: dict, record: ValidationRecord) -> None:
     sections["basis"] = BASIS_TAG
 
 
+def _clean_expected_conflicts(entries: list[dict], known: KnownIds, record: ValidationRecord) -> bool:
+    """§17 충돌 분류만 검사한다. 기존 TC 조치와 완료 결과는 바꾸지 않는다."""
+    removed = False
+    for entry in entries:
+        if "expected_conflict" not in entry:
+            continue  # 구형 결과·충돌 없음은 허용한다.
+        raw = entry["expected_conflict"]
+        reason = ""
+        try:
+            conflict = TcExpectedConflict.model_validate(raw)
+            if conflict.classification not in EXPECTED_CONFLICT_CLASSES:
+                reason = f"알 수 없는 Expected 충돌 분류 '{conflict.classification}'"
+            elif not conflict.reason.strip():
+                reason = "Expected 충돌 분류 이유가 없음"
+            elif conflict.issue_id not in known.issue_ids:
+                reason = "오늘 이슈 스냅샷에 없는 충돌 대상 이슈"
+        except ValidationError:
+            reason = "Expected 충돌 형식에 분류·이유·대상 이슈가 필요함"
+        if reason:
+            record.drop("expected_conflict", raw, reason)
+            record.removed[-1]["original"] = raw  # 표시용 요약과 별도로 원문 전체를 보존한다.
+            entry.pop("expected_conflict")
+            removed = True
+    return removed
+
+
 def _clean_spec_summary(sections: dict, known: KnownIds, subject: str, record: ValidationRecord) -> None:
     """사양 변경 분석 (REQ-QAINTEL-031). 관련 이슈는 오늘 스냅샷에 있는 번호만 남긴다."""
     related = _issue_list(sections.get("related_issues"), known, subject, record, "related_issues")
@@ -240,6 +268,8 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
         sections["issue_coverage"] = issue_cov
         checklist = dict(sections.get("checklist_coverage") or {})
         checklist["tcs"] = _clean_tc_entries(checklist.get("tcs"), known, record, "checklist_coverage", TC_DECISIONS)
+        if _clean_expected_conflicts(checklist["tcs"], known, record):
+            finding["confidence"] = "Review Needed"
         sections["checklist_coverage"] = checklist
         sections["alerts"] = [alert for alert in sections.get("alerts") or []
                               if isinstance(alert, dict) and alert.get("type") in COVERAGE_ALERTS]
@@ -294,6 +324,9 @@ def related_ids(finding: dict, analysis_type: str) -> dict:
         issues += [entry["issue_id"] for entry in (sections.get(key) or {}).get("candidates") or []]
     issues += [entry["issue_id"] for entry in (sections.get("issue_coverage") or {}).get("issues") or []]
     issues += [entry["issue_id"] for entry in sections.get("related_issues") or []]
+    issues += [entry["expected_conflict"]["issue_id"]
+               for entry in (sections.get("checklist_coverage") or {}).get("tcs") or []
+               if entry.get("expected_conflict")]
     tcs = [entry.get("tc_id") or entry.get("location") for entry in sections.get("tc_coverage") or []]
     tcs += [entry.get("tc_id") or entry.get("location") for entry in (sections.get("checklist_coverage") or {}).get("tcs") or []]
     srs = sorted({token for item in finding.get("evidence") or [] if item.get("source_type") == "srs"

@@ -2,7 +2,7 @@
 {% block content %}
 {% include "_intel_style.html" %}
 <section>
-  <h2>기간 분석 조회</h2>
+  <h2>기간별 결과</h2>
   <p class="hint">검증을 쉬는 동안 쌓인 변경과 분석을 한 번에 봅니다. 날짜를 비우면 최근 7일입니다.</p>
   <form method="get" action="/qa-agent/period" class="qa-run">
     {% if products|length > 1 %}<select name="product">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>

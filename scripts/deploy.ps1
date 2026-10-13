@@ -1,8 +1,10 @@
 param(
-    [switch]$Restart
+    [switch]$Restart,
+    [switch]$ManualRestart
 )
 
 $ErrorActionPreference = "Stop"
+if ($ManualRestart -and -not $Restart) { throw "-ManualRestart 는 -Restart 와 함께 사용하세요." }
 
 function Invoke-SudoOverSsh {
     <#
@@ -75,6 +77,31 @@ function Invoke-Native([scriptblock]$Command) {
 
 $testExit = Invoke-Native { & "$projectRoot\.venv\Scripts\python.exe" -m pytest -q -p no:warnings }
 if ($testExit -ne 0) { throw "테스트 실패로 배포를 중단합니다." }
+$appPort = (Select-String -Path (Join-Path $projectRoot "config.yaml") -Pattern '^\s*port:\s*(\d+)' | Select-Object -First 1).Matches[0].Groups[1].Value
+if (-not $appPort) { throw "config.yaml 에서 app.port 를 읽지 못했습니다." }
+function Assert-QaIdle {
+    $guardCode = @'
+import json
+from pathlib import Path
+if {entry.name for entry in Path('.').iterdir()} <= {'.venv'}:
+    print(json.dumps({"running_products": [], "active_jobs": 0, "initial_install": True}))
+    raise SystemExit(0)
+from datetime import datetime, timedelta, timezone
+from app.core.storage import Storage
+from app.modules.daily_qa.settings import configured_products, load
+from app.modules.daily_qa.pipeline import is_running
+running = [product for product in configured_products() if is_running(load(product=product))]
+cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+jobs = Storage().operations_status(cutoff)
+print(json.dumps({"running_products": running, "active_jobs": jobs["active_jobs"]}))
+'@
+    $statusText = $guardCode | ssh $hostTarget "cd '$directory' && .venv/bin/python -"
+    if ($LASTEXITCODE -ne 0) { throw "서버 실행 상태를 확인하지 못해 배포를 중단합니다." }
+    $qaStatus = ($statusText -join "") | ConvertFrom-Json
+    if ($null -eq $qaStatus.running_products -or $null -eq $qaStatus.active_jobs) { throw "서버 실행 상태 응답을 읽지 못해 배포를 중단합니다." }
+    if (@($qaStatus.running_products).Count -gt 0 -or $qaStatus.active_jobs -gt 0) { throw "서버에서 QA 점검 또는 분석이 대기·실행 중입니다. 완료 뒤 배포하세요." }
+}
+Assert-QaIdle
 ssh $hostTarget "test ! -e '$directory' || test -d '$directory'"
 ssh $hostTarget "mkdir -p '$directory'"
 foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requirements.txt", "config.yaml", "pytest.ini", ".env.example", "secrets.example.txt", "secrets.example.json", "README.md", "SECURITY.md")) {
@@ -82,7 +109,11 @@ foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requ
     if ($copyExit -ne 0) { throw "파일 전송 실패: $item" }
 }
 
-Write-Host "파일 전송 완료. 서버에서 의존성 동기화 중..."
+Write-Host "파일 전송 완료. 사용을 종료한 단일 이슈 분석 파일을 확인합니다."
+Assert-QaIdle
+$retiredExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/python scripts/remove_retired_qa_agent.py --apply" }
+if ($retiredExit -ne 0) { throw "사용 종료 파일 정리 실패. 프로젝트 밖 경로나 파일 상태를 확인하세요." }
+Write-Host "서버에서 의존성 동기화 중..."
 $pipExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/pip install -q -r requirements.txt" }
 if ($pipExit -ne 0) { throw "서버 의존성 설치 실패." }
 Write-Host "의존성 동기화 완료."
@@ -93,6 +124,14 @@ if (-not $Restart) {
     return
 }
 
+if ($ManualRestart) {
+    Assert-QaIdle
+    Write-Host "파일과 의존성을 반영했습니다. 재기동은 아직 하지 않았습니다."
+    Write-Host "실행 중인 QA 점검이 없는지 확인한 뒤 서버에서 직접 실행하세요: sudo systemctl restart qa-verification"
+    Write-Host "재기동 뒤 /health 와 실행 상태를 확인하세요. 인증 정보는 읽거나 입력하지 않았습니다."
+    return
+}
+
 $secretsFile = Join-Path $projectRoot "secrets.txt"
 if (-not (Test-Path -LiteralPath $secretsFile)) { throw "secrets.txt가 없어 -Restart를 쓸 수 없습니다 (SERVER_SUDO_PASSWORD 필요)." }
 $sudoLine = Get-Content -LiteralPath $secretsFile | Where-Object { $_ -match '^SERVER_SUDO_PASSWORD=' } | Select-Object -First 1
@@ -100,6 +139,7 @@ if (-not $sudoLine) { throw "secrets.txt에 SERVER_SUDO_PASSWORD가 없어 -Rest
 $sudoPassword = $sudoLine.Substring("SERVER_SUDO_PASSWORD=".Length)
 
 Write-Host "qa-verification 서비스 재기동 중..."
+Assert-QaIdle
 $exitCode = Invoke-SudoOverSsh -HostTarget $hostTarget -Command "systemctl restart qa-verification" -Password $sudoPassword
 if ($exitCode -ne 0) { throw "서비스 재기동 실패 (sudo 비밀번호 또는 유닛 이름을 확인하세요)." }
 

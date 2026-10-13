@@ -1,9 +1,17 @@
-# Next Steps — 매뉴얼 개정 검증 기능 진행 상황 (우선순위 순)
+# Next Steps — QA 검증 관리 시스템 남은 작업
 
 과거 완료 작업의 상세 서사(무엇을 왜 어떻게 고쳤는지)는 git log와 각 커밋 메시지에 있다.
 이 파일은 "아직 할 일"을 우선순위 순으로 추적하는 문서이므로, 완료된 항목은 날짜·한 줄
 요약·커밋 해시만 남긴다(2026-09-02 압축 — 토큰 절약 목적, 상세가 필요하면
 `git log --grep`/`git show <hash>`).
+
+## 현재 기준 (2026-10-13)
+
+- 핵심 기능은 QA Intelligence Agent 일일·주간 점검과 매뉴얼 개정 검토이다. 단일 이슈 검증 범위 분석은 2026-10-13 사용을 종료했다. Regression 영향 분석 화면·API·추천 평가는 2026-10-01 제거됐다(`0fdf2f2`). 과거 DB·평가·분석 기록은 보존한다.
+- 기본 AI 제공자는 `ai.provider: claude_cli`다. Gemini는 선택 가능한 제공자로 남아 있으며 아래의 9월 Gemini 실측·가격 항목은 그 제공자를 쓸 때 참고한다.
+- 일일 점검 예약은 운영 서버에서 평일 07:30(한국 시간)에 돈다. 담당자 PC의 같은 예약은 `config.local.yaml`에서 껐다. PC 테스트 서버와 운영 핵심 앱 포트는 `24357`이다.
+- 서버 DNS 복구는 이번 세션에서 확인했다. 메일은 처음 SMTP 인증정보가 없어 `530 Authentication Required`로 거절됐으나, 사용자 설정 후 인증정보 등록 상태와 `send_report`의 `sent`·1건을 확인했다. 받은편지함 수신과 새 실제 분석 완료는 별도 확인이 필요하다.
+- 최신 사양은 `SPEC.md`와 `specs/qa-intelligence.md`, 구현·검증·배포의 현재 진행 상태는 `progress.md`를 읽는다. 아래의 2026-09-02 운영 조사 수치는 재확인 없이 현재 수치로 쓰지 않는다.
 
 ## 완료 이력 색인 (최신순, 상세는 커밋 참고)
 
@@ -40,32 +48,31 @@
   데이터 연동(Cross-Manual 대조 소스로 활용, 실서버 활성화까지 완료)
 - 2026-09-01: TC Excel 컬럼/시트 수동 매핑 UI — `4459dd3`
 - 2026-09-01: 분석 이력 검색·필터·페이지네이션 — `7b38ac5`
-- 2026-09-01: 매뉴얼 개정 검증 캐시 Hit 기록(비용 대시보드 공백 해소) — `af0287a`
+- 2026-09-01: 매뉴얼 개정 검토 캐시 Hit 기록(AI 사용량 공백 해소) — `af0287a`
 - 2026-09-01: 실제 파일 기반 E2E pytest 편입 — `458dbd3`
-- 2026-09-01: 비용/캐시 대시보드 UI(`/cost-dashboard`) — `c674185`
+- 2026-09-01: AI 사용량 UI(`/cost-dashboard`) — `c674185`
 - 2026-09-01: Cross-Manual 영향분석, 이미지 변경 Human Review Gate, 프로젝트 명칭 통일
   (표시명 "QA 검증 관리 시스템", slug `qa-verification-management-system`)
-- 2026-09-01: QA 플랫폼 허브 전환, 공용 Knowledge 모듈 분리, PDF 리비전 diff, Release
-  Note/설계검토보고서 상세 근거, 매뉴얼 개정 검증 최초 구현(스켈레톤→파이프라인), Release
+- 2026-09-01: QA 플랫폼 허브 전환, 검증 자료 관리 모듈 분리, PDF 리비전 diff, Release
+  Note/설계검토보고서 상세 근거, 매뉴얼 개정 검토 최초 구현(스켈레톤→파이프라인), Release
   Note 파서 + Reverse 검증(누락 의심)
 
-## 아직 미착수 (2026-09-02 재정리, 우선순위 순)
+## 남은 작업 (2026-10-13 현재 설명으로 갱신)
 
 각 항목의 "확인" 줄은 실서버 또는 로컬에서 직접 검증한 근거다.
 
 ### A. 바로 해야 하는 것 (사용자 조치)
 
--1. **SMTP 앱 비밀번호.** 알림 코드는 완성됐고 수신자(`NOTIFY_EMAIL_TO`)도 넣었지만
-   발신 계정이 없어 실제로는 나가지 않는다. [앱 비밀번호](https://myaccount.google.com/apppasswords)를
-   발급해 `secrets.txt`의 `SMTP_USER`/`SMTP_PASSWORD`에 넣고
-   `python scripts/test_notification.py --send`로 확인한다. 1분 작업이다.
--2. **지식 폴더 마운트.** 방식은 정해졌다(서버가 읽기 전용 CIFS 마운트). 실행만 남았다.
+1. **운영 서버 점검 메일 수신 확인.** 처음에는 `530 Authentication Required`로 실패했다. 사용자 설정 후 인증정보 등록 상태와 `send_report`의 `sent`·1건을 확인했다.
+   실제 점검 메일의 받은편지함 수신과 실행 결과 링크를 확인한다. 추가 메일 발송 시험은 전송을 승인받은 범위에서 수행한다.
+2. **서버가 지식 폴더를 직접 읽게 할 때의 마운트.** 현재는 담당자 PC가 최신 문서를 서버 지식 사본으로 업로드한다(REQ-SYNC-002). 이 방식의 수집·업로드 결과는 `progress.md`에 있다. 서버가 공유 폴더를 직접 읽는 방식은 별도 운영 결정이다.
+   2026-09-02 당시 대안은 읽기 전용 CIFS 마운트였다.
    `python scripts/make_knowledge_mount.py --share "//<서버>/<공유>" --app-user <계정>`이
    fstab 라인과 systemd Environment를 생성한다. 마운트 후 `ls`로 한글 파일명을 먼저 확인한다.
--3. **Gemini 유료 사용 사내 승인.** 결제는 됐고 Flash 호출이 실제로 동작한다. 사내 문서
+3. **Gemini 선택 시 사내 승인 확인.** 2026-09-08에는 결제와 Flash 호출을 확인했다. 현재 기본 제공자는 Claude CLI다. Gemini로 바꿀 때 사내 문서
    조각이 외부로 나가므로 **회사 보안 정책상 외부 생성형 AI API 사용 가능 여부**가 확인돼야
    한다. 코드가 아니라 운영 승인 문제다.
--4. **`gemini-3.x` 단가 확인.** `config.yaml` `models.pricing`의 `gemini-3.5-flash`·
+4. **Gemini 선택 시 `gemini-3.x` 단가 확인.** `config.yaml` `models.pricing`의 `gemini-3.5-flash`·
    `gemini-3.1-flash-lite` 값은 2.5-flash 기준 **잠정값**이다. 공식 표를 확인해 채운다.
    비용 추정이 그만큼 어긋난다.
 
@@ -82,15 +89,9 @@
 
 ### B. 다음 개선 (측정이 먼저인 것)
 
-4a. **TC 후보를 40건 보내는데 실제로 판정되는 것은 2~3건이다.** 입력의 54%(16,404 / 30,207자)가
-   TC 후보이고 그중 대부분이 무관하다. 단순 임계값으로는 자를 수 없다 — 실측한 BM25 점수
-   분포가 관련성을 구분하지 못한다 (VP-6699는 40건이 25~34 사이에 붙어 있고 gap이 없다).
-   **정확도 평가 루프로 정해야 한다**: QA가 확정 TC ID를 몇 건 적립하면
-   (완료된 분석 상세 화면 → precision/recall/F1) 관련 TC가 실제로 몇 위에 오는지 나온다.
-   그 순위를 보고 `qa_agent.tc_candidate_limit`을 내린다. 15건으로 줄이면 입력이 약 40%
-   줄지만, 관련 TC가 20위에 있으면 놓친다 — 근거 없이 줄일 수 없다.
+4a. **단일 이슈 분석의 후보 평가 항목 종료.** 전용 기능과 후보 한도 설정은 사용을 종료했다. 2026-09-08 실측은 당시 단일 이슈 분석에 대한 기록이며 현재 점검의 후보 한도를 정하는 근거로 쓰지 않는다.
 
-4b. **`retrieval.candidate_limit=150`도 같은 이유로 검증되지 않았다.** (기존 항목)
+4b. **옛 Regression 후보 평가 항목 종료.** 기능과 추천 평가 화면은 제거됐다. 현재 비용 절감은 [비용 설계](docs/COST_OPTIMIZATION.md)의 작업 묶음·검색 재사용·결과 저장본 기준으로 검토한다.
 
 ### C. 제품 기능 고도화
 
@@ -98,20 +99,15 @@
    5명이 함께 쓰면 추적성이 필요해진다. Manual Hub의 세션 인증을 재사용하는 방법과 별도
    인증을 붙이는 방법이 있고, **평문 HTTP 상태(A-0)와 함께 결정해야 한다** — 인증을 붙이면서
    HTTPS를 미루면 자격증명이 평문으로 흐른다.
-6. **QA Agent 2차 Skill 미구현.** S04(Fix Verification) · S06(Issue Writing & Closure) ·
-   S08(API/WebSocket/DICOM) · S09(Generator) · S10(Release Validation). 현황은
+6. **제품 규칙의 자동화 범위 확인.** 폐기된 단일 이슈 엔진의 Skill 확장 계획은 종료했다. 현재 수정 완료 이슈 분석·TC 수동 점검·초안은 QA Intelligence 엔진이 수행한다. 자동 확정 금지와 제품별 미구현 규칙의 현황은
    `/qa-agent/rules` 또는 `python scripts/rule_capability_report.py --status NOT_PLANNED`.
-7. **사양 Chunk에 SRS 메타데이터가 없다.** SRS ID·Status·Parent/Child·Linked SRS를 뽑지
-   않고 본문 exact 검색으로 찾는다. Polarion REST API로 SRS 워크아이템을 수집하면 채울 수
-   있다(ALM-QA-Automation 의 srs-spec 앱이 이미 그 접근을 갖고 있다).
+7. **등록 문서 조각의 메타데이터 필요성 확인.** QA 점검은 Polarion 원본 필드와 관계를 제품 설정으로 읽는다(REQ-QAINTEL-002·003). 등록 PDF의 사양 조각에 필드를 더할 필요가 있는지는 현재 매뉴얼 검증·지식 검색 사용처를 기준으로 조사한다. 폐기된 단일 이슈 엔진을 위한 확장은 진행하지 않는다.
 8. **Semantic Search 미구현.** exact+BM25의 Recall을 먼저 측정해야 하고, 외부 Embedding은
    이 프로젝트의 전제(원문 미전송)와 충돌한다. 로컬 임베딩이 준비되면 `Retriever` Protocol
    구현체만 추가하면 된다.
 
-9. **`retrieval.candidate_limit=150`이 검증되지 않았다.** 실서버 표본 1건(전체 TC 6,407 →
-   후보 150 → 최종 추천 3)만으로 정한 값이다. 추천 정확도 측정 루프는 이미 동작하지만
-   (완료된 분석 상세 화면에서 QA 확정 TC ID/메모 적립 → precision/recall/F1 표시), QA
-   확정 표본이 실제로 쌓여야 조정 근거가 생긴다.
+9. **폐기 기능의 평가 기록(2026-09-02).** 옛 Regression의 `retrieval.candidate_limit=150`은 실서버 표본 1건(전체 TC 6,407 → 후보 150 → 최종 추천 3)만으로 정한 값이었다.
+   당시 완료된 분석 상세 화면에서 QA 확정 TC ID·메모를 적립해 precision/recall/F1을 보였으나, 2026-10-01 기능 제거로 이 개선 항목은 현재 결정 대기에서 제외한다. 과거 평가 데이터는 보존한다.
 12. **매뉴얼 서버 확장 항목.** 본문 full-text 검색(현재 PostgreSQL ILIKE → `tsvector`),
     변경 알림(Email/Teams), Revision 자동 추출, 권한 고도화. 구조는 준비돼 있고 미구현이다
     (`services/qa-manual-hub/README.md` "향후 확장").
@@ -144,7 +140,7 @@
 - `match_release_changes`의 BM25 매칭은 토큰 겹침 fallback(2026-09-02)으로 소표본 오판을
   줄였지만, 여전히 로컬 규칙 기반 참고 신호일 뿐 확정 판정이 아니다 — 항상 "QA 확인 필요"로
   취급할 것.
-- 매뉴얼 서버 Cross-Manual 연동은 제품 **이름**으로 매칭한다. 현재 겹치는 제품은
-  `Bellalun Viewer` 하나뿐이고, 핵심 앱의 `VXvue`는 매뉴얼 서버에 같은 이름의 제품이 없어
+- 매뉴얼 서버 Cross-Manual 연동은 제품 **이름**으로 매칭한다. 2026-09-02 확인 당시 겹치는 제품은
+  `Bellalun Viewer` 하나뿐이었고, 핵심 앱의 `VXvue`는 매뉴얼 서버에 같은 이름의 제품이 없어
   조용히 건너뛴다(오류 아님). VXvue도 대조에 쓰려면 매뉴얼 서버에 `VXvue` 제품을 만들고
   매뉴얼을 등록해야 한다.

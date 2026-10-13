@@ -18,15 +18,20 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Thread
 
 from app.core.claude_cli import PASSED_ENV, QUIET_ENV, build_env  # noqa: F401  (세 화면 기능의 Claude 호출과 같은 환경 규칙)
 from app.core import claude_usage
 from app.modules.daily_qa import claude_limits
+from app.modules.daily_qa.cancellation import RunCancelled
 from app.modules.daily_qa.packages import Task
 from app.modules.daily_qa.workspace import ALLOWED_TOOLS, DENIED_TOOLS, RunWorkspace
 
@@ -40,6 +45,107 @@ class RunnerOutcome:
     meta: dict = field(default_factory=dict)
     #: 사용량 한도·인증 실패로 끝났으면 그 정보 (REQ-QAINTEL-025). 그 실행의 남은 AI 작업을 멈춘다.
     limit: claude_limits.LimitInfo | None = None
+    cancelled: bool = False
+
+
+def _stop_owned_child(process: subprocess.Popen) -> None:
+    """이 실행기가 만든 살아 있는 자식과 그 하위 프로세스만 종료한다."""
+    if sys.platform != 'win32':
+        # poll/wait 로 부모를 먼저 회수하지 않는다. 부모가 먼저 끝났어도 손자가
+        # 출력 파이프를 갖고 있으면 소유한 세션의 PID/그룹을 유지한 채 정리한다.
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate(timeout=2)
+        return
+    job = getattr(process, '_qa_job', None)
+    if job is not None and job.terminate():
+        process.wait(timeout=2)
+        return
+    if process.poll() is not None:
+        return
+    try:
+        subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                       capture_output=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
+    except (OSError, subprocess.SubprocessError):
+        pass  # 트리 조회가 실패해도 아래의 소유 핸들은 정리한다.
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=2)
+
+
+def _run_cancellable(command, *, prompt, cwd, env, timeout, check):
+    check()
+    if sys.platform == 'win32':
+        from app.modules.daily_qa.windows_job import CREATE_SUSPENDED, WindowsJob
+        options = {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW | CREATE_SUSPENDED}
+    else:
+        options = {'start_new_session': True}
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          text=True, encoding='utf-8', cwd=cwd, env=env, **options) as process:
+        job = None
+        writer = None
+        cancelled = False
+        resumed = sys.platform != 'win32'
+        try:
+            if sys.platform == 'win32':
+                job = WindowsJob(process)
+                if not job.attach():
+                    raise OSError("Windows Job의 안전 종료 설정 또는 소유 프로세스 배정에 실패해 CLI를 시작하지 않았습니다.")
+                process._qa_job = job
+                job.resume()
+                resumed = True
+            started = time.monotonic()
+            value = prompt
+            if sys.platform == 'win32':
+                # Windows communicate의 동기 stdin 쓰기가 막혀도 취소를 계속 확인한다.
+                stream, process.stdin = process.stdin, None
+                def send_input():
+                    try:
+                        with stream:
+                            stream.write(prompt)
+                    except (OSError, ValueError):
+                        pass  # 중단으로 자식이 닫은 파이프
+                writer = Thread(target=send_input, daemon=True)
+                writer.start()
+                value = None
+            while True:
+                check()
+                if time.monotonic() - started >= timeout:
+                    raise subprocess.TimeoutExpired(command, timeout)
+                try:
+                    stdout, stderr = process.communicate(input=value, timeout=.25)
+                    break
+                except subprocess.TimeoutExpired:
+                    value = None
+        except RunCancelled:
+            cancelled = True
+            _stop_owned_child(process)
+            stdout, stderr = process.communicate(timeout=2)
+        except BaseException:
+            if resumed:
+                _stop_owned_child(process)
+            else:
+                # 아직 재개하지 않은 Popen의 원래 핸들만 종료한다. 자식은 생성되기 전이다.
+                process.kill()
+                process.wait(timeout=2)
+            raise
+        finally:
+            if job is not None:
+                job.close()
+            if writer is not None and writer.ident is not None:
+                writer.join(timeout=2)
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr), cancelled
 
 
 def build_prompt(task: Task, run: RunWorkspace) -> str:
@@ -51,6 +157,9 @@ def build_prompt(task: Task, run: RunWorkspace) -> str:
         f"결과 파일: {run.rel(run.out_dir / f'{task.task_id}.json')}\n"
         f"전체 색인: {run.rel(run.context_dir)}/\n"
         f"{product_rules}"
+        "입력 후보를 먼저 비교한다. 근거가 부족하거나 서로 충돌할 때만 전체 색인을 추가 검색한다.\n"
+        "후보 수·본문·근거 검사를 줄이지 않는다. 규칙에서 요구한 검토를 모두 수행한다.\n"
+        "같은 작업에서 이미 읽은 공통 출력 형식은 재사용한다. 결과를 쓰기 전에 필수 필드를 확인한다.\n"
         "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
     )
 
@@ -143,28 +252,37 @@ def _safe_meta(stdout: str) -> dict:
 
 
 class ClaudeRunner:
-    def __init__(self, claude_command: str, token: str, timeout_seconds: int, model: str = "", effort: str = "") -> None:
+    def __init__(self, claude_command: str, token: str, timeout_seconds: int, model: str = "", effort: str = "", cancel_check: Callable | None = None) -> None:
         self.claude_command = claude_command
         self.token = token
         self.timeout_seconds = timeout_seconds
         self.model = model
         self.effort = effort
+        self.cancel_check = cancel_check
 
     def run(self, task: Task, run: RunWorkspace) -> RunnerOutcome:
         started = time.monotonic()
         log_dir = run.run_dir / "logs"
         log_dir.mkdir(exist_ok=True)
+        cancelled = False
         try:
-            completed = subprocess.run(
-                build_command(self.claude_command, self.model, self.effort),
-                input=build_prompt(task, run),
-                cwd=run.root,
-                env=build_env(self.token),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=self.timeout_seconds,
-            )
+            if self.cancel_check is not None:
+                completed, cancelled = _run_cancellable(build_command(self.claude_command, self.model, self.effort),
+                    prompt=build_prompt(task, run), cwd=run.root, env=build_env(self.token),
+                    timeout=self.timeout_seconds, check=self.cancel_check)
+            else:
+                completed = subprocess.run(
+                    build_command(self.claude_command, self.model, self.effort),
+                    input=build_prompt(task, run),
+                    cwd=run.root,
+                    env=build_env(self.token),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    timeout=self.timeout_seconds,
+                )
+        except RunCancelled:
+            return RunnerOutcome(False, -1, time.monotonic() - started, '사용자 중단', {'cli_started': False}, cancelled=True)
         except subprocess.TimeoutExpired:
             return RunnerOutcome(False, -1, time.monotonic() - started, f"제한 시간 {self.timeout_seconds}초 초과")
         except FileNotFoundError:
@@ -181,6 +299,9 @@ class ClaudeRunner:
                 pass
         log = {**meta, "tool_call_log": calls}
         (log_dir / f"{task.task_id}.claude.json").write_text(json.dumps(log, ensure_ascii=False, indent=1), encoding="utf-8")
+        if cancelled:
+            meta['cli_started'] = True
+            return RunnerOutcome(False, completed.returncode, time.monotonic() - started, '사용자 중단', meta, cancelled=True)
         error = ""
         if completed.returncode != 0 or meta.get("is_error"):
             # stderr 에 토큰이 찍히는 일은 없지만, 혹시 몰라 토큰 문자열은 지운다.

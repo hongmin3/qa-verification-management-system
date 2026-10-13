@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.core.model_router import (
     DEFAULT_MODELS,
     DEFAULT_PRICING,
@@ -12,107 +10,9 @@ from app.core.model_router import (
     TIER_STANDARD,
     estimate_cost_usd,
     estimate_from_usage,
-    looks_like_integration,
     model_for,
     pricing_for,
-    route_qa_analysis,
 )
-
-
-def _route(**overrides):
-    defaults = {
-        "linked_srs_count": 1,
-        "exact_evidence_count": 2,
-        "evidence_document_count": 1,
-        "candidate_tc_count": 20,
-        "root_cause_known": True,
-        "has_integration_terms": False,
-    }
-    defaults.update(overrides)
-    return route_qa_analysis(**defaults)
-
-
-# --- 라우팅 ------------------------------------------------------------------
-
-
-def test_ordinary_analysis_uses_the_standard_model() -> None:
-    """모델 ID 자체를 고정하지 않는다 — 모델은 폐기된다(`gemini-2.5-pro`·`-flash-lite` 실제 404).
-    검증할 것은 "설정된 등급의 모델을 쓴다"는 계약이다."""
-    decision = _route()
-    assert decision.tier == TIER_STANDARD
-    assert decision.model == model_for(TIER_STANDARD)
-    assert decision.reasons
-
-
-def test_unknown_root_cause_escalates() -> None:
-    decision = _route(root_cause_known=False)
-    assert decision.tier == TIER_COMPLEX
-    assert any("Root Cause" in reason for reason in decision.reasons)
-
-
-def test_evidence_spread_across_documents_escalates() -> None:
-    """근거가 여러 문서에 흩어져 있으면 사양 충돌 가능성이 있다."""
-    decision = _route(evidence_document_count=3)
-    assert decision.tier == TIER_COMPLEX
-
-
-def test_integration_terms_escalate() -> None:
-    decision = _route(has_integration_terms=True)
-    assert decision.tier == TIER_COMPLEX
-    assert any("API" in reason for reason in decision.reasons)
-
-
-def test_many_linked_srs_without_exact_evidence_escalates() -> None:
-    decision = _route(linked_srs_count=3, exact_evidence_count=0)
-    assert decision.tier == TIER_COMPLEX
-
-
-def test_many_linked_srs_with_exact_evidence_stays_standard() -> None:
-    """근거를 실제로 찾았으면 올릴 이유가 없다."""
-    assert _route(linked_srs_count=5, exact_evidence_count=4).tier == TIER_STANDARD
-
-
-def test_forced_tier_wins() -> None:
-    decision = route_qa_analysis(
-        linked_srs_count=1,
-        exact_evidence_count=0,
-        evidence_document_count=9,
-        candidate_tc_count=1,
-        root_cause_known=False,
-        has_integration_terms=True,
-        force_tier=TIER_LIGHT,
-    )
-    assert decision.tier == TIER_LIGHT
-    assert decision.model == model_for(TIER_LIGHT)
-
-
-def test_unknown_forced_tier_is_ignored() -> None:
-    assert _route(force_tier="turbo").tier == TIER_STANDARD
-
-
-def test_decision_serialises_with_reasons() -> None:
-    payload = _route(root_cause_known=False).as_dict()
-    assert set(payload) == {"tier", "model", "tier_label", "reasons"}
-    assert payload["reasons"]
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("Command 30402 응답 확인", True),
-        ("DICOM Tag 확인", True),
-        ("WebSocket 연결 해제", True),
-        ("Generator Dose 값 잔존", True),
-        ("환자 목록 정렬 순서", False),
-    ],
-)
-def test_integration_term_detection(text: str, expected: bool) -> None:
-    assert looks_like_integration(text) is expected
-
-
-def test_integration_detection_is_safe_on_empty_text() -> None:
-    assert looks_like_integration("") is False
-
 
 # --- 모델·가격 설정 ----------------------------------------------------------
 
@@ -120,7 +20,7 @@ def test_integration_detection_is_safe_on_empty_text() -> None:
 def test_model_ids_come_from_settings(monkeypatch) -> None:
     """모델 ID 는 config.yaml 이 원천이다. 특정 ID 를 강제하지 않는다 — 모델은 폐기된다.
 
-    AI 제공자마다 읽는 곳이 다르다 (REQ-AICALL-004): Claude CLI 는 `ai.claude.models.*`, Gemini 는 `models.*`.
+    AI 제공자마다 읽는 곳이 다르다 (REQ-AICALL-005·007): Claude CLI 는 `ai.claude.models.*`, Gemini 는 `models.*`.
     """
     from app.core.config import get_settings
 

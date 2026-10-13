@@ -45,7 +45,9 @@
   - `srs`: `location` 에 SRS 번호(`VP-1234`) 또는 Legacy 번호(`01-20-05`).
   - `spec_doc`: `ref` 에 입력 `candidates.spec_docs[].ref` 를 그대로, `location` 에 그 조각의 `location`.
   - `tc`: `location` 에 입력 TC 의 `location`(`파일 / 시트 / N행`) 또는 `tc_id`.
-  - `issue`: `location` 에 이슈 번호. `comment`: `ref` 에 입력 댓글의 `id`.
+  - `issue`: `location` 에 이슈 번호.
+  - `comment`: `ref` 와 `location` 에 입력 댓글의 `id` 를 그대로 쓴다. 예: `{"source_type":"comment","ref":"c1","location":"c1"}`. 입력에 없는 댓글 번호를 만들지 않는다.
+    - `location` 필드를 빠뜨린 댓글 근거는 코드가 비어 있지 않은 문자열 `ref` 를 그대로 복사한 뒤 입력 댓글 번호와 대조한다. 입력에 없는 번호는 근거에서 빼고 이유를 남긴다. 명시한 위치는 바꾸지 않으며, 다른 출처의 위치는 `ref` 로 복원하지 않는다.
   - `rules`: `location` 에 규칙 절(`§61`).
 - `summary`: 결론부터 한두 문장. 카드에 그대로 보인다.
 - `action`: QA 할 일. 줄바꿈으로 3줄까지(카드에 3줄까지 보인다). 이슈 종료·Close, TC 덮어쓰기, 결과·이력 삭제는 쓰지 않는다(쓰면 버려진다).
@@ -83,13 +85,19 @@
 | spec-change-summary, coverage | `change` | `{summary, changed_requirements: [..]}` — 요구사항 5개까지 |
 | spec-change-summary | `related_issues` | `[{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]` — 5개까지 |
 | coverage | `issue_coverage` | `{has_related, issues: [{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]}` |
-| coverage | `checklist_coverage` | `{tcs: [{tc_id, location, decision: KEEP/UPDATE_EXISTING, reason, recommended_change}]}` |
+| coverage | `checklist_coverage` | `{tcs: [{tc_id, location, decision: KEEP/UPDATE_EXISTING, reason, recommended_change, expected_conflict?: {classification, reason, issue_id}}]}` |
 | coverage | `gaps` | `[{perspective, description}]` |
 | coverage | `alerts` | `[{type: ISSUE_WITHOUT_TC/TC_EXPECTED_OUTDATED/FIXED_ISSUE_WITHOUT_REGRESSION_TC/SPEC_ISSUE_BEHAVIOR_CHANGED, detail}]` |
 | tc-draft, coverage (요청) | `tc_hold` | `{reason, questions: [..]}` — 초안을 만들지 않은 이유 |
 
 댓글 분류: ROOT_CAUSE_INFORMATION / RESOLUTION_INFORMATION / REPRODUCTION_INFORMATION / SPEC_CLAIM /
 REQUIREMENT_INFORMATION / QA_ACTION_REQUIRED / OTHER_SIGNIFICANT_INFORMATION / NOT_SIGNIFICANT.
+
+`expected_conflict`는 제품 규칙 §17의 기존 TC·이슈 Expected 충돌 분석이다.
+`classification`은 `Issue만 수정 필요` / `기존 TC 수정 필요` / `Issue + TC 모두 수정 필요` / `사양 확인 필요`다.
+이유(`reason`)와 입력으로 받은 이슈 번호(`issue_id`)를 함께 쓴다. 구형 결과에는 없어도 된다.
+코드는 알 수 없는 분류·대상 이슈·빈 이유를 원문과 함께 검증 기록에 남기고 이 필드만 제외한다.
+분류를 자동으로 정정하거나 완료 TC의 Pass/Fail을 바꾸지 않는다.
 
 ## `draft_tcs`
 

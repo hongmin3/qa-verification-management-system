@@ -1,20 +1,6 @@
-"""요청 난이도에 따라 AI 모델을 고른다 (Rule-based). 모델 이름은 AI 제공자별로 읽는다.
-
-전부 Pro 로 보내면 비싸고, 전부 Flash-Lite 로 보내면 어려운 판단이 부정확하다. 그런데
-"어려운 요청인가"를 판단하려고 또 LLM 을 부르면 그것이 비용이다. 그래서 **입력에서 세어지는
-신호로만** 고른다.
-
-    Flash-Lite  요약·분류·정형 추출처럼 판단이 거의 없는 작업
-    Flash       기본 QA 판단 (Issue 분석 / 사양 추적 / TC Coverage / 일반 Regression)
-    Pro         근거가 여러 문서에 흩어져 있거나 Root Cause 가 불명확한 경우
-
-가격은 `config.yaml` `models.pricing` 에 둔다 — 값이 바뀌면 코드를 고치지 않는다.
-비용은 **추정치**다. 실제 청구는 Google 콘솔이 기준이다.
-"""
+"""공용 AI 제공자·모델 설정과 비용 추정. 가격은 config.yaml에서 읽는다."""
 
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 from app.core import claude_cli
 from app.core.config import get_settings
@@ -58,23 +44,6 @@ DEFAULT_PRICING: dict[str, dict[str, float]] = {
     "claude-sonnet-5-5": {"input": 2.00, "output": 10.00},
     "claude-haiku-4-5": {"input": 1.00, "output": 5.00},
 }
-
-TIER_LABELS = {TIER_LIGHT: "경량 (요약·분류)", TIER_STANDARD: "기본 QA 판단", TIER_COMPLEX: "복잡한 교차검증"}
-
-
-@dataclass(frozen=True)
-class RoutingDecision:
-    tier: str
-    model: str
-    reasons: tuple[str, ...] = ()
-
-    @property
-    def tier_label(self) -> str:
-        return TIER_LABELS.get(self.tier, self.tier)
-
-    def as_dict(self) -> dict:
-        return {"tier": self.tier, "model": self.model, "tier_label": self.tier_label, "reasons": list(self.reasons)}
-
 
 def ai_provider(settings=None) -> str:
     """`ai.provider` 값. 모르는 값이나 빈 값은 Claude CLI 로 본다."""
@@ -130,48 +99,3 @@ def estimate_from_usage(model: str, token_usage: dict) -> dict:
         "usd": estimate_cost_usd(model, prompt_tokens, output_tokens),
         "pricing_per_1m": pricing_for(model),
     }
-
-
-def route_qa_analysis(
-    linked_srs_count: int,
-    exact_evidence_count: int,
-    evidence_document_count: int,
-    candidate_tc_count: int,
-    root_cause_known: bool,
-    has_integration_terms: bool,
-    force_tier: str = "",
-) -> RoutingDecision:
-    """QA Agent 분석 1건의 모델을 고른다. 전부 입력에서 세어지는 신호다.
-
-    Pro 로 올리는 조건은 규칙이 "복잡하다"고 본 상황과 맞춘다 — 근거가 여러 문서에 흩어져
-    있거나(사양 충돌 가능), Root Cause 가 불명확하거나, 연동(API/DICOM/WebSocket) 의미
-    판단이 필요한 경우다.
-    """
-    if force_tier in DEFAULT_MODELS:
-        return RoutingDecision(tier=force_tier, model=model_for(force_tier), reasons=("사용자가 모델 등급을 지정했습니다",))
-
-    reasons: list[str] = []
-    if not root_cause_known:
-        reasons.append("Root Cause 가 문서에 명시돼 있지 않습니다")
-    if evidence_document_count >= 3:
-        reasons.append(f"근거가 {evidence_document_count}개 문서에 흩어져 있습니다")
-    if has_integration_terms:
-        reasons.append("API/DICOM/WebSocket 연동 의미 판단이 필요합니다")
-    if linked_srs_count >= 3 and exact_evidence_count == 0:
-        reasons.append("연결된 SRS 가 여러 건인데 사양 본문에서 정확 일치를 찾지 못했습니다")
-
-    if reasons:
-        return RoutingDecision(tier=TIER_COMPLEX, model=model_for(TIER_COMPLEX), reasons=tuple(reasons))
-    return RoutingDecision(
-        tier=TIER_STANDARD,
-        model=model_for(TIER_STANDARD),
-        reasons=(f"근거 문서 {evidence_document_count}개, TC 후보 {candidate_tc_count}건 — 기본 판단 범위",),
-    )
-
-
-INTEGRATION_TERMS = ("api", "websocket", "dicom", "command", "protocol", "sop", "generator")
-
-
-def looks_like_integration(text: str) -> bool:
-    lowered = (text or "").casefold()
-    return any(term in lowered for term in INTEGRATION_TERMS)

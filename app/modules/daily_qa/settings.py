@@ -81,6 +81,8 @@ class DailyQaSettings:
     #: 분석 작업의 모델·추론 정도. 화면 AI 기능과 같은 `ai.claude.models.standard`·`ai.claude.effort` (REQ-DAILY-016).
     claude_model: str = ""
     claude_effort: str = ""
+    #: 같은 성공 작업 묶음의 결과를 재사용한다 (REQ-QAINTEL-037).
+    result_cache_enabled: bool = True
 
     @property
     def product_profile(self) -> ProductProfile:
@@ -200,6 +202,7 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         claude_token=str(secrets.claude_code_oauth_token or ""),
         claude_model=str(get("ai.claude.models.standard", "") or ""),
         claude_effort=str(get("ai.claude.effort", "") or ""),
+        result_cache_enabled=bool(get("daily_qa.result_cache.enabled", True)),
         task_timeout_seconds=int(get("daily_qa.task_timeout_seconds", 900) or 900),
         max_tasks_per_run=int(get("daily_qa.max_tasks_per_run", 30) or 30),
         batch_size=max(1, int(get("daily_qa.batch_size", 5) or 5)),

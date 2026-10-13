@@ -123,7 +123,7 @@ def main() -> int:
 
     print("# ===== 확인 =====")
     print("# 1. 파일명이 정상 표시되는지:  ls -1 /srv/knowledge/<slug>")
-    print("# 2. 앱이 인식하는지:          curl -s 'localhost:24357/qa-agent/readiness?product=VXvue'")
+    print("# 2. 앱이 인식하는지:          /knowledge 화면에서 제품과 수집 상태 확인")
     print("# 3. 분류 결과와 제외 이유:     curl -s 'localhost:24357/knowledge/source/VXvue'")
     print("# 4. 수집 실행:                /knowledge 화면의 '지금 수집'")
     return 0

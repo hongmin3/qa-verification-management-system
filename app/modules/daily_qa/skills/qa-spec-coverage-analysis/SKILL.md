@@ -27,7 +27,7 @@ description: 사람이 사양 변경 분석 화면에서 [TC 점검]을 눌렀�
 - `target`: SRS 번호. `srs`: 오늘 SRS 본문. `change`: 이벤트 종류, 바뀌기 전·후 값,
   `after.added_sentences`·`after.removed_sentences`(바뀐 문장).
 - `candidates.issues[]`: 코드가 고른 관련 과거 이슈(SRS 번호 정확 일치·연결 항목 → BM25).
-  `relation_hint` 에 과거 FIXED·SPEC·최근 FIXED 여부가 있다.
+  `relation_hint` 에 과거 FIXED·SPEC·최근 FIXED 여부가 있다. `reproduction` 에 Precondition·Step·Expected·Actual·Log/Data를 구분해 전달한다.
 - `candidates.tcs[]`: TC 후보. `match` 에 순위 이유(SRS 번호 연결 → Legacy 번호 연결 → 관련 이슈 번호가
   적힘 → 같은 기능 검색). `is_checklist` 가 참이면 영향성평가 Checklist 행이다.
 - `candidates.srs[]`, `candidates.spec_docs[]`: 연관 사양. `candidates.manuals[]`: 매뉴얼 문단 후보.
@@ -44,6 +44,13 @@ description: 사람이 사양 변경 분석 화면에서 [TC 점검]을 눌렀�
    - `KEEP`: 그대로 둔다.
    - `UPDATE_EXISTING`: Step·Expected 가 옛 사양 기준이다. `recommended_change` 에 고칠 곳을 쓴다
      (예: "Expected Result 3번 수정").
+   - 관련 이슈 Expected와 기존 TC Expected가 충돌하면 제품 규칙 §17을 적용한다. `expected_conflict`에
+     `classification`(아래 네 값 중 하나), `reason`(유효 사양·관찰 근거와 비교한 이유), `issue_id`(입력 이슈 번호)를 쓴다.
+     `Issue만 수정 필요` / `기존 TC 수정 필요` / `Issue + TC 모두 수정 필요` / `사양 확인 필요`.
+     Generator·Console 상태와 Viewer Actual이 제공되면 함께 대조한다. 관찰 자료가 없으면 추정하지 않는다.
+     TC와 이슈 중 어느 쪽도 확정할 근거가 부족하면 `사양 확인 필요`로 기록하고 추가 질문을 남긴다.
+     충돌이 없거나 적용할 제품 규칙이 없으면 필드를 생략한다. 없는 분류를 만들거나 다른 분류로 치환하지 않는다.
+     이 분류는 분석 제안이다. 완료 TC의 결과·ID·행·Sheet·Issue 이력을 보존하고 기존 Pass/Fail을 바꾸지 않는다.
 4. **Coverage 판정** → `verdict`: `FULLY_COVERED` / `PARTIALLY_COVERED` / `NOT_COVERED` / `SPEC_REVIEW_REQUIRED`.
 5. **경고** (`sections.alerts`): 해당하는 것과 설명(`detail`).
    - `ISSUE_WITHOUT_TC`: 관련 이슈는 있는데 그것을 검증하는 TC 가 없다.

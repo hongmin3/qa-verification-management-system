@@ -22,7 +22,8 @@ def main() -> None:
     import uvicorn
 
     host, port = app_bind()
-    uvicorn.run("app.main:app", host=host, port=port)
+    # 설정 저장 권한은 TCP peer 로 판단한다. 전달 헤더로 client 를 바꾸지 않는다.
+    uvicorn.run("app.main:app", host=host, port=port, proxy_headers=False)
 
 
 if __name__ == "__main__":

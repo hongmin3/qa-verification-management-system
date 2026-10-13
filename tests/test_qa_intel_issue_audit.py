@@ -156,7 +156,8 @@ def test_audit_tasks_use_the_audit_model(tmp_path, monkeypatch):
     efforts: set[str] = set()
 
     class Recording:
-        def __init__(self, command, token, timeout, model="", effort=""):
+        def __init__(self, command, token, timeout, model="", effort="", cancel_check=None):
+            assert callable(cancel_check)
             self.model = model
             efforts.add(effort)
 

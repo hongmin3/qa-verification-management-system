@@ -237,6 +237,20 @@ def test_status_has_no_warnings_when_fully_configured(configured) -> None:
     assert notifier.status()["warnings"] == []
 
 
+def test_report_failure_records_smtp_response_without_credentials(monkeypatch):
+    import smtplib
+    config = EmailSettings(host="smtp.example.com", port=587, use_tls=True, sender="bot@example.com",
+                           recipients=("qa@example.com",), username="bot@example.com", password="test-private-password",
+                           cooldown_minutes=180, enabled=True)
+    monkeypatch.setattr(notifier, "load_email_settings", lambda: config)
+    def fail(*_):
+        raise smtplib.SMTPSenderRefused(530, b"Authentication Required bot@example.com test-private-password", config.sender)
+    monkeypatch.setattr(notifier, "_send", fail)
+    result = notifier.send_report("test", "test")
+    assert "530" in result["error"] and "Authentication Required" in result["error"]
+    assert config.sender not in result["error"] and config.password not in result["error"]
+
+
 # --- Gemini 호출 실패과의 연결 -------------------------------------------------
 
 
@@ -254,7 +268,7 @@ def test_gemini_failure_triggers_notification(configured, storage, monkeypatch: 
 
     client = GeminiClient(storage=storage, responder=boom)
     with pytest.raises(RuntimeError):
-        client.generate_structured("{}", prompt_name="qa_agent_issue_impact", response_schema=Response)
+        client.generate_structured("{}", prompt_name="manual_revision_quick", response_schema=Response)
 
     assert len(configured) == 1
     assert "할당량" in configured[0]["Subject"]

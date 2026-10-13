@@ -314,12 +314,16 @@ def change_summary(events: list[dict]) -> dict:
     return summary
 
 
-def next_run_text(cfg: DailyQaSettings, now: datetime | None = None) -> str:
+def next_run_text(cfg: DailyQaSettings, now: datetime | None = None, store=None) -> str:
+    from app.modules.daily_qa import automation_policy
+    from app.modules.daily_qa.store import DailyQaStore
     sched = schedule_settings()
     if not sched.get("enabled", True):
         return "예약 꺼짐 (이 서버는 자동 실행하지 않음)"
-    moment = holidays.next_run(now or datetime.now(timezone.utc), cfg.root, sched["day_of_week"], sched["time"],
-                               sched["calendar"], sched["extra"], sched["skip_holidays"])
+    store = store or DailyQaStore(cfg.db_path)
+    if automation_policy.get_policy(store, cfg.slug)["mode"] == "off":
+        return "자동 점검 중지"
+    moment = automation_policy.next_run(cfg, store, sched, now or datetime.now(timezone.utc))
     return moment.strftime("%Y-%m-%d (%a) %H:%M") if moment else ""
 
 
@@ -336,13 +340,47 @@ def status(choice: ProductChoice) -> dict:
     cfg, store = choice.cfg, choice.store
     runs = store.list_runs(limit=1, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
+    running = is_running(cfg)
+    cancel_requested = bool(last and last.get("cancel_requested_at") and last["status"] == "RUNNING")
+    if last and last["status"] == "RUNNING" and not running:
+        try:
+            started = datetime.fromisoformat(last["started_at"])
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - started).total_seconds() >= 30:
+                store.interrupt_run(last["id"])
+                last = store.get_run(last["id"])
+        except (ValueError, TypeError):
+            pass
+    progress = None
+    if last:
+        end = last.get("finished_at") if last["status"] != "RUNNING" else None
+        try:
+            started = datetime.fromisoformat(last["started_at"])
+            elapsed = (datetime.fromisoformat(end) if end else datetime.now(timezone.utc)) - started
+            seconds = max(0, int(elapsed.total_seconds()))
+        except (ValueError, TypeError):
+            seconds = 0
+        progress = {**last.get("progress", {}), "run_id": last["id"], "started_at": last["started_at"],
+                    "elapsed_seconds": seconds, "url": f"/qa-agent/runs/{last['id']}"}
+        if running and last["status"] != "RUNNING":
+            progress = {"phase": "preflight", "label": "준비", "elapsed_seconds": 0, "done": 0, "total": 0}
+        if cancel_requested:
+            progress.update({"cancel_requested": True, "label": "중단 요청 확인 중"})
     return {
         "product": cfg.product,
         "slug": cfg.slug,
-        "running": is_running(cfg),
+        "running": running,
+        "current_run_id": last["id"] if running and last and last["status"] == "RUNNING" else None,
+        "cancel_requested": cancel_requested,
+        "progress": progress,
         "last_run": {"id": last["id"], "status": last["status"], "status_label": last["status_label"],
-                     "started": kst(last["started_at"]), "finished": kst(last.get("finished_at"))} if last else None,
-        "next_run": next_run_text(cfg),
+                     "started": kst(last["started_at"]), "finished": kst(last.get("finished_at")),
+                     "result": " · ".join(filter(None, (last["status_label"],
+                         "메일 발송 실패" if last.get("email_status") == "failed" else "",
+                         claude_limits.KIND_LABELS.get(last["summary"]["claude_limit"].get("kind"), "AI 분석 중단")
+                         if last.get("summary", {}).get("claude_limit") else "")))} if last else None,
+        "next_run": next_run_text(cfg, store=store),
         "claude_limit": limit_info(choice),
         # 앞선 현재 상태 점검이 한도로 남긴 대상 (REQ-QAINTEL-030 순서 5).
         "issue_audit_remaining": len(store.list_events(product=cfg.slug, statuses=("pending", "failed"),
@@ -351,6 +389,7 @@ def status(choice: ProductChoice) -> dict:
 
 
 def dashboard(choice: ProductChoice) -> dict:
+    from app.modules.daily_qa import automation_policy
     cfg, store = choice.cfg, choice.store
     runs = store.list_runs(limit=10, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
@@ -365,6 +404,11 @@ def dashboard(choice: ProductChoice) -> dict:
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
+        "automation_policy": automation_policy.get_policy(store, cfg.slug),
+        "automation_history": [{**item, "changed_at": item.get("updated_at", ""),
+                                "label": automation_policy.LABELS["off" if not item.get("enabled", True)
+                                                                 else "daily" if item.get("validation_period", True) else "weekly"]}
+                               for item in automation_policy.history(store, cfg.slug)[:10]],
     }
 
 
