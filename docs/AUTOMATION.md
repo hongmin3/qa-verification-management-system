@@ -151,13 +151,21 @@ output 과 지식 폴더에 모두 배포하기 때문이다(2026-09-28 에 6건
 
 ```flow
 07:30 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
-09:00 PC ALM 통합 수집(SRS·이슈, 지식 폴더에 사양서 배포) -> 09:40 PC 사양서 동기화 -> 10:00 PC 지식 폴더 업로드
+09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 09:40 PC 사양서 동기화 -> 10:00 PC 지식 폴더 업로드
 ```
 
 서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않고, Claude 세션 한도에 걸리면 초기화 5분 뒤 한 번 다시 돈다(10분마다 확인하는 `qa_agent_limit_catchup`). PC 쪽 작업이 멈추면 서버의
 TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화면에 보인다.
 
 ## 8. 수동 동기화 방법
+
+통합 수집기는 `scripts/collect_srs_spec.py`로 실행한다. 문서 구성은 `config/srs-crawler.yaml`, 인증은 기존 비밀 설정, 최종 배포 폴더는 제품 설정의 `knowledge_source.dir`에서 읽는다. 다른 저장소의 실행 파일·설정에 의존하지 않는다. `requirements-srs.txt`와 Playwright Chromium은 수집 PC에만 설치한다.
+
+`--check`와 `--dry-run`은 설정을 확인하며 수집·배포하지 않는다. `--force`는 오늘 자료와 이미지도 다시 받는다. `--from-snapshot YYYY-MM-DD`는 저장된 그 날짜의 SRS를 PDF로 다시 만든다. `--no-publish`는 검사할 PDF만 만들고 지식 폴더·공개 완료본을 바꾸지 않는다.
+
+원본 SRS는 `data/srs_crawler/snapshots/`, 진행 중 산출물·실패 기록은 `output/srs_crawler/.runs/`, 완료 PDF는 `output/srs_crawler/YYYY-MM-DD/pdf/`에 남긴다. 성공 manifest·최종 PDF 해시를 확인한 날짜만 동기화한다. 배포 위치에서 읽기·페이지·해시 검사에 실패하면 이전 파일을 복구한다. 기존 사양서 보관본은 지식 폴더 옆 `ORG/`에 남기며 자동 삭제하지 않는다.
+
+PC 작업 전환 시 기존 작업 XML을 백업한다. 실제 수집·배포·서버 읽기를 확인한 뒤 옛 ALM 전체 예약을 이슈 Export 전용으로 바꾼다. 기존 단일 이슈 화면에 최신 입력을 계속 제공하기 위해서다. SRS는 통합 수집기, 분석·메일은 기존 QA Agent가 맡는다. 최근 실행 결과와 로그인 조건 등 설치 상태는 `progress.md`를 확인한다.
 
 - 웹 UI의 "사양서 지금 동기화" 버튼은 제거했다 — 실제 자동 실행이 Windows 작업 스케줄러로
   이관되어 서버 화면에서 누르면 항상 "이 서버에서는 접근할 수 없다"는 안내만 나오는 상태가
@@ -193,12 +201,14 @@ TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화
    `TimeoutError`/`ConnectionError`만 재시도한다 — 일시적 과부하는 사용자가 재실행하면 된다
    (이번 문서화 작업 중 실제로 한 번 재현되어 확인함).
 
+기존 예약 전환은 관리자 PowerShell에서 `./scripts/install_srs_schedule.ps1`로 실행한다. `-CheckOnly`는 설정과 변경할 실행 경로만 보여 준다. 전환은 기존 예약 XML을 백업한 뒤 ALM 예약을 이슈 수집만 하도록 바꾸고, 사양서 동기화 경로와 새 수집 예약을 연결한다. 새 수집 예약은 S4U로 저장한다. 설치 및 실행 확인 결과는 `progress.md`를 본다.
+
 ## 11. 환경변수 / 설정값 목록 (이번 변경분)
 
 | 위치 | 키 | 설명 |
 |---|---|---|
 | `config.yaml` | `analysis.daily_token_limit` | 일일 Gemini 토큰 한도 (기존 기능) |
-| `config/products/vxvue.yaml` | `specification.crawler_output_dir` | ALM 크롤러 output 폴더 경로 |
+| `config/products/vxvue.yaml` | `specification.crawler_output_dir` | 통합 SRS 수집 output 폴더 경로 |
 | `config/products/vxvue.yaml` | `specification.filename_patterns` | 사양서로 인식할 파일명 패턴 |
 | `config/products/vxvue.yaml` | `sync.schedule_time` | 예약 동기화 시각 (HH:MM, Asia/Seoul) |
 | CLI 인자 | `--target-url` | `scripts/sync_vxvue_spec.py`가 업로드할 서버 주소 |

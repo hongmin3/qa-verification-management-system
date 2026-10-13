@@ -11,6 +11,7 @@ output/<YYYY-MM-DD>/pdf/ 폴더만 읽는다.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import re
 import shutil
@@ -55,13 +56,31 @@ def is_available_on_this_host(config: ProductConfig | None = None) -> bool:
     config = config or load_product_config("vxvue")
     if config is None or config.specification.source != "alm_crawler":
         return False
-    return Path(config.specification.crawler_output_dir).is_dir()
+    path = Path(config.specification.crawler_output_dir)
+    if not path.is_absolute():
+        path = get_settings().root / path
+    return path.is_dir()
 
 
-def _latest_date_dir(output_dir: Path) -> Path | None:
+def _latest_date_dir(output_dir: Path, require_complete: bool = False) -> Path | None:
     if not output_dir.is_dir():
         return None
     candidates = [p for p in output_dir.iterdir() if p.is_dir() and DATE_DIR_RE.match(p.name)]
+    if require_complete:
+        complete = []
+        for candidate in candidates:
+            try:
+                manifest = json.loads((candidate / 'manifest.json').read_text(encoding='utf-8'))
+                files = manifest.get('files', [])
+                valid = bool(files) and all(
+                    Path(record['name']).name == record['name'] and
+                    hashlib.sha256((candidate / 'pdf' / record['name']).read_bytes()).hexdigest() == record['sha256']
+                    for record in files)
+                if valid and manifest.get('status') == 'SUCCESS' and manifest.get('published') is True:
+                    complete.append(candidate)
+            except (OSError, ValueError, AttributeError, KeyError, TypeError):
+                continue
+        candidates = complete
     return max(candidates, key=lambda p: p.name) if candidates else None
 
 
@@ -168,7 +187,10 @@ def run(target_url: str, dry_run: bool = False) -> dict:
         return {"status": "NEEDS_CONFIG", "detail": "config/products/vxvue.yaml에 specification.source=alm_crawler 설정이 없습니다."}
 
     crawler_output = Path(config.specification.crawler_output_dir)
-    latest_dir = _latest_date_dir(crawler_output)
+    native_output = get_settings().root / 'output/srs_crawler'
+    if not crawler_output.is_absolute():
+        crawler_output = get_settings().root / crawler_output
+    latest_dir = _latest_date_dir(crawler_output, require_complete=crawler_output.resolve() == native_output.resolve())
     if latest_dir is None:
         detail = f"크롤러 output 폴더에서 날짜 폴더를 찾지 못했습니다: {crawler_output}"
         logger.error(detail)

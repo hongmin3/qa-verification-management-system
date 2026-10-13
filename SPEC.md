@@ -125,14 +125,14 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 07:30 줄과 같다 | 아래 07:30 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 07:30 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 07:30 (평일, 공휴일 제외) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 일일 점검 | Polarion 을 직접 읽어 어제와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-SCHED-002 |
-| 09:00 (평일) | 담당자 PC 작업 스케줄러(`ALM_QA_Automation_Daily`) | ALM 통합 수집. 다른 저장소 ALM-QA-Automation 의 기능 | SRS 와 이슈를 모아 어제와 비교하고, 바뀐 사양에 연결된 이슈에 우선순위를 붙인다. 사양서 PDF 를 크롤러 output 과 지식 폴더에 놓는다 | 크롤러 output 폴더, 지식 폴더 | 그 저장소가 보내는 알림 메일 | 이 저장소 밖 |
+| 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
 | 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`) | 지식 폴더 업로드(`scripts/sync_product_knowledge.py`) | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 최신본을 서버 지식 사본으로 올린다. 다음 날 07:30 점검이 이것을 쓴다 | 서버 `/knowledge` 화면의 "마지막 수집" | 없음 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 
 ```flow
 07:30 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
-09:00 PC: ALM 통합 수집(ALM-QA-Automation) -> 사양서 PDF 를 크롤러 output 과 지식 폴더에 배포
+09:00 PC: SRS 수집·PDF 배포(REQ-SYNC-003) -> 완료 PDF 를 동기화 출력과 지식 폴더에 배포
 09:40 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
 10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 서버 지식 사본 갱신 -> 다음 날 07:30 점검이 사용
 ```
@@ -6182,7 +6182,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 ### REQ-SYNC-001 사양서 동기화
 
-**하는 일** 담당자 PC 에서 ALM 크롤러가 받아 둔 최신 사양서 PDF 를 서버에 사양서로 등록한다. 바뀐 파일만 올리고, 같은 문서의 옛 날짜본은 서버에서 지운다.
+**하는 일** 담당자 PC 에서 SRS 수집기가 만들어 둔 최신 사양서 PDF 를 서버에 사양서로 등록한다. 바뀐 파일만 올리고, 같은 문서의 옛 날짜본은 서버에서 지운다.
 
 > **예시** 오늘 폴더에 `(사양서) VXvue 사양서2(260929).pdf` 가 새로 생겼으면 그 파일만 올린다. 서버에 `(사양서) VXvue 사양서2(260928).pdf` 가 있으면 지운다. `(사양서) VXvue 사양서3(260928).pdf` 는 이름이 다른 문서이므로 그대로 둔다.
 
@@ -6192,7 +6192,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [--dry-run]
 ```
 
-이유: 09:40 은 ALM 통합 수집(09:00)이 끝난 뒤다. 그 전에 돌면 전날 사양서를 올린다.
+이유: 09:00 SRS 수집 이후에 동기화한다. 수집이 아직 끝나지 않았으면 마지막 정상 완료본을 사용한다.
 
 > **참고** 서버의 `POST /knowledge/sync/specification` 과 앱 안 예약 실행(REQ-SCHED-002)도 같은 코드를 부른다. 하지만 서버는 크롤러 폴더를 볼 수 없어 늘 400 이거나 건너뛴다.
 
@@ -6201,7 +6201,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 | 값 | 뜻 |
 |---|---|
 | `vxvue.yaml` `specification.source` | `alm_crawler` 여야 한다 |
-| `specification.crawler_output_dir` | 크롤러 output 폴더. 아래에 `YYYY-MM-DD/pdf/` 가 날마다 생긴다 |
+| `specification.crawler_output_dir` | 기본은 프로젝트 루트 기준 `output/srs_crawler`. 아래에 완료된 `YYYY-MM-DD/pdf/`가 생긴다. 기존 외부 크롤러 출력 경로도 사용할 수 있다 |
 | `specification.filename_patterns` | 사양서로 볼 PDF 이름 패턴. 지금 `(사양서) VXvue 사양서*.pdf`, `(사양서) Licence Manager SRS 사양서*.pdf` |
 | `--target-url` | 올릴 서버. 기본값은 운영 서버 주소와 `app.port` |
 | `--dry-run` | 무엇이 바뀌었는지만 로그에 남기고 올리지 않는다 |
@@ -6209,7 +6209,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 **순서**
 
 1. 잠금 파일(`data/spec_sync.lock`)이 있으면 "이미 실행 중인 것으로 보입니다" 를 찍고 종료 코드 1 로 끝낸다. 없으면 잠금 파일을 만든다.
-2. output 폴더에서 이름이 `YYYY-MM-DD` 인 폴더 가운데 가장 늦은 날짜를 고른다.
+2. output 폴더에서 이름이 `YYYY-MM-DD` 인 폴더 가운데 가장 늦은 날짜를 고른다. 기본 통합 수집 출력은 성공·배포 완료 manifest가 있고 모든 PDF의 해시가 기록과 맞는 날짜만 고른다. 기존 외부 크롤러 출력은 종전 날짜 선택을 유지한다.
 3. 그 폴더의 `pdf/` 에서 패턴에 맞는 PDF 를 모은다(이름이 겹치면 하나로).
 4. 상태 파일(`data/spec_sync_state.json`)에서 올릴 서버 주소별로 저장한 파일 크기·수정 시각과 비교한다. 그 서버에 올린 기록이 없거나 파일이 바뀌면 등록한다. 주소 끝의 `/` 는 같은 주소로 본다. 바뀐 것이 없으면 "변경 없음 (미변경 N건, 날짜 …)"으로 끝난다.
 
@@ -6248,11 +6248,38 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 **지킬 것**
 
-- ALM 크롤러 프로젝트의 코드·설정은 읽지 않는다. 그 output 폴더만 읽는다.
+- 동기화 어댑터는 수집기의 코드·인증을 읽지 않는다. 완료 output 폴더만 읽는다. SRS 수집은 REQ-SYNC-003이 맡는다.
 - 옛 판 지우기는 새 판 등록이 성공한 뒤에만 한다.
 - 이름이 같은 문서는 지우지 않는다.
 
 > **참고** 위 세 번째 규칙(이름이 같은 문서는 지우지 않는다) 때문에 같은 PDF 가 지식 업로드로도 올라오면 두 벌이 남는다. 그 정리는 REQ-SYNC-002 가 한다(서버 확정 단계 8번: 같은 바이트의 문서가 다른 경로로 이미 등록돼 있으면 지식 사본 쪽 하나만 남긴다).
+
+### REQ-SYNC-003 SRS 수집·PDF 배포 통합
+
+**하는 일** 담당자 PC가 Polarion SRS를 직접 수집해 사양서 PDF를 만들고, 읽을 수 있는 최신본을 지식 폴더와 동기화 출력에 배포한다. 다른 저장소의 코드나 설정에 의존하지 않는다.
+
+**언제** 평일 09:00 PC 작업 `QA_SRS_Collect`가 `scripts/collect_srs_spec.py`를 실행한다. PC가 꺼져 놓친 실행은 사용 가능한 시점에 만회한다. 운영 전환은 실제 수집·배포·서버 읽기를 확인한 뒤 한다.
+
+**입력** 기존 `POLARION_HOST`·`POLARION_TOKEN` 비밀 설정, `config/srs-crawler.yaml`의 프로젝트·본문 필드·문서 분할 구성, 제품 설정의 지식 폴더.
+
+**순서**
+
+1. OS 파일 잠금을 획득한다. 중복 실행은 실패로 끝나며 기존 자료를 건드리지 않는다. 프로세스가 끝나면 잠금은 해제된다.
+2. Polarion REST API를 읽어 프로젝트별 예상 건수와 실제 건수를 비교하고 SRS·본문·이미지·댓글을 저장한다. 같은 날짜 완료본이 있으면 다시 수집하지 않는다. `--force`는 다시 수집한다.
+3. 기존 ALM의 문서 분할과 HTML·PDF 렌더링 복구를 사용한다. SRS가 한 문서에만 배정됐는지, 이전 대비 건수가 95% 이상인지, 모든 비어 있지 않은 문서의 PDF가 1페이지 이상인지 검사한다.
+4. 준비 폴더는 일반 디렉터리 생성으로 상위 폴더 권한을 상속한다. 기존 파일의 복구 사본을 준비한 후 새 PDF를 배포한다. 최종 경로에서 다시 읽어 페이지 수와 SHA-256이 원본과 같은지 확인한다.
+5. 실패하면 기존 파일을 복구한다. 정상 배포 후에만 완료 manifest와 날짜별 PDF를 `output/srs_crawler/YYYY-MM-DD/`에 공개한다. 진행 중 산출물은 동기화 대상에 넣지 않는다.
+6. 09:40 사양서 동기화와 10:00 지식 폴더 업로드가 완료본을 서버로 보낸다. 기존 문서 보관본은 자동 삭제하지 않는다.
+
+**결과** 실행 manifest는 수집·재사용 여부, 검증 항목, 파일별 페이지·크기·SHA-256, 배포 여부를 기록한다. CLI는 정상 완료 0, 실패·중복 실행 1, 설정 미비 2로 끝난다.
+
+**설정** `--check`는 설정·필요 라이브러리를 확인한다. `--dry-run`은 설정만 읽고 수집·배포하지 않는다. `--from-snapshot YYYY-MM-DD`는 이미 저장된 그 날짜의 자료로 PDF를 다시 만든다. `--no-publish`는 지식 폴더 배포와 완료본 공개를 모두 생략한다.
+
+**안 될 때** 이미지 실패·서식 단순화는 실행 manifest에 경고로 남긴다. 수집·PDF·최종 배포 검증 실패는 성공으로 기록하지 않는다. 날짜 폴더가 있어도 완료 manifest가 없으면 동기화하지 않는다.
+
+**지킬 것** 원본 TC·매뉴얼·QA 규칙·운영 DB를 바꾸지 않는다. Polarion은 읽기만 한다. AI·메일은 호출하지 않고 기존 QA Agent의 분석·메일 기능을 사용한다. 실제 문서·인증·예약 XML은 커밋하지 않는다.
+
+> **참고** 기존 단일 이슈 분석은 ALM Issue Export 폴더를 읽는다. 그 수집 경로는 유지하며 옛 ALM 전체 예약은 이슈 Export 전용으로 전환한다. SRS와 별도 ALM 분석·메일은 새 작업에서 중복 실행하지 않는다.
 
 ### REQ-SYNC-002 지식 폴더 업로드
 
@@ -9008,6 +9035,12 @@ python -m pytest tests/test_vxvue_spec_sync.py -q
 
 > **참고** 최신 날짜 폴더 고르기와 잠금 파일은 자동 테스트가 없다. 담당자 PC 에서 `--dry-run` 으로 "변경 N건 감지"를 확인하고, 작업 스케줄러의 마지막 결과가 0 인지 본다.
 
+### TEST-SYNC-003
+
+REQ-SYNC-003을 `tests/test_srs_crawler.py`와 `tests/srs_crawler/`의 합성 자료로 검사한다. 최종 PDF 손상·잘못된 PDF·완료본 공개 실패 때 이전 파일을 복구하는지, 제한된 임시 폴더를 사용하지 않는지, OS 잠금과 강제 재수집·미배포 실행·부분 수집 기록이 맞는지 본다. 통합 worker로 HTML을 PDF로 만들고 본문을 읽는다.
+
+실제 실행에서는 Polarion 예상 건수와 수집 건수, 생성본·최종 배포본의 페이지·해시를 대조하고 서버에서 내려받아 읽는다. 이 결과와 PC 작업 전환 상태는 `progress.md`에 기록한다.
+
 ### TEST-SYNC-002
 
 REQ-SYNC-002를 `tests/test_knowledge_upload.py` 로 검증한다.
@@ -9504,6 +9537,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DEPLOY-003 | `deploy/systemd/qa-verification.service` | TEST-DEPLOY-002 | implemented |
 | REQ-DEPLOY-004 | `deploy/nginx/qa-platform.conf` | TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
 | REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
+| REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/sync_product_knowledge.py`, `app/core/product_knowledge.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |

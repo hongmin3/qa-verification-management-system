@@ -12,6 +12,8 @@
 - REQ-MANUAL-016: Word Comment 에 문장 점검 줄을 붙인다. 판정이 문제없음이어도 문장 점검 결과가 있으면 Comment 를 달고, QA 가 문제없음으로 확정하면 달지 않는다.
 - REQ-MANUAL-018: Claude 대화 검증도 같은 판정 기준과 문장 점검을 쓴다. `changes.json` 에 절 제목·최종 문장·문장 점검이 들어가고 Excel 에 "문장 점검" 칸이 생겼다.
 - REQ-MANUAL-017: 사용법 화면을 새 등록·확정 흐름으로 다시 썼다.
+- REQ-SYNC-003: ALM-QA-Automation의 SRS 수집·문서 분할·PDF 생성·렌더링 복구를 Knowledge 모듈로 옮겼다. 기존 QA Agent가 분석·메일을 담당한다. 실제 지식 폴더의 읽기·페이지·해시까지 검사한 뒤 완료본을 공개하며 실패하면 이전 파일을 복구한다. 같은 날 강제 수집은 이미지도 새로 받는다. 부분 수집 자료와 실패 기록은 비공개 실행 폴더에 보존한다.
+- REQ-SYNC-001: 사양서 동기화가 통합 수집기의 완료본을 읽는다. 성공 manifest와 파일 해시가 맞지 않는 날짜는 올리지 않는다. 기존 외부 크롤러 출력 경로는 계속 지원한다.
 
 - REQ-CONF-001: 그 컴퓨터에만 쓰는 설정 파일 `config.local.yaml` 을 읽어 `config.yaml` 의 같은 키를 덮어쓴다. Git·배포에 넣지 않고, 자동 테스트는 읽지 않는다.
 - REQ-QAINTEL-001, REQ-QAINTEL-019, REQ-QAINTEL-035: `daily_qa.schedule.enabled: false` 면 07:30 예약과 만회 감시를 등록하지 않고, 대시보드에 "예약 꺼짐" 을 보인다. 사용자 결정으로 일일 점검은 운영 서버가 맡고 담당자 PC 는 `config.local.yaml` 로 예약을 껐다. [지금 실행]은 그대로다.
