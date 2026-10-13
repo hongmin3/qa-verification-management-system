@@ -127,3 +127,20 @@ def test_generator_cell_records_have_snapshot_citations(sources, tmp_path, monke
     reference = value["vss"][0]["source"]
     assert reference["reference_url"].startswith("/vxvue-chatbot/jobs/job/source")
     assert reference["location"] == {"sheet": "VSS", "cell": "E7"}
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_prompt_cites_vp_ids_only():
+    from app.core.prompt_manager import load_prompt
+    prompt = load_prompt("vxvue_chatbot")
+    assert "VP-" in prompt.system_instruction
+    assert "Legacy No." in prompt.system_instruction
+    assert prompt.version == 4
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_prompt_ignores_draft_status():
+    from app.core.prompt_manager import load_prompt
+    text = load_prompt("vxvue_chatbot").system_instruction
+    assert "draft" in text
+    assert "확인 필요 항목으로 쓰지 않는다" in text
