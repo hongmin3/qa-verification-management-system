@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="db44d423794974c1cf9392be786a054fd0d2a175fe776c2d00acd12acd104dc8">
+<meta name="spec-source-sha256" content="0f5ee855b42b2fb3369dfbe7528e88972ae3f3da5577a807b5e00d97a4cabd69">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -14663,8 +14663,9 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-req" id="REQ-VXVUECHATBOT-001">
 <h3><span class="idtag">REQ-VXVUECHATBOT-001</span> 챗봇 화면</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/router.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_router.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a>: 긴 대화 제목을 상단의 한 줄에 줄임표로 표시한다. 작은 화면에서 제목이 위로 벗어나거나 모델 표시를 밀어내지 않도록 보완했다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a>, <a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a>: VXvue AI 챗봇을 더했다. 왼쪽 대화 목록과 메시지 화면에서 이력을 열고 제목을 바꾸거나 삭제한다. 로그인 없이 브라우저별로 대화와 다운로드를 확인한다.</li>
 </ul>
 </details>
