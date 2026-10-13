@@ -1,4 +1,4 @@
-"""QA Agent 점검 예약 (SPEC REQ-DAILY-001, REQ-QAINTEL-001·021·025).
+"""QA Agent 점검 예약 (SPEC REQ-DAILY-001, REQ-QAINTEL-001·021·025·035).
 
 다른 모듈과 같은 방식이다 — `app/core/scheduler.py` 는 이 모듈을 모르고, `app/main.py` 가
 콜백으로 넘긴다. 신규 systemd 유닛을 만들지 않는다.
@@ -13,6 +13,9 @@
 
 Polarion 설정이 없는 호스트(개발 PC 등)에서는 시각에 깨어나도 점검을 띄우지 않는다. 공휴일에도
 띄우지 않는다. Claude 토큰만 없으면 점검은 띄운다 — 변경 감지와 AI 가 필요 없는 점검은 돈다.
+
+예약은 메모리에만 있어서 예약 시각에 앱이 꺼져 있었으면 그날 실행이 사라진다. 그래서 예약을 처리한
+날짜를 DB 상태에 남기고, 감시 예약이 앱 시작 직후와 10분마다 오늘 몫이 빠졌는지 본다(REQ-QAINTEL-035).
 """
 
 from __future__ import annotations
@@ -20,7 +23,8 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
-from datetime import datetime, timezone
+import threading
+from datetime import datetime, time, timedelta, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -34,6 +38,9 @@ logger = logging.getLogger("regression_analyzer")
 
 JOB_PREFIX = "qa_agent_"
 CATCHUP_JOB_ID = "qa_agent_limit_catchup"
+MISSED_JOB_ID = "qa_agent_missed_schedule"
+STATE_SCHEDULED_DATE = "scheduled_date"   # 예약 실행을 처리한 날짜(한국 시간). 정시·만회가 함께 쓴다
+_schedule_lock = threading.Lock()         # 정시 예약과 만회 확인이 같은 순간 둘 다 띄우지 않게 한다
 
 
 def job_id(slug: str) -> str:
@@ -49,6 +56,7 @@ def schedule_settings(settings=None) -> dict:
         "skip_holidays": bool(settings.get("daily_qa.schedule.skip_holidays", True)),
         "calendar": str(settings.get("daily_qa.schedule.holiday_calendar", "kr") or "kr"),
         "extra": tuple(str(item) for item in extra),
+        "run_missed": bool(settings.get("daily_qa.schedule.run_missed", True)),
     }
 
 
@@ -107,6 +115,54 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
     return {"status": "launched", "pid": process.pid, "product": cfg.slug}
 
 
+def launch_scheduled(product: str | None = None, *, now: datetime | None = None, popen=subprocess.Popen) -> dict:
+    """정시 예약과 만회 확인이 부르는 예약 실행. 처리한 날짜를 남겨 하루 한 번만 띄운다 (REQ-QAINTEL-035).
+
+    오늘 이미 처리했으면 `already` 다. 다른 실행이 돌고 있으면(`running`) 날짜를 남기지 않아 만회 확인이
+    10분 뒤 다시 본다.
+    """
+    from app.modules.daily_qa.store import DailyQaStore
+
+    now = now or datetime.now(timezone.utc)
+    today = now.astimezone(holidays.KST).date().isoformat()
+    cfg = load(product=product)
+    store = DailyQaStore(cfg.db_path)
+    key = cfg.state_key(STATE_SCHEDULED_DATE)
+    with _schedule_lock:
+        if store.get_state(key) == today:
+            return {"status": "already", "product": cfg.slug, "date": today}
+        result = launch_detached(product, trigger="scheduled", today=now, popen=popen)
+        if result.get("status") != "running":
+            store.set_state(key, today)
+    return result
+
+
+def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) -> list[dict]:
+    """예약 시각이 지났는데 오늘 예약을 처리하지 않은 제품의 실행을 띄운다. 지난 날은 만회하지 않는다."""
+    from app.modules.daily_qa.store import DailyQaStore
+
+    sched = schedule_settings()
+    if not sched.get("run_missed", True):
+        return []
+    now = now or datetime.now(timezone.utc)
+    local = now.astimezone(holidays.KST)
+    hour, _, minute = sched["time"].partition(":")
+    scheduled_at = time(int(hour or 7), int(minute or 30))
+    if local.weekday() not in holidays.parse_days(sched["day_of_week"]) or local.time() < scheduled_at:
+        return []
+    today = local.date().isoformat()
+    results = []
+    for product in configured_products():
+        cfg = load(product=product)
+        if DailyQaStore(cfg.db_path).get_state(cfg.state_key(STATE_SCHEDULED_DATE)) == today:
+            continue
+        logger.info("qa_agent_missed_schedule product=%s date=%s time=%s", cfg.slug, today, sched["time"])
+        result = launch_scheduled(product, now=now, popen=popen)
+        if result.get("status") != "already":
+            results.append(result)
+    return results
+
+
 def catchup_due_products(now: datetime | None = None, clear: bool = True) -> list[str]:
     """세션 한도가 풀린 뒤 다시 돌 차례인 제품 (REQ-QAINTEL-025). `clear` 면 차례 기록을 지운다."""
     from app.modules.daily_qa.pipeline import STATE_CATCHUP_AFTER
@@ -151,7 +207,7 @@ def register_scheduled_jobs(scheduler: BackgroundScheduler) -> None:
     for product in configured_products():
         slug = load(product=product).slug
         scheduler.add_job(
-            launch_detached,
+            launch_scheduled,
             CronTrigger(day_of_week=sched["day_of_week"], hour=int(hour or 7), minute=int(minute or 30), timezone="Asia/Seoul"),
             kwargs={"product": product},
             id=job_id(slug),
@@ -161,3 +217,7 @@ def register_scheduled_jobs(scheduler: BackgroundScheduler) -> None:
         logger.info("scheduled_job_registered id=%s day_of_week=%s time=%s", job_id(slug), sched["day_of_week"], sched["time"])
     scheduler.add_job(run_catchups, IntervalTrigger(minutes=10), id=CATCHUP_JOB_ID, replace_existing=True, max_instances=1)
     logger.info("scheduled_job_registered id=%s every=10m", CATCHUP_JOB_ID)
+    # 앱이 예약 시각 뒤에 켜졌으면 1분 뒤 첫 확인에서 오늘 몫을 띄운다 (REQ-QAINTEL-035).
+    scheduler.add_job(run_missed_schedules, IntervalTrigger(minutes=10), id=MISSED_JOB_ID, replace_existing=True,
+                      max_instances=1, next_run_time=datetime.now(timezone.utc) + timedelta(minutes=1))
+    logger.info("scheduled_job_registered id=%s every=10m first=+1m", MISSED_JOB_ID)

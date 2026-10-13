@@ -29,6 +29,7 @@
 | **에이전트와 개발할 때 폴더·지식을 어떻게 관리하는지** | [Context Engineering](CONTEXT_ENGINEERING.md) |
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
+| **2026-10-13 AI 모델·추론 정도 화면 설정 계획** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) (미착수, 접근 제한 방식 결정 필요) |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |

@@ -456,11 +456,12 @@ class _Run:
                 note = f"Claude CLI 로그인({self.claude_login['method'] or '로그인'})으로 부릅니다."
             self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)
         if self.runner is None:
-            self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds)
+            self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
+                                                                                  model=cfg.claude_model, effort=cfg.claude_effort)
             if not self.dry_run:
                 # 이슈 정합성 점검은 요약 카드 판정이라 가벼운 모델로 부른다 (REQ-QAINTEL-030 순서 6).
                 self.audit_runner = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                 model=cfg.intelligence.audit_model)
+                                                 model=cfg.intelligence.audit_model, effort=cfg.claude_effort)
                 self.audit["audit_model"] = cfg.intelligence.audit_model
 
     def _client(self):

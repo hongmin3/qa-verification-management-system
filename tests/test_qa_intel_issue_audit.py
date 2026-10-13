@@ -150,12 +150,15 @@ def test_limit_leaves_audit_pending_and_next_daily_run_continues(tmp_path):
 
 def test_audit_tasks_use_the_audit_model(tmp_path, monkeypatch):
     h = _world(tmp_path)
-    h.cfg = replace(h.cfg, intelligence=replace(h.cfg.intelligence, audit_model="audit-light-model"))
+    h.cfg = replace(h.cfg, intelligence=replace(h.cfg.intelligence, audit_model="audit-light-model"),
+                    claude_effort="medium")
     used: list[tuple[str, str]] = []
+    efforts: set[str] = set()
 
     class Recording:
-        def __init__(self, command, token, timeout, model=""):
+        def __init__(self, command, token, timeout, model="", effort=""):
             self.model = model
+            efforts.add(effort)
 
         def run(self, task, run):
             used.append((task.task_id, self.model))
@@ -165,3 +168,4 @@ def test_audit_tasks_use_the_audit_model(tmp_path, monkeypatch):
     h.run(DAY2, since=DAY1.date(), issue_audit=True, runner=None)
     audit = [model for task_id, model in used if task_id.startswith("AUD-")]
     assert audit and set(audit) == {"audit-light-model"}
+    assert efforts == {"medium"}                    # 점검 작업도 같은 추론 정도 (REQ-DAILY-016 순서 5)

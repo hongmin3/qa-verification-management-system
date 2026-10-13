@@ -54,7 +54,7 @@ def build_prompt(task: Task, run: RunWorkspace) -> str:
     )
 
 
-def build_command(claude_command: str, model: str = "") -> list[str]:
+def build_command(claude_command: str, model: str = "", effort: str = "") -> list[str]:
     # stream-json(+ --verbose)은 도구 호출을 한 줄씩 내보낸다. 무엇을 읽고 검색했는지 감사
     # 기록에 남기려면 이 형식이어야 한다 (json 형식은 최종 결과 한 덩어리만 준다).
     command = [
@@ -69,8 +69,11 @@ def build_command(claude_command: str, model: str = "") -> list[str]:
         "--allowedTools", *ALLOWED_TOOLS,
         "--disallowedTools", *DENIED_TOOLS,
     ]
+    # 화면 AI 기능과 같은 모델·추론 정도를 쓴다. 비면 CLI 기본값이다 (REQ-DAILY-016 순서 5).
     if model:
         command += ["--model", model]
+    if effort:
+        command += ["--effort", effort]
     return command
 
 
@@ -133,11 +136,12 @@ def _safe_meta(stdout: str) -> dict:
 
 
 class ClaudeRunner:
-    def __init__(self, claude_command: str, token: str, timeout_seconds: int, model: str = "") -> None:
+    def __init__(self, claude_command: str, token: str, timeout_seconds: int, model: str = "", effort: str = "") -> None:
         self.claude_command = claude_command
         self.token = token
         self.timeout_seconds = timeout_seconds
         self.model = model
+        self.effort = effort
 
     def run(self, task: Task, run: RunWorkspace) -> RunnerOutcome:
         started = time.monotonic()
@@ -145,7 +149,7 @@ class ClaudeRunner:
         log_dir.mkdir(exist_ok=True)
         try:
             completed = subprocess.run(
-                build_command(self.claude_command, self.model),
+                build_command(self.claude_command, self.model, self.effort),
                 input=build_prompt(task, run),
                 cwd=run.root,
                 env=build_env(self.token),

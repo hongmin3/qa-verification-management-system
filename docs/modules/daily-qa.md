@@ -160,6 +160,7 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.schedule.day_of_week` / `.time` | `mon-fri` / `07:30` | 예약 요일·시각(한국 시간) |
 | `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛴다 |
 | `daily_qa.schedule.extra_holidays` | `[]` | 공휴일 표에 더할 날짜(`YYYY-MM-DD`, 회사 휴무일 등) |
+| `daily_qa.schedule.run_missed` | `true` | 예약 시각에 앱이 꺼져 있었으면 앱이 다시 돌 때 오늘 몫을 한 번 띄운다(REQ-QAINTEL-035) |
 | `daily_qa.polarion.issue_query` 등 | `type:issue` | 제품 설정 `alm.queries` 가 없을 때만 쓰는 대체값 |
 | `daily_qa.max_tasks_per_run` | `30` | 한 실행의 AI 작업 묶음 상한. 넘은 이벤트는 `pending` 으로 다음 실행에 |
 | `daily_qa.intelligence.comment_fetch_limit` | `300` | 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에 |

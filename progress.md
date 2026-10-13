@@ -1,5 +1,18 @@
 # 진행 상태
 
+## 2026-10-13 놓친 오늘 예약 만회 (REQ-QAINTEL-035)
+
+- 현황 점검: 마지막 커밋 `58e9466`(10-02) 뒤 코드 변경이 없다. DB의 마지막 일일 QA 실행은 `20261002-102319-vxvue`(PARTIAL)이고, 그 뒤 11일 동안 실행 기록이 없다. 변경 이벤트는 완료 35건·대상 아님 15건·대기 42건으로 10-02와 같다.
+- 원인: 07:30 예약은 12000 테스트 서버 안의 메모리 예약이다. 서버는 로그인 때 뜬다. `supervisor.log` 의 시작 시각이 10-08 07:44, 10-13 08:01로 07:30보다 늦었다. 10-06은 06:19에 떴지만 07:30 실행 기록이 없다(절전으로 추정, 확인 못 함).
+- 사용자 결정: 앱 시작 때 오늘 예약분을 놓쳤으면 실행하는 만회 규칙(다)을 택했다. SPEC에 REQ-QAINTEL-035·TEST-QAINTEL-019를 먼저 더했다.
+- 구현: `app/modules/daily_qa/scheduled_jobs.py` 의 `launch_scheduled`·`run_missed_schedules`, 감시 예약 `qa_agent_missed_schedule`(시작 1분 뒤, 10분마다). 설정 `daily_qa.schedule.run_missed`(기본 `true`).
+- 검증: 새 테스트 8개를 더해 `tests/test_qa_intel_schedule.py` 38 passed. 날짜 기록 줄을 빼면 5개, 요일 확인을 빼면 1개가 실패하는 것을 확인했다. 실제 `config.yaml`·DB 사본·가짜 실행기로 10-13 08:58에 돌리면 `--product VXvue --trigger scheduled` 하나가 뜨고 두 번째 확인은 아무것도 띄우지 않았다.
+- 모델 통일(REQ-DAILY-016): 일일 QA 작업이 `--model`·`--effort` 없이 CLI 기본값으로 돌던 것을 `ai.claude.models.standard`·`ai.claude.effort` 로 넘기게 고쳤다. 사용자 결정으로 Opus 5.5·`medium`. 실제 설정을 읽으면 분석·점검 모두 `claude-opus-5-5`/`medium` 이다.
+- 테스트 서버: 09:06 무렵 12000 서버가 프로세스는 살아 있는데 포트를 듣지 않는 상태로 멈췄다(`WinError 64`). 감시 스크립트는 프로세스가 끝날 때만 다시 띄워 복구하지 못했다. `%LOCALAPPDATA%\QA-Test-Web\keep-test-web.ps1` 에 "직접 띄운 서버가 시작 3분 뒤에도 2분 넘게 응답하지 않으면 uvicorn 프로세스만 끄고 다시 띄운다"를 더했다(원본 `.bak-20261013`). 별도 포트에서 서버를 일시 정지시켜 자동 재시작을 두 번 확인했다. 분석 실행은 하위 프로세스라 끄지 않는다.
+- 실제 실행: 재시작 1분 뒤 만회 확인이 `20261013-091846-vxvue`(trigger `scheduled`)를 띄웠고 상태 기록이 `2026-10-13` 이 됐다. 실행은 PARTIAL. 수집·이벤트는 정상이고 AI 단계는 QA 규칙 판 불일치(지식 폴더 Rev1.18, Skill 기준 Rev1.17)로 모두 멈췄다(Claude 호출 0). 대기 이벤트 92건. 메일은 SMTP 미설정으로 `failed`.
+- Knowledge: `REF-workflow#execution-flow` 를 현재 흐름으로 다시 썼다(제거된 Regression 흐름 삭제). CURATE 검토의 나머지 4개는 사용자 승인으로 이어서 고친다.
+- 계획: AI 모델·추론 정도 화면 설정 `docs/superpowers/plans/2026-10-13-ai-model-settings-ui.md`. 다음: 남은 Knowledge 4개, Skill Rev1.18, 사용량 잔여 표시, 포트 통일(12000 → 24357), 운영 서버 배포.
+
 ## 2026-10-02 Claude 후속 작업 재개 · 자동 분석과 요청 점검 분리
 
 - 재개한 세션: Claude Desktop의 `QA 검증 관리 시스템 후속 작업`. 실제 중단 파일이 남아 있는 `projects/qa-verification-management-system` 원본 체크아웃에서 이어 했다. 핵심 앱만 수정했고 Manual Hub 서비스와 운영 서버는 변경하지 않았다.

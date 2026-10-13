@@ -173,3 +173,100 @@ def test_limit_expires_at_reset_and_unknown_reset_never_blocks():
     restored = claude_limits.load(claude_limits.dump(info))
     assert restored.kind == info.kind and restored.reset_at == info.reset_at
     assert claude_limits.load("not json") is None
+
+
+# --- 놓친 오늘 예약 만회 (REQ-QAINTEL-035, TEST-QAINTEL-019) ---------------------------------
+# Validates: REQ-QAINTEL-035
+
+TUE_0801 = datetime(2026, 10, 13, 8, 1, tzinfo=KST)        # 화요일, 07:30 이 지난 뒤
+
+
+@pytest.fixture
+def missed(launcher, monkeypatch):
+    cfg, launched, popen = launcher
+    monkeypatch.setattr(scheduled_jobs, "configured_products", lambda settings=None: ["VXvue"])
+    monkeypatch.setattr(holidays, "table_path", lambda root, calendar="kr": REPO / "config" / "holidays" / "kr.yaml")
+    store = DailyQaStore(cfg.db_path)
+    return cfg, launched, popen, store
+
+
+def scheduled_date(cfg, store):
+    return store.get_state(cfg.state_key(scheduled_jobs.STATE_SCHEDULED_DATE))
+
+
+def test_missed_schedule_launches_once_today(missed):
+    cfg, launched, popen, store = missed
+    results = scheduled_jobs.run_missed_schedules(now=TUE_0801, popen=popen)
+    assert [r["status"] for r in results] == ["launched"] and len(launched) == 1
+    args = launched[0]
+    assert args[args.index("--trigger") + 1] == "scheduled"
+    assert scheduled_date(cfg, store) == "2026-10-13"
+    assert scheduled_jobs.run_missed_schedules(now=TUE_0801 + timedelta(minutes=10), popen=popen) == []
+    assert len(launched) == 1
+
+
+@pytest.mark.parametrize("now", [
+    datetime(2026, 10, 13, 7, 0, tzinfo=KST),                # 예약 시각 전
+    datetime(2026, 10, 17, 10, 0, tzinfo=KST),               # 토요일
+])
+def test_missed_schedule_waits_for_schedule_day_and_time(missed, now):
+    cfg, launched, popen, store = missed
+    assert scheduled_jobs.run_missed_schedules(now=now, popen=popen) == [] and launched == []
+    assert not scheduled_date(cfg, store)
+
+
+def test_missed_schedule_can_be_turned_off(missed, monkeypatch):
+    cfg, launched, popen, store = missed
+    monkeypatch.setattr(scheduled_jobs, "schedule_settings", lambda settings=None: {
+        "day_of_week": "mon-fri", "time": "07:30", "skip_holidays": True, "calendar": "kr", "extra": (),
+        "run_missed": False})
+    assert scheduled_jobs.run_missed_schedules(now=TUE_0801, popen=popen) == [] and launched == []
+
+
+def test_missed_schedule_covers_only_today(missed):
+    cfg, launched, popen, store = missed
+    store.set_state(cfg.state_key(scheduled_jobs.STATE_SCHEDULED_DATE), "2026-10-08")   # 그 뒤 며칠을 놓쳤다
+    scheduled_jobs.run_missed_schedules(now=TUE_0801, popen=popen)
+    assert len(launched) == 1 and scheduled_date(cfg, store) == "2026-10-13"
+
+
+def test_missed_schedule_retries_while_another_run_holds_the_lock(missed):
+    cfg, launched, popen, store = missed
+    cfg.lock_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg.lock_path.write_text("1", encoding="utf-8")
+    results = scheduled_jobs.run_missed_schedules(now=TUE_0801, popen=popen)
+    assert [r["status"] for r in results] == ["running"] and launched == []
+    assert not scheduled_date(cfg, store)
+    cfg.lock_path.unlink()
+    scheduled_jobs.run_missed_schedules(now=TUE_0801 + timedelta(minutes=10), popen=popen)
+    assert len(launched) == 1 and scheduled_date(cfg, store) == "2026-10-13"
+
+
+def test_missed_schedule_on_holiday_marks_the_day_without_launching(missed):
+    cfg, launched, popen, store = missed
+    hangul_day = datetime(2026, 10, 9, 9, 0, tzinfo=KST)    # 금요일, 한글날
+    results = scheduled_jobs.run_missed_schedules(now=hangul_day, popen=popen)
+    assert [r["status"] for r in results] == ["holiday"] and launched == []
+    assert scheduled_date(cfg, store) == "2026-10-09"
+
+
+def test_on_time_schedule_marks_the_day_so_no_catch_up_follows(missed):
+    cfg, launched, popen, store = missed
+    on_time = datetime(2026, 10, 13, 7, 30, tzinfo=KST)
+    assert scheduled_jobs.launch_scheduled("VXvue", now=on_time, popen=popen)["status"] == "launched"
+    assert scheduled_date(cfg, store) == "2026-10-13"
+    assert scheduled_jobs.run_missed_schedules(now=TUE_0801, popen=popen) == [] and len(launched) == 1
+
+
+def test_missed_schedule_watch_is_registered_and_runs_soon_after_start(monkeypatch):
+    from apscheduler.schedulers.background import BackgroundScheduler
+
+    monkeypatch.setattr(scheduled_jobs, "configured_products", lambda settings=None: ["VXvue"])
+    scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+    before = datetime.now(timezone.utc)
+    scheduled_jobs.register_scheduled_jobs(scheduler)
+    job = scheduler.get_job(scheduled_jobs.MISSED_JOB_ID)
+    assert job is not None and job.trigger.interval == timedelta(minutes=10)
+    first = job.next_run_time or job.trigger.get_next_fire_time(None, before)
+    assert before <= first <= before + timedelta(minutes=2)
+    assert scheduler.get_job("qa_agent_vxvue").func is scheduled_jobs.launch_scheduled

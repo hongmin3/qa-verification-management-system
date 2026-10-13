@@ -3693,10 +3693,11 @@ python scripts/run_daily_qa.py --dry-run
    - 제품 설정에 제품 규칙 Skill 이 있으면 "제품 규칙 Skill `<이름>` 을 먼저 읽는다."(VXvue 는 `vxvue-qa-rules`)
    - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
 4. 실행 옵션과 환경은 NFR-SEC-001 을 따른다. 제한 시간(`task_timeout_seconds`)을 넘기면 멈추고 실패로 본다.
-5. CLI 가 남긴 도구 호출 기록을 실행 폴더 `claude_logs/<작업 ID>.attempt<N>.claude.json` 으로 복사한다.
-6. 결과 파일을 검사한다(REQ-DAILY-007). 맞으면 끝낸다.
-7. 틀리면 3번부터 한 번 더 한다. CLI 가 오류로 끝나도 결과 파일 검사는 한다. 두 번째도 틀리면 그 작업은 `실패` 다.
-8. 맞은 결과 파일을 실행 폴더에 복사하고, Finding(REQ-DAILY-018)과 질문(REQ-DAILY-017)을 저장한다.
+5. 모델은 `--model <ai.claude.models.standard>`, 추론 정도는 `--effort <ai.claude.effort>` 로 넘긴다. 화면 AI 기능과 같은 설정을 쓴다. 값이 비면 그 인자를 넣지 않고 CLI 기본값을 쓴다. 현재 상태 점검 작업(REQ-QAINTEL-030)은 모델만 `daily_qa.intelligence.audit_model` 을 쓰고 추론 정도는 같다.
+6. CLI 가 남긴 도구 호출 기록을 실행 폴더 `claude_logs/<작업 ID>.attempt<N>.claude.json` 으로 복사한다.
+7. 결과 파일을 검사한다(REQ-DAILY-007). 맞으면 끝낸다.
+8. 틀리면 3번부터 한 번 더 한다. CLI 가 오류로 끝나도 결과 파일 검사는 한다. 두 번째도 틀리면 그 작업은 `실패` 다.
+9. 맞은 결과 파일을 실행 폴더에 복사하고, Finding(REQ-DAILY-018)과 질문(REQ-DAILY-017)을 저장한다.
 
 **결과** 점검 단계의 상태는 아래와 같이 남는다.
 
@@ -3723,6 +3724,8 @@ python scripts/run_daily_qa.py --dry-run
 |---|---|---|
 | `daily_qa.claude_command` | `claude` | Claude CLI 실행 파일 |
 | `daily_qa.task_timeout_seconds` | `900` | 작업 한 번의 제한 시간(초) |
+| `ai.claude.models.standard` | `claude-opus-5-5` | 분석 작업의 모델(`--model`) |
+| `ai.claude.effort` | `medium` | 분석 작업의 추론 정도(`--effort`) |
 
 **안 될 때**
 
@@ -5276,7 +5279,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `ai.claude.command` | `claude` | Claude CLI 실행 파일 |
 | `ai.claude.timeout_seconds` | `600` | 호출 한 번의 제한 시간(초) |
 | `ai.claude.workdir` | 빈 값 | 빈 작업 폴더. 비면 사용자 홈의 `~/.qa-ai-workspace` |
-| `ai.claude.effort` | 빈 값 | 추론 정도(`low`·`medium`·`high` 등). 비면 CLI 기본값 |
+| `ai.claude.effort` | `medium` | 추론 정도(`low`·`medium`·`high` 등). 일일 QA 점검 작업에도 쓴다(REQ-DAILY-016). 비면 CLI 기본값 |
 | `ai.claude.models.light` / `standard` / `complex` | `claude-opus-5-5` | 모델 등급별 모델 이름(REQ-AICALL-004) |
 | `CLAUDE_CODE_OAUTH_TOKEN` (secrets) | 없음 | 서버 인증 토큰. 비면 넣지 않고, 개발 PC 는 기존 로그인을 쓴다 |
 
@@ -9091,7 +9094,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-014 | `app/modules/daily_qa/tc_index.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-015 | `app/modules/daily_qa/packages.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
-| REQ-DAILY-016 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
+| REQ-DAILY-016 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py`, `tests/test_daily_qa_runner.py` | implemented |
 | REQ-DAILY-017 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | REQ-DAILY-018 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-019 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | implemented |

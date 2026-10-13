@@ -97,7 +97,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 
 ### 요구사항 지도
 
-- 언제 도는가: REQ-QAINTEL-001(예약·공휴일), REQ-QAINTEL-021(지금 실행), REQ-QAINTEL-027(기간을 정한 수동 실행)
+- 언제 도는가: REQ-QAINTEL-001(예약·공휴일), REQ-QAINTEL-035(놓친 오늘 예약 만회), REQ-QAINTEL-021(지금 실행), REQ-QAINTEL-027(기간을 정한 수동 실행)
 - 제품 차이 흡수: REQ-QAINTEL-002(제품 설정·공통 모델), REQ-QAINTEL-023(제품별 데이터 분리), NFR-QAINTEL-002
 - 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기), REQ-QAINTEL-030(이슈 기록이 없는 기간의 현재 상태 기준 점검)
 - 무엇이 바뀌었나: REQ-QAINTEL-003(SRS), REQ-QAINTEL-004(이슈), REQ-QAINTEL-005(이벤트), REQ-QAINTEL-006(저장·재시도), REQ-QAINTEL-008(기준 스냅샷), REQ-QAINTEL-009(수집 실패), REQ-QAINTEL-028(삭제된 SRS 를 가리키는 TC)
@@ -134,6 +134,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 **지킬 것**
 
 - 공휴일 건너뛰기는 예약 실행에만 적용한다. 사람이 [지금 실행]을 누르면 공휴일에도 돈다(REQ-QAINTEL-021).
+- 예약 시각에 앱이 꺼져 있었으면 앱이 다시 돌 때 오늘 몫을 한 번 띄운다(REQ-QAINTEL-035).
 
 ### REQ-QAINTEL-002 제품 설정과 공통 모델
 
@@ -1215,6 +1216,39 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 **결과** 단계 `F` 의 결과와 Finding. 자동 실행의 단계 `F` 는 늘 `not_due` 이고 비고는 "매뉴얼 점검은 자동으로 돌지 않습니다." 로 시작한다. 예전의 미룬 점검 상태(`manual_check_due`)는 읽지도 쓰지도 않는다.
 
+### REQ-QAINTEL-035 놓친 오늘 예약 실행 만회
+
+**하는 일** 예약 시각(기본 07:30)에 앱이 꺼져 있었거나 PC가 절전 중이었으면, 앱이 다시 돌 때 오늘 몫의 예약 실행을 한 번 띄운다.
+
+> **예시** 평일 07:30에 PC가 꺼져 있었고 08:01에 로그인해 앱이 떴다. 앱은 08:02쯤 오늘 예약이 아직 돌지 않은 것을 알고 예약 실행을 띄운다. 그날 다시 띄우지는 않는다.
+
+**언제** 앱이 시작되고 1분 뒤에 한 번 확인하고, 그 뒤 10분마다 확인한다(감시 예약 `qa_agent_missed_schedule`).
+
+**순서**
+
+1. 활성 제품마다 오늘(한국 시간)이 예약 요일(`daily_qa.schedule.day_of_week`)인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다.
+2. 오늘 예약을 이미 처리했는지 제품별 상태 기록(`<slug>:scheduled_date`, 한국 시간 날짜)으로 본다. 오늘 날짜가 적혀 있으면 아무것도 하지 않는다.
+3. 처리하지 않았으면 REQ-QAINTEL-001 의 예약 실행과 같은 함수를 부른다. 공휴일 건너뛰기, 실행 잠금, Polarion 설정 확인이 그대로 적용된다. 앱 로그에 `qa_agent_missed_schedule product=<slug> date=<날짜> time=<예약 시각>` 을 남긴다.
+4. 결과가 `running`(다른 실행이 도는 중)이 아니면 상태 기록에 오늘 날짜를 적는다. `running` 이면 적지 않고 10분 뒤 다시 본다.
+
+**지킬 것**
+
+- 정시 예약(REQ-QAINTEL-001)도 실행을 띄운 뒤 같은 상태 기록에 오늘 날짜를 적는다. 그래서 정시에 돈 날에는 만회 실행이 없다.
+- 정시 예약과 만회 확인이 같은 순간에 깨어나도 실행은 하나만 뜬다. 두 경로는 한 잠금 안에서 상태 기록을 확인하고 적는다.
+- 지난 날의 놓친 예약은 만회하지 않는다. 오늘 몫만 띄운다.
+
+이유: 다음 실행이 마지막으로 저장한 스냅샷과 비교하므로 놓친 날의 변경도 그 실행이 함께 찾는다(REQ-QAINTEL-003·004).
+
+- [지금 실행]·기간 실행·catch-up 실행은 상태 기록을 바꾸지 않는다. 사람이 아침에 [지금 실행]을 눌렀어도 그날 예약 실행은 따로 돈다. 앱이 07:30에 켜져 있을 때와 같다.
+
+**설정**
+
+| 키 | 기본값 | 뜻 |
+|---|---|---|
+| `daily_qa.schedule.run_missed` | `true` | `false` 면 놓친 예약을 만회하지 않는다. 정시 예약만 돈다 |
+
+> **주의** 이 기능을 처음 설치한 날에는 상태 기록이 비어 있다. 예약 시각이 지난 평일에 설치하면 그날 예약 실행이 한 번 뜬다.
+
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
 - 수집과 스냅샷 비교는 매 실행 한다. AI 는 `analysis_required` 가 참인 이벤트가 있을 때만 부른다.
@@ -1457,6 +1491,22 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 
 **기대 결과** 모든 테스트 통과.
 
+### TEST-QAINTEL-019 놓친 오늘 예약 만회
+
+**목적** 예약 시각에 앱이 꺼져 있던 날 오늘 몫의 예약 실행이 한 번만 뜨는지 확인한다.
+
+**절차** `tests/test_qa_intel_schedule.py` 의 만회 테스트를 돌린다. 시각을 정해 넣고 가짜 프로세스 실행기를 쓴다.
+
+1. 평일 08:01, 상태 기록 없음: 예약 실행이 하나 뜨고 상태 기록이 오늘 날짜가 된다. 10분 뒤 다시 확인해도 더 뜨지 않는다.
+2. 평일 07:00(예약 전), 토요일 10:00, `run_missed: false`: 아무것도 뜨지 않는다.
+3. 어제 날짜만 적힌 상태에서 오늘 예약 시각 뒤: 오늘 몫 하나만 뜬다.
+4. 다른 실행이 도는 중: 뜨지 않고 상태 기록도 적지 않는다. 잠금이 풀린 뒤 확인하면 뜬다.
+5. 공휴일: 뜨지 않고 상태 기록은 오늘 날짜가 된다.
+6. 정시 예약이 띄운 날: 상태 기록이 오늘 날짜이고 만회 확인이 띄우지 않는다.
+7. 감시 예약 `qa_agent_missed_schedule` 이 10분 간격으로 등록되고 첫 확인이 앱 시작 직후에 잡힌다.
+
+**기대 결과** 모든 테스트 통과. 만회 코드를 빼면 1·3번이 실패한다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -1497,6 +1547,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 | REQ-QAINTEL-032 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/qa_agent/router.py`, `scripts/run_daily_qa.py`, `app/modules/daily_qa/skills/qa-verification-tc-draft/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_pipeline.py`, `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-034 | `app/modules/daily_qa/pipeline.py`, `scripts/run_daily_qa.py` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_failures.py`, `tests/test_daily_qa_pipeline.py` | verified |
+| REQ-QAINTEL-035 | `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-019: `tests/test_qa_intel_schedule.py` | verified |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

@@ -186,3 +186,45 @@ def test_usage_limit_is_a_failure_with_its_reason_recorded(tmp_path, monkeypatch
     assert outcome.limit is not None and outcome.limit.kind == claude_limits.KIND_SESSION and outcome.limit.reset_at
     log = json.loads((run.run_dir / "logs" / "B-001.claude.json").read_text(encoding="utf-8"))
     assert log["is_error"] is True and log["tool_call_log"] == []
+
+
+def test_command_passes_model_and_effort_only_when_set():
+    """Validates: REQ-DAILY-016 순서 5 — 일일 QA 작업도 화면 AI 와 같은 모델·추론 정도를 쓴다."""
+    command = build_command("claude", "claude-opus-5-5", "medium")
+    assert _option_values(command, "--model") == ["claude-opus-5-5"]
+    assert _option_values(command, "--effort") == ["medium"]
+    bare = build_command("claude")
+    assert "--model" not in bare and "--effort" not in bare
+
+
+def test_settings_read_shared_claude_model_and_effort(tmp_path):
+    """Validates: REQ-DAILY-016 순서 5 — 모델은 ai.claude.models.standard, 추론 정도는 ai.claude.effort."""
+    from app.modules.daily_qa.settings import load
+
+    class FakeSettings:
+        root = Path(__file__).resolve().parents[1]
+        secrets = type("S", (), {"__getattr__": lambda self, name: ""})()
+        values = {"ai.claude.models.standard": "claude-opus-5-5", "ai.claude.effort": "medium",
+                  "ai.claude.models.light": "claude-sonnet-5-5"}
+
+        def get(self, key, default=None):
+            return self.values.get(key, default)
+
+    cfg = load(FakeSettings())
+    assert (cfg.claude_model, cfg.claude_effort) == ("claude-opus-5-5", "medium")
+    assert cfg.intelligence.audit_model == "claude-sonnet-5-5"
+
+
+def test_runner_sends_model_and_effort(tmp_path, monkeypatch):
+    """Validates: REQ-DAILY-016 순서 5 — 실행기가 받은 모델·추론 정도를 CLI 에 넘긴다."""
+    seen: list = []
+
+    def fake_run(args, **kwargs):
+        seen.append(args)
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(agent_runner.subprocess, "run", fake_run)
+    run = prepare(tmp_path / "ws", tmp_path / "repo", "r1", None, None)
+    ClaudeRunner("claude", "", 5, model="claude-opus-5-5", effort="medium").run(Task("B-001", "qa-spec-change-summary", {}), run)
+    assert seen and _option_values(seen[0], "--model") == ["claude-opus-5-5"]
+    assert _option_values(seen[0], "--effort") == ["medium"]
