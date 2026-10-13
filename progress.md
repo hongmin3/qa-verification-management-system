@@ -8,7 +8,9 @@
 - 실제 문서로 정한 것: VXvue 1.1.0 Service Manual W2 는 본문 번호 스타일(`VText0Number`)에도 개요 수준이 있어 스타일 이름 기준으로만 제목을 찾는다(제목 354개). 문장 점검은 분석 대상 800건 중 18건이 걸렸고 한 단어짜리 추가 문구 중복("Exposure")은 정상 문장이라 두 단어 이상만 보게 좁혔다. DICOM CS V4.4W1 은 376건 중 0건.
 - 실제 실행(worktree DB, 포트 24358, `config.local.yaml` 복사해 예약 끈 상태 확인 "예약 꺼짐"): Licence Manager SRS(261013)를 근거로 등록하고 실제 문장으로 만든 표본(변경 5건, 분석 대상 4건)을 화면 파일 칸으로 올렸다. 자동 인식 "VXvue · VXvue Service Manual · V1.1.0 · W1". Claude CLI 7회·125초에 완료. 결과 화면 연구소 요청 2·QA 확인 2·단순 변경 1. AI 가 절 제목과 최종 문장을 보고 "설정 설정" 오기와 License Key 입력 방식 불일치를 근거 p.10·p.13·p.19 와 함께 짚었다. 동의 → 묶음 이동·건수·QA 확정 1/4 즉시 갱신, 일괄 동의는 사람 검토·문장 점검 3건을 건너뜀(0건 동의), 판정 바꾸기 저장, Word Comment 3건(QA 메모·문장 점검 줄 포함, QA 문제없음 확정 건 제외)과 지적사항 3건 저장. 콘솔 오류 없음.
 - 준비 검사 중 발견: 검사기는 "확인 필요" 글자를 미확정 표시로 본다. 배지 이름을 용어표의 "사람 검토 필요"로 맞췄다. 새로 생긴 300자 초과 문단 4개는 하위 항목 사이를 띄워 나눴다(전체 31 → 29).
-- 남은 것: 전체 Service Manual(분석 대상 800건)로 Claude 판정을 끝까지 돌리지는 않았다(호출 비용). 운영 서버 배포는 하지 않았다.
+- 남은 것: 전체 Service Manual(분석 대상 800건)로 Claude 판정을 끝까지 돌리지는 않았다(호출 비용).
+- 운영 배포 시도(14:35, 사용자 요청) → 보류: 원본 폴더를 `e4d1267` 로 빨리 감기(줄바꿈만 다른 `docs/SPEC.html` 되돌림)하고 서버 백업을 만들었다(`backups/qa-backup-20261013T053618Z.zip`, `~/qa-app-backup-20261013-053607.tgz`, `~/qa-app-config-backup-20261013-053607/`의 `config.yaml`·`secrets.txt`). 백업 도구가 보관 규칙대로 9월 초 옛 백업 12개를 정리했다. 서버 `config.yaml` 은 새 판과 `ai.claude.allowed_models` 한 줄만 다르다(코드가 읽지 않는 값).
+- `scripts/deploy.ps1 -Restart` 가 로컬 테스트에서 멈춰 서버에는 아무것도 올리지 않았다(2 failed·1310 passed). `test_pdf_worker_executes_native_package` 는 단독 재실행에서 통과(전체 실행 중 Chromium 렌더링 시간 초과로 보임). `test_real_knowledge_dir_has_no_unclassified_assets` 는 지식 폴더에 14:40 새로 생긴 `[Skill 지침] VXvue.md`(`qa-skill-export:v1` 머리글의 VXvue 스킬 내보내기, 이 저장소 밖 도구가 만든 것으로 보임)가 분류되지 않아 실패한다. 사용자 결정: 그 파일을 만든 쪽 작업이 끝날 때까지 배포 보류. 다음 배포 때 이 파일을 수집 제외(`ignore`)할지 규칙 문서로 분류할지 정한다.
 
 ## 2026-10-13 SRS 자동 수집 통합과 읽을 수 없는 PDF 복구 (REQ-SYNC-003)
 
