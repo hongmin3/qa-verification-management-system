@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="cd3ba77870163b0077788eab48ca1e0959e11398752564f74423fa183200cf9d">
+<meta name="spec-source-sha256" content="efcc45dbb1a0262e726fd4bc061d02ac0622a817b36538040f0af7964fd8b724">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -7914,7 +7914,12 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-req" id="REQ-DEPLOY-002">
 <h3><span class="idtag">REQ-DEPLOY-002</span> 배포 스크립트</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-DEPLOY-002">REQ-DEPLOY-002</a>: 배포 스크립트가 테스트를 통과하고도 멈추던 문제를 고쳤다. Windows PowerShell 5.1 이 pytest 의 경고(stderr)를 오류로 바꿔 <code>$ErrorActionPreference = &quot;Stop&quot;</code> 에서 중단됐다. 테스트·파일 전송·의존성 설치는 이제 종료 코드로만 판단하고, 파일 전송 실패도 멈춘다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 에서 테스트를 통과한 파일만 운영 서버로 옮기고 의존성을 맞춘다. 원하면 재기동과 헬스체크까지 한다.</p>
 <p><strong>언제</strong> <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 에서 다음 명령을 돌릴 때.</p>
 <pre><code class="language-text">.\scripts\deploy.ps1            # 파일 전송 + 의존성 설치

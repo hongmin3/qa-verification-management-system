@@ -2,6 +2,7 @@
 
 ## 2026-10-13
 
+- REQ-DEPLOY-002: 배포 스크립트가 테스트를 통과하고도 멈추던 문제를 고쳤다. Windows PowerShell 5.1 이 pytest 의 경고(stderr)를 오류로 바꿔 `$ErrorActionPreference = "Stop"` 에서 중단됐다. 테스트·파일 전송·의존성 설치는 이제 종료 코드로만 판단하고, 파일 전송 실패도 멈춘다.
 - REQ-AICALL-006: `/qa-agent` 와 비용 대시보드 위쪽에 Claude 사용량 칸을 더했다. 5시간 한도와 주간 한도의 사용 비율·남은 비율·초기화 시각을 보인다. 서버에 로그인된 Claude CLI 계정으로 지금 조회하고, 안 되면 일일 점검이 받은 마지막 값(`rate_limit_event`)을 보인다. 조회 API 는 `GET /claude/usage` 다.
 - REQ-AICALL-006: 로그인 토큰이 만료돼 조회가 안 되면 60분에 한 번까지 작은 CLI 호출(약 1천 토큰)로 CLI 가 토큰을 새로 받게 한다. `ai.claude.usage.refresh_with_cli: false` 로 끌 수 있다.
 - REQ-DEPLOY-001: 담당자 PC 테스트 서버도 `app.port`(24357)를 읽어 `127.0.0.1:24357` 에 뜬다. 옛 포트 12000 은 쓰지 않는다.

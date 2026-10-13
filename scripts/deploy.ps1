@@ -63,15 +63,28 @@ $hostTarget = "$($deploy.DEPLOY_SSH_USER)@$($deploy.DEPLOY_SSH_HOST)"
 $directory = $deploy.DEPLOY_TARGET_DIRECTORY
 $target = "${hostTarget}:${directory}/"
 Set-Location $projectRoot
-& "$projectRoot\.venv\Scripts\python.exe" -m pytest -q
-if ($LASTEXITCODE -ne 0) { throw "테스트 실패로 배포를 중단합니다." }
+
+# Windows PowerShell 5.1 은 외부 명령이 stderr 에 쓴 경고(예: pytest 의 DeprecationWarning)를 오류로 바꾼다.
+# $ErrorActionPreference = "Stop" 이면 테스트가 통과해도 여기서 멈춘다. 외부 명령은 종료 코드로만 판단한다.
+function Invoke-Native([scriptblock]$Command) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Command 2>&1 | ForEach-Object { "$_" } | Out-Host; return $LASTEXITCODE }
+    finally { $ErrorActionPreference = $previous }
+}
+
+$testExit = Invoke-Native { & "$projectRoot\.venv\Scripts\python.exe" -m pytest -q -p no:warnings }
+if ($testExit -ne 0) { throw "테스트 실패로 배포를 중단합니다." }
 ssh $hostTarget "test ! -e '$directory' || test -d '$directory'"
 ssh $hostTarget "mkdir -p '$directory'"
-foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requirements.txt", "config.yaml", "pytest.ini", ".env.example", "secrets.example.txt", "secrets.example.json", "README.md", "SECURITY.md")) { scp -r -- "$item" $target }
+foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requirements.txt", "config.yaml", "pytest.ini", ".env.example", "secrets.example.txt", "secrets.example.json", "README.md", "SECURITY.md")) {
+    $copyExit = Invoke-Native { scp -r -- "$item" $target }
+    if ($copyExit -ne 0) { throw "파일 전송 실패: $item" }
+}
 
 Write-Host "파일 전송 완료. 서버에서 의존성 동기화 중..."
-ssh $hostTarget "cd '$directory' && .venv/bin/pip install -q -r requirements.txt"
-if ($LASTEXITCODE -ne 0) { throw "서버 의존성 설치 실패." }
+$pipExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/pip install -q -r requirements.txt" }
+if ($pipExit -ne 0) { throw "서버 의존성 설치 실패." }
 Write-Host "의존성 동기화 완료."
 
 if (-not $Restart) {
