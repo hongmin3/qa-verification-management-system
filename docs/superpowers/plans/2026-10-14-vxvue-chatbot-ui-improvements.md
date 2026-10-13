@@ -181,8 +181,9 @@
 - [ ] **Step 7:** Akela `log applied`(REF-core-web-ui#progress-sse, #static-assets, #template-inheritance), `log outcome`.
 - [ ] **Step 8:** 커밋·push (worktree 브랜치 → master 반영은 기존 운영 절차를 따른다).
 
-## 결정이 필요한 점 (구현 전에 확인)
+## 확정된 결정 (2026-10-14 사용자 확인)
 
-1. **제외된 매뉴얼 2개**(DICOM Conformance V4.2 PDF, System Integration Guide TXT)는 접힌 줄에서 빼고 펼친 목록에 `제외`로만 보이게 계획했다. 펼친 목록에서도 빼길 원하면 알려 주세요.
-2. **Skill "최신 버전"**은 서버가 마지막으로 동기화받은 버전(현재 0.3.2)이다. 서버는 PC의 설치본을 직접 볼 수 없어서, PC에 더 새 버전이 깔렸는지는 다음 08:00 동기화 뒤에 보인다.
-3. **사용량 칩**은 서버 Claude 계정 하나의 사용률이다. 챗봇과 일일 점검이 같은 계정을 쓴다.
+1. 제외된 매뉴얼은 접힌 줄에서 빼고 펼친 매뉴얼 목록에 `제외` 상태로 보인다.
+2. Skill 최신 버전은 서버가 마지막으로 동기화받은 버전과 동기화 일시로 보인다. PC의 더 새 설치본은 다음 08:00 동기화 뒤 반영된다.
+3. 사용량 칩은 서버 Claude 계정 하나의 사용률이다(챗봇과 일일 점검 공용).
+4. 실행 방식: Subagent-driven.
