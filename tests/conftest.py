@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -5,6 +6,8 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# 그 PC 전용 설정(config.local.yaml)이 테스트 결과를 바꾸지 않게 한다 (SPEC REQ-CONF-001).
+os.environ["QA_SKIP_LOCAL_CONFIG"] = "1"
 
 REAL_DB = Path(__file__).resolve().parents[1] / "data" / "app.db"
 

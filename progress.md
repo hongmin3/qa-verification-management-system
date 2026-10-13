@@ -2,6 +2,8 @@
 
 ## 2026-10-13 놓친 오늘 예약 만회 (REQ-QAINTEL-035)
 
+- 담당자 PC 예약 끄기(사용자 결정): `config.local.yaml`(Git 제외)에 `daily_qa.schedule.enabled: false`. 이 PC 테스트 서버를 다시 띄웠다. 대시보드는 "예약 꺼짐" 을 보인다.
+- 서버 Polarion 정보: 사용자가 PowerShell 에서 Git Bash 용 명령을 실행해 명령 글자 두 줄이 서버 `secrets.txt` 에 들어갔다(값은 들어가지 않음). 백업 뒤 두 줄을 지웠고 PowerShell 용 명령을 가짜 값으로 확인해 다시 안내했다. 넣은 뒤 `/config/reload` 가 필요하다(웹 프로세스는 시작 때 읽은 설정을 쓴다).
 - 운영 서버 배포(10:29, 사용자 요청): 서버 백업(`backups/qa-backup-20261013T004831Z.zip`, `~/qa-app-backup-20261012-204831.tgz`, 설정·비밀 사본) → `scripts/deploy.ps1 -Restart`(테스트 1202 passed) → 옛 Regression 파일 39개·빈 폴더 5개 삭제 → 이 PC 의 SRS·이슈 스냅샷 17개 복사(해시 일치).
 - 배포 확인: `/health`·`/`·`/qa-agent`·`/knowledge`·`/cost-dashboard`·`/manual-review` 200, `/daily-qa` 307, `/impact-analyzer` 308, nginx 80 200. 사용량 칸은 서버 계정으로 지금 조회(5시간 12%·주간 24% 사용). `run_daily_qa.py --check` 9줄 중 Polarion 설정만 `[주의]`.
 - 배포 스크립트 결함: Windows PowerShell 5.1 이 pytest 경고(stderr)를 오류로 바꿔 테스트 통과 뒤 멈췄다. 외부 명령을 종료 코드로만 판단하게 고쳤다(REQ-DEPLOY-002).

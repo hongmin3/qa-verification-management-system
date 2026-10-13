@@ -4889,16 +4889,24 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-CONF-001 설정 파일 읽기
 
-**하는 일** 비밀이 아닌 설정을 `config.yaml` 한 파일에서 읽는다. 설정값을 코드에 박아 두지 않는다.
+**하는 일** 비밀이 아닌 설정을 `config.yaml` 한 파일에서 읽는다. 설정값을 코드에 박아 두지 않는다. 그 컴퓨터에만 다른 값이 필요하면 `config.local.yaml` 에 그 키만 적는다.
+
+> **주의** 자동 테스트(pytest)는 `config.local.yaml` 을 읽지 않는다(환경변수 `QA_SKIP_LOCAL_CONFIG=1`). 테스트 결과가 그 PC 의 설정에 따라 달라지지 않게 하려는 것이다.
+
+> **주의** `config.local.yaml` 은 `.gitignore` 대상이고 배포 스크립트(`scripts/deploy.ps1`)가 서버로 보내지 않는다. 서버와 담당자 PC 가 서로의 값을 덮어쓰지 않게 하려는 것이다. 비밀값은 이 파일이 아니라 비밀 설정 파일(REQ-CONF-002)에 둔다.
 
 **언제** 앱이 시작할 때 한 번 읽어 둔다(`get_settings`). 스크립트도 같은 함수를 쓴다.
 
 **순서**
 
 1. 저장소 루트의 `config.yaml` 을 UTF-8 로 읽는다. 비어 있으면 빈 설정으로 본다.
-2. 비밀 설정을 함께 읽는다(REQ-CONF-002).
-3. 아래 표의 저장 폴더가 없으면 만든다.
-4. 설정값은 점 표기(`analysis.daily_token_limit`)로 꺼낸다. 값이 없으면 부르는 쪽이 정한 기본값을 쓴다.
+2. 같은 폴더에 `config.local.yaml` 이 있으면 읽어서 같은 키의 값을 덮어쓴다. 묶음(키 아래 키)은 안쪽 키 단위로 덮어쓰고, 적지 않은 키는 `config.yaml` 값을 그대로 쓴다.
+
+   > **예시** 담당자 PC 의 `config.local.yaml` 에 `daily_qa: {schedule: {enabled: false}}` 만 적으면, 그 PC 에서만 07:30 예약이 꺼지고 `daily_qa.schedule.time` 같은 나머지 값은 `config.yaml` 을 따른다.
+
+3. 비밀 설정을 함께 읽는다(REQ-CONF-002).
+4. 아래 표의 저장 폴더가 없으면 만든다.
+5. 설정값은 점 표기(`analysis.daily_token_limit`)로 꺼낸다. 값이 없으면 부르는 쪽이 정한 기본값을 쓴다.
 
 **설정** 공통 기반이 읽는 키는 다음과 같다.
 
@@ -8625,6 +8633,8 @@ REQ-CONF-003 을 `tests/test_product_config.py`(VXvue 설정 읽기, 없는 제�
 
 REQ-CONF-001 은 자동 테스트가 따로 없다(`tests/test_backup.py`, `tests/test_serve_bind.py` 가 임시 `config.yaml` 로 `build_settings` 를 거치며 저장 폴더 생성을 함께 지난다). 사람이 확인하는 절차: 빈 폴더에 `config.yaml` 만 두고 앱을 띄워 `storage.*_dir` 폴더가 생기는지 본다.
 
+`config.local.yaml` 덮어쓰기는 `tests/test_config_local.py` 가 확인한다. 안쪽 키 단위로 덮어쓰는지, 파일이 없을 때 `config.yaml` 값만 쓰는지, 비어 있는 파일을 무시하는지 본다.
+
 ### TEST-STORE-001
 
 REQ-STORE-002, 003 을 `tests/test_persistent_analyses.py` 로 확인한다: 저장 객체를 새로 만들어도 결과가 남음, 재시작 후 미완료 작업 실패 처리, `RUNNING` 만 실패 처리, 단계 기록 초기화·진행, 요청 입력 보존, 동시 작업 수 세기, 기능별 이력 분리, `module` 없는 옛 줄의 처리.
@@ -9215,7 +9225,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py` | verified |
 | REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
-| REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py` | implemented |
+| REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
 | REQ-STORE-001 | `app/core/storage.py`, `app/core/config.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
