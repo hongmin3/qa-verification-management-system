@@ -1,19 +1,19 @@
 # 핵심 앱 — 화면 구조 규칙
 
 ## 템플릿 상속
-<!-- akela: id=template-inheritance scope=web-ui tier=must -->
+<!-- akela: id=template-inheritance scope=web-ui tier=should -->
 
 - 공용 골격은 `app/web/templates/base.html` 하나다. 블록은 `page_title`, `header_title`, `header_subtitle`, `header_nav`, `main_class`, `content`.
-- 각 모듈은 자기 `templates/module_base.html`에서 `base.html`을 상속하고 **자기 내비게이션만** 채운다. 모듈 화면은 그 module_base를 상속한다.
-- 허브(`hub.html`)는 `header_nav`를 비운다 — 기능 선택 화면에는 내비게이션이 없다.
-- 새 모듈을 만들면 `app/modules/<name>/templates/module_base.html`을 함께 만든다. 공용 `base.html`에 모듈 전용 요소를 추가하지 않는다.
+- 각 모듈은 자기 `templates/module_base.html`에서 `base.html`을 상속하고, `header_nav` 블록에서 `_nav.html` 의 `top_nav(<기능 키>, <사용법 주소>)` 를 부른다. 메뉴 목록을 모듈 템플릿에 직접 적지 않는다(REQ-WEB-007).
+- 허브(`hub.html`)도 `top_nav("home")` 을 부른다. 허브 메뉴에는 `QA 홈`·`사용법` 이 없다(REQ-WEB-001).
+- 새 모듈을 만들면 `app/modules/<name>/templates/module_base.html`을 함께 만든다. 상단 메뉴에 보일 기능이면 `_nav.html` 목록에 한 줄을 더한다. 공용 `base.html`에 모듈 전용 요소를 추가하지 않는다.
 
-## 기능 간 링크를 공용 레이아웃에 섞지 않는다
-<!-- akela: id=module-navigation-rule scope=web-ui tier=must -->
+## 기능 사이 링크는 공통 메뉴 한 곳에만 둔다
+<!-- akela: id=module-navigation-rule scope=web-ui tier=should -->
 
-- 각 모듈은 자기 내비게이션과 자기 사용법(`/<module>/guide`)을 소유한다.
-- 모듈 A의 화면에서 모듈 B로 가는 링크를 공용 헤더에 넣지 않는다. 기능 사이 이동은 허브(`/`)를 거친다.
-- 허브로 돌아가는 링크만 각 모듈 내비게이션에 둔다.
+- 기능 사이를 옮겨 가는 링크는 `app/web/templates/_nav.html` 에만 둔다. `base.html` 에는 기능 링크를 넣지 않는다(REQ-WEB-006).
+- 각 모듈은 자기 사용법(`/<module>/guide`)을 소유하고 그 주소를 `top_nav` 에 넘긴다.
+- 기능 안의 하위 화면(예: QA Agent 기간 조회)은 상단 메뉴에 넣지 않는다. 그 기능 화면 안의 링크·양식으로 연다(REQ-WEB-007).
 
 ## 허브의 하위 서비스 카드
 <!-- akela: id=hub-service-cards scope=web-ui tier=should -->
