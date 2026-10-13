@@ -86,6 +86,7 @@
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서·지식 폴더 자동 동기화(PC 예약 작업), 하루 실행 순서, 보고서 구조 |
+| [SRS 수집 통합 설계](superpowers/specs/2026-10-13-srs-collection-design.md) · [실행 계획](superpowers/plans/2026-10-13-srs-collection.md) | ALM 수집기의 핵심 앱 통합 범위, PDF 접근 권한·최종 배포 검증, 실패 복구와 운영 전환 |
 | [SECURITY_AI_AGENT.md](SECURITY_AI_AGENT.md) | QA Agent 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |
 | [modules/daily-qa.md](modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조, 분석 5종·Skill, 제품별 분리, 서버 설치, 설정, 운영 |
 | [USER_GUIDE.md](USER_GUIDE.md) | 기능별 사용 안내 — 어느 기능을 언제 쓰는지, 무엇을 보장하는지 |

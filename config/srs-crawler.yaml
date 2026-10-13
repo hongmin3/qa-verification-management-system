@@ -1,0 +1,39 @@
+# 문서 분할은 ALM-QA-Automation의 현재 구성을 이식했다. 인증·개인 경로는 기존 설정에서 읽는다.
+product_slug: vxvue
+projects:
+  - id: VXvue
+    query: "type:srs"
+    fetch_comments: true
+  - id: LicenseManager
+    query: "type:srs"
+    fetch_comments: true
+content:
+  field_priority: [descriptionKR, description]
+partition:
+  vxvue_project_id: VXvue
+  vxvue_groups:
+    - file_key: spec1
+      display_name: VXvue 사양서1
+      modules: ["01", "02"]
+    - file_key: spec2
+      display_name: VXvue 사양서2
+      modules: ["04"]
+    - file_key: spec3
+      display_name: VXvue 사양서3
+      modules: ["03", "05", "06"]
+    - file_key: spec4
+      display_name: VXvue 사양서4
+      modules: ["07"]
+    - file_key: spec5
+      display_name: VXvue 사양서5
+      modules: ["08", "09", "10", "11"]
+  single_file_projects:
+    - project_id: LicenseManager
+      file_key: license_manager
+      display_name: Licence Manager SRS 사양서
+validation:
+  min_expected_srs_ratio: 0.95
+  require_all_pdfs: true
+render:
+  known_problem_srs: ["VXvue/VP-1277"]
+  pdf_timeout_seconds: 300

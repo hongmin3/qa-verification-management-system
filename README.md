@@ -49,6 +49,12 @@ SW 변경이 생겼을 때 QA가 답해야 하는 질문은 늘 같습니다.
 QA Agent 점검은 사람이 자료를 넣지 않습니다. 서버가 평일 아침마다 Polarion 을 직접 읽어 바뀐 것만 분석하고,
 사람은 아침 메일과 `/qa-agent` 대시보드에서 결과를 봅니다.
 
+사양서 PDF도 담당자 PC의 통합 수집기가 Polarion에서 만들어 지식 폴더에 배포합니다. 별도 ALM 저장소 없이 실행하며, 최종 파일을 다시 읽고 페이지·해시를 확인한 완료본만 서버로 동기화합니다.
+
+수집 PC에서는 기존 앱 설치 후 `.venv\Scripts\python.exe -m pip install -r requirements-srs.txt`와 `.venv\Scripts\python.exe -m playwright install chromium`을 실행합니다. 기존 비밀 설정의 `POLARION_HOST`·`POLARION_TOKEN`, 제품의 지식 폴더와 `config/srs-crawler.yaml`의 문서 구성을 확인합니다.
+
+`.venv\Scripts\python.exe scripts/collect_srs_spec.py --check`로 준비 상태를 확인하고, 옵션 없이 실행하면 수집·PDF 생성·배포를 수행합니다. 완료본과 실행 기록은 `output/srs_crawler/`에 남습니다. 운영 순서는 [자동화 운영 문서](docs/AUTOMATION.md)에 있습니다.
+
 이슈 하나를 검증하려면 QA Agent 단일 이슈 분석을, 매일 바뀐 사양·이슈를 보려면 QA Agent 점검을 씁니다. 개정 매뉴얼은 매뉴얼 개정 검증에서 확인합니다. Knowledge에 등록한 제품 자료를 함께 사용합니다.
 
 ---
