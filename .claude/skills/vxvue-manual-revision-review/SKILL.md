@@ -49,9 +49,16 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe scripts/manual_review_local.py e
    `MODIFICATION_REQUIRED`, 삭제된 사양을 아직 설명하면 `DELETE_REQUIRED`, 문서 버전이 헷갈리면
    `VERSION_CONFIRMATION_REQUIRED`, 판단할 정보가 모자라면 `UNABLE_TO_DETERMINE`.
 4. `release_context` 가 있으면 참고로 쓴다. `result_status: FAIL` 이면 사람 확인이 필요하다고 적는다.
-5. 이미지 변경(`image_change: true`)과 PDF 변경은 글자만으로 확정하지 않는다. 사람 검토가 필요하다고 적는다.
+5. 변경 글자 한 조각만 보지 말고 `section_heading`(절 제목)과 `paragraph_text`(변경을 받아들인 최종 문장)를 함께 본다.
+   화면 검증(REQ-MANUAL-011)과 같은 문서 개정 검토 기준(QA 가이드 S07, 35절)을 따른다.
+   - 공통 절·상위 절·참조 절·다른 공식 문서에서 이미 설명할 수 있는 내용이면 누락·보강으로 보지 않고 `PASS`, 판정 신호 `COVERED_ELSEWHERE`.
+   - Manual-worthy Gate: 설치·설정 경로·기본값/범위/검사·UI 노출 조건·저장/적용/재시작 조건·연동·오류/복구·로그·권한·모델/모드/라이선스 제약·대상 독자가 판단할 상태가 빠졌을 때만 보강·수정을 요구한다. 내부 구현 상세는 요구하지 않는다(`NOT_MANUAL_WORTHY`).
+   - 사양서끼리 기본값·조건·범위가 상충하면 문구를 확정하지 않고 `SPEC_CONFIRMATION_REQUIRED`, 판정 신호 `SPEC_CONFLICT`.
+6. `text_issues`(문장 점검: 같은 단어 반복, 추가 문구 중복, 문장 붙음, 문장부호 겹침, 공백 겹침)는 도구가 이미 찾아 둔 편집 잔재다.
+   판정 값을 바꾸지 말고 요약에서 따로 보인다. `finish` 가 Excel 의 "문장 점검" 칸과 Word Comment 에 넣는다.
+7. 이미지 변경(`image_change: true`)과 PDF 변경은 글자만으로 확정하지 않는다. 사람 검토가 필요하다고 적는다.
    이미지 변경을 `PASS` 로 적어도 `finish` 가 "판정 불가"로 바꾼다.
-6. 권장 문구(`recommended_manual_text`)와 QA Comment(`qa_comment`)는 근거 조각의 표현만으로 쓴다.
+8. 권장 문구(`recommended_manual_text`)와 QA Comment(`qa_comment`)는 근거 조각의 표현만으로 쓴다.
    근거에 없는 수치·메뉴명·동작을 추측으로 넣지 않는다. QA Comment 는 연구소가 읽는 한국어 한두 문장이다.
 
 `decisions.json` 의 `decisions` 줄마다 채운다.

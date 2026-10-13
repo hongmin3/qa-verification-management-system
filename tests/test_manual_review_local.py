@@ -245,3 +245,25 @@ def test_command_line_entry_point_runs(tmp_path):
 
     assert result.returncode == 2
     assert "없음.docx" in result.stdout + result.stderr
+
+
+# Validates: REQ-MANUAL-018, REQ-MANUAL-020
+def test_extract_writes_section_heading_and_text_issues(tmp_path):
+    manual = tmp_path / "VXvue Service Manual.docx"
+    body = (
+        '<w:p><w:ins w:author="연구소" w:date="2026-08-01T00:00:00Z">'
+        "<w:r><w:t>잠금 해제 해제 방법은 10분 뒤 자동입니다.</w:t></w:r></w:ins></w:p>"
+    )
+    xml = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document {W_NS_DECL}><w:body>{body}</w:body></w:document>'
+    with zipfile.ZipFile(manual, "w") as archive:
+        archive.writestr("word/document.xml", xml)
+        archive.writestr("[Content_Types].xml", _CONTENT_TYPES)
+        archive.writestr("_rels/.rels", _RELS)
+
+    code, run_dir = _extract(tmp_path)
+
+    assert code == 0
+    change = json.loads((run_dir / "changes.json").read_text(encoding="utf-8"))["changes"][0]
+    assert change["section_heading"] == ""
+    assert change["paragraph_text"] == "잠금 해제 해제 방법은 10분 뒤 자동입니다."
+    assert [issue["code"] for issue in change["text_issues"]] == ["DUPLICATE_WORD"]

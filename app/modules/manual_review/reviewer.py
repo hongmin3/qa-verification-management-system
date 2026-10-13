@@ -17,6 +17,7 @@ from app.modules.manual_review.pdf_revision_diff import extract_pdf_revision_dif
 from app.modules.manual_review.review_signals import apply_human_review_signals
 from app.modules.manual_review.release_scope import extract_design_review_changes, extract_release_note_changes, match_release_changes
 from app.modules.manual_review.srs_evidence import load_srs_chunks, search_candidates
+from app.modules.manual_review.text_checks import text_issues_by_change
 from app.parsers.document_parser import extract_document_text
 
 MANUAL_REVIEW_STAGES: tuple[str, ...] = (
@@ -113,9 +114,15 @@ class ManualRevisionReviewer:
                     revision_id, change.kind, change.author, change.date, change.paragraph_index, change.text,
                     functional=functional, source_page=change.source_page, review_required=change.review_required,
                     change_index_in_paragraph=change.change_index_in_paragraph,
+                    section_heading=change.section_heading, paragraph_text=change.paragraph_text,
                 )
                 if functional:
                     functional_pairs.append((change_id, change))
+            # 문장 점검은 AI 없이 규칙으로 하고, 결과는 AI 판정을 저장할 때 함께 붙인다 (REQ-MANUAL-020).
+            text_issues = text_issues_by_change([
+                (change_id, change.kind, change.text, change.paragraph_text, change.paragraph_index, change.source_page, True)
+                for change_id, change in functional_pairs
+            ])
 
             stage(3)
             missing_count, release_scope_total, release_context, release_changes = self._match_release_scope(revision_id, release_note_path, design_review_path, functional_pairs)
@@ -136,6 +143,7 @@ class ManualRevisionReviewer:
                 change_release_context = release_context.get(change_id, [])
                 judgment = self.ai_client.judge(change, candidates, change_release_context)
                 apply_human_review_signals(judgment, change.kind, change.review_required, change_release_context)
+                judgment.text_issues = text_issues.get(change_id, [])
                 self.storage.update_manual_change_judgment(change_id, judgment.decision.value, judgment.confidence, judgment.model_dump(mode="json"))
                 decision_counts[judgment.decision.value] = decision_counts.get(judgment.decision.value, 0) + 1
 

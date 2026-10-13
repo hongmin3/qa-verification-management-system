@@ -65,7 +65,7 @@ def test_home_shows_registered_srs_sources(monkeypatch, tmp_path):
     response = TestClient(app).get("/manual-review")
 
     assert response.status_code == 200
-    assert "현재 검증 근거 SRS" in response.text
+    assert "근거 사양서 1개" in response.text
     assert "VXvue SRS.pdf" in response.text
 
 
@@ -192,7 +192,7 @@ def test_qa_can_confirm_cross_manual_impact(monkeypatch, tmp_path):
         data={"qa_status": "IMPACT_CONFIRMED"}, follow_redirects=False,
     )
 
-    assert "다른 Manual 영향 확인" in view.text
+    assert "다른 Manual 영향 1" in view.text
     assert "Operation Manual" in view.text
     assert updated.status_code == 303
     assert storage.list_cross_manual_impacts(revision_id)[0]["qa_status"] == "IMPACT_CONFIRMED"
@@ -431,3 +431,147 @@ def test_daily_token_status_uses_shared_core_calculation(monkeypatch, tmp_path):
 
     assert manual_review_router._daily_token_status() == {"used": 7, "limit": 5, "exceeded": True}
     assert seen == [storage]
+
+
+# Validates: REQ-MANUAL-001
+def test_home_shows_single_dropzone_and_collapsed_reference_docs(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+
+    text = TestClient(app).get("/manual-review").text
+
+    assert text.count('class="dropzone') == 1
+    assert "개정 매뉴얼을 끌어놓거나 클릭해 고르세요" in text
+    assert "<summary>참고 자료 추가 (선택)</summary>" in text
+    assert '<details id="edit-values" class="mr-fold">' in text  # 처음에는 접혀 있다
+    assert 'name="release_note_file"' in text and 'name="design_review_file"' in text
+
+
+# Validates: REQ-MANUAL-001
+def test_srs_status_warns_when_knowledge_copy_has_newer_spec(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    storage.add_document("specification", "VXvue", "1.0", "", "(사양서) VXvue 사양서1(261006).pdf", tmp_path / "s1.pdf")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_collected_spec_names", lambda product: ["(사양서) VXvue 사양서1(261013).pdf"])
+
+    text = TestClient(app).get("/manual-review").text
+
+    assert "사양서 날짜 261006" in text
+    assert "지식 폴더에 더 새 사양서(261013)가 있습니다." in text
+
+
+# Validates: REQ-MANUAL-001
+def test_srs_status_warns_when_no_spec_or_failed_sync(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    monkeypatch.setattr(manual_review_router, "_collected_spec_names", lambda product: [])
+    monkeypatch.setattr(storage, "latest_sync", lambda product, kind: {"status": "FAILED", "synced_at": "2026-10-13T00:00:00+00:00", "detail": "오류"})
+
+    status = manual_review_router._srs_status("VXvue")
+
+    assert status["warnings"] == ["등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다.", "최근 사양서 동기화가 실패했습니다."]
+
+
+# Validates: REQ-MANUAL-019
+def test_suggest_endpoint_returns_json_and_saves_nothing(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    storage.ensure_product("VXvue")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    versions_before = storage.list_versions("VXvue")
+
+    response = TestClient(app).get("/manual-review/suggest", params={"file_name": "(매뉴얼) VXvue Service Manual.V1.1.0W1_KO.docx"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert (data["product"], data["manual_name"], data["target_version"]) == ("VXvue", "VXvue Service Manual", "1.1.0")
+    assert data["revision_label"] == "V1.1.0 · W1"
+    assert storage.list_versions("VXvue") == versions_before
+    assert storage.list_manual_revisions() == []
+
+
+# Validates: REQ-MANUAL-019
+def test_suggest_rejects_empty_or_unsupported_file_name(monkeypatch, tmp_path):
+    monkeypatch.setattr(manual_review_router, "storage", Storage(tmp_path / "app.db"))
+    client = TestClient(app)
+
+    assert client.get("/manual-review/suggest", params={"file_name": " "}).status_code == 400
+    assert client.get("/manual-review/suggest", params={"file_name": "notes.txt"}).status_code == 400
+
+
+def _revision_with_changes(storage, tmp_path):
+    revision_id = storage.add_manual_revision("VXvue", "VXvue Service Manual", "V1.1.0 · W1", tmp_path / "r.docx")
+    fix = storage.add_manual_change(revision_id, "insertion", "연구소", "", 3, "조건 문구", functional=True, section_heading="로그인", paragraph_text="조건 문구가 바뀌었다")
+    storage.update_manual_change_judgment(fix, "SUPPLEMENT_REQUIRED", 0.6, {"decision": "SUPPLEMENT_REQUIRED", "qa_comment": "조건을 추가해 주세요."})
+    ok = storage.add_manual_change(revision_id, "insertion", "연구소", "", 1, "맞는 문구", functional=True)
+    storage.update_manual_change_judgment(ok, "PASS", 0.9, {"decision": "PASS"})
+    image = storage.add_manual_change(revision_id, "image_insertion", "연구소", "", 2, "이미지 변경", functional=True, review_required=True)
+    storage.update_manual_change_judgment(image, "UNABLE_TO_DETERMINE", 0.5, {"decision": "UNABLE_TO_DETERMINE", "needs_human_review": True})
+    typo = storage.add_manual_change(revision_id, "insertion", "연구소", "", 4, "설정", functional=True, paragraph_text="설정 설정 화면")
+    storage.update_manual_change_judgment(typo, "PASS", 0.9, {"decision": "PASS", "text_issues": [{"code": "DUPLICATE_WORD", "label": "같은 단어 반복", "excerpt": "설정 설정"}]})
+    storage.add_manual_change(revision_id, "deletion", "연구소", "", 0, "12", functional=False)
+    return revision_id, {"fix": fix, "ok": ok, "image": image, "typo": typo}
+
+
+# Validates: REQ-MANUAL-013
+def test_view_groups_changes_into_work_buckets(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    revision_id, _ = _revision_with_changes(storage, tmp_path)
+    storage.add_release_finding(revision_id, "release_note", "Added", "빠진 기능", status="MISSING_SUSPECTED")
+
+    text = TestClient(app).get(f"/manual-review/revisions/{revision_id}/view").text
+
+    assert 'data-count="request">2<' in text and 'data-count="check">1<' in text
+    assert 'data-count="pass">1<' in text and 'data-count="simple">1<' in text
+    assert 'data-bucket="request" class="active"' in text
+    assert 'QA 확정 <span id="confirmed-count">0</span>/4' in text
+    assert "로그인 · 문단 #3" in text
+    assert "문장 점검: 같은 단어 반복" in text
+    assert "Comment 넣은 Word 받기" in text and "남은 AI 판정 모두 동의" in text
+    assert "/excel" not in text
+    assert "누락 의심 1" in text
+
+
+# Validates: REQ-MANUAL-014
+def test_qa_decision_json_response_returns_bucket_counts(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    revision_id, ids = _revision_with_changes(storage, tmp_path)
+
+    response = TestClient(app).post(
+        f"/manual-review/revisions/{revision_id}/changes/{ids['typo']}/qa-decision",
+        data={"qa_decision": "PASS", "qa_note": ""}, headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["bucket"] == "pass" and data["qa_decision_label"] == "문제없음"
+    assert data["bucket_counts"] == {"request": 1, "check": 1, "pass": 2, "simple": 1}
+    assert (data["confirmed"], data["functional"]) == (1, 4)
+
+
+# Validates: REQ-MANUAL-014
+def test_accept_ai_skips_human_review_and_text_issue_changes(monkeypatch, tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    monkeypatch.setattr(manual_review_router, "storage", storage)
+    revision_id, ids = _revision_with_changes(storage, tmp_path)
+    storage.update_manual_change_qa_decision(ids["ok"], "MODIFICATION_REQUIRED", "QA가 다르게 봄")
+
+    response = TestClient(app).post(f"/manual-review/revisions/{revision_id}/qa-decisions/accept-ai", headers={"Accept": "application/json"})
+
+    assert response.status_code == 200
+    assert (response.json()["accepted"], response.json()["skipped"]) == (1, 2)
+    assert storage.get_manual_change(ids["fix"])["qa_decision"] == "SUPPLEMENT_REQUIRED"
+    assert storage.get_manual_change(ids["ok"])["qa_decision"] == "MODIFICATION_REQUIRED"  # 이미 확정한 값은 그대로
+    assert not storage.get_manual_change(ids["image"])["qa_decision"]
+    assert not storage.get_manual_change(ids["typo"])["qa_decision"]
+
+
+# Validates: REQ-MANUAL-014
+def test_accept_ai_missing_revision_returns_404(monkeypatch, tmp_path):
+    monkeypatch.setattr(manual_review_router, "storage", Storage(tmp_path / "app.db"))
+
+    assert TestClient(app).post("/manual-review/revisions/999/qa-decisions/accept-ai").status_code == 404

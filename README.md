@@ -241,8 +241,11 @@ Issue 구조화 → 지식 로드 → QA 규칙 로드 → Exact→BM25 검색
 연구소가 제출한 Word Track Changes 개정 매뉴얼이 최신 SRS를 반영했는지 1차 검토하고, 판정
 결과를 Word Comment로 삽입해 회신할 수 있게 만듭니다.
 
-- Track Changes 구조화 추출 → 비기능 변경 필터 → SRS 근거 BM25 검색 → Release Note·설계검토
-  보고서 Scope 대조 → Cross-Manual 영향 추적 → quick / detail 2단계 AI 판정
+- 개정 매뉴얼 파일 하나만 끌어놓으면 파일 이름으로 제품·매뉴얼·버전·이어받을 이전 검증을 채웁니다
+- Track Changes 구조화 추출(절 제목 포함) → 비기능 변경 필터 → 문장 점검(같은 단어 반복·문장 붙음 등) →
+  SRS 근거 BM25 검색 → Release Note·설계검토 보고서 Scope 대조 → Cross-Manual 영향 추적 →
+  quick / detail 2단계 AI 판정(QA 가이드 문서 개정 검토 기준)
+- 결과는 화면에서 바로 봅니다. "연구소 요청 / QA 확인 / 문제없음" 묶음별로 동의하거나 판정을 바꿉니다
 - **이미지 변경은 AI가 PASS로 판정해도 "판정 불가"로 바꾸고** 사람이 원본을 확인하도록 Word Comment에 넣음
 - **PDF diff는 confidence 상한 60%** — 레이아웃 해석 오차를 인정하고 QA가 최종 판정
 - Round 계보 추적. QA가 확정하기 전에는 이전 지적사항 상태를 자동 변경하지 않음

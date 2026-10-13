@@ -8,15 +8,18 @@ from pathlib import Path
 from threading import Thread
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.config import get_settings
 from app.core.product_config import list_product_configs
+from app.core.product_knowledge import KIND_SPECIFICATION, collected_assets, parse_asset_name
 from app.core.storage import Storage
 from app.core.usage import daily_token_status
+from app.modules.manual_review import result_view
 from app.modules.manual_review.comment_writer import insert_comments_detailed, output_filename
 from app.modules.manual_review.comment_resolution import suggest_prior_comments
+from app.modules.manual_review.intake import SUPPORTED_SUFFIXES, revision_label, suggest_revision_inputs
 from app.modules.manual_review.reviewer import MANUAL_REVIEW_STAGES, ManualRevisionReviewer
 from app.modules.manual_review.schemas import JUDGMENT_LABELS_KO, ManualJudgment
 
@@ -29,14 +32,40 @@ templates.env.filters["judgment_ko"] = lambda value: JUDGMENT_LABELS_KO.get(valu
 storage = Storage()
 
 
+def _spec_date(name: str) -> str:
+    """사양서 이름의 `(261013)` 같은 날짜. 없으면 빈 글자."""
+    parsed = parse_asset_name(name or "")
+    return parsed["revision"] if parsed["revision_kind"] == "date" else ""
+
+
+def _collected_spec_names(product: str) -> list[str]:
+    """지식 사본(`data/product_knowledge/<제품>/`)에 모아 둔 사양서 파일 이름. 읽지 못하면 빈 목록."""
+    try:
+        return [str(asset.get("file_name") or "") for asset in collected_assets(product, KIND_SPECIFICATION)]
+    except Exception:  # 지식 사본이 없거나 깨져도 시작 화면은 열려야 한다
+        return []
+
+
+def _srs_status(product: str) -> dict:
+    """근거 사양서 상태 한 줄과 경고 (REQ-MANUAL-001 5번)."""
+    documents = storage.active_documents("specification", product)
+    latest_sync = storage.latest_sync(product, "specification")
+    registered_dates = [date for date in (_spec_date(doc["name"]) for doc in documents) if date]
+    latest_date = max(registered_dates) if registered_dates else ""
+    warnings = []
+    if not documents:
+        warnings.append("등록된 사양서가 없어 SRS 근거를 찾을 수 없습니다.")
+    else:
+        newer = sorted({date for date in (_spec_date(name) for name in _collected_spec_names(product)) if date and date > latest_date})
+        if newer:
+            warnings.append(f"지식 폴더에 더 새 사양서({newer[-1]})가 있습니다. Knowledge 에서 동기화하세요.")
+    if latest_sync and latest_sync.get("status") == "FAILED":
+        warnings.append("최근 사양서 동기화가 실패했습니다.")
+    return {"documents": documents, "latest_sync": latest_sync, "latest_date": latest_date, "warnings": warnings}
+
+
 def _srs_status_by_product(products: list[str]) -> dict[str, dict]:
-    return {
-        product: {
-            "documents": storage.active_documents("specification", product),
-            "latest_sync": storage.latest_sync(product, "specification"),
-        }
-        for product in products
-    }
+    return {product: _srs_status(product) for product in products}
 
 
 def _manual_types_by_product(products: list[str], revisions: list[dict]) -> dict[str, list[str]]:
@@ -66,8 +95,7 @@ def _comment_output_dir() -> Path:
 
 
 def _revision_label(target_version: str, parent_round: int | None, pdf_baseline: bool = False) -> str:
-    suffix = "Baseline" if pdf_baseline else f"W{(parent_round + 2) if parent_round is not None else 1}"
-    return f"V{target_version} · {suffix}"
+    return revision_label(target_version, parent_round, pdf_baseline)
 
 
 @router.get("", response_class=HTMLResponse)
@@ -90,6 +118,26 @@ def home(request: Request):
 @router.get("/guide", response_class=HTMLResponse)
 def guide(request: Request):
     return templates.TemplateResponse(request, "guide.html", {})
+
+
+@router.get("/suggest")
+def suggest(file_name: str = ""):
+    """파일 이름으로 제품·매뉴얼·버전·이전 검증을 제안한다 (REQ-MANUAL-019). 아무것도 저장하지 않는다."""
+    file_name = Path(file_name.strip().replace("\\", "/")).name
+    if not file_name:
+        raise HTTPException(400, "파일 이름이 필요합니다.")
+    if Path(file_name).suffix.lower() not in SUPPORTED_SUFFIXES:
+        raise HTTPException(400, "Word Track Changes(.docx) 또는 PDF 파일만 지원합니다.")
+    products = storage.list_products()
+    revisions = storage.list_manual_revisions()
+    return suggest_revision_inputs(
+        file_name,
+        products,
+        _manual_types_by_product(products, revisions),
+        {product: storage.list_versions(product) for product in products},
+        revisions,
+        open_comment_count=lambda revision_id: len(storage.list_open_comments_for_revision(revision_id)),
+    )
 
 
 def _run_job(
@@ -261,14 +309,31 @@ def view_revision(request: Request, revision_id: int):
     prior_open_comments = suggest_prior_comments(prior_open_comments, changes)
     release_findings = storage.list_release_findings(revision_id)
     cross_manual_impacts = storage.list_cross_manual_impacts(revision_id)
+    counts = result_view.bucket_counts(changes)
+    cards = [
+        {
+            **change,
+            "bucket": result_view.bucket_for(change),
+            "location": result_view.location(change),
+            "kind_label": result_view.kind_label(change["kind"]),
+            "text_issues": result_view.text_issues(change),
+            "human_review": result_view.needs_human_review(change),
+        }
+        for change in result_view.ordered_changes(changes)
+    ]
     return templates.TemplateResponse(
         request,
         "revision.html",
         {
             "revision": revision,
-            "changes": changes,
+            "changes": cards,
             "prior_open_comments": prior_open_comments,
             "decision_counts": _decision_counts(changes),
+            "bucket_counts": counts,
+            "bucket_labels": result_view.BUCKET_LABELS,
+            "bucket_order": result_view.BUCKET_ORDER,
+            "default_bucket": result_view.default_bucket(counts),
+            "progress": result_view.progress(changes),
             "judgment_options": JUDGMENT_OPTIONS,
             "missing_findings": [f for f in release_findings if f["status"] == "MISSING_SUSPECTED"],
             "cross_manual_impacts": cross_manual_impacts,
@@ -297,8 +362,12 @@ def _decision_counts(changes: list[dict]) -> dict[str, int]:
     return counts
 
 
+def _wants_json(request: Request) -> bool:
+    return "application/json" in request.headers.get("accept", "")
+
+
 @router.post("/revisions/{revision_id}/changes/{change_id}/qa-decision")
-def set_qa_decision(revision_id: int, change_id: int, qa_decision: str = Form(...), qa_note: str = Form("")):
+def set_qa_decision(request: Request, revision_id: int, change_id: int, qa_decision: str = Form(...), qa_note: str = Form("")):
     change = storage.get_manual_change(change_id)
     if not change or change["revision_id"] != revision_id:
         raise HTTPException(404, "변경 항목을 찾을 수 없습니다.")
@@ -307,7 +376,37 @@ def set_qa_decision(revision_id: int, change_id: int, qa_decision: str = Form(..
     if qa_decision and qa_decision not in ALLOWED_QA_DECISIONS:
         raise HTTPException(400, "지원하지 않는 판정 값입니다.")
     storage.update_manual_change_qa_decision(change_id, qa_decision, qa_note)
-    return RedirectResponse(f"/manual-review/revisions/{revision_id}/view", status_code=303)
+    if not _wants_json(request):
+        return RedirectResponse(f"/manual-review/revisions/{revision_id}/view", status_code=303)
+    # 화면은 새로고침 없이 카드와 묶음 건수만 바꾼다 (REQ-MANUAL-014 4번).
+    saved = storage.get_manual_change(change_id)
+    return JSONResponse({
+        "change_id": change_id,
+        "qa_decision": saved["qa_decision"] or "",
+        "qa_decision_label": result_view.judgment_label(saved["qa_decision"]),
+        "bucket": result_view.bucket_for(saved),
+        **result_view.summary_payload(storage.list_manual_changes(revision_id)),
+    })
+
+
+@router.post("/revisions/{revision_id}/qa-decisions/accept-ai")
+def accept_remaining_ai_decisions(request: Request, revision_id: int):
+    """QA 확정 전인 변경에 AI 판정을 한꺼번에 동의한다. 사람 검토 필요·문장 점검 변경은 뺀다 (REQ-MANUAL-014)."""
+    if not storage.get_manual_revision(revision_id):
+        raise HTTPException(404, "리비전을 찾을 수 없습니다.")
+    accepted = skipped = 0
+    for change in storage.list_manual_changes(revision_id):
+        if not change["functional"] or change["qa_decision"] or not change["decision"]:
+            continue
+        if result_view.needs_human_review(change) or result_view.text_issues(change):
+            skipped += 1
+            continue
+        storage.update_manual_change_qa_decision(int(change["id"]), change["decision"], "")
+        accepted += 1
+    if not _wants_json(request):
+        return RedirectResponse(f"/manual-review/revisions/{revision_id}/view", status_code=303)
+    return JSONResponse({"accepted": accepted, "skipped": skipped, **result_view.summary_payload(storage.list_manual_changes(revision_id))})
+
 
 
 @router.post("/revisions/{revision_id}/comments/{comment_id}/status")

@@ -112,6 +112,8 @@ class ManualChangeJudgment(BaseModel):
     prompt_version: int = 0
     # 그림 변경의 문제없음 판정을 판정 불가로 바꿨을 때 AI가 낸 원래 판정 (REQ-MANUAL-012).
     ai_original_decision: ManualJudgment | None = None
+    # 문장 점검 결과 {code, label, excerpt} 목록 (REQ-MANUAL-020). AI 판정 값은 바꾸지 않는다.
+    text_issues: list[dict] = Field(default_factory=list)
 
 
 class ManualRevision(BaseModel):
@@ -139,6 +141,8 @@ class ManualChange(BaseModel):
     source_page: int | None = None
     review_required: bool = False
     text: str = ""
+    section_heading: str = ""
+    paragraph_text: str = ""
     functional: bool = True
     decision: str | None = None
     confidence: float | None = None

@@ -30,6 +30,18 @@
 - PC 예약: 관리자 승인으로 기존 `QA_ProductKnowledge_Sync`를 매일 08:00 KST·15분 간격 확인·PC 시작 만회로 전환했다. 운영 프로젝트 아래 해시별 실행본을 설치해 worktree 정리 뒤에도 실행한다. 원래 XML은 `backups/knowledge-schedule-20261013-131256/`에 보관했다. 13:15 S4U 예약 실행은 SUCCESS·종료 코드 0, 서버 보유 21개 건너뜀·21개 자산 확정·실패 0개다. 재시도 시각보다 예약이 일찍 실행되면 남은 시간만 기다리는 실행본으로 갱신했다. 실패 재시도와 수일 종료 후 만회는 격리 시험이며 PC 전원 종료·로그아웃은 별도 확인하지 않았다.
 - 운영 서버: 다른 채팅의 `20261013-125746-vxvue` QA 분석이 진행 중이다. 사용자 결정으로 이를 유지하고 분석이 끝난 뒤 챗봇을 배포한다. 현재 운영 서버의 챗봇 UI와 서버 Claude 호출은 아직 확인하지 않았다. 같은 파일을 수정하는 다른 채팅이 끝날 때까지 원격 push와 공용 파일 반영도 보류한다.
 
+## 2026-10-13 매뉴얼 개정 검증 화면 고도화 (REQ-MANUAL-001·005·011·013·014·016~020)
+
+- 요청: VXvue 검증 DB 스킬(QA 가이드 Rev1.18 S07·35절)에 맞춰 입력 칸이 많고 불편한 매뉴얼 개정 검증 화면을 간단하게 고도화. 사용자가 계획 확인 뒤 권장안(판정 코드 8개 유지·묶음 표시, 웹 등록 사양서 유지·오래되면 경고)으로 1·2·3단계 전부 승인. 중간에 "Excel 로 추출하지 말고 웹 UI 로 바로 확인"을 요청해 Excel 받기 초안(REQ 번호 부여 전 단계)을 걷어냈다.
+- 작업 위치: worktree `claude/vxvue-manual-validation-upgrade-6e914c`(master `b80085c` 에서 시작). 같은 시각 Codex worktree(`codex/srs-collection-integration`)가 `SPEC.md`·`CHANGELOG.md` 의 사양서 동기화 절을 고치고 있었다. 매뉴얼 절과 겹치지 않는다.
+- 구현: 시작 화면 파일 하나 + 자동 인식(`intake.py`, `GET /manual-review/suggest`), 사양서 상태 한 줄과 경고, 결과 화면 할 일 묶음(`result_view.py`)·새로고침 없는 동의/판정 바꾸기·남은 AI 판정 모두 동의, 절 제목·최종 문장 기록, 판정 지시문 버전 3(35.1 Coverage·35.2 Manual-worthy), 문장 점검(`text_checks.py`), Word Comment 문장 점검 줄, Claude 대화 검증에도 같은 기준.
+- 실제 문서로 정한 것: VXvue 1.1.0 Service Manual W2 는 본문 번호 스타일(`VText0Number`)에도 개요 수준이 있어 스타일 이름 기준으로만 제목을 찾는다(제목 354개). 문장 점검은 분석 대상 800건 중 18건이 걸렸고 한 단어짜리 추가 문구 중복("Exposure")은 정상 문장이라 두 단어 이상만 보게 좁혔다. DICOM CS V4.4W1 은 376건 중 0건.
+- 실제 실행(worktree DB, 포트 24358, `config.local.yaml` 복사해 예약 끈 상태 확인 "예약 꺼짐"): Licence Manager SRS(261013)를 근거로 등록하고 실제 문장으로 만든 표본(변경 5건, 분석 대상 4건)을 화면 파일 칸으로 올렸다. 자동 인식 "VXvue · VXvue Service Manual · V1.1.0 · W1". Claude CLI 7회·125초에 완료. 결과 화면 연구소 요청 2·QA 확인 2·단순 변경 1. AI 가 절 제목과 최종 문장을 보고 "설정 설정" 오기와 License Key 입력 방식 불일치를 근거 p.10·p.13·p.19 와 함께 짚었다. 동의 → 묶음 이동·건수·QA 확정 1/4 즉시 갱신, 일괄 동의는 사람 검토·문장 점검 3건을 건너뜀(0건 동의), 판정 바꾸기 저장, Word Comment 3건(QA 메모·문장 점검 줄 포함, QA 문제없음 확정 건 제외)과 지적사항 3건 저장. 콘솔 오류 없음.
+- 준비 검사 중 발견: 검사기는 "확인 필요" 글자를 미확정 표시로 본다. 배지 이름을 용어표의 "사람 검토 필요"로 맞췄다. 새로 생긴 300자 초과 문단 4개는 하위 항목 사이를 띄워 나눴다(전체 31 → 29).
+- 남은 것: 전체 Service Manual(분석 대상 800건)로 Claude 판정을 끝까지 돌리지는 않았다(호출 비용).
+- 운영 배포 시도(14:35, 사용자 요청) → 보류: 원본 폴더를 `e4d1267` 로 빨리 감기(줄바꿈만 다른 `docs/SPEC.html` 되돌림)하고 서버 백업을 만들었다(`backups/qa-backup-20261013T053618Z.zip`, `~/qa-app-backup-20261013-053607.tgz`, `~/qa-app-config-backup-20261013-053607/`의 `config.yaml`·`secrets.txt`). 백업 도구가 보관 규칙대로 9월 초 옛 백업 12개를 정리했다. 서버 `config.yaml` 은 새 판과 `ai.claude.allowed_models` 한 줄만 다르다(코드가 읽지 않는 값).
+- `scripts/deploy.ps1 -Restart` 가 로컬 테스트에서 멈춰 서버에는 아무것도 올리지 않았다(2 failed·1310 passed). `test_pdf_worker_executes_native_package` 는 단독 재실행에서 통과(전체 실행 중 Chromium 렌더링 시간 초과로 보임). `test_real_knowledge_dir_has_no_unclassified_assets` 는 지식 폴더에 14:40 새로 생긴 `[Skill 지침] VXvue.md`(`qa-skill-export:v1` 머리글의 VXvue 스킬 내보내기, 이 저장소 밖 도구가 만든 것으로 보임)가 분류되지 않아 실패한다. 사용자 결정: 그 파일을 만든 쪽 작업이 끝날 때까지 배포 보류. 다음 배포 때 이 파일을 수집 제외(`ignore`)할지 규칙 문서로 분류할지 정한다.
+
 ## 2026-10-13 SRS 자동 수집 통합과 읽을 수 없는 PDF 복구 (REQ-SYNC-003)
 
 - 지식 폴더의 최신 PDF 6개는 파일 접근 권한 때문에 읽을 수 없었다. 원본 수집 폴더 PDF는 정상이었다. 기존 폴더 전체를 VXvue `ORG/261013-before-permission-repair-e9ec09c0bf79`에 보관한 뒤 읽을 수 있는 폴더로 교체했다. 다른 문서 18개의 해시는 원본과 같다.

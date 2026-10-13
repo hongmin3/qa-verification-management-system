@@ -36,6 +36,7 @@ from app.modules.manual_review.schemas import (
     ManualJudgment,
 )
 from app.modules.manual_review.srs_evidence import search_candidates
+from app.modules.manual_review.text_checks import text_issues_by_change
 
 TOOL_NAME = "manual_review_local"
 FORMAT_VERSION = 1
@@ -249,6 +250,8 @@ def run_extract(args: argparse.Namespace) -> int:
             "paragraph_index": change.paragraph_index,
             "change_index_in_paragraph": change.change_index_in_paragraph,
             "source_page": change.source_page,
+            "section_heading": change.section_heading,
+            "paragraph_text": change.paragraph_text,
             "text": change.text,
             "functional": is_functional_change(change),
             "review_required": change.review_required,
@@ -256,7 +259,14 @@ def run_extract(args: argparse.Namespace) -> int:
             "needs_human_review": change.review_required or no_srs,
             "srs_candidates": [],
             "release_context": [],
+            "text_issues": [],
         })
+    issues = text_issues_by_change([
+        (item["change_id"], item["kind"], item["text"], item["paragraph_text"], item["paragraph_index"], item["source_page"], item["functional"])
+        for item in changes
+    ])
+    for item in changes:
+        item["text_issues"] = issues.get(item["change_id"], [])
     functional = [item for item in changes if item["functional"]]
     for item in functional:
         item["srs_candidates"] = [_candidate_record(chunk) for chunk in search_candidates(chunks, item["text"], args.max_candidates)]
@@ -444,13 +454,16 @@ def _judgment_for(change: dict, row: dict) -> ManualChangeJudgment:
             judgment.reason_codes.append(SRS_NOT_AVAILABLE_REASON)
     if change["needs_human_review"]:
         judgment.needs_human_review = True
+    judgment.text_issues = list(change.get("text_issues") or [])
     return judgment
 
 
 def _location(change: dict) -> str:
     if change.get("source_page"):
         return f"PDF 페이지 {change['source_page']}"
-    return f"{change.get('author') or '-'} · {change.get('date') or '-'} · 문단 #{change['paragraph_index']}"
+    heading = (change.get("section_heading") or "").strip()
+    place = f"{heading} · 문단 #{change['paragraph_index']}" if heading else f"문단 #{change['paragraph_index']}"
+    return f"{place} · {change.get('author') or '-'} · {change.get('date') or '-'}"
 
 
 def _write_excel(path: Path, changes: dict, judgments: dict[str, ManualChangeJudgment], prior: list[dict]) -> None:
@@ -461,13 +474,13 @@ def _write_excel(path: Path, changes: dict, judgments: dict[str, ManualChangeJud
     sheet = workbook.active
     sheet.title = "변경 판정"
     header = ["변경 번호", "변경 종류", "위치", "변경 글자", "분석 대상", "판정", "판정 코드", "확신도",
-              "사람 확인", "판정 신호", "문제", "권장 문구", "QA Comment", "근거"]
+              "사람 확인", "판정 신호", "문제", "권장 문구", "QA Comment", "근거", "문장 점검"]
     sheet.append(header)
     for change in changes["changes"]:
         judgment = judgments.get(change["change_id"])
         if judgment is None:
             sheet.append([change["change_id"], change["kind_label"], _location(change), change["text"], "아니요 (단순 변경)",
-                          "-", "", None, "", "", "", "", "", ""])
+                          "-", "", None, "", "", "", "", "", "", ""])
             continue
         evidence = "\n".join(
             f"{item.type.value} · {item.source_file} p.{item.page} · {item.srs_title} ({item.chunk_id})" for item in judgment.evidence
@@ -477,8 +490,9 @@ def _write_excel(path: Path, changes: dict, judgments: dict[str, ManualChangeJud
             JUDGMENT_LABELS_KO[judgment.decision], judgment.decision.value, round(judgment.confidence, 2),
             "필요" if judgment.needs_human_review else "", ", ".join(judgment.reason_codes),
             judgment.problem, judgment.recommended_manual_text, judgment.qa_comment, evidence,
+            "\n".join(f"{item.get('label')}: {item.get('excerpt')}" for item in judgment.text_issues),
         ])
-    for column, width in zip("ABCDEFGHIJKLMN", (9, 14, 28, 60, 14, 16, 26, 8, 9, 28, 40, 40, 40, 50)):
+    for column, width in zip("ABCDEFGHIJKLMNO", (9, 14, 28, 60, 14, 16, 26, 8, 9, 28, 40, 40, 40, 50, 36)):
         sheet.column_dimensions[column].width = width
     for row in sheet.iter_rows(min_row=2):
         for cell in row:

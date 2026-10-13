@@ -98,3 +98,46 @@ def test_image_inside_tracked_change_requires_human_review():
     assert result.changes[0].kind == "image_insertion"
     assert result.changes[0].text == "이미지 변경 (로그인 화면)"
     assert result.changes[0].review_required is True
+
+
+_STYLES = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    f"<w:styles {W_NS_DECL}>"
+    '<w:style w:type="paragraph" w:styleId="1"><w:name w:val="heading 1"/></w:style>'
+    '<w:style w:type="paragraph" w:styleId="VTitle2"><w:name w:val="V Title 2"/><w:basedOn w:val="1"/></w:style>'
+    '<w:style w:type="paragraph" w:styleId="VText0Number"><w:name w:val="V Text Number"/><w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style>'
+    '<w:style w:type="character" w:styleId="1Char"><w:name w:val="제목 1 Char"/></w:style>'
+    "</w:styles>"
+).encode("utf-8")
+
+
+# Validates: REQ-MANUAL-005
+def test_records_section_heading_and_paragraph_text():
+    from app.modules.manual_review.docx_track_changes import heading_style_ids
+
+    body = (
+        '<w:p><w:pPr><w:pStyle w:val="1"/></w:pPr><w:r><w:t>로그인</w:t></w:r></w:p>'
+        '<w:p><w:pPr><w:pStyle w:val="VTitle2"/></w:pPr><w:r><w:t>잠금 정책</w:t></w:r></w:p>'
+        "<w:p><w:r><w:t>계정이 </w:t></w:r>"
+        '<w:del w:author="연구소" w:date="2026-08-01T00:00:00Z"><w:r><w:delText>5분</w:delText></w:r></w:del>'
+        '<w:ins w:author="연구소" w:date="2026-08-01T00:00:00Z"><w:r><w:t>10분</w:t></w:r></w:ins>'
+        "<w:r><w:t> 동안</w:t><w:br/><w:t>잠긴다.</w:t></w:r></w:p>"
+    )
+    result = extract_track_changes_from_xml(_document_xml(body), heading_style_ids(_STYLES))
+
+    assert heading_style_ids(_STYLES) == {"1", "VTitle2"}
+    assert [change.section_heading for change in result.changes] == ["잠금 정책", "잠금 정책"]
+    assert result.changes[0].paragraph_text == "계정이 10분 동안\n잠긴다."
+
+
+# Validates: REQ-MANUAL-005
+def test_outline_level_alone_is_not_heading():
+    from app.modules.manual_review.docx_track_changes import heading_style_ids
+
+    body = (
+        '<w:p><w:pPr><w:pStyle w:val="VText0Number"/></w:pPr><w:r><w:t>VXvue를 실행하십시오.</w:t></w:r></w:p>'
+        '<w:p><w:ins w:author="연구소" w:date="2026-08-01T00:00:00Z"><w:r><w:t>새 문장</w:t></w:r></w:ins></w:p>'
+    )
+    result = extract_track_changes_from_xml(_document_xml(body), heading_style_ids(_STYLES))
+
+    assert result.changes[0].section_heading == ""

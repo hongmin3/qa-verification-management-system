@@ -19,6 +19,7 @@ from app.modules.manual_review.schemas import DetailJudgmentResponse, ManualChan
 
 QUICK_PROMPT_NAME = "manual_revision_quick"
 DETAIL_PROMPT_NAME = "manual_revision_detail"
+PARAGRAPH_TEXT_LIMIT = 1000
 
 
 class ManualReviewAIClient:
@@ -47,6 +48,9 @@ class ManualReviewAIClient:
                 "paragraph_index": change.paragraph_index,
                 "source_page": change.source_page,
                 "review_required": change.review_required,
+                # 조각 하나만 보고 문장 뜻을 짐작하지 않도록 절 제목과 최종 문장을 함께 준다 (REQ-MANUAL-011).
+                "section_heading": change.section_heading,
+                "paragraph_text": change.paragraph_text[:PARAGRAPH_TEXT_LIMIT],
             },
             "candidate_srs": [chunk.model_dump() for chunk in candidates],
             "release_scope_context": release_context or [],

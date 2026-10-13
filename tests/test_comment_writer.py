@@ -184,3 +184,22 @@ def test_insert_comments_detailed_reports_which_changes_got_comments(tmp_path):
     inserted = insert_comments_detailed(revision_path, changes, tmp_path / "out.docx")
 
     assert [(item["change"]["id"], item["text"]) for item in inserted] == [(7, "SRS와 다릅니다.")]
+
+
+_ISSUE = {"code": "DUPLICATE_WORD", "label": "같은 단어 반복", "excerpt": "설정 설정"}
+
+
+# Validates: REQ-MANUAL-016, REQ-MANUAL-020
+def test_comment_text_appends_text_issue_lines():
+    change = {"decision": "SUPPLEMENT_REQUIRED", "ai_judgment": {"qa_comment": "조건을 추가해 주세요.", "text_issues": [_ISSUE]}}
+
+    assert comment_text_for(change) == '조건을 추가해 주세요. [문장 점검] 같은 단어 반복: "설정 설정"'
+
+
+# Validates: REQ-MANUAL-016, REQ-MANUAL-020
+def test_text_issue_alone_creates_comment_unless_qa_pass():
+    change = {"decision": "PASS", "ai_judgment": {"text_issues": [_ISSUE]}}
+
+    assert comment_text_for(change) == '[문장 점검] 같은 단어 반복: "설정 설정"'
+    assert comment_text_for({**change, "qa_decision": "PASS"}) is None
+    assert comment_text_for({"decision": "PASS", "ai_judgment": {"text_issues": []}}) is None

@@ -239,3 +239,18 @@ def test_image_change_judged_pass_becomes_unable_to_determine(tmp_path):
     assert "IMAGE_CHANGE_REVIEW_REQUIRED" in change["ai_judgment"]["reason_codes"]
     assert result["decision_counts"] == {"UNABLE_TO_DETERMINE": 1}
     assert comment_text_for(change)
+
+
+# Validates: REQ-MANUAL-020
+def test_reviewer_attaches_text_issues_to_judgment(tmp_path):
+    storage = Storage(tmp_path / "app.db")
+    revision_path = tmp_path / "typo.docx"
+    _write_multi_change_docx(revision_path, ["설정 설정 화면에서 값을 바꿉니다."])
+
+    reviewer = ManualRevisionReviewer(ai_client=_mock_ai_client(storage), storage=storage)
+    result = reviewer.run(revision_path, "VXvue", "Service Manual", "V1.1.0 W1")
+
+    change = storage.list_manual_changes(result["revision_id"])[0]
+    assert change["paragraph_text"] == "설정 설정 화면에서 값을 바꿉니다."
+    assert [issue["code"] for issue in change["ai_judgment"]["text_issues"]] == ["DUPLICATE_WORD"]
+    assert change["decision"] == "MODIFICATION_REQUIRED"  # 문장 점검은 AI 판정 값을 바꾸지 않는다
