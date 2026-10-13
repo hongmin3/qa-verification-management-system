@@ -79,7 +79,7 @@ WorkingDirectory도 새 경로로 갱신되어 있음을 실제로 확인했다(
 `services/qa-manual-hub/deploy/`(매뉴얼 허브) 참고. 재기동은
 `sudo systemctl restart qa-verification`(또는 `scripts/deploy.ps1 -Restart`).
 
-재기동 전에 `/qa-agent/status`로 분석이 실행 중인지 확인한다. systemd 재기동은 분석 하위 프로세스도 종료한다. sudo 인증정보를 자동으로 사용하지 않는 배포는 `scripts/deploy.ps1 -Restart -ManualRestart`로 전송한 뒤, 안내된 재기동 명령을 사용자가 서버에서 수행한다.
+재기동 전에 모든 제품의 `/qa-agent/status`와 DB의 `analyses`·`daily_qa_runs` 대기·실행·중단 요청을 확인한다. `operations/status`의 `active_jobs`만으로 종료를 판단하지 않는다. systemd 재기동은 분석 하위 프로세스도 종료한다. sudo 인증정보를 자동으로 사용하지 않는 배포는 `scripts/deploy.ps1 -Restart -ManualRestart`로 전송한 뒤, 안내된 재기동 명령을 사용자가 서버에서 수행한다.
 
 ## 7. 운영 서버 절대 보호 규칙
 
