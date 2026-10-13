@@ -41,6 +41,9 @@ def create_backup(destination: Path) -> Path:
         snapshots = settings.root / "data" / "daily_qa" / "snapshots"
         if snapshots.exists():
             entries.extend(path for path in snapshots.rglob("*") if path.is_file())
+        chat = settings.root / "data" / "vxvue_chatbot"
+        if chat.exists():
+            entries.extend(path for path in chat.rglob("*") if path.is_file() and path.suffix not in (".sqlite3", "-shm", "-wal"))
         manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for path in entries:

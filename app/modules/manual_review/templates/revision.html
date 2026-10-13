@@ -2,7 +2,7 @@
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <section>
-  <h2>매뉴얼 개정 검증 결과</h2>
+  <h2>매뉴얼 개정 검토 결과</h2>
   <p>{{ revision.product }} · {{ revision.manual_name }} · {{ revision.revision_label }}{% if revision.target_version %} · 제품 버전 V{{ revision.target_version }}{% endif %} · 상태 <span class="badge {{ revision.status }}">{{ revision.status }}</span></p>
   <p class="hint">변경 {{ changes|length }}건 중 분석 대상 {{ progress.functional }}건 · QA 확정 <span id="confirmed-count">{{ progress.confirmed }}</span>/{{ progress.functional }}</p>
 

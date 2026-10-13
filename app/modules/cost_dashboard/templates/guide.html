@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block page_title %}비용 대시보드 사용법{% endblock %}
-{% block header_title %}비용 대시보드 사용법{% endblock %}
+{% block page_title %}AI 사용량 사용법{% endblock %}
+{% block header_title %}AI 사용량 사용법{% endblock %}
 {% block header_subtitle %}AI 호출이 실제로 얼마나 발생했는지, 무엇이 비용을 줄이고 있는지 확인합니다.{% endblock %}
 {% block header_nav %}{% from "_nav.html" import top_nav %}{{ top_nav("cost_dashboard", "/cost-dashboard/guide") }}{% endblock %}
 {% block content %}
@@ -14,7 +14,7 @@
       <thead><tr><th>지표</th><th>뜻</th><th>이 값이 나쁠 때</th></tr></thead>
       <tbody>
         <tr><td><b>분석 건수</b></td><td>실행된 분석 수</td><td>—</td></tr>
-        <tr><td><b>API 호출 수</b></td><td>실제로 AI 에 요청한 횟수</td><td>분석 건수보다 크게 많으면 어딘가에서 재질의가 발생하는 것입니다. QA Agent는 분석 1건당 1회, 매뉴얼 개정 검증은 변경마다 1~2회가 원칙입니다. 지금 대시보드는 이 값을 따로 합산하지 않고, 캐시 Hit율의 분모(“Gemini 호출 M건 기준”)로만 보입니다</td></tr>
+        <tr><td><b>API 호출 수</b></td><td>실제로 AI 에 요청한 횟수</td><td>분석 건수보다 크게 많으면 어딘가에서 재질의가 발생하는 것입니다. QA Agent는 분석 1건당 1회, 매뉴얼 개정 검토은 변경마다 1~2회가 원칙입니다. 지금 대시보드는 이 값을 따로 합산하지 않고, 캐시 Hit율의 분모(“Gemini 호출 M건 기준”)로만 보입니다</td></tr>
         <tr><td><b>캐시 적중</b></td><td>같은 입력이어서 호출 없이 재사용된 횟수</td><td>0에 가까우면 같은 분석을 반복 실행하는 경우가 없다는 뜻입니다 (나쁜 것은 아닙니다)</td></tr>
         <tr><td><b>토큰</b></td><td>입력·출력 토큰 누적. 캐시 적중은 합산하지 않습니다 (실제 비용이 0이므로)</td><td>분석당 입력 토큰이 계속 커지면 검색 후보 상한을 확인하세요</td></tr>
         <tr><td><b>일별 추이</b></td><td>날짜별 토큰 (한국 시간 기준 날짜)</td><td>특정 날짜에 급증하면 그날 분석의 감사 화면에서 입력 크기를 확인하세요</td></tr>
@@ -35,7 +35,7 @@
         <tr><td>5</td><td>정확 일치 시 후보 축소</td><td>확실한 근거가 확보되면 유사도 후보 수를 줄임</td></tr>
         <tr><td>6</td><td>규칙 발췌 주입</td><td>QA 규칙 전문 약 30KB → 해당 Skill 절만 2~5KB (85~94% 절감)</td></tr>
         <tr><td>7</td><td>Structured Output 단일 호출</td><td>Issue 분석·사양 관련도·TC Coverage·Regression을 한 번에 받음</td></tr>
-        <tr><td>8</td><td>quick / detail 2단계 + PASS short-circuit</td><td>매뉴얼 개정 검증에서 문제없으면 비싼 호출 생략</td></tr>
+        <tr><td>8</td><td>quick / detail 2단계 + PASS short-circuit</td><td>매뉴얼 개정 검토에서 문제없으면 비싼 호출 생략</td></tr>
         <tr><td>9</td><td>SHA-256 응답 캐시</td><td>같은 입력은 API 호출 자체가 없음</td></tr>
         <tr><td>10</td><td><code>thinking_budget=0</code></td><td>내부 추론 토큰 소비 차단</td></tr>
         <tr><td>11</td><td>모델 등급 라우팅</td><td>기본은 Flash. 근거가 흩어져 있거나 Root Cause가 불명확할 때만 상위 등급</td></tr>
@@ -69,7 +69,6 @@
     <b>Pro 계열은 쓰지 않습니다.</b> 같은 Issue·같은 입력으로 비교한 결과, Pro는 thinking을 끌 수 없어 내부 추론 토큰이 출력의 2배 붙고(1만 토큰),
     111초가 걸리면서도 <b>근거가 하나도 없는데 TC 40건을 전부 “유지”로 단정</b>했습니다. 느리고 비싸고 결과가 더 나빴습니다.
     이 파이프라인의 AI 작업은 이미 압축된 근거에 대한 구조화 판정이라 내부 추론이 필요하지 않습니다.
-    직접 확인하려면 <code>python scripts/compare_models.py --product VXvue --issue &lt;ID&gt;</code>를 실행하세요 (실제 API를 호출합니다).
   </p>
 
   <h3>참고 규모</h3>
@@ -78,7 +77,7 @@
   <h3>비용이 예상보다 많을 때 확인 순서</h3>
   <ol>
     <li><b>분석 상세 화면의 감사 영역</b>을 펼쳐 입력 JSON 글자 수와 규칙 발췌 크기를 봅니다.</li>
-    <li>입력이 크면 <code>retrieval.specification_top_k</code>, <code>qa_agent.tc_candidate_limit</code>, <code>qa_agent.rule_char_budget</code>을 낮춥니다.</li>
+    <li>입력이 크면 <code>retrieval.specification_top_k</code>나 <code>daily_qa.intelligence.spec_candidates</code> 같은 후보 개수를 검토합니다. 필요한 근거를 빠뜨리지 않는 범위에서 조정합니다.</li>
     <li>모델 등급이 계속 상위로 올라가면 결과 화면의 <b>라우팅 이유</b>를 봅니다. Root Cause 미명시가 잦다면 Issue 작성 품질 문제일 수 있습니다.</li>
     <li>같은 분석을 반복 실행하고 있다면 캐시 적중이 올라가야 정상입니다. 안 올라가면 입력이 매번 미세하게 다른 것입니다.</li>
     <li>호출 수가 분석 건수보다 많으면 재시도가 발생한 것입니다 — 응답 JSON이 잘려 실패했는지 로그를 확인하세요.</li>

@@ -18,7 +18,7 @@
 ```
 
 SQLite Online Backup API로 일관된 DB 사본을 만들고 업로드·사양서·TC·인덱스·매뉴얼 원본을
-ZIP에 함께 저장한다. `manifest.json` SHA-256과 임시 복원 DB의 `PRAGMA integrity_check`를
+ZIP에 함께 저장한다. 챗봇 대화 DB, 첨부와 답변이 조회한 원본 판도 포함한다. 다시 만들 수 있는 챗봇 검색 색인은 제외한다. `manifest.json` SHA-256과 임시 복원 DB의 `PRAGMA integrity_check`를
 모두 통과해야 성공이다. 원본 운영 데이터를 덮어쓰는 자동 복원 기능은 의도적으로 제공하지 않는다.
 
 ## 모니터링

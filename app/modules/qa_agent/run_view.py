@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import quote
 
 from app.modules.daily_qa.change_events import ANALYSIS_LABELS, EVENT_LABELS
 from app.modules.daily_qa.report import STAGE_LABELS, STATUS_LABELS
+from app.modules.qa_agent.dashboard import sort_cards
 
 #: 진행 흐름 네 칸과 그 칸에 드는 단계.
 FLOW = (
@@ -37,7 +39,7 @@ FILE_LABELS = {
     "findings.json": "분석 결과 목록",
 }
 _DAYS = {"mon": "월요일", "tue": "화요일", "wed": "수요일", "thu": "목요일", "fri": "금요일", "sat": "토요일", "sun": "일요일"}
-TRIGGER_LABELS = {"scheduled": "예약 실행", "manual": "[지금 실행]", "manual_cli": "명령줄 실행", "catchup": "한도 초기화 뒤 다시 실행"}
+TRIGGER_LABELS = {"scheduled": "예약 실행", "manual": "[변경사항 점검하기]", "manual_cli": "명령줄 실행", "catchup": "한도 초기화 뒤 다시 실행"}
 
 
 def plain_note(note: str) -> str:
@@ -99,6 +101,68 @@ def _tile(label: str, value, hint: str = "") -> dict:
     return {"label": label, "value": "-" if value is None else (f"{value:,}" if isinstance(value, int) else value), "hint": hint}
 
 
+def _actions(run: dict) -> list[dict]:
+    """실패 기록을 확인된 원인에 따른 QA 담당자 할 일로 바꾼다."""
+    stages = run.get("stages") or {}
+    summary = run.get("summary") or {}
+    actions = []
+    seen = set()
+
+    def add(kind, message, todo):
+        if kind not in seen:
+            actions.append({"kind": kind, "message": message, "todo": todo})
+            seen.add(kind)
+
+    def add_claude_problem():
+        kind = (summary.get("claude_limit") or {}).get("kind")
+        if kind == "AUTH":
+            add("auth", "Claude 인증을 확인하지 못해 분석을 끝내지 못했습니다.",
+                "관리자에게 Claude 로그인과 서버 인증 설정 확인을 요청하고 해결 후 다시 실행하세요.")
+        elif kind == "CLI_MISSING":
+            add("cli", "Claude 실행 도구가 없어 분석을 끝내지 못했습니다.",
+                "관리자에게 서버의 Claude CLI 설치와 실행 경로 확인을 요청하세요.")
+        else:
+            weekly = (summary.get("automation_policy") or {}).get("mode") == "weekly"
+            add("limit", "Claude 사용량 한도에 걸려 남은 분석은 대기입니다.",
+                "한도가 풀린 뒤 다시 요청하세요." if "on_demand" in stages else
+                "다음 주 첫 업무일의 예정 점검이나 [변경사항 점검하기]에서 이어 갑니다." if weekly else
+                "사용량 초기화 시각을 확인하세요. 한도가 풀리면 남은 분석을 이어서 합니다.")
+
+    for key, stage in stages.items():
+        state = stage.get("status")
+        if state not in {"failed", "partial", "rules", "limit"}:
+            continue
+        note = str(stage.get("note") or "").lower()
+        collection = key in {"collect_srs", "collect_issues"}
+        if key in {"email", "mail"}:
+            add("mail", "요약 메일을 보내지 못했습니다.", "화면에서 결과를 확인하고 관리자에게 메일 설정과 전송 오류 확인을 요청하세요.")
+        elif re.search(r"\b(?:401|403)\b", note) or any(marker in note for marker in (
+                "unauthorized", "forbidden", "login required", "not logged", "invalid api key", "authentication_error", "please run /login", "인증", "로그인")):
+            service = "Polarion 토큰" if collection else "Claude 로그인"
+            add("auth", f"{service} 인증을 확인하지 못해 점검을 끝내지 못했습니다.",
+                f"관리자에게 {service} 확인을 요청하고 해결 후 다시 실행하세요.")
+        elif collection:
+            dns = any(marker in note for marker in ("name or service not known", "getaddrinfo failed", "temporary failure in name resolution", "nodename nor servname", "주소 풀이", "dns"))
+            add("dns" if dns else "polarion", "Polarion 자료를 수집하지 못해 오늘 변경을 확인하지 못했습니다.",
+                "관리자에게 서버 DNS와 Polarion 주소 확인을 요청하고 해결 후 다시 실행하세요." if dns else
+                "관리자에게 서버의 Polarion 연결·주소·네트워크 확인을 요청하고 해결 후 다시 실행하세요.")
+        elif state == "rules" or (key == "preflight" and "규칙" in note):
+            add("rules", "QA 규칙 판을 확인하지 못해 분석을 끝내지 못했습니다.",
+                "관리자에게 지원하는 QA 규칙 판과 파일 등록 확인을 요청하세요.")
+        elif state == "limit":
+            add_claude_problem()
+        else:
+            name = STAGE_LABELS.get(key, key)
+            add("stage", f"{name} 단계에서 점검을 끝내지 못했습니다.", f"아래 실패한 단계의 기록을 확인하고 관리자에게 {name} 오류 확인을 요청하세요.")
+    if summary.get("claude_limit"):
+        add_claude_problem()
+    if run.get("email_status") == "failed":
+        add("mail", "요약 메일을 보내지 못했습니다.", "화면에서 결과를 확인하고 관리자에게 메일 설정과 전송 오류 확인을 요청하세요.")
+    if not actions and run.get("status") in {"FAILED", "PARTIAL"}:
+        add("stage", "점검을 끝까지 마치지 못했습니다.", "아래 실행 기록을 확인하고 관리자에게 오류 확인을 요청하세요.")
+    return actions
+
+
 def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) -> dict:
     stages: dict = run.get("stages") or {}
     summary: dict = run.get("summary") or {}
@@ -110,6 +174,15 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     srs, issues, tc, ev = counts("collect_srs"), counts("collect_issues"), counts("tc_index"), counts("events")
     changed_srs = (srs.get("added", 0) + srs.get("removed", 0) + srs.get("modified", 0)) if srs else None
     tokens = (summary.get("token_usage") or {}).get("total_tokens")
+    unknown_calls = (summary.get("token_usage") or {}).get("usage_unknown_calls", 0)
+    cache = summary.get("result_cache") or {}
+    cache_hits = cache.get("hits", summary.get("result_cache_hits", 0))
+    cache_sources = [{**source, "url": f"/qa-agent/runs/{quote(str(source['run_id']), safe='')}"}
+                     for source in cache.get("sources", []) if source.get("run_id")]
+    token_hint = f"토큰 {tokens:,}" if isinstance(tokens, int) and tokens else ""
+    if unknown_calls:
+        recorded = f"기록된 토큰 {tokens:,} · " if isinstance(tokens, int) else ""
+        token_hint = f"{recorded}사용량을 확인하지 못한 중단 호출 {unknown_calls}회"
 
     rows = []
     for key, stage in stages.items():
@@ -152,6 +225,15 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
     elif cards:
         parts.append(f"분석 결과 {len(cards)}건을 만들었습니다.")
     headline = " ".join(part for part in parts if part)
+    actions = _actions(run)
+    if actions:
+        headline = " ".join(action["message"] for action in actions)
+        if any(action["kind"] == "limit" for action in actions) and "on_demand" in stages:
+            headline += " 한도가 풀린 뒤 다시 요청하세요."
+    if not headline:
+        headline = "이번 실행에서 확인한 변경이 없습니다." if run.get("status") == "NO_CHANGE" else "실행 기록을 확인하세요."
+    if run.get("status") == "CANCELLED":
+        headline = "사용자 요청으로 이번 점검을 중단했습니다. 이미 저장한 결과를 확인하세요."
     audit = summary.get("issue_audit") or {}
     audit_box = None
     if audit:
@@ -167,11 +249,25 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         _tile("읽은 이슈", issues.get("total")), _tile("TC 행", tc.get("rows")),
         _tile("AI 분석이 필요한 변경", ev.get("analysis_required") if ev else None),
         _tile("분석 결과", len(cards)),
-        _tile("Claude 호출", summary.get("claude_calls"), f"토큰 {tokens:,}" if isinstance(tokens, int) and tokens else ""),
+        _tile("Claude 호출", summary.get("claude_calls"), token_hint),
     ]
     downloads = [{"name": name, "label": FILE_LABELS.get(name, "검증 TC 초안(Excel)" if name.endswith(".xlsx") else name)} for name in files]
+    ordered = sort_cards(cards)
+    attention = [item for item in ordered if item["level"] in {"사양과 다름", "검토 필요", "근거 부족"}]
+    collection_failed = any((stages.get(key) or {}).get("status") in {"failed", "partial"} for key in ("collect_srs", "collect_issues"))
+    analyzed = 0 if dry_run else sum((stage.get("counts") or {}).get("done", 0)
+                                   for stage in stages.values() if "tasks" in (stage.get("counts") or {}))
+    analyzed = max(0, analyzed - cache_hits)
     return {
         "headline": headline, "tiles": tiles, "flow": flow, "stages": rows, "downloads": downloads,
+        "tone": "warn" if run.get("status") == "CANCELLED" else "bad" if run.get("status") == "FAILED" or any(row["tone"] == "bad" for row in rows) or run.get("email_status") == "failed" else "warn" if actions else "good",
+        "actions": actions, "failed_stages": [row for row in rows if row["tone"] == "bad"],
+        "key_tiles": [_tile("바뀐 것", None if collection_failed else ev.get("total", len(events))),
+                      _tile("AI가 분석한 것", analyzed, f"재사용 {cache_hits}묶음" if cache_hits else ""), _tile("확인 필요", len(attention))],
+        "cache": {"hits": cache_hits, "reused_findings": cache.get("reused_findings", 0), "sources": cache_sources},
+        "priority_cards": attention[:10], "attention_count": len(attention), "remaining": max(0, len(attention) - 10),
+        "other_counts": [(name, sum(item["level"] == name for item in cards)) for name in ("참고", "문제 없음")],
+        "ai_settings": summary.get("ai_settings") or {},
         "mail": MAIL_LABELS.get(run.get("email_status") or "", run.get("email_status") or "-"),
         "trigger": "요청 점검" if "on_demand" in stages else TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
         "dry_run": dry_run,

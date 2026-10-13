@@ -62,5 +62,7 @@ description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-
 
 ## 결과 파일
 
-형식과 예시는 `references/output-contract.md` — **결과 JSON 을 쓰기 직전에 반드시 읽는다.**
+형식과 예시는 `references/output-contract.md`에 있다. 결과 JSON을 쓰기 전에 형식을 확인한다.
+같은 작업에서 이미 읽었다면 그 내용을 재사용한다. 다른 분석 Skill의 "쓰기 직전에 읽는다"도
+같은 파일을 반복해서 읽으라는 뜻은 아니다. 필수 필드와 입력 참조 번호를 마지막에 확인한다.
 형식이 틀리면 작업 전체가 다시 실행되고, 두 번 틀리면 실패로 남는다.

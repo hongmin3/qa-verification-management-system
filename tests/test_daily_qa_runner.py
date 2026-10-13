@@ -107,6 +107,19 @@ def test_prompt_names_skill_and_result_file(tmp_path):
     assert "runs/r1/out/B-001.json" in prompt
 
 
+def test_prompt_prefers_supplied_candidates_but_keeps_evidence_search(tmp_path):
+    """Validates: REQ-QAINTEL-011. 근거 탐색을 막지 않고 불필요한 재검색을 줄인다."""
+    run = prepare(tmp_path / "ws", tmp_path / "repo", "r1", None, None)
+    task = Task("FIX-001", "qa-fixed-issue-analysis", {"items": [{"target": "VP-100"}]})
+    prompt = build_prompt(task, run)
+    assert "입력 후보를 먼저 비교" in prompt
+    assert "부족하거나 서로 충돌" in prompt
+    assert "전체 색인" in prompt and "runs/r1/context" in prompt
+    assert "후보 수·본문·근거 검사를 줄이지" in prompt
+    assert "이미 읽은 공통 출력 형식은 재사용" in prompt
+    assert "runs/r1/out/FIX-001.json" in prompt
+
+
 def test_runner_hides_token_in_errors_and_records_usage(tmp_path, monkeypatch):
     run = prepare(tmp_path / "ws", tmp_path / "repo", "r1", None, None)
     captured = {}

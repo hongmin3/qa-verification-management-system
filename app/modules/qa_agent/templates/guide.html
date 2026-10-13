@@ -1,20 +1,20 @@
 {% extends "module_base.html" %}
 {% block content %}
 <section>
-  <h2>QA Agent 사용법</h2>
-  <p class="hint">QA Agent 는 <b>매일 점검 대시보드</b>(<a href="/qa-agent">/qa-agent</a>)에서 씁니다. 매일 아침 Polarion 의 SRS·이슈 변경을 찾아 바뀐 것만 분석합니다. 이슈 하나를 골라 보던 <b>단일 이슈 분석</b>은 예전 기능이라 상단 메뉴에서 뺐습니다. 필요하면 주소(<a href="/qa-agent/issue-analysis">/qa-agent/issue-analysis</a>)로 엽니다. AI가 QA를 판정하지 않습니다. 결과는 참고 초안이고 확정은 QA가 합니다.</p>
+  <h2>사양·이슈 변경 점검 사용법</h2>
+  <p class="hint">사양·이슈 변경 점검은 <a href="/qa-agent">점검 현황</a>에서 Polarion 의 SRS·이슈 변경을 찾아 바뀐 것만 분석합니다. AI 결과는 참고 초안이고 확정은 QA가 합니다.</p>
 
-  <h3>A. 매일 점검 대시보드 — 매일 아침 무엇이 바뀌었나</h3>
+  <h3>A. 점검 현황 — 무엇이 바뀌었나</h3>
   <p>서버가 평일 07:30(한국 시간)에 제품마다 스스로 돕니다. 공휴일에는 돌지 않습니다. Polarion 의 SRS·이슈를 전부 읽어 어제 저장한 것과 비교하고, 바뀐 것만 분석합니다. <b>바뀐 것이 없으면 AI 를 부르지 않습니다</b>(실행 결과 <span class="pill">변경사항 없음</span>). 처음 도는 날은 비교할 어제 자료가 없어 기준만 저장합니다(<span class="pill">기준 스냅샷 생성</span>).</p>
   <div class="table-wrap">
     <table class="history">
-      <thead><tr><th>무엇이 바뀌면</th><th>대시보드 칸</th><th>무엇을 얻나</th></tr></thead>
+      <thead><tr><th>무엇이 바뀌면</th><th>점검 현황 칸</th><th>무엇을 얻나</th></tr></thead>
       <tbody>
         <tr><td>새 이슈가 등록됨</td><td>신규 Issue</td><td>중복일 수 있는 이슈, 관련 사양, 비슷한 과거 이슈</td></tr>
         <tr><td>연구소 결과가 수정 완료(FIXED)</td><td>Fixed</td><td>조치가 사양과 맞는지, 다시 확인할 것. 검증 TC 초안은 상세 화면의 [검증 TC 초안 만들기]로 만듭니다</td></tr>
         <tr><td>연구소 결과가 사양대로·결함 아님</td><td>Spec</td><td>그 판정의 사양 근거</td></tr>
         <tr><td>진행 알림이 아닌 새 댓글</td><td>Comment Update</td><td>댓글이 바꾼 판단</td></tr>
-        <tr><td>새 SRS·바뀐 SRS</td><td>SRS Update</td><td>무엇이 바뀌었는지, QA 가 확인할 것, 관련 과거 이슈. TC 와 맞춰 보려면 상세 화면의 [TC 점검]을 누릅니다</td></tr>
+        <tr><td>새 SRS·바뀐 SRS</td><td>SRS Update</td><td>무엇이 바뀌었는지, QA 가 확인할 것, 관련 과거 이슈. TC 와 맞춰 보려면 상세 화면의 [기존 TC 검토]을 누릅니다</td></tr>
       </tbody>
     </table>
   </div>
@@ -23,222 +23,40 @@
   <ul>
     <li><b>최신 분석 결과</b> 카드는 결론(<span class="pill">사양과 다름</span> <span class="pill">검토 필요</span> <span class="pill">근거 부족</span> <span class="pill">참고</span> <span class="pill">문제 없음</span>), 한두 문장 요약, QA 할 일 3줄까지만 보입니다. <span class="pill">문제 없음</span> 은 접어 둡니다.</li>
     <li>[상세보기] 맨 위에 결론·바뀐 사양·근거·할 일이 있고, 나머지 분석 기록은 <b>자세히</b>를 펼쳐 봅니다. 초안 TC 는 참고용입니다. 원본 Checklist·Polarion 에는 사람이 옮깁니다.</li>
-    <li><b>지식 문서 업로드 현황</b>은 담당자가 직접 올려야 하는 문서(TC·Checklist, 매뉴얼, ALM 을 쓰지 않는 제품의 사양서)의 최신본과 서버에 올라간 날짜입니다. ALM 에서 자동으로 가져오는 사양서, QA 규칙, 지침 프롬프트는 여기 보이지 않습니다.</li>
-    <li><b>실행 상세</b>에서 단계별 상태, 찾은 변경 목록, 결과 파일(초안 Excel·audit.json)을 봅니다.</li>
+    <li><b>등록 자료와 최신 상태</b>은 담당자가 직접 올려야 하는 문서(TC·Checklist, 매뉴얼, ALM 을 쓰지 않는 제품의 사양서)의 최신본과 서버에 올라간 날짜입니다. ALM 에서 자동으로 가져오는 사양서, QA 규칙, 지침 프롬프트는 여기 보이지 않습니다.</li>
+    <li><b>점검 기록 보기</b>에서 단계별 상태, 찾은 변경 목록, 결과 파일(초안 Excel·audit.json)을 봅니다.</li>
   </ul>
 
-  <h3>B. 지금 실행 — 기간을 골라 바로 돌리기</h3>
+  <h3>B. 변경사항 점검하기 — 기간을 골라 바로 돌리기</h3>
   <ol>
-    <li>대시보드 실행 칸의 <b>분석 기간</b>에서 시작일과 종료일을 고릅니다. 기본은 어제~오늘입니다.</li>
-    <li>[지금 실행]을 누릅니다. 실행은 서버에서 따로 돌고, 끝나면 마지막 실행 칸이 바뀝니다.</li>
+    <li>점검 현황 실행 칸의 <b>분석 기간</b>에서 시작일과 종료일을 고릅니다. 기본은 어제~오늘입니다.</li>
+    <li>[변경사항 점검하기]를 누릅니다. 실행은 서버에서 따로 돌고, 끝나면 마지막 실행 칸이 바뀝니다.</li>
     <li>시작일 날짜(또는 그 전 가장 가까운 날)에 저장한 자료와 비교합니다. 종료일이 지난 날이면 새로 읽지 않고 저장된 자료끼리 비교합니다.</li>
   </ol>
-  <p class="hint">이미 분석한 변경은 다시 분석하지 않으므로 같은 기간을 여러 번 돌려도 AI 사용량이 늘지 않습니다. 이미 도는 실행이 있으면 "QA Agent가 이미 실행 중입니다." 로 막힙니다. 종료일은 오늘보다 늦을 수 없고, 시작일은 종료일보다 늦을 수 없습니다.</p>
+  <p class="hint">이미 분석한 변경은 다시 분석하지 않으므로 같은 기간을 여러 번 돌려도 AI 사용량이 늘지 않습니다. 이미 도는 실행이 있으면 "점검이 이미 실행 중입니다." 로 막힙니다. 종료일은 오늘보다 늦을 수 없고, 시작일은 종료일보다 늦을 수 없습니다.</p>
 
-  <h3>B-2. 현재 상태 점검 — 이슈 기록이 없는 기간</h3>
-  <p>이슈 스냅샷이 쌓이기 전의 기간은 이슈가 언제 어떻게 바뀌었는지 알 수 없습니다. 그런 기간은 [현재 상태 점검]으로 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 봅니다.</p>
+  <h3>B-2. 현재 이슈 전체 점검 — 이슈 기록이 없는 기간</h3>
+  <p>이슈 스냅샷이 쌓이기 전의 기간은 이슈가 언제 어떻게 바뀌었는지 알 수 없습니다. 그런 기간은 [현재 이슈 전체 점검]으로 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 봅니다.</p>
   <ol>
-    <li>분석 기간을 고르고 [현재 상태 점검]을 누릅니다. 확인 창이 뜨면 확인합니다.</li>
+    <li>분석 기간을 고르고 [현재 이슈 전체 점검]을 누릅니다. 확인 창이 뜨면 확인합니다.</li>
     <li>코드가 이슈를 나눕니다: 연결 SRS 가 바뀐 이슈(수정 완료 · Spec 판정 · 그 밖), SRS 는 그대로인 Spec 판정 이슈, 기간 안 신규 이슈. 나머지는 AI 에 보내지 않습니다.</li>
     <li>SRS 하나와 그 SRS 의 이슈를 묶어 가벼운 모델로 판정합니다(일치 · 부분 일치 · 충돌 · 근거 부족).</li>
-    <li>실행 상세 맨 위에 "현재 상태 기준 점검" 알림과 묶음별 건수가 보이고, 판정 카드에는 <b>현재 상태 기준(기간 이력 없음)</b> 표시가 붙습니다.</li>
+    <li>점검 기록 보기 맨 위에 "현재 상태 기준 점검" 알림과 묶음별 건수가 보이고, 판정 카드에는 <b>현재 상태 기준(기간 이력 없음)</b> 표시가 붙습니다.</li>
   </ol>
-  <p class="hint">사용량 한도에 걸리면 남은 대상은 대기로 남고 다음 실행이 이어서 점검합니다. 같은 기간을 다시 눌러도 이미 본 이슈·사양 조합은 다시 분석하지 않습니다.</p>
+  <p class="hint">충돌·부분 일치로 나온 이슈는 상세 화면의 근거와 연구소 기록을 확인하세요. 사용량 한도에 걸리면 남은 대상은 대기로 남고 다음 실행이 이어서 점검합니다. 같은 기간을 다시 눌러도 이미 본 이슈·사양 조합은 다시 분석하지 않습니다.</p>
 
-  <h3>C. 기간 조회 — 지난 분석 모아 보기</h3>
-  <p>대시보드 "최신 분석 결과" 칸의 기간 조회 양식(<a href="/qa-agent/period">기간 조회 화면</a>)에서 시작일·종료일(과 변경 종류)을 고르면 그 기간에 찾은 변경과 분석 결과를 한 화면에 봅니다. 날짜는 한국 시간 기준입니다.</p>
+  <h3>C. 기간별 결과 — 지난 분석 모아 보기</h3>
+  <p><a href="/qa-agent/period">기간별 결과</a>에서 시작일·종료일(과 변경 종류)을 고르면 그 기간에 찾은 변경과 분석 결과를 한 화면에 봅니다. 날짜는 한국 시간 기준입니다.</p>
 
   <h3>D. Claude 사용량 한도</h3>
-  <p>Claude 세션(5시간) 한도나 주간 한도에 걸리면 대시보드 맨 위와 요약 메일 첫 줄에 <b>언제 초기화되는지</b> 보입니다. [지금 실행]을 눌렀을 때도 같은 안내가 나옵니다.</p>
+  <p>Claude 세션(5시간) 한도나 주간 한도에 걸리면 점검 현황 맨 위와 요약 메일 첫 줄에 <b>언제 초기화되는지</b> 보입니다. [변경사항 점검하기]를 눌렀을 때도 같은 안내가 나옵니다.</p>
   <ul>
     <li>한도 동안에도 변경 찾기는 계속합니다. 분석할 것은 "분석 대기"로 남습니다.</li>
-    <li>세션 한도는 초기화 5분 뒤 서버가 한 번 다시 돌아 밀린 분석을 합니다. 주간 한도는 초기화 뒤 첫 평일 예약 실행이 이어서 합니다.</li>
+    <li>일일 모드에서 세션 한도는 초기화 5분 뒤 서버가 한 번 다시 돌아 밀린 분석을 합니다. 주간 한도는 초기화 뒤 예정 업무일 실행이 이어서 합니다.</li>
+    <li>차수 대기의 주간 모드는 한도 뒤 별도로 재개하지 않습니다. 다음 주 첫 업무일의 예정 점검이나 [변경사항 점검하기]에서 이어 갑니다. 자동 점검 중지나 서버 예약 꺼짐 상태에는 자동 재개하지 않습니다.</li>
     <li>로그인 토큰이 만료됐으면 서버 관리자가 토큰을 바꿀 때까지 분석하지 않습니다.</li>
   </ul>
-  <p class="hint">쓴 토큰은 <a href="/cost-dashboard">비용 대시보드</a>의 "QA Agent 점검" 줄에 자동으로 더해집니다.</p>
+  <p class="hint">쓴 토큰은 <a href="/cost-dashboard">AI 사용량</a>의 "사양·이슈 변경 점검" 줄에 자동으로 더해집니다.</p>
 
-  <h2>단일 이슈 분석 사용법</h2>
-  <p class="hint">예전 기능입니다. 상단 메뉴에는 없고 <code>/qa-agent/issue-analysis</code> 주소로 엽니다. 지난 결과 목록은 <code>/qa-agent/analyses</code> 에 있습니다.</p>
-  <p class="hint">Issue 하나를 넣으면 <b>관련 사양 → 기존 TC → Regression 범위</b>를 근거와 함께 정리합니다.</p>
-
-  <h3>0. 이 기능이 대신하는 일</h3>
-  <p>Issue 하나를 검증 범위로 옮기려면 원래 다음을 손으로 합니다.</p>
-  <ul>
-    <li>Issue 본문에서 재현 조건·발생원인·조치내역을 읽고 정리한다</li>
-    <li>연결된 SRS 번호를 사양서 5권에서 찾아 본문을 확인한다</li>
-    <li>TC Excel 수천 행에서 이 기능을 검증하는 TC를 찾는다</li>
-    <li>그 TC가 <b>수정 전 상태에서 Fail로 검출되는지</b> 판단한다</li>
-    <li>같은 Root Cause로 영향이 갈 다른 영역을 떠올린다</li>
-    <li>어느 근거로 그렇게 판단했는지 다시 찾아 적는다</li>
-  </ul>
-  <p>이 기능은 이 여섯 단계를 자동화하고, 마지막에 <b>근거 링크가 붙은 검토 화면</b>을 줍니다. 판정을 대신하지는 않습니다.</p>
-
-  <h3>1. 먼저 준비돼야 하는 것</h3>
-  <p>세 가지가 있어야 분석이 시작됩니다. 하나라도 없으면 <b>G1 Gate가 막고 AI를 호출하지 않습니다.</b></p>
-  <ul>
-    <li><b>제품 사양서</b> — <a href="/knowledge">Knowledge</a>에 등록된 사양서. VXvue는 ALM 크롤러 연동으로 매주 자동 갱신됩니다.</li>
-    <li><b>Test Case</b> — Knowledge에 등록된 TC Excel. 다중 시트를 지원하고, 컬럼 자동 탐지에 실패하면 수동 매핑 화면이 뜹니다.</li>
-    <li><b>QA 규칙 문서</b> — 제품 지식 폴더의 <code>[QA 작성 규칙] … 가이드_Rev*.md</code>와 <code>… 지침 프롬프트</code>. Knowledge 화면의 <b>지식 폴더 수집</b>으로 가져옵니다.</li>
-  </ul>
-  <p class="hint">규칙 문서가 없으면 분석하지 않습니다. 규칙 없이 낸 판정은 담당자마다 달라지고 근거를 되짚을 수 없기 때문입니다.</p>
-
-  <h3>2. Issue 넣기 — 두 가지 방법</h3>
-  <p><b>① Export 폴더에서 고르기.</b> 이 PC에 ALM-QA-Automation 의 issue-export 앱 <code>polarion_backup/</code> 폴더가 있으면 Issue ID 목록이 자동으로 채워집니다. 실행마다 생기는 하위 폴더까지 찾고, 같은 Issue 가 여러 번 수집됐으면 가장 최근 것을 씁니다. 목록에서 고르면 됩니다.</p>
-  <p><b>② JSON 첨부.</b> 서버처럼 그 폴더가 없는 환경에서는 <code>&lt;ISSUE-ID&gt;/backup.json</code> 파일을 직접 첨부합니다.</p>
-  <p class="hint">Export 폴더가 없는 서버에서는 Issue ID만으로 이슈를 읽을 수 없어 번호 입력칸이 나오지 않습니다. 반드시 <code>backup.json</code>을 첨부하세요.</p>
-  <p><b>이슈 유형.</b> 비워 두면 연구소 검토 결과로 유형을 정합니다. 결과가 “QA 확정 필요”였다면 양식의 <b>이슈 유형</b>에서 골라 다시 실행하세요. QA가 고른 유형은 결과 화면에 <span class="pill">QA 선택</span>으로 표시되고 G1의 “유형 확인” 대기가 풀립니다.</p>
-  <p class="hint">Issue 본문이 <code>[Precondition]</code> / <code>[Step]</code> / <code>[Expected Result]</code> / <code>[Actual Result]</code> 형식으로 작성돼 있으면 구획이 자동 분리됩니다. 형식을 안 지킨 Issue도 분석되지만, 어느 구획이 없는지 결과에 표시됩니다.</p>
-
-  <h3>3. 검증 환경 입력 — 여기만 사람이 채웁니다</h3>
-  <p>규칙이 <b>“QA만 아는 사실”</b>로 정해 둔 값입니다. 자동으로 알아낼 수 없고, 최종 판정에 영향을 주므로 먼저 묻습니다.</p>
-  <div class="table-wrap">
-    <table class="history">
-      <thead><tr><th>항목</th><th>왜 묻는가</th><th>비워 두면</th></tr></thead>
-      <tbody>
-        <tr><td>실제 수행 가능 여부</td><td>수행할 수 없는 절차를 Expected로 만들지 않기 위해</td><td>G4가 “확인 필요”로 대기</td></tr>
-        <tr><td>Test Data 준비</td><td>데이터 없이 Pass 판정을 만들지 않기 위해</td><td>G4가 “확인 필요”로 대기</td></tr>
-        <tr><td>실제 X-ray Exposure 가능</td><td>불가면 실제 촬영 결과를 Expected로 쓰지 않음</td><td>해당 없음으로 처리</td></tr>
-        <tr><td>Dose Table 제공</td><td>없으면 공식 촬영 가능 조합·출력 정확도를 확정하지 않음</td><td>해당 없음으로 처리</td></tr>
-        <tr><td>확보한 관찰 수단</td><td>무엇으로 결과를 볼 수 있는지</td><td>없음으로 처리</td></tr>
-        <tr><td><b>반드시 필요한</b> 관찰 수단</td><td>필요한데 없으면 다른 수단으로 Pass 처리하지 않기 위해</td><td>제약 없음</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="hint"><b>반드시 필요한 관찰 수단</b>을 골랐는데 확보하지 못했으면 G4가 분석을 <b>중단</b>합니다. 예: API 응답을 봐야 판단되는 Issue인데 API 접근이 없으면, UI만 보고 Pass로 만들지 않습니다.</p>
-  <p>정보가 부족한 상태에서도 초안이 필요하면 <b>“초안으로 작성”</b>을 체크하세요. 미확정 항목이 “확인 필요”로 표시된 초안이 나오고, 화면 상단에 <span class="pill MEDIUM">초안 모드</span>가 붙습니다.</p>
-
-  <h3>4. 조사 범위 제한</h3>
-  <p>근거 검색은 늘 등록된 사양서·TC <b>전체</b>를 봅니다. 범위 글을 적어도 검색 대상을 줄이지 않습니다. 적은 범위는 AI에 참고로 전하고, 결과 화면에 <b>“제한된 범위 기준”</b>으로 표시합니다.</p>
-  <p class="hint">범위 밖 항목을 “확정 불가”로 따로 표시하는 기능은 아직 없습니다. AI가 범위 글을 따라 답할 때만 그렇게 나옵니다.</p>
-  <p class="hint">사양이 여러 권으로 나뉘어 있어도 “사양 존재 여부” 판단에는 항상 전체를 하나의 집합으로 봅니다. 일부만 보고 “사양 없음”이라고 하지 않기 위한 규칙입니다.</p>
-
-  <h3>5. 결과 읽기 — 상단 Gate부터</h3>
-  <p>화면 맨 위에 Gate 5개의 판정이 있습니다. <b>여기부터 보세요.</b></p>
-  <div class="gatebar">
-    <div class="gate PASS"><b>PASS</b><span>통과</span></div>
-    <div class="gate PASS_WITH_NOTE"><b>PASS_WITH_NOTE</b><span>통과, 주의사항 있음</span></div>
-    <div class="gate NEED_INPUT"><b>NEED_INPUT</b><span>QA 입력 대기</span></div>
-    <div class="gate BLOCK"><b>BLOCK</b><span>중단</span></div>
-    <div class="gate PENDING"><b>PENDING</b><span>미판정</span></div>
-  </div>
-  <div class="table-wrap">
-    <table class="history">
-      <thead><tr><th>Gate</th><th>무엇을 보는가</th><th>시점</th></tr></thead>
-      <tbody>
-        <tr><td><b>G1</b> Source Completeness</td><td>Issue·사양서·TC·규칙·버전이 갖춰졌는가</td><td>AI 호출 전</td></tr>
-        <tr><td><b>G2</b> Specification Evidence</td><td>공식 사양 근거를 찾았는가, 취소선·분할 사양은 어떤가</td><td>AI 호출 전</td></tr>
-        <tr><td><b>G4</b> Execution Feasibility</td><td>실제로 수행할 수 있는가, 필수 관찰 수단이 있는가</td><td>AI 호출 전</td></tr>
-        <tr><td><b>G3</b> TC &amp; Root Cause Coverage</td><td>기존 TC가 Root Cause를 검출하는가</td><td>AI 호출 후</td></tr>
-        <tr><td><b>G5</b> Cross-check</td><td>판정끼리 모순되지 않는가, 근거 없는 확정이 없는가</td><td>AI 호출 후</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="hint"><b>G1·G2·G4가 막으면 AI를 호출하지 않습니다.</b> 결과 화면에 <span class="pill HIGH">Gate 차단 — AI 호출 0회</span>가 붙고, 무엇이 없어서 멈췄는지가 목록으로 나옵니다. 그 항목을 채우고 다시 실행하세요.</p>
-
-  <h3>6. 탭별로 무엇을 보는가</h3>
-  <h4>Issue 탭</h4>
-  <p>Issue 구조화 결과와 AI의 의미 분석(Trigger / Root Cause / 수정 대상 / Before→After)입니다.</p>
-  <ul>
-    <li><b>유형</b>은 Polarion 연구소 검토 결과에서 코드로 분류합니다. <code>lab_fixed</code>→Program Fixed 처럼 대응이 명확한 값은 AI 없이 정해집니다.</li>
-    <li>대응이 갈리는 값(<code>lab_noact</code> 등)은 <b>확정하지 않고</b> 후보만 보여주고 QA가 고르게 합니다.</li>
-    <li>발생원인·조치내역은 <b>탐색 단서</b>입니다. 이것만으로 “정상”이나 “사양대로”가 확정되지 않습니다.</li>
-    <li>본문 이미지·첨부는 목록으로만 보여줍니다. <b>이미지는 AI가 판정하지 않습니다.</b></li>
-  </ul>
-
-  <h4>Specification 탭</h4>
-  <p>검색한 사양 Chunk와 관련도 판정입니다. 상단에 <b>정확 일치 몇 건 + 용어 유사도 몇 건</b>이 나옵니다.</p>
-  <ul>
-    <li><b>정확 일치</b>는 SRS 번호·DICOM Tag·Command 번호처럼 문자열이 그대로 맞은 것입니다. 가장 강한 근거입니다.</li>
-    <li><b>용어 유사도</b>는 뜻이 비슷한 문장을 찾은 것입니다. 참고 신호이고 확정 근거로는 약합니다.</li>
-    <li>근거마다 <b>문서명 · 페이지 · 절</b>이 붙습니다. 원문에서 바로 찾아갈 수 있어야 하기 때문입니다.</li>
-    <li>취소선·삭제 표시가 있는 근거는 “현재 적용 여부 확인 필요”로 표시됩니다.</li>
-  </ul>
-
-  <h4>TC Coverage 탭</h4>
-  <p>기존 TC마다 판정과 근거가 나옵니다. 가장 중요한 값은 <b>“Root Cause 검출 가능/불가”</b>입니다.</p>
-  <div class="table-wrap">
-    <table class="history">
-      <thead><tr><th>판정</th><th>뜻</th><th>QA가 할 일</th></tr></thead>
-      <tbody>
-        <tr><td><b>유지</b></td><td>지금 TC로 Root Cause가 검출된다</td><td>확인만</td></tr>
-        <tr><td><b>경미 수정</b></td><td>검증은 되지만 표현·Expected 정밀화 필요</td><td>수정안 검토 후 반영</td></tr>
-        <tr><td><b>수정 필수</b></td><td>지금 TC로는 Root Cause가 검출되지 않는다</td><td>Step/Expected 수정</td></tr>
-        <tr><td><b>신규 TC 필요</b></td><td>기존 TC를 고쳐서는 덮을 수 없다</td><td>신규 TC 작성</td></tr>
-        <tr><td><b>Issue Link 수정</b></td><td>Issue 번호는 적혀 있지만 검증 목적이 다르다</td><td>Link 정정</td></tr>
-        <tr><td><b>사양 확인 필요</b></td><td>사양 근거가 없어 판정할 수 없다</td><td>사양 확인 후 재실행</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="hint"><b>TC 파일은 절대 자동으로 바뀌지 않습니다.</b> 판정과 수정안까지만 만들고, 실제 반영은 QA가 승인한 뒤 직접 합니다. TC ID·행 순서·버전별 결과 이력을 시스템이 건드리지 않는다는 뜻입니다.</p>
-
-  <h4>Regression 탭</h4>
-  <p>8개 축으로 영향 범위를 봅니다. 축은 코드가 고정하고 AI는 해당 여부와 근거만 채웁니다.</p>
-  <div class="table-wrap">
-    <table class="history">
-      <thead><tr><th>축</th><th>무엇을 보는가</th></tr></thead>
-      <tbody>
-        {% for code, label in axes.items() %}
-        <tr><td><b>{{ label }}</b></td><td>{{ axis_descriptions.get(code, '') }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <p class="hint">해당하지 않는 축도 <b>“해당 없음”으로 남깁니다.</b> 검토했다는 기록이 있어야 다음 사람이 다시 처음부터 훑지 않습니다.</p>
-
-  <h4>Gate 상세 탭</h4>
-  <p>Gate가 남긴 항목 전부와, <b>ID 교차검증에서 걸러낸 것</b>이 나옵니다. 모델이 만든 TC ID·근거 ID가 실제 데이터에 없으면 결과에서 빼고, 뺐다는 사실을 여기 남깁니다. Step–Expected 번호가 어긋난 것도 여기 표시됩니다.</p>
-
-  <h4>QA Action 탭</h4>
-  <p>판정 전체를 표로 보고 <b>승인 / 거절 / 수정 후 승인 / 근거 추가 필요</b>를 기록합니다. QA 결정은 AI 판정을 <b>덮어쓰지 않고</b> 따로 쌓입니다 — 나중에 AI 결과와 QA 결정을 비교해 규칙을 고치기 위한 자료입니다.</p>
-  <p>같은 판정에 결정을 다시 적으면 화면에는 최신 결정이 보이고, 이전 결정은 지워지지 않고 <b>결정 기록 N건</b>을 펼치면 보입니다. 기록한 뒤에는 폼이 있던 탭으로 돌아옵니다.</p>
-  <p>다음은 QA 승인이 <b>필수</b>입니다: TC 실제 변경, SRS Link 확정, Pass/Fail, Issue Close, 새로운 결함 확정, Release 승인.</p>
-
-  <h3>7. AI에 실제로 무엇이 나갔는지 확인하기</h3>
-  <p>결과 화면 아래 <b>“AI 에 실제로 보낸 것 / 받은 것”</b>을 펼치면 다음이 원문 그대로 나옵니다.</p>
-  <ul>
-    <li>System Instruction (프롬프트 YAML 원문)</li>
-    <li><b>주입한 규칙 발췌</b> — 제품 규칙 문서에서 이 판단에 필요한 절만 자른 것</li>
-    <li>보낸 입력 JSON 전체와 그 글자 수</li>
-    <li>받은 응답 JSON 전체</li>
-  </ul>
-  <p class="hint">사양서·매뉴얼·TC 원본 파일은 서버 밖으로 나가지 않습니다. 나가는 것은 검색으로 추린 사양 Chunk 발췌, TC 후보의 일부 필드, 구조화된 Issue 필드, 그리고 규칙 발췌뿐입니다. 실제 payload를 여기서 직접 확인할 수 있습니다.</p>
-
-  <h3>8. 토큰을 아끼는 방식</h3>
-  <ul>
-    <li><b>Gate가 먼저 막습니다.</b> 근거가 없으면 AI 호출이 0회입니다.</li>
-    <li><b>호출은 1회입니다.</b> Issue 분석·사양 관련도·TC Coverage·Regression을 한 번에 받습니다. Skill마다 나눠 부르면 같은 근거를 네 번 보내게 됩니다.</li>
-    <li><b>규칙을 잘라 보냅니다.</b> 규칙 전문 약 30KB 중 그 판단에 해당하는 절만 2~5KB 넣습니다.</li>
-    <li><b>후보를 줄입니다.</b> 정확 일치로 근거가 확보되면 유사도 후보 수를 줄입니다.</li>
-    <li><b>같은 입력은 캐시</b>합니다. 재실행 시 호출이 발생하지 않습니다(화면에 “캐시 적중” 표시).</li>
-    <li>Issue Comment는 최근 3건만, 사양 Chunk는 1,200자까지, TC는 판정에 쓰는 필드만 보냅니다.</li>
-  </ul>
-  <p><a href="/cost-dashboard">비용 대시보드</a>에서 호출 수·토큰·캐시 적중을 집계해서 볼 수 있습니다.</p>
-
-  <h3>9. 규칙 어디까지 구현됐는지 보기</h3>
-  <p><a href="/qa-agent/rules">규칙 구현현황</a>(상단 메뉴에는 없고 주소로 엽니다)에서 제품 규칙 문서의 절마다 <b>어떤 방식으로 구현했는지</b>와 <b>Skill별로 규칙이 몇 KB 주입되는지</b>를 볼 수 있습니다. 규칙 Rev가 올라가 새 절이 생기면 테스트가 실패하도록 해 두어, 새 규칙이 조용히 빠지지 않습니다.</p>
-
-  <h3>10. 자주 막히는 경우</h3>
-  <div class="table-wrap">
-    <table class="history">
-      <thead><tr><th>증상</th><th>원인</th><th>해결</th></tr></thead>
-      <tbody>
-        <tr><td>G1 BLOCK — 규칙 문서 미수집</td><td>제품 지식 폴더를 수집하지 않았다</td><td><a href="/knowledge">Knowledge</a> → 지식 폴더 수집</td></tr>
-        <tr><td>G1 BLOCK — 사양서/TC 없음</td><td>제품에 등록된 문서가 없다</td><td>Knowledge에서 등록</td></tr>
-        <tr><td>G2 BLOCK — 사양 근거 없음</td><td>Issue 용어가 사양서 표현과 다르다</td><td>Issue에 SRS 번호를 연결하거나, 사양서가 최신인지 확인</td></tr>
-        <tr><td>G4 NEED_INPUT</td><td>검증 환경을 입력하지 않았다</td><td>환경 항목을 채우거나 “초안으로 작성” 체크</td></tr>
-        <tr><td>G4 BLOCK — 필수 관찰 수단 없음</td><td>필요하다고 고른 수단이 확보되지 않았다</td><td>수단을 확보하거나 필수 지정을 해제</td></tr>
-        <tr><td>Issue를 찾을 수 없음</td><td>서버에 Export 폴더가 없다</td><td><code>backup.json</code>을 첨부</td></tr>
-        <tr><td>유형이 “QA 확정 필요”</td><td>연구소 검토 결과가 한 유형으로 확정되지 않는다</td><td>Issue 탭에서 후보를 보고, 새 분석 양식의 “이슈 유형”에서 골라 다시 실행</td></tr>
-        <tr><td>G2 “읽지 못한 문서”</td><td>등록된 사양서·TC 파일을 읽지 못했다</td><td>결과 화면 위의 목록을 보고 Knowledge에서 다시 등록</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3>11. 다른 기능과의 관계</h3>
-  <ul>
-    <li><b>QA Agent</b> — <b>Issue</b>와 <b>SRS 변경</b>이 입력입니다. 매일 점검이 바뀐 SRS·이슈를 찾아 분석합니다. 예전 단일 이슈 분석은 주소로만 엽니다. 예전 Regression 영향 분석(변경 문서 업로드) 화면은 이 기능으로 합쳐 없앴습니다.</li>
-    <li><a href="/manual-review">매뉴얼 개정 검증</a> — <b>개정 매뉴얼</b>이 입력입니다. 문서가 최신 사양을 반영했는지 봅니다.</li>
-    <li><a href="/knowledge">Knowledge</a> — 위 기능이 함께 쓰는 사양서·TC·규칙 문서를 등록·수집합니다.</li>
-  </ul>
 </section>
 {% endblock %}

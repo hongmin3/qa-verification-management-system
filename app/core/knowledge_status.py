@@ -263,7 +263,8 @@ def _judge(ctx: _Context, kind: str) -> AssetStatus:
     times = [row.updated_at for row in rows] + [last_success.get("synced_at", "") if last_success else ""]
     return AssetStatus(
         kind=kind, label=KIND_LABELS[kind], source=source, source_label=SOURCE_LABELS[source],
-        managed=MANAGED_LABELS[source], message=SOURCE_MESSAGES[source], required=required,
+        managed="자동 관리(로컬 Skill)" if kind == "skill_instruction" and source == SOURCE_FOLDER else MANAGED_LABELS[source],
+        message="로컬 Skill 지침과 참조 MD를 자동으로 내보내 지식폴더에서 동기화합니다." if kind == "skill_instruction" and source == SOURCE_FOLDER else SOURCE_MESSAGES[source], required=required,
         count=len(rows), status=status, level=level, reason=reason, last_updated=_latest(times),
         last_sync=last_sync, can_upload=can_manual_upload(config, kind), accept=UPLOAD_ACCEPT.get(kind, ""),
         documents=rows,

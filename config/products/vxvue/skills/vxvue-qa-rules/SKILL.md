@@ -27,7 +27,7 @@ QA 규칙 원문은 작업 폴더 `rules/qa-guide.md`(`[QA 작성 규칙] VXvue 
 | qa-verification-tc-draft | qa-fixed-issue-analysis 와 같은 절. Generator 이슈에 기존 TC 후보가 있으면 §17 "Generator Issue Expected 충돌 검사" |
 | qa-spec-decision-analysis | §6(B 유형 Spec/Not Bug), §7, §9~§11, §37 |
 | qa-comment-analysis | §7(연구소 Comment 는 탐색 단서) |
-| qa-spec-coverage-analysis | §3.3(S03), §16(기존 TC 첨삭), §59(상태 생성 사양 역추적), §61, §69(완료 TC 의미 보존 편집), §70(Coverage Review 확장) |
+| qa-spec-coverage-analysis | §3.3(S03), §16(기존 TC 첨삭), §17(Generator Issue Expected 충돌 검사), §59(상태 생성 사양 역추적), §61, §69(완료 TC 의미 보존 편집), §70(Coverage Review 확장) |
 | qa-manual-completeness | S07 B 모드(Completeness Review) 절 |
 
 ## VXvue 고유 관점

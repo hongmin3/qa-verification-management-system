@@ -27,6 +27,7 @@ def test_hub_links_to_qa_modules():
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert 'href="/manual-review"' in response.text
+    assert '<a class="app-card" href="/settings/ai">' in response.text
 
 
 def test_hub_shows_top_menu_without_home_link():
@@ -160,5 +161,5 @@ def test_no_screen_links_to_removed_impact_analyzer():
 def test_knowledge_is_presented_as_shared_workspace():
     response = TestClient(app).get("/knowledge")
     assert response.status_code == 200
-    assert "공용 Knowledge" in response.text
+    assert "검증 자료 관리" in response.text
     assert 'href="/manual-review"' in response.text

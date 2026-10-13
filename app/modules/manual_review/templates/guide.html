@@ -1,11 +1,11 @@
 {% extends "module_base.html" %}
 {% block content %}
 <section>
-  <h2>매뉴얼 개정 검증 사용법</h2>
+  <h2>매뉴얼 개정 검토 사용법</h2>
   <p class="hint">개정 매뉴얼 파일 하나를 끌어놓으면 AI가 1차 검토합니다. QA는 결과 화면에서 바로 확인·확정하고, 연구소에 보낼 Comment 삽입 Word 파일을 내려받습니다.</p>
 
   <h3>1. 검증 등록</h3>
-  <p><a href="/manual-review">매뉴얼 검증</a> 화면에 Word Track Changes가 켜진 <code>.docx</code> 또는 <code>.pdf</code> 파일 <b>하나만</b> 끌어놓습니다.</p>
+  <p><a href="/manual-review">매뉴얼 개정 검토</a> 화면에 Word Track Changes가 켜진 <code>.docx</code> 또는 <code>.pdf</code> 파일 <b>하나만</b> 끌어놓습니다.</p>
   <ul>
     <li>파일 이름으로 제품, 매뉴얼 종류, 제품 버전을 자동 인식해 "자동 인식" 줄에 보여 줍니다. 예: <code>(매뉴얼) VXvue Service Manual.V1.1.0W2_KO.docx</code> → VXvue · VXvue Service Manual · V1.1.0.</li>
     <li>같은 제품·매뉴얼·버전의 완료된 검증이 있으면 자동으로 이어받아 회차가 하나 올라갑니다(<code>W2</code>, <code>W3</code> …). 이어받는 미해결 지적사항 수도 함께 보입니다.</li>

@@ -1,4 +1,4 @@
-"""QA Intelligence 대시보드·상세·지금 실행 화면 (TEST-QAINTEL-009).
+"""QA Intelligence 대시보드·상세·변경사항 점검하기 화면 (TEST-QAINTEL-009).
 
 실제 파이프라인을 가짜 Polarion·가짜 Claude 로 돌려 저장소를 채운 뒤 `/qa-agent` 화면을 연다.
 Claude·Polarion·메일은 부르지 않는다. 실행 프로세스도 가짜 `popen` 으로 대신한다.
@@ -33,10 +33,10 @@ DAY2 = DAY1 + timedelta(days=1)
 
 #: 분석 종류마다 상세 화면에만 있는 구획 제목 (REQ-QAINTEL-020).
 SECTIONS = {
-    "NEW_ISSUE": ["Duplicate Analysis", "Specification Analysis", "Historical Analysis", "QA Recommendation"],
-    "FIXED_ISSUE": ["Root Cause Review", "Resolution Review", "Specification Consistency", "Regression Risk"],
-    "SPEC_DECISION": ["R&amp;D Claim", "Specification Evidence", "Historical Decisions", "QA Analysis"],
-    "COMMENT": ["New Comment"],
+    "NEW_ISSUE": ["중복 이슈 검토", "사양과 비교", "과거 이슈 검토", "QA 확인사항"],
+    "FIXED_ISSUE": ["원인 설명 검토", "수정 내용 검토", "사양 일치 여부", "변경 영향과 회귀 위험"],
+    "SPEC_DECISION": ["연구소 설명", "사양 근거", "과거 판정", "QA 검토"],
+    "COMMENT": ["새 댓글"],
     "SPEC_COVERAGE": ["관련 과거 이슈"],
 }
 REVIEW_WORDS = ("승인", "거절", "근거 추가 필요", "검토자", "질문 답변")
@@ -110,7 +110,7 @@ def test_dashboard_renders_summary_cards_and_recent_runs(world):
     response = world["client"].get("/qa-agent")
     assert response.status_code == 200
     page = response.text
-    for heading in ("지식 문서 업로드 현황", "분석 실행 <span class=\"hint\">· VXvue</span>", "최신 분석 결과", "최근 실행"):
+    for heading in ("등록 자료와 최신 상태", "점검 실행 <span class=\"hint\">· VXvue</span>", "최신 분석 결과", "최근 실행"):
         assert heading in page
     assert "[VP-200]" in page and "[VP-100]" in page
     assert f"/qa-agent/runs/{world['changed']['run_id']}" in page
@@ -119,7 +119,7 @@ def test_dashboard_renders_summary_cards_and_recent_runs(world):
 
 
 def test_dashboard_run_period_inputs_default_to_yesterday_and_today(world):
-    """[지금 실행] 달력의 기본값은 시작일 = 전날, 종료일 = 오늘이다 (REQ-QAINTEL-027)."""
+    """[변경사항 점검하기] 달력의 기본값은 시작일 = 전날, 종료일 = 오늘이다 (REQ-QAINTEL-027)."""
     today = datetime.now(dash.KST).date()
     page = world["client"].get("/qa-agent").text
     assert f'id="run-since" value="{(today - timedelta(days=1)).isoformat()}"' in page
@@ -171,7 +171,7 @@ def test_status_json_shows_running_while_locked(world):
 
 
 def _knowledge_rows(page: str) -> str:
-    start = page.index("지식 문서 업로드 현황")
+    start = page.index("등록 자료와 최신 상태")
     return page[start:page.index("</table>", start)]
 
 
@@ -282,7 +282,7 @@ def test_finding_detail_unknown_id_is_404(world):
 
 
 def test_run_detail_stage_status_column_does_not_wrap(world):
-    """실행 상세 단계 표의 상태 이름은 한 줄로 보인다 (REQ-QAINTEL-020 지킬 것)."""
+    """점검 기록 보기 단계 표의 상태 이름은 한 줄로 보인다 (REQ-QAINTEL-020 지킬 것)."""
     css = (REPO_ROOT / "app/modules/qa_agent/templates/_intel_style.html").read_text(encoding="utf-8")
     rules = [body.replace(" ", "") for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)
              if ".history.qa-stages td:nth-child(2)" in selector]
@@ -307,6 +307,29 @@ def test_run_detail_lists_events_files_and_cards(world):
     assert f"/qa-agent/runs/{run_id}/files/impact_checklist_draft.xlsx" in page
     assert "VP-200" in page and "VP-11" in page
     assert world["client"].get("/qa-agent/runs/20000101-000000-vxvue").status_code == 404
+
+
+def test_run_detail_folds_existing_information_and_keeps_run_filtered_legacy_results(world):
+    """Validates: REQ-QAINTEL-020. 214개 규칙 결과는 10개만 펼치고 모두보기에서 찾는다."""
+    run_id = world["changed"]["run_id"]
+    legacy_ids = []
+    for i in range(65):
+        legacy_ids.append(world["store"].add_finding(run_id, "qa-trace-gap", f"legacy-{i}",
+            {"subject": f"LEGACY-{i}", "verdict": "TC 없음", "summary": "옛 규칙 점검"}, product="vxvue"))
+    world["store"].add_finding(world["baseline"]["run_id"], "qa-trace-gap", "other-run",
+        {"subject": "ANOTHER-RUN", "verdict": "TC 없음", "summary": "다른 실행"}, product="vxvue")
+    page = world["client"].get(f"/qa-agent/runs/{run_id}").text
+    primary = page[page.index('id="run-priority"'):page.index('id="run-details"')]
+    assert primary.count('class="qa-card"') == 10
+    assert f'/qa-agent/runs/{run_id}/findings' in primary
+    assert '<details id="run-details"' in page and '<details id="run-details" open' not in page
+    listing = world["client"].get(f"/qa-agent/runs/{run_id}/findings")
+    assert listing.status_code == 200 and "LEGACY-64" in listing.text
+    assert "ANOTHER-RUN" not in listing.text
+    assert "LEGACY-0" in world["client"].get(f"/qa-agent/runs/{run_id}/findings?page=2").text
+    assert f'/qa-agent/findings/{legacy_ids[-1]}' in listing.text
+    assert world["client"].get("/qa-agent/runs/missing/findings").status_code == 404
+    assert world["client"].get(f"/qa-agent/runs/{run_id}/findings?page=0").status_code == 404
 
 
 def test_run_detail_reads_as_plain_korean_for_first_time_users(world):
@@ -365,7 +388,7 @@ def test_run_file_rejects_run_id_outside_output_dir(world):
         assert client.get(url).status_code == 404, url
 
 
-# -- 기간 조회 (REQ-QAINTEL-024) -------------------------------------------------------
+# -- 기간별 결과 (REQ-QAINTEL-024) -------------------------------------------------------
 
 
 def test_period_view_groups_findings_by_subject(world):
@@ -394,7 +417,7 @@ def test_period_boundary_of_366_days_is_allowed(world):
     assert world["client"].get("/qa-agent/period?start=2025-09-29&end=2026-09-30").status_code == 400
 
 
-# -- 지금 실행 (REQ-QAINTEL-021·027) ---------------------------------------------------
+# -- 변경사항 점검하기 (REQ-QAINTEL-021·027) ---------------------------------------------------
 
 
 class _Popen:
@@ -448,7 +471,7 @@ def test_run_now_is_409_while_locked(world, launcher):
     world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     response = world["client"].post("/qa-agent/runs", data={"product": "VXvue"})
-    assert response.status_code == 409 and response.json()["detail"] == "QA Agent가 이미 실행 중입니다."
+    assert response.status_code == 409 and response.json()["detail"] == "점검이 이미 실행 중입니다."
     assert launcher.commands == []
 
 
@@ -476,22 +499,23 @@ def test_expired_limit_is_not_shown(world):
     assert 'id="limit-banner"' not in world["client"].get("/qa-agent").text
 
 
-# -- 사용법 화면 (REQ-QAAGENT-014) ----------------------------------------------------
+# -- 사용법 화면 (REQ-QAAGENT-016, REQ-QAINTEL-019) -----------------------------------
 
 
 def test_guide_explains_dashboard_run_now_period_and_limits(world):
-    """사용법 화면이 대시보드·지금 실행·기간 조회·한도를 설명하고, 단일 이슈 분석 설명도 남아 있다."""
+    """사용법 화면은 현재 변경 분석·기간별 결과·한도만 안내한다. Validates: REQ-QAAGENT-016."""
     page = world["client"].get("/qa-agent/guide").text
-    for heading in ("A. 매일 점검 대시보드", "B. 지금 실행", "C. 기간 조회", "D. Claude 사용량 한도", "단일 이슈 분석 사용법",
-                    "0. 이 기능이 대신하는 일"):
+    for heading in ("A. 점검 현황", "B. 변경사항 점검하기", "C. 기간별 결과", "D. Claude 사용량 한도"):
         assert heading in page, heading
     for column in ("신규 Issue", "Fixed", "Spec", "Comment Update", "SRS Update"):
         assert f"<td>{column}</td>" in page, column
-    assert 'href="/qa-agent/period"' in page and 'href="/qa-agent/issue-analysis"' in page
+    assert 'href="/qa-agent/period"' in page
+    assert '/qa-agent/issue-analysis' not in page
+    assert '단일 이슈 분석' not in page
 
 
 def test_guide_running_message_matches_run_now_conflict_response(world, launcher):
-    """사용법이 인용한 '이미 실행 중' 문장은 [지금 실행] 409 응답 문장과 같다."""
+    """사용법이 인용한 '이미 실행 중' 문장은 [변경사항 점검하기] 409 응답 문장과 같다."""
     world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     response = world["client"].post("/qa-agent/runs", data={"product": world["cfg"].product})
@@ -499,11 +523,11 @@ def test_guide_running_message_matches_run_now_conflict_response(world, launcher
     assert response.json()["detail"] in world["client"].get("/qa-agent/guide").text
 
 
-# -- 현재 상태 점검 (REQ-QAINTEL-030) ---------------------------------------------------
+# -- 현재 이슈 전체 점검 (REQ-QAINTEL-030) ---------------------------------------------------
 
 
 def test_issue_audit_launches_with_flag_and_warning(world, launcher):
-    """Validates: REQ-QAINTEL-030 — [현재 상태 점검]은 --issue-audit 로 띄우고 현재 상태 기준이라는 경고를 준다."""
+    """Validates: REQ-QAINTEL-030 — [현재 이슈 전체 점검]은 --issue-audit 로 띄우고 현재 상태 기준이라는 경고를 준다."""
     today = datetime.now(dash.KST).date()
     since = (today - timedelta(days=7)).isoformat()
     response = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue", "since": since, "until": today.isoformat()})
@@ -517,16 +541,16 @@ def test_issue_audit_is_refused_for_past_day_without_issue_snapshot_and_while_lo
     response = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue", "since": "2026-09-01", "until": "2026-09-28"})
     detail = response.json()["detail"]
     assert response.status_code == 400
-    assert "이슈 스냅샷이 없어 현재 상태 점검을 할 수 없습니다" in detail or "SRS 스냅샷이 없어" in detail
+    assert "이슈 스냅샷이 없어 현재 이슈 전체 점검을 할 수 없습니다" in detail or "SRS 스냅샷이 없어" in detail
     world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     locked = world["client"].post("/qa-agent/issue-audit", data={"product": "VXvue"})
-    assert locked.status_code == 409 and locked.json()["detail"] == "QA Agent가 이미 실행 중입니다."
+    assert locked.status_code == 409 and locked.json()["detail"] == "점검이 이미 실행 중입니다."
 
 
 def test_dashboard_shows_issue_audit_button(world):
     page = world["client"].get("/qa-agent").text
-    assert 'id="audit-now"' in page and "현재 상태 점검" in page
+    assert 'id="audit-now"' in page and "현재 이슈 전체 점검" in page
 
 
 # -- 결론 단계와 짧은 카드 (REQ-QAINTEL-033) ----------------------------------------------
@@ -575,7 +599,7 @@ def test_old_coverage_finding_renders_key_block_and_details(world):
     key = page[page.index('id="key-result"'):page.index('<details class="qa-more">')]
     assert "검토 필요" in key and "옛 Coverage 요약" in key and "정렬 바뀜" in key and "TC_2 Expected 수정" in key
     assert 'data-action="tc-check"' in key
-    assert "<h3>Checklist Coverage" in page[page.index('<details class="qa-more">'):]
+    assert "<h3>Checklist의 검증 범위" in page[page.index('<details class="qa-more">'):]
 
 
 def test_detail_shows_on_demand_buttons_only_for_their_analysis(world):
@@ -609,10 +633,10 @@ def test_tc_check_and_tc_draft_launch_with_on_demand_flags(world, launcher):
 def test_on_demand_is_refused_for_wrong_analysis_unknown_action_and_while_locked(world, launcher):
     new_id, spec_id = _finding_id(world, "NEW_ISSUE"), _finding_id(world, "SPEC_COVERAGE")
     wrong = world["client"].post(f"/qa-agent/findings/{new_id}/tc-check")
-    assert wrong.status_code == 400 and wrong.json()["detail"] == "사양 변경 분석에서만 TC 점검을 할 수 있습니다."
+    assert wrong.status_code == 400 and wrong.json()["detail"] == "사양 변경 분석에서만 기존 TC 검토를 할 수 있습니다."
     assert world["client"].post(f"/qa-agent/findings/{spec_id}/whatever").status_code == 404
     assert world["client"].post("/qa-agent/findings/999999/tc-check").status_code == 404
     world["cfg"].lock_path.parent.mkdir(parents=True, exist_ok=True)
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     locked = world["client"].post(f"/qa-agent/findings/{spec_id}/tc-check")
-    assert locked.status_code == 409 and locked.json()["detail"] == "QA Agent가 이미 실행 중입니다."
+    assert locked.status_code == 409 and locked.json()["detail"] == "점검이 이미 실행 중입니다."

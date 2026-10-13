@@ -62,6 +62,20 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
             "detail": f"이 PC 에서 지식 폴더에 접근할 수 없습니다: {config.knowledge_source.dir or '(미설정)'}",
         }
 
+    profile = getattr(config.knowledge_source, "skill_sync", None)
+    if profile and profile.enabled:
+        try:
+            if (Path(__file__).parent / "skill_knowledge.py").is_file() and __package__ in (None, ""):
+                from skill_knowledge import export_skill, read_bundle
+            else:
+                from app.core.skill_knowledge import export_skill, read_bundle
+            if dry_run:
+                read_bundle(profile.plugin, profile.skill)
+            else:
+                export_skill(config)
+        except (OSError, ValueError) as exc:
+            return {"status": "FAILED", "detail": f"Skill 지침 내보내기 실패: {type(exc).__name__}. 로컬 설치 상태와 자동 생성 문서를 확인해주세요."}
+
     collected = sync_product(config, dry_run=dry_run)
     if collected.status in ("NEEDS_CONFIG", "FAILED"):
         return {"status": collected.status, "detail": collected.detail}
@@ -71,6 +85,7 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
     # 옛 판까지 지운다(SPEC_CODE_MISMATCH 5절 3번). 서버는 받은 파일을 스스로 다시 읽고, 못 읽으면 옛 판을 지킨다.
     assets = list(manifest.get("assets", []))
     manifest_payload = {
+        "allow_prune": collected.status == "SUCCESS",
         "source_dir": manifest.get("source_dir", ""),
         "counts": manifest.get("counts", {}),
         "uploaded_from": socket.gethostname(),
@@ -120,6 +135,7 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
             uploaded[file_name] = response.json()
             sent_bytes += path.stat().st_size
 
+        manifest_payload["allow_prune"] = manifest_payload["allow_prune"] and not failed
         commit = client.post(
             f"{target_url.rstrip('/')}/knowledge/product-knowledge/commit",
             data={

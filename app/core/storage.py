@@ -7,14 +7,18 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
+from app.core.vxchat_storage import VxChatStorageMixin
+
+from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
 
 
-class Storage(DailyQaStorageMixin):
+class Storage(DailyQaStorageMixin, VxChatStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
         self._initialize_daily_qa()
+        self._initialize_vxchat()
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
@@ -25,6 +29,7 @@ class Storage(DailyQaStorageMixin):
 
     def initialize(self) -> None:
         with self.connect() as db:
+            db.executescript(SETTINGS_SCHEMA)
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS documents (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL,
@@ -480,13 +485,13 @@ class Storage(DailyQaStorageMixin):
             return cursor.rowcount
 
     def fail_retired_queued_analyses(self) -> int:
-        """없앤 Regression 기능의 대기를 종료해 현재 기능의 실행 자리를 막지 않게 한다."""
+        """없앤 분석 기능의 대기를 종료해 현재 기능의 실행 자리를 막지 않게 한다."""
         now = datetime.now(timezone.utc).isoformat()
         with self.connect() as db:
             cursor = db.execute(
                 "UPDATE analyses SET status='FAILED',error=?,updated_at=? "
-                "WHERE status='QUEUED' AND (module='impact_analyzer' OR module IS NULL)",
-                ("Regression 영향 분석 기능이 제거되어 대기 작업을 실행하지 않습니다. 기존 기록은 보존됩니다.", now),
+                "WHERE status='QUEUED' AND (module IN ('impact_analyzer','qa_agent') OR module IS NULL)",
+                ("분석 기능이 제거되어 대기 작업을 실행하지 않습니다. 기존 기록은 보존됩니다.", now),
             )
             return cursor.rowcount
 

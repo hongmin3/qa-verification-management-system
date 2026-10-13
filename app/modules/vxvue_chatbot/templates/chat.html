@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_title %}VXvue AI 챗봇{% endblock %}
+{% block main_class %}vx-chat-main{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261013b">
+<div class="vx-chat" data-max-file-bytes="{{ max_file_bytes }}">
+  <aside id="sidebar" class="chat-sidebar" aria-label="대화 이력">
+    <a class="chat-brand" href="/vxvue-chatbot"><span class="brand-mark">V</span><span>VXvue <small>AI 챗봇</small></span></a>
+    <button id="new-chat" class="new-chat">＋ 새 대화</button>
+    <label class="history-search"><span class="sr-only">대화 검색</span><input id="history-search" placeholder="대화 검색" autocomplete="off"></label>
+    <nav id="conversation-list" aria-label="저장된 대화"></nav>
+    <div class="sidebar-bottom"><a href="/">← QA 자동화 홈</a><a href="/vxvue-chatbot/guide">사용법 · 자료와 답변 기준</a><small>이 브라우저의 대화가 표시됩니다.</small></div>
+  </aside>
+  <div id="sidebar-backdrop" hidden></div>
+  <section class="chat-workspace">
+    <div class="chat-topbar"><button id="toggle-sidebar" aria-label="대화 목록 열기">☰</button><div><strong id="chat-title">새 대화</strong><small>VXvue 지식으로 함께 검토합니다.</small></div><span class="provider-badge">Claude</span></div>
+    <div id="knowledge-status" class="knowledge-banner" role="status">지식 갱신 상태 확인 중…</div>
+    <div id="error-banner" class="chat-error" hidden role="alert"></div>
+    <div id="scroll-area" class="chat-scroll">
+      <div id="welcome" class="chat-welcome">
+        <div class="welcome-symbol">V</div><p class="welcome-eyebrow">VXvue QA assistant</p><h2>어떤 업무를 도와드릴까요?</h2><p>사양을 찾고, TC를 검토하고, QA 초안을 함께 정리하세요.<br>관련 자료를 첨부하면 대화 속에서 이어서 확인합니다.</p>
+        <div class="suggestion-grid">
+          <button data-prompt="VXvue 사양에서 이 기능의 적용 조건을 찾아줘."><span>⌕</span><strong>사양·매뉴얼 찾기</strong><small>원문 위치와 적용 조건 확인</small></button>
+          <button data-prompt="첨부한 TC를 사양과 비교하고 확인이 필요한 부분을 정리해줘. 원본은 수정하지 마."><span>✓</span><strong>TC 검토하기</strong><small>절차·Expected와 근거 비교</small></button>
+          <button data-prompt="Ecoray Generator 연동의 상태 전이와 확인할 항목을 정리해줘."><span>↔</span><strong>Generator 분석</strong><small>장비·Console·Viewer 상태 대조</small></button>
+          <button data-prompt="지금부터 설명하는 현상을 Issue 초안으로 정리해줘. 부족한 정보가 있으면 질문해줘."><span>✎</span><strong>Issue·메일 초안</strong><small>관찰한 사실로 전달 문서 작성</small></button>
+        </div>
+      </div>
+      <div id="messages" class="chat-messages" aria-live="polite"></div>
+    </div>
+    <div class="composer-wrap">
+      <div id="job-status" class="job-status" hidden role="status"><span class="chat-spinner"></span><span id="job-stage"></span><span id="job-time"></span><button id="cancel-job">중지</button></div>
+      <form id="composer" class="chat-composer">
+        <div id="attached-files" class="attached-files"></div>
+        <textarea id="message-input" rows="2" maxlength="{{ message_char_limit }}" placeholder="VXvue에 대해 질문하세요. 자료를 첨부해도 좋아요." aria-label="질문"></textarea>
+        <div class="composer-controls"><button type="button" id="attach-button" aria-label="첨부파일 추가">＋ 자료 첨부</button><input id="file-input" type="file" multiple hidden accept=".pdf,.docx,.xlsx,.md,.txt,.csv,.tsv,.json,.xml,.log,.png,.jpg,.jpeg,.webp"><small id="file-count">최대 10개 · 파일당 50MiB</small><button type="submit" id="send-button" aria-label="질문 보내기">보내기 ↑</button></div>
+      </form>
+      <p class="composer-note">AI 답변과 인용 원문을 함께 확인하세요. 최종 검증 판정과 초안 반영은 QA가 결정합니다.</p>
+    </div>
+  </section>
+</div>
+<script src="/static/vxvue-chatbot.js?v=20261013" defer></script>
+{% endblock %}

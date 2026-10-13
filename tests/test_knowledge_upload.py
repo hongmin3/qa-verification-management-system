@@ -77,6 +77,43 @@ def test_a_plain_file_name_passes() -> None:
     assert safe_file_name("(사양서) VXvue 사양서1(260907).pdf") == "(사양서) VXvue 사양서1(260907).pdf"
 
 
+def test_bad_hash_does_not_destroy_previous_same_name_asset(server):
+    from hashlib import sha256
+    name = "(사양서) unchanged.txt"
+    original = b"last readable version"
+    store_asset(PRODUCT, "specification", name, original, sha256(original).hexdigest(), root=server.root)
+    with pytest.raises(UploadRejected):
+        store_asset(PRODUCT, "specification", name, b"corrupted", "0" * 64, root=server.root)
+    path = product_dir(PRODUCT, server.root) / "original" / "specification" / name
+    assert path.read_bytes() == original
+
+
+def test_same_name_parse_failure_keeps_original_and_requests_reupload(server, monkeypatch):
+    from hashlib import sha256
+    import app.core.knowledge_upload as upload
+    name = "(사양서) same.txt"
+    first = store_asset(PRODUCT, "specification", name, b"readable old", root=server.root)
+    commit(PRODUCT, {"assets": [first]}, {name: first}, storage=server.storage, root=server.root)
+    def failed(path):
+        raise ValueError("parser unavailable")
+    monkeypatch.setattr(upload, "_extract_text", failed)
+    new = store_asset(PRODUCT, "specification", name, b"readable new", root=server.root)
+    result = commit(PRODUCT, {"assets": [new]}, {name: new}, storage=server.storage, root=server.root)
+    assert result["status"] == "PARTIAL"
+    assert server_state(PRODUCT, server.root)["assets"][0]["sha256"] == sha256(b"readable old").hexdigest()
+    assert len(server.storage.active_documents("specification", PRODUCT)) == 1
+
+
+def test_partial_listing_does_not_prune_previously_uploaded_assets(server):
+    from hashlib import sha256
+    name = "(사양서) preserved.txt"
+    record = store_asset(PRODUCT, "specification", name, b"previous readable", root=server.root)
+    commit(PRODUCT, {"assets": [{"kind": "specification", "file_name": name, "sha256": record["sha256"]}]}, {name: record}, storage=server.storage, root=server.root)
+    result = commit(PRODUCT, {"assets": [], "allow_prune": False}, storage=server.storage, root=server.root)
+    assert not result["removed"]
+    assert (product_dir(PRODUCT, server.root) / "original" / "specification" / name).is_file()
+
+
 def test_hidden_and_empty_names_are_rejected() -> None:
     with pytest.raises(UploadRejected):
         safe_file_name("")

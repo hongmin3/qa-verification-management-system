@@ -2,7 +2,7 @@
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <section>
-  <h2>매뉴얼 개정 검증</h2>
+  <h2>매뉴얼 개정 검토</h2>
   <p class="hint">개정 매뉴얼 파일 하나만 끌어놓으세요. 파일 이름으로 제품·매뉴얼·버전·이전 검증을 채우고, 변경마다 최신 사양서(SRS)와 맞는지 AI가 1차 검토합니다.</p>
   <form id="revision-form" novalidate>
     <div class="dropzone mr-drop" id="revision-dropzone" data-for="revision-file" data-placeholder="개정 매뉴얼을 끌어놓거나 클릭해 고르세요 (.docx 변경 추적 / .pdf)">개정 매뉴얼을 끌어놓거나 클릭해 고르세요 (.docx 변경 추적 / .pdf)</div>
@@ -18,7 +18,7 @@
       <summary>인식 값 고치기</summary>
       <p id="edit-hint" class="hint" hidden>인식하지 못한 칸이 있습니다. 빈 칸을 채우세요.</p>
       <div class="mr-fields">
-        <label>제품<select name="product" required><option value="">선택</option>{% for p in products %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select><span class="hint">목록에 없으면 제품 설정을 먼저 추가하세요(<code>docs/PRODUCT_ONBOARDING.md</code>). <a href="/knowledge">Knowledge</a></span></label>
+        <label>제품<select name="product" required><option value="">선택</option>{% for p in products %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select><span class="hint">목록에 없으면 제품 설정을 먼저 추가하세요(<code>docs/PRODUCT_ONBOARDING.md</code>). <a href="/knowledge">검증 자료 관리</a></span></label>
         <label>매뉴얼 종류<input type="text" name="manual_name" list="manual-types-list" placeholder="목록에서 선택하거나 직접 입력" autocomplete="off" required><datalist id="manual-types-list"></datalist></label>
         <label>제품 버전<input type="text" name="target_version" list="product-versions-list" placeholder="예: 1.1.0" autocomplete="off" required><datalist id="product-versions-list"></datalist><span class="hint">V는 자동으로 붙습니다.</span></label>
         <label>이전 검증<select name="parent_revision_id"><option value="">없음 (새 검증 계보)</option>{% for r in revisions %}<option value="{{ r.id }}" data-product="{{ r.product }}" data-manual="{{ r.manual_name }}" data-version="{{ r.target_version or '' }}" data-round="{{ r.round_number }}">#{{ r.id }} · {{ r.product }} · {{ r.manual_name }} · {{ r.revision_label }}</option>{% endfor %}</select><span class="hint">같은 제품·매뉴얼·제품 버전의 후속 검증일 때만 선택하세요.</span></label>

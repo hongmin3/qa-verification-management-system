@@ -575,4 +575,3 @@ def test_accept_ai_missing_revision_returns_404(monkeypatch, tmp_path):
     monkeypatch.setattr(manual_review_router, "storage", Storage(tmp_path / "app.db"))
 
     assert TestClient(app).post("/manual-review/revisions/999/qa-decisions/accept-ai").status_code == 404
-

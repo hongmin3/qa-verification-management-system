@@ -5,7 +5,7 @@
 {% include "_claude_usage.html" %}
 
 <section>
-  <h2>지식 문서 업로드 현황 <span class="hint">담당자가 직접 올려야 하는 문서: {{ knowledge.kinds|join(', ') }}</span></h2>
+  <h2>등록 자료와 최신 상태 <span class="hint">담당자가 직접 올려야 하는 문서: {{ knowledge.kinds|join(', ') }}</span></h2>
   <p class="qa-banner" id="knowledge-latest-notice">정확한 분석을 위해 매뉴얼과 TC 가 최신이 아니라면 최신 버전을 업로드해 주세요.</p>
   {% if knowledge.available %}
   <p class="hint">마지막 수집 {{ knowledge.synced_at or '-' }} (한국 시간)</p>
@@ -31,7 +31,8 @@
     <select name="product" onchange="this.form.submit()">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
   </label></form>
   {% endif %}
-  <h2>분석 실행 <span class="hint">· {{ selected }}</span></h2>
+  <h2>점검 실행 <span class="hint">· {{ selected }}</span></h2>
+  {% include '_automation_policy.html' %}
   {% if status.claude_limit %}
   <p class="qa-banner" id="limit-banner"><b>{{ status.claude_limit.label }}</b> — {{ status.claude_limit.description }}
     그동안 변경 감지는 계속하고 AI 분석은 대기로 남깁니다.</p>
@@ -42,14 +43,15 @@
     <span>다음 자동 실행 <b>{{ status.next_run or '-' }}</b></span>
     <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
     <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
-    <button type="button" id="run-now" data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}지금 실행{% endif %}</button>
-    <button type="button" id="audit-now" title="이슈 변경 기록이 없는 기간을 지금 이슈 상태 기준으로 점검합니다" {% if status.running %}disabled{% endif %}>현재 상태 점검</button>
-    {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">실행 상세</a>{% endif %}
+    <button type="button" id="run-now" title="선택한 기간의 사양·이슈 변경과 남은 분석 대상을 점검합니다." data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}변경사항 점검하기{% endif %}</button>
+    <button type="button" id="audit-now" title="현재 이슈를 사양과 비교합니다. 변경 이력이 없는 기간에도 사용할 수 있습니다." {% if status.running %}disabled{% endif %}>현재 이슈 전체 점검</button>
+    {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">점검 기록 보기</a>{% endif %}
   </div>
   <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}
   자동 실행은 TC·매뉴얼을 보지 않습니다.
-  <b>현재 상태 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
+  <b>현재 이슈 전체 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
 
+  {% include "_run_progress.html" %}
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}
   <div class="qa-stats">
@@ -65,7 +67,7 @@
   <h2>최신 분석 결과</h2>
   <form method="get" action="/qa-agent/period" class="inline-form">
     <input type="hidden" name="product" value="{{ selected }}">
-    기간 조회 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
+    기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
   {% macro result_card(item) %}
     <div class="qa-card">
@@ -94,13 +96,13 @@
 <section class="qa-section">
   <h2>최근 실행</h2>
   <div class="table-wrap"><table class="history">
-    <thead><tr><th>실행 ID</th><th>결과</th><th>시작</th><th>변경</th><th>Finding</th><th></th></tr></thead>
+    <thead><tr><th>실행 ID</th><th>결과</th><th>시작</th><th>변경</th><th>검토 항목</th><th></th></tr></thead>
     <tbody>
     {% for run in runs %}
       <tr><td class="mono">{{ run.id }}</td><td><span class="pill {{ run.status }}">{{ run.status_label }}</span></td>
           <td class="mono">{{ kst(run.started_at) }}</td>
           <td>{% for name, count in (run.summary.events or {}).items() %}{{ event_labels.get(name, name) }} {{ count }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}</td>
-          <td>{{ run.summary.findings or 0 }}</td><td><a href="/qa-agent/runs/{{ run.id }}">실행 상세</a></td></tr>
+          <td>{{ run.summary.findings or 0 }}</td><td><a href="/qa-agent/runs/{{ run.id }}">점검 기록 보기</a></td></tr>
     {% else %}
       <tr><td colspan="6">실행 기록이 없습니다.</td></tr>
     {% endfor %}
@@ -111,52 +113,19 @@
 <script>
 (function () {
   const button = document.getElementById('run-now');
+  const audit = document.getElementById('audit-now');
+  const progress = QARunProgress(button.dataset.product);
   const message = document.getElementById('run-message');
-  if (!button) return;
-  const product = button.dataset.product;
-  async function poll() {
-    const response = await fetch('/qa-agent/status?product=' + encodeURIComponent(product));
-    if (!response.ok) return;
-    const data = await response.json();
-    if (data.last_run) {
-      document.getElementById('last-run').textContent = data.last_run.started;
-      const pill = document.getElementById('last-status');
-      pill.textContent = data.last_run.status_label;
-      pill.className = 'pill ' + data.last_run.status;
-    }
-    // 프로세스가 잠금을 만들기 전에 읽은 "실행 중 아님"은 끝났다는 뜻이 아니다. 한 번 실행 중을 본 뒤에만 끝으로 본다.
-    if (data.running) seenRunning = true;
-    waited += 1;
-    const finished = seenRunning && !data.running;
-    button.disabled = data.running || (button.dataset.started && !finished && waited < 12);
-    button.textContent = data.running ? '실행 중…' : '지금 실행';
-    if (finished && button.dataset.started) location.reload();
-    else if (data.running || (button.dataset.started && waited < 12)) setTimeout(poll, 5000);
-  }
-  let seenRunning = false, waited = 0;
-  const auditButton = document.getElementById('audit-now');
-  async function start(url, startedText) {
-    button.disabled = true; if (auditButton) auditButton.disabled = true;
-    const body = new FormData(); body.append('product', product);
+  function start(url) {
+    const body = new FormData(); body.append('product', button.dataset.product);
     body.append('since', document.getElementById('run-since').value);
     body.append('until', document.getElementById('run-until').value);
-    const response = await fetch(url, {method: 'POST', body});
-    const data = await response.json().catch(() => ({}));
-    if (response.status === 202) {
-      message.textContent = startedText + (data.warning ? ' ' + data.warning : '');
-      button.dataset.started = '1';
-      setTimeout(poll, 3000);
-    } else {
-      message.textContent = data.detail || '실행하지 못했습니다.';
-      button.disabled = false; if (auditButton) auditButton.disabled = false;
-    }
+    return progress.launch(url, body, message);
   }
-  button.addEventListener('click', () => start('/qa-agent/runs', '실행을 시작했습니다.'));
-  if (auditButton) auditButton.addEventListener('click', () => {
-    if (!confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) return;
-    start('/qa-agent/issue-audit', '현재 상태 점검을 시작했습니다.');
+  button.addEventListener('click', () => start('/qa-agent/runs'));
+  audit.addEventListener('click', () => {
+    if (confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) start('/qa-agent/issue-audit');
   });
-  {% if status.running %}setTimeout(poll, 5000);{% endif %}
 })();
 </script>
 {% endblock %}

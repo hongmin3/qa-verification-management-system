@@ -17,12 +17,15 @@
 | **서버에 올리기** | [배포 가이드](DEPLOYMENT.md) |
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
-| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·진행·결과](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검토](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
+| **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
+| **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
-| **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
+| **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) · 챗봇 운영·지식·예약·실제 CLI 확인 결과는 [progress](../progress.md) |
 | **할당량 소진 알림 설정** | [배포 후 테스트 §3.8](POST_DEPLOY_TESTS.md) → `scripts/test_notification.py` |
-| **모델을 바꿀지 판단하기** | [구조 §10](QA_AGENT_ARCHITECTURE.md) → `scripts/compare_models.py` |
+| **현재 AI 실행 경로와 모델을 확인하기** | [QA 점검 구조](QA_AGENT_ARCHITECTURE.md) · [모델 설정 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) |
 | **옛 추천 평가의 보관 상태 확인** | [추천 평가 종료 안내](EVALUATION.md) |
 | **새 기능을 추가하기** | [공용 아키텍처](SHARED_PLATFORM_ARCHITECTURE.md) |
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |
@@ -30,14 +33,15 @@
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
 | **2026-10-13 후속 작업·다른 세션용 프롬프트(서버 실행 오류·진행 표시·남은 일)** | [후속 작업 프롬프트](local/CONTINUE_2026-10-13.md) |
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
-| **2026-10-13 AI 모델·추론 정도 화면 설정 계획** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) (미착수, 접근 제한 방식 결정 필요) |
+| **AI 모델·추론 정도 화면 설정** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) · [SPEC REQ-AICALL-007](../SPEC.md) (서버 안에서만 저장, 외부는 읽기 전용) |
+| **등록된 Excel 사양서 읽기** | [SPEC REQ-PARSE-010](../SPEC.md) · 등록·동기화된 XLSX의 모든 시트·행과 원문 위치를 분석에 사용 |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
 | **운영 서버 반영 계획(2026-10-02 서버 상태·배포·되돌리기, 미실행)** | [운영 서버 반영 계획](local/DEPLOY_PLAN_2026-10-02.md) |
 | **운영 서버 주소·경로·재기동 절차(사내 정보)** | [운영 로컬 메모](local/OPERATIONS_LOCAL.md) · 2026-09-09 노출 사고 기록은 [보안 사고 메모](local/SECURITY_INCIDENT_2026-09-09.md). 비공개 저장소에만 있다 |
 | **AI 제공자(Claude CLI / Gemini) 바꾸기** | [SPEC REQ-AICALL-005](../SPEC.md) → `config.yaml` 의 `ai.provider` |
-| **QA Agent 점검을 서버에 설치·운영하기** (예약·공휴일·한도·기간 실행) | [QA Agent 점검 엔진](modules/daily-qa.md) |
+| **QA Agent 점검을 서버에 설치·운영하기** (일일·주간·중지·공휴일·한도·기간 실행) | [QA Agent 점검 엔진](modules/daily-qa.md) |
 | **AI 점검의 보안 통제를 설명하기** | [AI 점검 보안 통제](SECURITY_AI_AGENT.md) |
 
 ## 사용법은 앱 안에 있다
@@ -48,10 +52,11 @@
 | 주소 | 내용 |
 |---|---|
 | `/` | 허브 — 기능 선택 |
-| `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간 조회·지금 실행·한도 안내, 단일 이슈 분석) |
-| `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
+| `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간별 결과·변경사항 점검하기·중단·자동 점검 모드·한도 안내) |
+| `/vxvue-chatbot/guide` | VXvue AI 챗봇 사용법 (대화·첨부 10개·근거·갱신 상태) |
+| `/manual-review/guide` | 매뉴얼 개정 검토 사용법 |
 | `/knowledge/guide` | Knowledge 사용법 (제품 상태 보기, 자동·수동 자료, 파일 교체, 문제 상태 대처, 새 제품 추가) |
-| `/cost-dashboard/guide` | 비용 대시보드 사용법 (지표 해석, 절감 기법) |
+| `/cost-dashboard/guide` | AI 사용량 사용법 (지표 해석, 절감 기법) |
 | `/qa-agent/rules` | 규칙 절별 구현현황과 Skill별 규칙 주입량 |
 | `/manual-hub/` | 매뉴얼 서버 (하위 서비스) |
 | `/config/status` | API Key 설정 여부와 일일 토큰 사용량 (Key 값은 반환하지 않음) |
@@ -80,9 +85,9 @@
 | [SPEC.html](SPEC.html) | 공통 키트 기준 사양(`../SPEC.md`)과 변경 이력을 사람이 읽기 쉽게 만든 페이지. `SPEC.md`나 `CHANGELOG.md`를 고친 뒤 `node .project-check/render-spec-html.js .`로 재생성 |
 | [SPEC_CODE_MISMATCH.md](SPEC_CODE_MISMATCH.md) | `SPEC.md` 와 코드가 다른 곳 목록. 항목마다 코드를 고칠지, 사양을 고칠지, 사용자가 정할지를 적는다. 고친 항목 아래에는 `해결 <날짜>:` 줄이 붙는다 |
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
-| [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 9단계 파이프라인 |
+| [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 흐름, 일일 점검 실측·재시도 수정과 다음 절감 방안 |
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 하위 서비스 통합까지 |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 실행 중인 작업 차단·사용자 sudo 재시작, 하위 서비스 통합까지 |
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |
@@ -99,8 +104,8 @@
 
 | 문서 | 내용 |
 |---|---|
-| [qa-agent.md](modules/qa-agent.md) | QA Agent — Issue 검증 범위, Gate, Evidence, 설계 결정 |
-| [manual-review.md](modules/manual-review.md) | 매뉴얼 개정 검증 — 흐름, Human Review Gate, 설정 |
+| [qa-agent.md](modules/qa-agent.md) | QA Agent 화면·실행 상태·결과·공용 자료와 폐기 경계 |
+| [manual-review.md](modules/manual-review.md) | 매뉴얼 개정 검토 — 흐름, Human Review Gate, 설정 |
 
 ### `services/` — 하위 서비스
 

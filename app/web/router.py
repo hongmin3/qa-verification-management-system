@@ -15,6 +15,7 @@ from app.modules.daily_qa.router import router as daily_qa_router
 from app.modules.knowledge.router import router as knowledge_router
 from app.modules.manual_review.router import router as manual_review_router
 from app.modules.qa_agent.router import router as qa_agent_router
+from app.modules.vxvue_chatbot.router import router as vxvue_chatbot_router
 
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -125,4 +126,5 @@ def build_router() -> APIRouter:
     api.include_router(qa_agent_router, prefix="/qa-agent")
     api.include_router(cost_dashboard_router)
     api.include_router(daily_qa_router, prefix="/daily-qa")
+    api.include_router(vxvue_chatbot_router, prefix="/vxvue-chatbot")
     return api

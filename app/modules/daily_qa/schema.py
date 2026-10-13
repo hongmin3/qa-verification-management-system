@@ -15,9 +15,9 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 #: 개편 전 Skill (옛 Finding 표시·옛 결과 검증용). 새 실행은 SKILL_B·SKILL_C 를 돌리지 않는다.
 SKILL_B = "vxvue-spec-change-impact"
@@ -123,12 +123,35 @@ class Evidence(BaseModel):
     #: 작업 입력으로 받은 참조 번호 (`spec:<조각>`, 댓글 번호). 코드가 입력과 대조한다.
     ref: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def comment_location_from_ref(cls, value: Any) -> Any:
+        # 댓글 번호 자체가 입력의 위치다. 알려진 번호인지는 근거 검증 단계가 대조한다.
+        # 빠진 필드만 보완하며 명시한 위치·다른 출처·빈 ref를 추측으로 바꾸지 않는다.
+        if isinstance(value, dict) and value.get("source_type") == "comment" and "location" not in value:
+            ref = value.get("ref")
+            if isinstance(ref, str) and ref.strip():
+                return {**value, "location": ref}
+        return value
+
 
 #: 검증 TC 관점 (REQ-QAINTEL-013 · REQ-QAINTEL-016). 빈 값은 개편 전 초안이다.
 DRAFT_PERSPECTIVES = (
     "DIRECT_FIX", "DIRECT_SPEC", "REGRESSION", "STATE_TRANSITION", "PERSISTENCE", "BOUNDARY", "NEGATIVE",
     "INTEGRATION", "CONFIGURATION", "ENVIRONMENT",
 )
+
+#: QA 규칙 §17. 기존 TC와 이슈 Expected 충돌을 별도 분석 결과로 기록한다.
+EXPECTED_CONFLICT_CLASSES = (
+    "Issue만 수정 필요", "기존 TC 수정 필요", "Issue + TC 모두 수정 필요", "사양 확인 필요",
+)
+
+
+class TcExpectedConflict(BaseModel):
+    # 알 수 없는 분류도 먼저 받는다. evidence_validation이 원문을 기록하고 제외한다.
+    classification: str
+    reason: str = Field(min_length=1)
+    issue_id: str = Field(min_length=1)
 
 
 class DraftTc(BaseModel):

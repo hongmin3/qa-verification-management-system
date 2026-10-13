@@ -2,7 +2,7 @@
 
 > 상위 문서: [README](../../README.md) · [문서 지도](../README.md) · 사양: [QA Intelligence 사양](../../specs/qa-intelligence.md) `REQ-QAINTEL-*`, [SPEC](../../SPEC.md) `REQ-DAILY-*`, `NFR-SEC-001` · 보안: [AI 점검 보안 통제](../SECURITY_AI_AGENT.md) · 새 제품: [제품 추가](../PRODUCT_ONBOARDING.md)
 
-운영 서버가 평일 아침마다 스스로 돌리는 **변경 탐지 기반 QA 점검**이다. Polarion 에서 SRS 와 이슈를
+운영 서버가 제품별 일일·주간 설정에 따라 돌리는 **변경 탐지 기반 QA 점검**이다. Polarion 에서 SRS 와 이슈를
 **전부** 읽어 어제 스냅샷과 비교하고, 바뀐 것(Change Event)만 골라 Claude Skill 로 분석한다.
 바뀐 것이 없으면 Claude 를 한 번도 부르지 않는다. 결과는 `/qa-agent` 대시보드와 요약 메일로 본다.
 사람의 승인·거절 화면은 없다. 결과는 참고 초안이고, Polarion·원본 TC 에 옮기는 일은 사람이 한다.
@@ -14,18 +14,19 @@
 
 ```flow
 앱 내장 스케줄러(제품마다 평일 07:30, 공휴일 건너뜀) -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
-대시보드 [지금 실행] -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
+대시보드 [변경사항 점검하기] -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
 분리 프로세스 -> 제품 잠금 -> Polarion 읽기(GET) -> SRS·이슈 스냅샷 -> 어제 스냅샷과 비교 -> Change Event 저장
 Change Event 저장 -(분석이 필요한 이벤트 없음)-> NO_CHANGE(Claude 0회)
 Change Event 저장 -> 분석 5종 작업 묶음 -> Claude CLI(제품별 격리 작업 폴더, Skill) -> 근거 검증 -> Finding 저장
-Finding 저장 -> 초안 Excel(FIXED 이슈·사양 변경) -> 요약 메일
-Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
+Finding 저장 -> 요약 메일(자동 점검 켜짐일 때)
+Finding 상세의 수동 요청 -> 기존 TC 검토·검증 TC 초안
+Finding 저장 -> /qa-agent 대시보드·기간별 결과·Finding 상세
 ```
 
 | 파일 | 역할 |
 |---|---|
 | `app/modules/daily_qa/pipeline.py` | 실행 순서, 기간 실행, 한도 중단, 단계 상태 (REQ-QAINTEL-006·027) |
-| `app/modules/daily_qa/issue_audit.py` | 이슈 기록이 없는 기간의 현재 상태 점검: 묶음 나누기, 요약 카드, SRS 단위 작업 묶기 (REQ-QAINTEL-030) |
+| `app/modules/daily_qa/issue_audit.py` | 이슈 기록이 없는 기간의 현재 이슈 전체 점검: 묶음 나누기, 요약 카드, SRS 단위 작업 묶기 (REQ-QAINTEL-030) |
 | `app/modules/daily_qa/product_adapter.py` | 제품 설정 → 공통 모델(`ProductProfile`), 필드 이름·연구소 결과 값 변환 (REQ-QAINTEL-002) |
 | `app/modules/daily_qa/polarion.py` | 읽기 전용 Polarion 클라이언트 — GET 만 있다 |
 | `app/modules/daily_qa/collector.py` | SRS·이슈 전체 수집, 이슈 댓글 읽기·미룸 (REQ-QAINTEL-003·004) |
@@ -41,7 +42,7 @@ Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
 | `app/modules/daily_qa/checklist_xlsx.py` | 제품 Checklist 형식 초안 Excel (REQ-QAINTEL-018) |
 | `app/modules/daily_qa/scheduled_jobs.py` | 제품별 예약 `qa_agent_<slug>`, 한도 catch-up 감시 |
 | `app/modules/daily_qa/router.py` | 옛 `/daily-qa/*` 주소를 새 주소로 307 연결 (메일에 남은 링크용) |
-| `app/modules/qa_agent/dashboard.py`, `router.py` | `/qa-agent` 대시보드·상태 JSON·[지금 실행]·기간 조회·상세 |
+| `app/modules/qa_agent/dashboard.py`, `router.py` | `/qa-agent` 대시보드·상태 JSON·[변경사항 점검하기]·기간별 결과·상세 |
 
 ## 제품별로 나뉘는 것
 
@@ -66,7 +67,7 @@ Finding 저장 -> /qa-agent 대시보드·기간 조회·Finding 상세
 | Spec 판정 이슈 분석 | 연구소 결과가 사양대로·결함 아님인 이슈의 변경 | `qa-spec-decision-analysis` |
 | 새 댓글 분석 | 진행 상태 알림이 아닌 새 댓글 | `qa-comment-analysis` |
 | 사양 변경 요약 | 새 SRS·바뀐 SRS | `qa-spec-change-summary` |
-| TC 점검 | 사람이 사양 변경 상세에서 요청 | `qa-spec-coverage-analysis` |
+| 기존 TC 검토 | 사람이 사양 변경 상세에서 요청 | `qa-spec-coverage-analysis` |
 | 검증 TC 초안 | 사람이 수정 완료 이슈 상세에서 요청 | `qa-verification-tc-draft` |
 
 상태만 바뀐 이슈, 심각도·버전 같은 속성만 바뀐 이슈, 없어진 SRS·이슈는 기록만 남기고 AI 를 부르지 않는다.
@@ -89,7 +90,7 @@ QA 규칙 원문은 저장소에 넣지 않는다. 지식 폴더에서 수집된
 |---|---|---|
 | SRS, 이슈(댓글 포함) | Polarion. 서버가 점검할 때 직접 읽는다 | 매 실행 |
 | TC Excel, 매뉴얼, QA 규칙·지침 프롬프트 | 서버의 지식 사본. 담당자 PC 의 `QA_ProductKnowledge_Sync` 가 올린다 | 평일 10:00 업로드 뒤 다음 점검부터 |
-| 등록된 사양서 문서 조각 | 공용 Knowledge(`knowledge_documents.py`) | 문서를 등록·교체할 때 |
+| 등록된 사양서 문서 조각 | 검증 자료 관리(`knowledge_documents.py`) | 문서를 등록·교체할 때 |
 
 PC 쪽 예약 작업과 하루 순서는 [자동화 아키텍처 §7.1·§7.2](../AUTOMATION.md) 에 있다.
 
@@ -166,8 +167,18 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.intelligence.comment_fetch_limit` | `300` | 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에 |
 | `daily_qa.intelligence.comment_min_chars` | `15` | 이보다 짧은 댓글은 의미 없는 댓글로 본다 |
 | `daily_qa.intelligence.event_max_attempts` | `3` | 같은 이벤트의 분석 실패가 이 횟수면 포기(`abandoned`) |
-| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 세션 한도 초기화가 이 시간 안이면 초기화 몇 분 뒤 한 번 다시 돈다 |
+| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 일일 모드에서 세션 한도 초기화 뒤 자동 재개 조건. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
 | `daily_qa.intelligence.use_knowledge_documents` | `true` | 등록된 사양서 문서 조각도 후보로 찾는다 |
+
+## 자동 점검 모드
+
+제품별 정책은 대시보드의 [자동 분석·메일 사용]·[현재 검증 진행 중]으로 저장한다(REQ-QAINTEL-038). 둘 다 켜면 매 업무일, 검증 기간만 끄면 매주 첫 업무일에 분석과 메일을 수행한다. 자동 점검을 끄면 자동 실행과 메일을 중지한다. 처음 저장하기 전에는 기존 일일 모드다.
+
+주간 실행일은 한국 시간의 월~금에서 등록 공휴일과 추가 휴일을 뺀 첫 날짜다. 놓친 예약은 그 실행일 당일에만 만회한다. 주간 사용량 한도 대기는 다음 주 예약 또는 [변경사항 점검하기]에서 이어 간다. 일일 한도 자동 재개는 유지한다.
+
+설정은 제품별 공용 DB에 저장하며 일반 사내 웹에서 변경할 수 있다. 서버의 `daily_qa.schedule.enabled: false`는 우선 적용하므로 담당자 PC를 화면 설정으로 자동 실행 서버로 바꾸지 않는다.
+
+자동 중지 중에도 [변경사항 점검하기]은 분석할 수 있다. 진행 중인 분석은 계속 저장하지만 메일 직전에 중지 설정을 확인하면 전송을 생략한다. 현재 실행을 끝내려면 [분석 중단]을 사용한다. 세부 조작은 앱 안 `/qa-agent/guide`에 있다.
 
 ## 운영
 
@@ -191,9 +202,9 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 종료 코드: `0` 성공(변경사항 없음·기준 스냅샷 생성 포함), `1` 일부·전체 실패, `2` 설정 오류, `3` 다른 실행이 진행 중.
 Polarion 설정이 없어 수집을 건너뛴 실행은 변경을 확인하지 못했으므로 `변경사항 없음` 이 아니라 `일부 실패`(종료 코드 `1`)다(REQ-QAINTEL-007).
 
-## 이슈 기록이 없는 기간의 현재 상태 점검 (REQ-QAINTEL-030)
+## 이슈 기록이 없는 기간의 현재 이슈 전체 점검 (REQ-QAINTEL-030)
 
-이슈 스냅샷은 첫 매일 실행부터 쌓이므로 그 전 기간의 이슈 변화는 알 수 없다. 대시보드 [현재 상태 점검] 또는
+이슈 스냅샷은 첫 매일 실행부터 쌓이므로 그 전 기간의 이슈 변화는 알 수 없다. 대시보드 [현재 이슈 전체 점검] 또는
 `scripts/run_daily_qa.py --issue-audit --since YYYY-MM-DD --until YYYY-MM-DD` 는 지금 이슈 전체를 그 기간의 SRS
 변화와 맞춰 본다. 판정 카드에는 "현재 상태 기준(기간 이력 없음)" 표시가 붙는다.
 
@@ -206,7 +217,7 @@ Polarion 설정이 없어 수집을 건너뛴 실행은 변경을 확인하지 �
 ## 과거 SRS 스냅샷 가져오기 (REQ-QAINTEL-029)
 
 ALM-QA-Automation 의 사양서 자동화(`apps/srs-spec`)가 날짜마다 남긴 SRS 스냅샷을 이 시스템 스냅샷으로 바꿔 넣는다.
-그러면 이 시스템을 쓰기 전 기간도 [지금 실행]의 기간 실행으로 분석할 수 있다. 그 도구가 있는 PC 에서 돌린다.
+그러면 이 시스템을 쓰기 전 기간도 [변경사항 점검하기]의 기간 실행으로 분석할 수 있다. 그 도구가 있는 PC 에서 돌린다.
 
 ```text
 .venv/Scripts/python.exe scripts/import_alm_srs_history.py --product VXvue --dry-run

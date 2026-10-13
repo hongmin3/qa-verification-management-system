@@ -1,25 +1,36 @@
 {% extends "base.html" %}
+{% block page_title %}QA 업무 지원{% endblock %}
+{% block header_title %}QA 업무 지원{% endblock %}
+{% block header_subtitle %}필요한 업무를 선택하세요. 자세한 사용 방법은 각 화면의 [사용법]에서 확인할 수 있습니다.{% endblock %}
 {% block header_nav %}{% from "_nav.html" import top_nav %}{{ top_nav("home") }}{% endblock %}
 {% block content %}
 <section>
-  <h2>QA 자동화</h2>
-  <p>수행할 검증 업무를 선택하세요. 각 기능 화면의 <b>사용법</b> 메뉴에 상세 안내가 있습니다.</p>
+  <h2>QA 업무 지원</h2>
+  <p>필요한 업무를 선택하세요. 자세한 사용 방법은 각 화면의 [사용법]에서 확인할 수 있습니다.</p>
   <div class="grid">
+    <a class="app-card" href="/vxvue-chatbot">
+      <h3>VXvue AI 챗봇</h3>
+      <p>최신 지침과 지식 문서로 사양을 찾고, TC와 Generator를 검토하며, Issue·메일 초안을 대화로 정리합니다.</p>
+    </a>
     <a class="app-card" href="/qa-agent">
-      <h3>QA Agent — 변경 탐지 기반 QA 분석</h3>
-      <p>평일 아침 Polarion 의 SRS·이슈 전체를 어제와 비교해 의미 있는 변경만 골라, 최신 사양·과거 이슈·TC 를 근거로 분석하고 검증 TC 초안을 만듭니다. 이슈 하나를 골라 깊게 보는 단일 이슈 분석도 여기 있습니다.</p>
+      <h3>사양·이슈 변경 점검</h3>
+      <p>Polarion의 사양과 이슈 변경을 분석해 QA가 확인할 사항과 관련 근거를 정리합니다. 결과 화면에서 기존 TC 검토와 검증 TC 초안을 요청할 수 있습니다.</p>
     </a>
     <a class="app-card" href="/manual-review">
-      <h3>매뉴얼 개정 검증</h3>
-      <p>Word 변경 이력과 최신 SRS·Release Scope를 비교해 매뉴얼 수정 및 누락 의심 항목을 검토합니다.</p>
+      <h3>매뉴얼 개정 검토</h3>
+      <p>개정 매뉴얼을 최신 사양과 배포 범위에 비교해 수정하거나 추가할 내용을 찾습니다.</p>
     </a>
     <a class="app-card" href="/knowledge">
-      <h3>Knowledge — 사양서·TC·규칙 관리</h3>
-      <p>위 기능들이 공유하는 제품별 사양서·Test Case·QA 규칙 문서를 등록하고, 제품 지식 폴더의 최신본을 수집합니다.</p>
+      <h3>검증 자료 관리</h3>
+      <p>분석에 사용할 사양서·TC·매뉴얼·QA 규칙을 등록하고 최신 자료를 확인합니다.</p>
     </a>
     <a class="app-card" href="/cost-dashboard">
-      <h3>비용 대시보드</h3>
-      <p>AI 호출 수·토큰 사용량·캐시 적중을 기능별로 집계합니다.</p>
+      <h3>AI 사용량</h3>
+      <p>AI 호출·토큰 사용량과 기존 분석의 재사용 현황을 확인합니다. 비용은 환산 추정치로 구분해 표시합니다.</p>
+    </a>
+    <a class="app-card" href="/settings/ai">
+      <h3>AI 분석 설정</h3>
+      <p>작업별 모델과 추론 정도를 확인합니다. 설정 변경은 서버에 직접 접속한 관리자만 가능합니다.</p>
     </a>
     {# config.yaml `services.*`에 URL이 설정된 하위 서비스. 핵심 앱과 다른 프로세스로
        뜨는 별도 배포 단위라 링크로만 연결한다. #}

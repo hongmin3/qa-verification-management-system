@@ -249,6 +249,7 @@ def send_report(subject: str, text_body: str, html_body: str = "", recipients: t
     수신자를 넘기지 않으면 `NOTIFY_EMAIL_TO` 로 보낸다. 반환값: `sent` / `not_configured` / `failed`.
     """
     result: dict = {"status": "not_configured"}
+    config = None
     try:
         config = load_email_settings()
         targets = tuple(recipients) or config.recipients
@@ -267,8 +268,18 @@ def send_report(subject: str, text_body: str, html_body: str = "", recipients: t
         logger.info("report_sent recipients=%d", len(targets))
         return result
     except Exception as exc:
-        result = {"status": "failed", "error": type(exc).__name__}
-        logger.warning("report_failed error_type=%s", type(exc).__name__)
+        detail = getattr(exc, "smtp_error", "")
+        if isinstance(detail, bytes):
+            detail = detail.decode("utf-8", errors="replace")
+        detail = str(detail)
+        if config:
+            for secret in (config.username, config.password, config.sender, *config.recipients):
+                if secret:
+                    detail = detail.replace(secret, "[REDACTED]")
+        detail = mask_text(detail)[0].replace("\r", " ").replace("\n", " ")[:500]
+        error = ": ".join(str(part) for part in (type(exc).__name__, getattr(exc, "smtp_code", ""), detail) if part)
+        result = {"status": "failed", "error": error}
+        logger.warning("report_failed error=%s", error)
         return result
 
 

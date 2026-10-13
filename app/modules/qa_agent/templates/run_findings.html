@@ -1,0 +1,22 @@
+{% extends "module_base.html" %}
+{% block content %}
+{% include "_intel_style.html" %}
+<section>
+  <h2>이 실행의 모든 결과 ({{ total }}건)</h2>
+  <p class="hint">실행 번호 {{ run.id }} · {{ page }} / {{ pages }} 페이지</p>
+  <p><a href="/qa-agent/runs/{{ run.id }}">실행 결과로 돌아가기</a></p>
+  <div class="qa-cards">
+  {% for item in cards %}
+    <div class="qa-card"><span class="level {{ item.level_class }}">{{ item.level }}</span>
+      <h4>[{{ item.subject }}] {{ item.kind }}</h4><div>{{ item.summary }}</div>
+      {% if item.todos %}<ul>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ul>{% endif %}
+      <a href="/qa-agent/findings/{{ item.id }}">상세보기</a></div>
+  {% else %}<p>이번 실행에서 만든 결과가 없습니다.</p>{% endfor %}
+  </div>
+  <nav aria-label="결과 페이지">
+    {% if page > 1 %}<a href="?page={{ page - 1 }}">이전 50개</a>{% endif %}
+    <span>{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a href="?page={{ page + 1 }}">다음 50개</a>{% endif %}
+  </nav>
+</section>
+{% endblock %}

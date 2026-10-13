@@ -46,7 +46,8 @@ def _harness(tmp_path, monkeypatch, login):
     monkeypatch.setattr(pipeline, "claude_login_status", lambda command="claude", **_: login)
     made = []
 
-    def fake_runner(command, token, timeout, model="", effort=""):
+    def fake_runner(command, token, timeout, model="", effort="", cancel_check=None):
+        assert callable(cancel_check)
         made.append(token)
         return FakeRunner(h._produce)
     monkeypatch.setattr(pipeline, "ClaudeRunner", fake_runner)
