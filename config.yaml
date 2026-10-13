@@ -16,6 +16,7 @@ vxvue_chatbot:
   max_turns: 24
   max_budget_usd: 0
   prompt_cache_ttl: ""
+  reviewed_skill_code_hash: "9e23f741f51c92709d3324868f129e90aa52b9402db9138bf18df29abd38d279"
   message_char_limit: 30000
   max_pending_jobs: 20
   max_file_bytes: 52428800

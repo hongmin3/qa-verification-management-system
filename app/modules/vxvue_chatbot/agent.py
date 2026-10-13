@@ -114,17 +114,22 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     module = Path(__file__).parent
     system = load_prompt("vxvue_chatbot").system_instruction
     system += "\n\n" + (module / "skill" / "SKILL.md").read_text(encoding="utf-8")
-    system += "\n\n" + (module / "skill" / "references" / "qa-work-principles.md").read_text(encoding="utf-8")
-    system += "\n\n" + (module / "skill" / "references" / "generator-integration.md").read_text(encoding="utf-8")
+    if snapshot.get("skill_text"):
+        system += "\n\n" + snapshot["skill_text"]
+    else:
+        system += "\n\n" + (module / "skill" / "references" / "qa-work-principles.md").read_text(encoding="utf-8")
+        system += "\n\n" + (module / "skill" / "references" / "generator-integration.md").read_text(encoding="utf-8")
     system += "\n\n# 서버의 최신 지침 프롬프트·QA 규칙 전문\n" + snapshot["rules"]
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
-    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k != "rules"}, "attachments": attachments, "job_id": job_id}, ensure_ascii=False), encoding="utf-8")
+    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")
     prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)))
     prompt = prompt[:-1] + ',"source_failures":' + json.dumps(snapshot.get("failures", []), ensure_ascii=False, separators=(",", ":")) + "}"
+    if snapshot.get("skill_metadata"):
+        prompt = prompt[:-1] + ',"skill_code_review_needed":' + json.dumps(snapshot["skill_metadata"]["code_hash"] != settings.get("vxvue_chatbot.reviewed_skill_code_hash", "")) + "}"
     prompt, history_mask = mask_text(prompt)
     (workdir / "input.json").write_text(prompt, encoding="utf-8")
     token = settings.secrets.claude_code_oauth_token or ""

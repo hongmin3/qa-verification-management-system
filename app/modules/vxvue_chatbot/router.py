@@ -21,6 +21,7 @@ from app.core.uploads import save_upload
 from app.core.usage import daily_token_status
 from app.core.security_filter import mask_text
 from . import service
+from .knowledge import skill_status
 
 def no_store(response: Response):
     response.headers["Cache-Control"] = "no-store"
@@ -61,7 +62,8 @@ def owner(request):
 
 def public_job(job):
     knowledge = json.loads(job.get("knowledge_json") or "{}")
-    return {k: job[k] for k in ("id", "conversation_id", "assistant_message_id", "status", "stage", "error", "created_at", "updated_at")} | {"knowledge": {"id": knowledge.get("id"), "failures": knowledge.get("failures", []), "documents": len(knowledge.get("documents", []))}}
+    metadata = knowledge.get("skill_metadata") or {}
+    return {k: job[k] for k in ("id", "conversation_id", "assistant_message_id", "status", "stage", "error", "created_at", "updated_at")} | {"knowledge": {"id": knowledge.get("id"), "failures": knowledge.get("failures", []), "documents": len(knowledge.get("documents", [])), "skill_version": metadata.get("version"), "skill_code_review_needed": knowledge.get("skill_code_review_needed", False)}}
 
 
 def public_chat(chat):
@@ -275,5 +277,6 @@ def knowledge_status():
             "last_success_at": successful["synced_at"] if successful else None,
             "next_retry_at": retry, "stale": stale,
             "excluded": excluded, "failed_documents": failed,
+            "skill": skill_status(get_settings().root, get_settings().get("vxvue_chatbot.reviewed_skill_code_hash", "")),
             "schedule": "매일 08:00 KST · 실패 시 15분마다 재시도",
-            "documents": sum(len(store.active_documents(kind, "VXvue")) for kind in ("specification", "manual", "testcase", "qa_rules", "instruction_prompt"))}
+            "documents": sum(len(store.active_documents(kind, "VXvue")) for kind in ("specification", "manual", "testcase")) + len([a for a in manifest.get("assets", []) if a.get("kind") in ("qa_rules", "instruction_prompt", "skill_instruction")])}

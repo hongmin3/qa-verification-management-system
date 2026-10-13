@@ -47,9 +47,11 @@ def run_job(store, settings, job, cancel_event):
             raise InterruptedError()
         if daily_token_status(store)["exceeded"]:
             raise ValueError("오늘 AI 사용량 한도에 도달했습니다. 한도가 풀린 뒤 다시 요청해주세요.")
-        snapshot = prepare_knowledge(store, settings.root / "data" / "vxvue_chatbot" / "snapshots")
+        snapshot = prepare_knowledge(store, settings.root / "data" / "vxvue_chatbot" / "snapshots", project_root=settings.root)
         # Private location is only persisted; the router returns the ID and status, not paths.
-        knowledge = {k: v for k, v in snapshot.items() if k != "rules"}
+        knowledge = {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}
+        if snapshot.get("skill_metadata"):
+            knowledge["skill_code_review_needed"] = snapshot["skill_metadata"]["code_hash"] != settings.get("vxvue_chatbot.reviewed_skill_code_hash", "")
         store.vxchat_progress(job["id"], "자료 검색", knowledge=knowledge)
         attachments = [a for message in chat["messages"] for a in message["attachments"]]
         if cancel_event.is_set():

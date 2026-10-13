@@ -36,7 +36,7 @@ if ($old) {
     Export-ScheduledTask -TaskName $old.TaskName -TaskPath $old.TaskPath |
         Set-Content -LiteralPath (Join-Path $backup ($taskName + '.xml')) -Encoding Unicode
 }
-$workerSources = @($script, (Join-Path $sourceRoot 'app\core\knowledge_retry.py'), (Join-Path $sourceRoot 'app\core\knowledge_push.py'))
+$workerSources = @($script, (Join-Path $sourceRoot 'app\core\knowledge_retry.py'), (Join-Path $sourceRoot 'app\core\knowledge_push.py'), (Join-Path $sourceRoot 'app\core\skill_knowledge.py'))
 $fingerprint = ($workerSources | ForEach-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash }) -join ''
 $hasher = [Security.Cryptography.SHA256]::Create()
 $workerDigest = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($fingerprint))).Replace('-', '').ToLower()

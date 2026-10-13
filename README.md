@@ -8,6 +8,8 @@
 
 챗봇은 서버 Claude CLI와 VXvue Skill을 사용하며, 동기화한 최신 지침 프롬프트 TXT와 QA 규칙 MD 전문을 적용합니다. 사용법은 앱의 `/vxvue-chatbot/guide`에 있습니다.
 
+로컬 Skill의 지침·참조 MD도 기존 지식폴더의 자동 생성 문서로 동기화합니다. 업무 규칙은 그 폴더에서 계속 관리하고, 검색 도구 변경은 검증 후 배포합니다. [Skill 동기화 기준](docs/VXVUE_SKILL_SYNC_PLAN.md)을 참고하세요.
+
 Opus medium을 유지하면서 공통 지침 캐시와 묶음 조회로 반복 입력을 줄입니다. [챗봇 사용량 절감 계획](docs/VXVUE_CHATBOT_COST_PLAN.md)에 적용 방법과 측정 기준을 정리했습니다.
 
 ---

@@ -139,7 +139,9 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
 관리자 PowerShell에서 `scripts/install_product_knowledge_schedule.ps1 -ProjectRoot <운영 프로젝트>`를 실행한다. `-CheckOnly`는 설치 전에 입력 경로와 서버 주소를 확인한다. 기존 작업의 XML을 백업하고 같은 작업을 바꾼다.
 
-설치 스크립트는 수집 실행기·재시도 처리·업로드 처리 세 파일의 해시로 실행본을 만든다. 임시 worktree 경로가 예약에 남지 않으며, 코드 수정 후에는 설치 스크립트를 다시 실행해 실행본을 갱신한다. 예약이 재시도 시각보다 먼저 실행되면 `--wait-retry`가 남은 시간만 기다려 한 주기를 더 미루지 않게 한다. 서버 주소·상태·로그는 실행본 밖 운영 프로젝트 설정과 `data/knowledge_retry/`, `output/logs/product_knowledge_retry.log`에서 관리한다.
+설치 스크립트는 수집 실행기·재시도 처리·업로드 처리·Skill 지침 내보내기 네 파일의 해시로 실행본을 만든다. 임시 worktree 경로가 예약에 남지 않으며, 코드 수정 후에는 설치 스크립트를 다시 실행해 실행본을 갱신한다. 예약이 재시도 시각보다 먼저 실행되면 `--wait-retry`가 남은 시간만 기다려 한 주기를 더 미루지 않게 한다. 서버 주소·상태·로그는 실행본 밖 운영 프로젝트 설정과 `data/knowledge_retry/`, `output/logs/product_knowledge_retry.log`에서 관리한다.
+
+VXvue는 업로드 전에 활성 로컬 Skill의 최신 설치 캐시에서 지침·참조 MD를 읽어 같은 지식폴더의 `[Skill 지침] VXvue.md`에 내보낸다. 사용자 QA 규칙과 프롬프트 원본은 고치지 않는다. 검색 코드와 MCP 설정은 해시만 기록하며 변경은 별도 검증 후 배포한다(REQ-VXVUECHATBOT-008). 새 종류를 받을 수 있도록 서버와 운영 PC 코드를 반영한 뒤 예약 실행본을 갱신한다. 자세한 기준은 [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md)에 있다.
 
 기존 09:00 수집과 09:40 사양 동기화는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
 
