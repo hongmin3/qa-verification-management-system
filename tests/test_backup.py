@@ -62,6 +62,22 @@ def test_backup_includes_daily_qa_snapshots_but_not_knowledge_copy(monkeypatch, 
     assert verify_backup(archive)["status"] == "ok"
 
 
+def test_backup_keeps_chat_attachments_and_cited_original_versions(monkeypatch, tmp_path):
+    # Validates: REQ-VXVUECHATBOT-002
+    root, settings = _project(tmp_path)
+    monkeypatch.setattr("scripts.backup_data.get_settings", lambda: settings)
+    paths = ["attachments/a.txt", "snapshots/version/original/source.md", "snapshots/version/manifest.json", "snapshots/version/index.sqlite3"]
+    for name in paths:
+        path = root / "data" / "vxvue_chatbot" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("synthetic", encoding="utf-8")
+    archive = create_backup(tmp_path / "backups")
+    with zipfile.ZipFile(archive) as bundle:
+        names = set(bundle.namelist())
+    assert all("data/vxvue_chatbot/" + name in names for name in paths[:3])
+    assert "data/vxvue_chatbot/" + paths[3] not in names
+
+
 def test_old_backups_are_pruned_but_the_newest_is_kept(tmp_path):
     # Validates: REQ-OPS-002
     from app.core.retention import prune_backups

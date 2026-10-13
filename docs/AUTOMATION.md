@@ -126,32 +126,29 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 (`app/core/knowledge_push.py` → `app/core/knowledge_upload.py`). TC Excel, 매뉴얼, QA 규칙,
 지침 프롬프트가 이 경로로 서버에 간다. QA Agent 점검(`docs/modules/daily-qa.md`)도 이 사본을 쓴다.
 
-2026-09-28 에 작업 스케줄러에 등록했다. 등록 직후 두 번 실행해 결과 0, 서버의 QA 규칙이
-Rev1.12 → Rev1.17 로 바뀐 것을 확인했다.
+매일 08:00 KST에 갱신하고 실패하면 15분마다 재시도한다. 설치·실행 확인 결과는 `progress.md`에 기록한다.
 
 | 설정 | 값 |
 |---|---|
-| 트리거 | Weekly, 월~금 10:00 (KST) — 사양서 동기화(09:40) 뒤 |
-| 실행 | `.venv\Scripts\python.exe scripts\sync_product_knowledge.py --product VXvue --upload-to http://10.13.0.222:24357` |
-| LogonType | `S4U` (위 사양서 동기화와 같다) |
-| StartWhenAvailable / MultipleInstances / 제한 시간 | `True` / `IgnoreNew` / 1시간 |
+| 시간 | 매일 08:00 KST, 15분 간격 확인, PC 시작 때 놓친 일정 만회 |
+| 실행 | 운영 프로젝트 `data/knowledge_retry/worker-<해시>/retry_product_knowledge.py --project-root <운영 프로젝트> --product VXvue --upload-to <서버 주소>` |
+| 성공 후 | 제품·대상 서버별 완료 날짜를 저장하고 그날 추가 업로드를 멈춘다 |
+| 실패·부분 실패 | 다음 재시도 시각을 저장한다. 서버는 이전 자료를 계속 사용한다 |
+| LogonType | 기존 예약의 S4U 계정을 유지한다 |
+| StartWhenAvailable / MultipleInstances / 제한 시간 | `True` / `IgnoreNew` / 2시간 |
 
-**사양서 동기화 뒤에 도는 이유.** 사양서 PDF 는 두 경로로 서버에 간다. ALM 이 같은 PDF 를 크롤러
-output 과 지식 폴더에 모두 배포하기 때문이다(2026-09-28 에 6건 모두 바이트가 같은 것을 확인했다).
+관리자 PowerShell에서 `scripts/install_product_knowledge_schedule.ps1 -ProjectRoot <운영 프로젝트>`를 실행한다. `-CheckOnly`는 설치 전에 입력 경로와 서버 주소를 확인한다. 기존 작업의 XML을 백업하고 같은 작업을 바꾼다.
 
-- 지식 업로드는 같은 바이트의 다른 등록을 지운다(`register_collected`). 그래서 뒤에 돌면 사양서가
-  바뀐 날에도 두 벌이 20분 안에 1건으로 정리된다.
-- 사양서 동기화의 옛 리비전 정리는 이름이 같은 문서를 건너뛴다. 그래서 순서가 반대면 중복이 다음
-  날까지 남는다.
+설치 스크립트는 수집 실행기·재시도 처리·업로드 처리 세 파일의 해시로 실행본을 만든다. 임시 worktree 경로가 예약에 남지 않으며, 코드 수정 후에는 설치 스크립트를 다시 실행해 실행본을 갱신한다. 예약이 재시도 시각보다 먼저 실행되면 `--wait-retry`가 남은 시간만 기다려 한 주기를 더 미루지 않게 한다. 서버 주소·상태·로그는 실행본 밖 운영 프로젝트 설정과 `data/knowledge_retry/`, `output/logs/product_knowledge_retry.log`에서 관리한다.
 
-실행 결과는 서버 `/knowledge` 화면의 VXvue "마지막 수집" 줄과 작업 스케줄러의 `LastTaskResult` 로
-본다. 미리 보기만 하려면 같은 명령에 `--dry-run` 을 붙인다(서버에 보내지 않는다).
+기존 09:00 수집과 09:40 사양 동기화는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
 
 ### 7.2 하루 실행 순서 (평일)
 
 ```flow
 07:30 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
-09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 09:40 PC 사양서 동기화 -> 10:00 PC 지식 폴더 업로드
+08:00 PC 지식 폴더 업로드 -> 실패 시 15분마다 재시도 -> 서버 지식 사본
+09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 09:40 PC 사양서 동기화 -> 서버 신규 사양서 등록
 ```
 
 서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않고, Claude 세션 한도에 걸리면 초기화 5분 뒤 한 번 다시 돈다(10분마다 확인하는 `qa_agent_limit_catchup`). PC 쪽 작업이 멈추면 서버의

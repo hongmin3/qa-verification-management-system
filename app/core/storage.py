@@ -7,14 +7,16 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
+from app.core.vxchat_storage import VxChatStorageMixin
 
 
-class Storage(DailyQaStorageMixin):
+class Storage(DailyQaStorageMixin, VxChatStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
         self._initialize_daily_qa()
+        self._initialize_vxchat()
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)

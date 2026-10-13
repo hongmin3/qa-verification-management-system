@@ -71,6 +71,7 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
     # 옛 판까지 지운다(SPEC_CODE_MISMATCH 5절 3번). 서버는 받은 파일을 스스로 다시 읽고, 못 읽으면 옛 판을 지킨다.
     assets = list(manifest.get("assets", []))
     manifest_payload = {
+        "allow_prune": collected.status == "SUCCESS",
         "source_dir": manifest.get("source_dir", ""),
         "counts": manifest.get("counts", {}),
         "uploaded_from": socket.gethostname(),
@@ -120,6 +121,7 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
             uploaded[file_name] = response.json()
             sent_bytes += path.stat().st_size
 
+        manifest_payload["allow_prune"] = manifest_payload["allow_prune"] and not failed
         commit = client.post(
             f"{target_url.rstrip('/')}/knowledge/product-knowledge/commit",
             data={

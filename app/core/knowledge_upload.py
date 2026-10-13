@@ -25,7 +25,10 @@ PC 가 꺼져 있어도 분석이 멈추지 않는다 — 마운트였다면 그
 from __future__ import annotations
 
 import json
+import hashlib
 import unicodedata
+import tempfile
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -114,7 +117,7 @@ def server_state(product: str, root: Path | None = None) -> dict:
         path = base / "original" / kind / file_name
         if not path.is_file():
             continue
-        assets.append({"file_name": file_name, "kind": kind, "sha256": entry.get("sha256", "")})
+        assets.append({"file_name": file_name, "kind": kind, "sha256": _sha256(path)})
     return {"product": config.product, "slug": product_slug(config.product), "assets": assets}
 
 
@@ -135,13 +138,8 @@ def store_asset(product: str, kind: str, file_name: str, data: bytes, sha256: st
     safe_name = safe_file_name(file_name)
     target = product_dir(config.product, root) / "original" / kind / safe_name
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(data)
-
-    # 무결성 확인은 **쓴 뒤** 한다. 전송 중 잘린 파일이 디스크에 남아 다음 실행에서
-    # "이미 있음"으로 건너뛰어지는 것이 가장 나쁘다 — 어긋나면 바로 지운다.
-    digest = _sha256(target)
+    digest = hashlib.sha256(data).hexdigest()
     if sha256 and digest != sha256:
-        target.unlink(missing_ok=True)
         raise UploadRejected(f"전송된 내용이 손상됐습니다 (sha256 불일치): {safe_name}")
 
     record = {
@@ -153,19 +151,38 @@ def store_asset(product: str, kind: str, file_name: str, data: bytes, sha256: st
         "normalized_path": "",
         "normalized_chars": 0,
     }
-    try:
-        text = _extract_text(target)
-    except Exception as exc:
-        # 텍스트 추출 실패가 업로드 실패는 아니다. 원본은 서버에 남지만, 텍스트가 없으면 검색에
-        # 쓸 수 없으므로 문서로 등록되지 않는다(collected_assets 가 error 자산을 거른다).
-        # 같은 문서의 읽을 수 있던 이전 판은 commit 이 유지한다(_keep_previous_readable, REQ-SYNC-002).
-        record["error"] = f"정규화 실패 {type(exc).__name__}: {exc}"
-        return record
-
     base = product_dir(config.product, root)
     normalized_target = base / "normalized" / kind / f"{Path(safe_name).stem}{_normalized_suffix(Path(safe_name).suffix.lower())}"
     normalized_target.parent.mkdir(parents=True, exist_ok=True)
-    normalized_target.write_text(text, encoding="utf-8")
+    staging = base / ".staging"
+    staging.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=staging) as folder:
+        staged = Path(folder) / safe_name
+        staged.write_bytes(data)
+        try:
+            text = _extract_text(staged)
+        except Exception as exc:
+            # Keep a readable previous same-name file. A new unreadable asset remains available
+            # for diagnosis only when no previous version exists.
+            if not target.exists():
+                staged.replace(target)
+            record["error"] = f"정규화 실패 {type(exc).__name__}: {exc}"
+            return record
+        normalized = Path(folder) / "normalized"
+        normalized.write_text(text, encoding="utf-8")
+        previous = Path(folder) / "previous"
+        existed = target.exists()
+        if existed:
+            shutil.copy2(target, previous)
+        staged.replace(target)
+        try:
+            normalized.replace(normalized_target)
+        except OSError:
+            if existed:
+                previous.replace(target)
+            else:
+                target.unlink(missing_ok=True)
+            raise
     record["normalized_path"] = str(normalized_target.relative_to(base)).replace("\\", "/")
     record["normalized_chars"] = len(text)
     return record
@@ -304,7 +321,19 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
 
     kept_previous = _keep_previous_readable(base, kept, previous_assets, missing_records)
     keep_keys = {(record["kind"], record["file_name"]) for record in kept}
-    removed = _prune_orphans(base, keep_keys)
+    allow_prune = manifest.get("allow_prune", True) is True and not missing
+    if not allow_prune:
+        for old in previous_assets:
+            key = (old.get("kind"), old.get("file_name"))
+            if key not in keep_keys and key[0] in ALLOWED_KINDS and key[1]:
+                try:
+                    name = safe_file_name(key[1])
+                except UploadRejected:
+                    continue
+                if (base / "original" / key[0] / name).is_file():
+                    kept.append(old)
+                    keep_keys.add(key)
+    removed = _prune_orphans(base, keep_keys) if allow_prune else []
     unregistered = _forget_pruned_documents(base, removed, storage, config.product)
 
     payload = {
@@ -333,7 +362,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
     if kept_previous:
         detail += f" / 읽지 못한 새 판 대신 이전 판 유지 {len(kept_previous)}건: {', '.join(kept_previous[:3])}"
     return {
-        "status": "PARTIAL" if (missing or failures) else "SUCCESS",
+        "status": "PARTIAL" if (missing or failures or not allow_prune) else "SUCCESS",
         "detail": detail,
         "assets": len(kept),
         "removed": removed,

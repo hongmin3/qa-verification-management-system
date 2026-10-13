@@ -35,6 +35,7 @@ QA 담당자 화면 요청 -> 이슈·개정 매뉴얼 -> 사양서·TC·지식 
 평일 07:30 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
+QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
 결과 형식 검증 -(형식 오류 또는 한도)-> 작업 실패·건너뜀 기록 -> 요약 메일
 ```
@@ -127,14 +128,14 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 07:30 (평일, 공휴일 제외) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 일일 점검 | Polarion 을 직접 읽어 어제와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-SCHED-002 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
 | 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
-| 10:00 (평일) | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`) | 지식 폴더 업로드(`scripts/sync_product_knowledge.py`) | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 최신본을 서버 지식 사본으로 올린다. 다음 날 07:30 점검이 이것을 쓴다 | 서버 `/knowledge` 화면의 "마지막 수집" | 없음 | REQ-SYNC-002 |
+| 08:00 (매일), 미완료 시 15분마다 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 
 ```flow
 07:30 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
 09:00 PC: SRS 수집·PDF 배포(REQ-SYNC-003) -> 완료 PDF 를 동기화 출력과 지식 폴더에 배포
 09:40 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
-10:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 서버 지식 사본 갱신 -> 다음 날 07:30 점검이 사용
+08:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 실패 시 15분마다 재시도 -> 서버 지식 사본 갱신 -> 다음 채팅·다음 날 점검이 사용
 ```
 
 순서에는 까닭이 있다.
@@ -143,7 +144,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 
   이유: 수집이 끝나기 전에 돌면 이전 수집본을 올릴 수 있다.
 
-- 07:30 일일 점검은 전날 10:00 에 올린 지식 사본을 쓴다. 그날 아침 바뀐 TC·매뉴얼은 다음 날 점검에 들어간다.
+- 07:30 일일 점검은 전날 정상적으로 올린 지식 사본을 쓴다. 그날 아침 바뀐 TC·매뉴얼은 다음 날 점검에 들어간다.
 
 > **참고** 담당자 PC 의 예약 작업은 "예약된 시작 시간을 놓치면 가능한 대로 빨리 실행"이 켜져 있다. PC 가 그 시각에 꺼져 있었으면 켜진 뒤에 돈다. 서버의 일일 점검은 늦게 깨어나도 1시간 안이면 돈다(REQ-SCHED-002). 공휴일에는 예약 점검을 띄우지 않고 앱 로그만 남긴다(REQ-QAINTEL-001).
 
@@ -3100,7 +3101,7 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 | SRS 전체, 이슈 전체 | Polarion (점검 때 서버가 직접 읽는다) | 매 실행 |
 | 전날 스냅샷 | `data/daily_qa/snapshots/<slug>/srs/`, `.../issues/` | 매 정상 실행 |
 | 분석을 기다리는 변경 이벤트 | 이벤트 표(`qa_change_events`)의 `pending`·`failed` 줄 | 매 실행 |
-| TC Excel, 매뉴얼 텍스트, QA 규칙·지침 프롬프트 | 서버의 지식 사본(`data/product_knowledge/<제품>/`) | 담당자 PC 가 올릴 때 (PC 의 예약 작업, 평일 10:00) |
+| TC Excel, 매뉴얼 텍스트, QA 규칙·지침 프롬프트 | 서버의 지식 사본(`data/product_knowledge/<제품>/`) | 담당자 PC 가 올릴 때 (PC 의 예약 작업, 매일 08:00·실패 후 15분 재시도) |
 | 영향성평가 Checklist | 지식 사본의 TC 가운데 파일 이름에 제품 설정의 표시 글자(VXvue 는 `영향성평가`)가 들어간 첫 파일 | 위와 같다 |
 | 사람이 답한 질문 | 이 시스템의 질문 표(`daily_qa_questions`). 개편 전에 남긴 답만 있다 | 바뀌지 않는다 |
 
@@ -4076,6 +4077,8 @@ REQ-QAINTEL-019 가 대신한다.
 | 작업 폴더 자료 | 작업 입력 말고도 오늘 SRS 전체·TC 전체 색인·매뉴얼 텍스트(모두 마스킹본)를 둔다. 첨부 이미지와 PDF·Excel 원본 파일은 두지 않는다. Claude 가 그중 읽은 부분이 외부로 나간다 |
 | 오류 문장 | CLI 오류 출력에서 토큰 문자열을 지운다 |
 
+> **예외** VXvue AI 챗봇(REQ-VXVUECHATBOT-004)은 기본 도구를 모두 끄고 전용 읽기 MCP만 연결한다. 설정 출처는 비우고 shell·웹·쓰기는 허용하지 않는다. 지침·대화·검색·첨부의 글은 같은 마스킹을 적용한다. 첨부 이미지와 PDF 페이지는 이미지 분석을 위해 Claude로 전달하며 글 마스킹을 자동 적용하지 못한다. 업로드 전 민감한 값을 가린 자료를 사용한다.
+
 - `--bare` 는 쓰지 않는다.
 
 이유: 이 모드는 `CLAUDE_CODE_OAUTH_TOKEN` 을 읽지 않아 회사 Team 계정 토큰으로 인증할 수 없다.
@@ -4767,7 +4770,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 - 사용법은 문서 파일이 아니라 이 화면에 둔다. 화면이 바뀌면 사용법도 같이 고친다.
 - 리비전 정규식, 논리 문서를 가리는 방법, 네트워크 마운트 절차 같은 개발·운영 기술 설명은 이 화면에 두지 않는다. 그런 설명은 `docs/PRODUCT_ONBOARDING.md` 와 이 SPEC 에 한 번만 둔다.
-- CLI 예시는 운영 방식(`--upload-to http://<서버 주소>:24357`, 평일 10:00)을 보인다(REQ-SYNC-002).
+- CLI 예시는 운영 방식(`--upload-to http://<서버 주소>:24357`, 매일 08:00)을 보인다(REQ-SYNC-002).
 
 ### REQ-KNOW-018 제품별 자료 출처 프로필
 
@@ -6080,15 +6083,21 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 이유: 서버가 PC 폴더를 마운트하는 방법은 쓰지 않는다. PC 가 Wi-Fi DHCP 라 주소가 바뀌고, 사내 DNS 에 이름이 없으며, 외근 때는 망에 없기 때문이다. 폴더를 볼 수 있는 쪽이 밀어 올리고, 서버는 마지막 업로드본을 계속 쓴다.
 
-**언제** 담당자 PC 의 작업 스케줄러 `QA_ProductKnowledge_Sync` 가 평일 10:00 에 부른다.
+**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 매일 08:00 KST와 15분 간격 확인으로 설정한다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
 
 ```text
-python scripts/sync_product_knowledge.py --product VXvue --upload-to http://<서버 주소>:24357
+python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<서버 주소>:24357
 ```
 
-10:00 은 사양서 동기화(09:40) 뒤다.
+1. 제품·대상 서버별 상태와 운영체제 파일 잠금으로 중복 실행을 막는다.
+2. 그날 동기화가 성공했으면 이후 확인에서는 전송하지 않는다.
+3. `PARTIAL`, `FAILED`, `NEEDS_CONFIG`면 15분 후 다시 시도한다.
+4. 수일 동안 PC가 꺼졌으면 마지막 완료 날짜와 비교해 최신 자료를 한 번 수집한다.
+5. 실패 중에는 서버의 이전 자료를 계속 사용한다. 성공하면 다음 날 08:00까지 대기한다.
 
-이유: 순서가 반대면 사양서 동기화의 "이름이 같으면 지우지 않음" 규칙 때문에 같은 사양서가 다음 날까지 두 번 등록된 채 남는다.
+기존 09:00 사양 수집과 09:40 사양 동기화는 유지한다. 같은 PDF가 두 경로로 등록되면 챗봇 지식 판에서 같은 바이트의 원본을 한 번만 검색한다. 09:40 새 등록도 다음 요청에 반영한다.
+
+**설치** `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 작업을 바꾼다. 수집·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 예약이 재시도 시각보다 조금 일찍 실행되면 남은 시간만 기다렸다 시도한다(`--wait-retry`). 별도 중복 작업을 만들지 않는다.
 
 **입력**
 
@@ -6124,7 +6133,7 @@ python scripts/sync_product_knowledge.py --product VXvue --upload-to http://<서
 2. 종류는 `qa_rules`, `instruction_prompt`, `specification`, `manual`, `testcase` 만 받는다.
 3. 빈 파일과 200MB 넘는 파일은 거절한다.
 4. 파일 이름을 검증한다(NFR-SEC-003). 경로 조각이 있으면 떼어 내지 않고 거절한다.
-5. `original/<종류>/<이름>` 에 쓴 뒤 sha256 을 계산한다. 보낸 값과 다르면 파일을 지우고 거절한다.
+5. 임시 파일의 sha256을 먼저 검사한다. 보낸 값과 다르면 임시 파일만 지우고 거절한다. 정상 원본이 같은 이름으로 있으면 보존한다.
 6. 텍스트를 서버가 직접 뽑아 `normalized/` 에 쓴다. 실패해도 업로드는 받고, 기록에 `error`("정규화 실패 …")를 남긴다.
 
 이유: PC 가 뽑은 텍스트를 쓰면 PC 쪽 코드 버전에 묶인다.
@@ -6136,7 +6145,7 @@ python scripts/sync_product_knowledge.py --product VXvue --upload-to http://<서
 3. 받은 목록에서 종류가 맞고, 이름 검증을 통과하고, 서버에 파일이 있는 자산만 남긴다. 파일이 없으면 "업로드 누락"으로 센다.
 4. 이번에 올리지 않은(서버가 이미 가진) 파일은 지난 기록의 텍스트 경로와 "읽지 못함" 표시를 이어받는다.
 5. 새 판을 읽지 못했거나 받지 못했으면, 같은 논리 문서의 읽을 수 있던 이전 판을 남길 목록에 되살린다.
-6. 남길 목록에 없는 원본·텍스트 파일을 지운다.
+6. PC 수집·업로드가 모두 성공하고 누락이 없을 때만 목록 밖 파일을 정리한다. 부분 실패의 목록(`allow_prune=false`)은 이전 서버 자료를 유지하고 `PARTIAL`로 표시한다.
 7. 수집 기록을 새로 쓴다(올린 PC 이름 포함).
 8. 등록한다(REQ-KNOW-012). 같은 바이트의 문서가 다른 경로로 이미 등록돼 있으면(예: 사양서 동기화가 올린 같은 PDF) 지식 사본 쪽 하나만 남긴다. 6번에서 지운 파일을 가리키는 등록과 파싱 저장본도 지운다.
 9. 동기화 기록을 결과 상태로 닫는다.
@@ -6177,7 +6186,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | 서버에 제품 설정 없음 | ①②③ 모두 거절 | "config/products/ 에 '<제품>' 설정이 없습니다. 서버에 제품 설정을 먼저 배포하세요."(400) |
 | 알 수 없는 종류 | ② 거절 | "알 수 없는 자산 종류입니다"(400) |
 | 경로가 든 이름·숨김 파일·허용 밖 확장자 | ② 거절, ③ 에서는 그 항목만 무시 | "파일 이름에 경로가 들어 있습니다" 등(400) |
-| 전송 중 손상(sha256 다름) | 파일을 지우고 거절 | "전송된 내용이 손상됐습니다 (sha256 불일치)"(400) |
+| 전송 중 손상(sha256 다름) | 임시 파일만 지우고 거절, 기존 원본 보존 | "전송된 내용이 손상됐습니다 (sha256 불일치)"(400) |
 | `manifest`·`uploaded` 가 JSON 객체가 아님 | ③ 거절 | 400 |
 | 확정 중 예외 | 동기화 기록 `FAILED` | "확정 실패: …"(500) |
 
@@ -7836,6 +7845,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | 기능 | 사양 문서 | 상태 |
 |---|---|---|
 | QA Intelligence Agent | [specs/qa-intelligence.md](specs/qa-intelligence.md) | draft |
+| VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
 
 <!-- spec-index: end -->
 
@@ -8802,7 +8812,7 @@ REQ-SYNC-003을 `tests/test_srs_crawler.py`와 `tests/srs_crawler/`의 합성 �
 
 ### TEST-SYNC-002
 
-REQ-SYNC-002를 `tests/test_knowledge_upload.py` 로 검증한다.
+REQ-SYNC-002를 `tests/test_knowledge_upload.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`로 검증한다. 08:00 KST, 실패 후 15분 대기, 성공 후 정지, PC 종료 뒤 만회와 대상별 상태를 함께 확인한다.
 
 - 서버가 같은 sha256 으로 가진 파일은 다시 보내지 않는다.
 - 사양서 동기화가 먼저 올린 같은 바이트의 PDF 는 지식 사본 쪽 1건으로 정리된다.
@@ -9295,7 +9305,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DEPLOY-004 | `deploy/nginx/qa-platform.conf` | TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
 | REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
 | REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
-| REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/sync_product_knowledge.py`, `app/core/product_knowledge.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
+| REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |
 | NFR-SEC-004 | `deploy/nginx/qa-platform.conf` | TEST-SEC-004 | implemented |

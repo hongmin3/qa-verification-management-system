@@ -18,6 +18,8 @@
 | **운영 서버에 뭐가 떠 있는지 알기** | [서버 3개 안내](SERVERS.md) |
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
 | **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·단일 이슈 분석](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md) · [매뉴얼 개정 검증](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
+| **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
+| **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) |
@@ -49,6 +51,7 @@
 |---|---|
 | `/` | 허브 — 기능 선택 |
 | `/qa-agent/guide` | QA Agent 사용법 (대시보드·기간 조회·지금 실행·한도 안내, 단일 이슈 분석) |
+| `/vxvue-chatbot/guide` | VXvue AI 챗봇 사용법 (대화·첨부 10개·근거·갱신 상태) |
 | `/manual-review/guide` | 매뉴얼 개정 검증 사용법 |
 | `/knowledge/guide` | Knowledge 사용법 (제품 상태 보기, 자동·수동 자료, 파일 교체, 문제 상태 대처, 새 제품 추가) |
 | `/cost-dashboard/guide` | 비용 대시보드 사용법 (지표 해석, 절감 기법) |
