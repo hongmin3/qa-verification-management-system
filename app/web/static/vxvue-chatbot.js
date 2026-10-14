@@ -59,20 +59,32 @@
   }
   const JOB_STAGES=['대기 중','자료 검색 준비','자료 검색','원문 확인','답변 작성'];
   let reached=-1;
-  function progressCard(active,compact){
-    const card=$('job-progress-template').content.firstElementChild.cloneNode(true);
+  function updateCard(card,active,compact){
     const index=JOB_STAGES.indexOf(active.stage);if(index>reached)reached=index;
     card.classList.toggle('compact',!!compact);card.querySelector('#job-stage').textContent=active.stage;
     card.querySelector('#job-time').textContent=Math.max(0,Math.floor((Date.now()-new Date(active.created_at).getTime())/1000))+'초';
     card.querySelectorAll('.job-steps li').forEach((li,i)=>{li.classList.toggle('current',li.dataset.stage===active.stage);li.classList.toggle('done',i<reached&&li.dataset.stage!==active.stage);});
-    card.querySelector('.job-cancel').onclick=async()=>{try{await api('/jobs/'+active.id+'/cancel',{method:'POST'});}catch(e){showError(e);}};
-    return card;
   }
-  function messageNode(message){
+  function progressCard(active,compact){
+    const card=$('job-progress-template').content.firstElementChild.cloneNode(true);
+    const cancel=card.querySelector('.job-cancel');
+    cancel.onclick=async()=>{cancel.disabled=true;cancel.textContent='중지 중';try{await api('/jobs/'+active.id+'/cancel',{method:'POST'});}catch(e){cancel.disabled=false;cancel.textContent='중지';showError(e);}};
+    updateCard(card,active,compact);return card;
+  }
+  // 진행 중에는 카드 요소를 그대로 두고 나머지 메시지 부분만 바꾼다(스피너·중지 버튼 유지).
+  function refreshRunningMessage(existing,message){
+    const card=existing.querySelector('.job-progress');
+    if(!card){existing.replaceWith(messageNode(message));return;}
+    updateCard(card,job,!!message.content&&job.stage==='답변 작성');
+    const fresh=messageNode(message,true),parts=[...fresh.children],label=parts.shift();
+    [...existing.children].forEach(child=>{if(child!==card)child.remove();});
+    existing.insertBefore(label,card);card.after(...parts);
+  }
+  function messageNode(message,withoutCard){
     const node=document.createElement('article');node.className='chat-message '+message.role;node.dataset.messageId=message.id;
     const label=document.createElement('div');label.className='message-label';label.innerHTML=message.role==='user'?'나':'<span class="mini-mark">V</span> VXvue AI';node.append(label);
     const running=message.role==='assistant'&&job&&job.assistant_message_id===message.id&&['QUEUED','RUNNING'].includes(job.status);
-    if(running)node.append(progressCard(job,!!message.content&&job.stage==='답변 작성'));
+    if(running&&!withoutCard)node.append(progressCard(job,!!message.content&&job.stage==='답변 작성'));
     const body=document.createElement('div');body.className='message-body';if(message.role==='user')body.textContent=message.content;else body.innerHTML=markdown(message.content);if(!running||message.content)node.append(body);
     if(message.attachments?.length){ const list=document.createElement('div');list.className='message-files';message.attachments.forEach(a=>{const link=document.createElement('a');link.href=base+'/attachments/'+a.id;link.textContent='↧ '+a.name;list.append(link);});node.append(list); }
     if(message.role==='assistant' && message.content){
@@ -90,7 +102,7 @@
     stream=new EventSource(base+'/jobs/'+value.id+'/events');
     stream.onmessage=event=>{
       const data=JSON.parse(event.data);job=data.job;chat.jobs=chat.jobs.map(saved=>saved.id===job.id?job:saved);
-      const message=chat.messages.find(m=>m.id===job.assistant_message_id);if(message){message.content=data.message.content;message.citations=data.message.citations;const existing=$('messages').querySelector(`[data-message-id="${message.id}"]`);if(existing){const scroll=$('scroll-area'),near=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180;existing.replaceWith(messageNode(message));if(near)scroll.scrollTop=scroll.scrollHeight;}}
+      const message=chat.messages.find(m=>m.id===job.assistant_message_id);if(message){message.content=data.message.content;message.citations=data.message.citations;const existing=$('messages').querySelector(`[data-message-id="${message.id}"]`);if(existing){const scroll=$('scroll-area'),near=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180;(job&&['QUEUED','RUNNING'].includes(job.status)?refreshRunningMessage(existing,message):existing.replaceWith(messageNode(message)));if(near)scroll.scrollTop=scroll.scrollHeight;}}
       if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().then(()=>{const c=history.find(x=>x.id===current);if(c)$('chat-title').textContent=c.title;}).catch(showError);knowledgeStatus();}
     };
     stream.onerror=()=>{const ticket=selection;stopWatch();retryTimer=setTimeout(async()=>{if(current&&ticket===selection){try{await select(current);}catch(e){showError(e);setBusy(false);}}},2000);};
