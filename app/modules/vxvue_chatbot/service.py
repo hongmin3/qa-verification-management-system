@@ -59,6 +59,8 @@ def run_job(store, settings, job, cancel_event):
         result = agent.run(chat["messages"], snapshot, attachments, job["id"], settings, cancel_event,
                            lambda stage, content: store.vxchat_progress(job["id"], stage, content))
         store.vxchat_finish(job["id"], "DONE", result["text"], citations=result["citations"], usage=result["usage"], model=result["model"], masking=result.get("masking"), metrics=result.get("metrics"))
+        if result.get("title"):
+            store.vxchat_set_ai_title(job["conversation_id"], result["title"])
     except InterruptedError:
         store.vxchat_finish(job["id"], "CANCELLED", "답변 생성을 중지했습니다.")
     except Exception as exc:

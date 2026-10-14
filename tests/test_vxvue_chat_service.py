@@ -77,3 +77,16 @@ def test_queue_rechecks_daily_budget_before_calling_claude(tmp_path, monkeypatch
     service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
     stored = store.vxchat_job("owner", job["id"])
     assert stored["status"] == "FAILED" and "오늘 AI 사용량" in stored["error"]
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_service_stores_ai_title(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
+    result = {"text": "답변", "title": "Theme 설정 사양", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    got = store.vxchat_get("owner", chat["id"])
+    assert got["messages"][-1]["content"] == "답변" and "<!--" not in got["messages"][-1]["content"]
+    assert got["title"] == "Theme 설정 사양"

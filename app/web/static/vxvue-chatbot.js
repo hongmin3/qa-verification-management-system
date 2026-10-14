@@ -78,7 +78,7 @@
     stream.onmessage=event=>{
       const data=JSON.parse(event.data);job=data.job;chat.jobs=chat.jobs.map(saved=>saved.id===job.id?job:saved);$('job-stage').textContent=job.stage;
       const message=chat.messages.find(m=>m.id===job.assistant_message_id);if(message){message.content=data.message.content;message.citations=data.message.citations;const existing=$('messages').querySelector(`[data-message-id="${message.id}"]`);if(existing){const scroll=$('scroll-area'),near=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180;existing.replaceWith(messageNode(message));if(near)scroll.scrollTop=scroll.scrollHeight;}}
-      if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().catch(showError);knowledgeStatus();}
+      if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().then(()=>{const c=history.find(x=>x.id===current);if(c)$('chat-title').textContent=c.title;}).catch(showError);knowledgeStatus();}
     };
     stream.onerror=()=>{const ticket=selection;stopWatch();retryTimer=setTimeout(async()=>{if(current&&ticket===selection){try{await select(current);}catch(e){showError(e);setBusy(false);}}},2000);};
   }

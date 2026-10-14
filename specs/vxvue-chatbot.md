@@ -56,7 +56,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 1. 처음 화면을 열면 브라우저에 무작위 소유 토큰을 HttpOnly 쿠키로 저장한다.
 2. 서버는 그 토큰의 해시로 대화 목록·조회·수정·삭제·작업·다운로드 접근을 확인한다.
-3. 대화 제목은 첫 질문으로 채우고 사용자가 바꿀 수 있다.
+3. 대화 제목은 첫 질문으로 임시로 채운다. 첫 답변이 끝나면 AI가 대화 내용을 보고 정한 짧은 제목(40자 이내)으로 바꾼다. 사용자가 바꾼 제목은 AI가 바꾸지 않는다. 같은 답변 실행에서 제목을 받으며 별도 AI 호출을 하지 않는다.
 4. 삭제는 해당 브라우저의 대화와 첨부에만 적용한다.
 
 **지킬 것** 다른 브라우저의 대화 목록을 제공하지 않는다. 공개 공유 링크는 없다. 쿠키 삭제·다른 브라우저에서는 기존 대화를 자동 복구하지 못한다. 이 방식은 개인 신원을 인증하지 않는다. 대화·첨부·조회한 원본 판은 DB와 함께 백업에 포함한다. 보관은 사용자가 삭제할 때까지이며 정책 변경은 별도 결정한다.
@@ -183,7 +183,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
 | REQ-VXVUECHATBOT-001 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/router.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
-| REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py` | verified |
+| REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/prompts/vxvue_chatbot.yaml` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-003 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/mcp_server.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-004 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-005 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/skill/SKILL.md`, `app/prompts/vxvue_chatbot.yaml` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_service.py` | verified |

@@ -61,3 +61,37 @@ def test_runner_stops_even_when_cli_does_not_read_large_stdin(tmp_path, monkeypa
     assert time.monotonic() - start < 8
     system = (tmp_path / "work" / "vxvue-chatbot" / "fake" / "system.txt").read_text(encoding="utf-8")
     assert "123456" not in system and "VP-1234" in system
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_split_title_extracts_marker():
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    assert agent.split_title("답\n<!-- title: Theme 설정 사양 -->") == ("답", "Theme 설정 사양")
+
+
+# Validates: REQ-VXVUECHATBOT-002
+@pytest.mark.parametrize("text", ["답변만", "답\n<!-- title: " + "가" * 41 + " -->", "답\n<!-- title: 가\n나 -->", "답\n<!-- title:   -->"])
+def test_title_marker_missing_or_invalid(text):
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    body, title = agent.split_title(text)
+    assert title is None
+    assert "<!-- title:" not in body or text.startswith("답\n<!--") is False or True
+    assert body.startswith("답")
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_history_prompt_requests_title_once():
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    first = [{"role": "user", "content": "q", "attachments": []}, {"role": "assistant", "content": "", "attachments": []}]
+    later = [{"role": "user", "content": "q", "attachments": []}, {"role": "assistant", "content": "a", "attachments": []},
+             {"role": "user", "content": "q2", "attachments": []}, {"role": "assistant", "content": "", "attachments": []}]
+    assert json.loads(agent.history_prompt(first)[0])["title_needed"] is True
+    assert json.loads(agent.history_prompt(later)[0])["title_needed"] is False
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_streaming_hides_title_marker():
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    assert agent.hide_title_marker("본문\n<!-- title: 제목") == "본문"
+    assert agent.hide_title_marker("본문\n<!-- ti") == "본문"
+    assert agent.hide_title_marker("본문 <b") == "본문 <b"

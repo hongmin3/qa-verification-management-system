@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import os
 import queue
+import re
 import signal
 import subprocess
 import sys
@@ -71,6 +72,33 @@ def event_update(event):
     return "", ""
 
 
+TITLE_MARKER = "<!-- title:"
+_TITLE_RE = re.compile(r"[ \t]*<!--\s*title:(.*?)-->\s*$", re.S)
+
+
+def split_title(text):
+    """Remove the trailing `<!-- title: ... -->` line and return (body, title or None)."""
+    match = _TITLE_RE.search(text)
+    if not match:
+        return text, None
+    title = match.group(1).strip()
+    body = text[:match.start()].rstrip()
+    if not 1 <= len(title) <= 40 or "\n" in title or "\r" in title:
+        return body, None
+    return body, title
+
+
+def hide_title_marker(text):
+    """Cut the title marker, including a half-streamed prefix of it, from text shown while streaming."""
+    index = text.find(TITLE_MARKER)
+    if index >= 0:
+        return text[:index].rstrip()
+    for size in range(min(len(TITLE_MARKER) - 1, len(text)), 0, -1):
+        if text.endswith(TITLE_MARKER[:size]):
+            return text[:-size].rstrip()
+    return text
+
+
 def history_prompt(messages, max_chars=120000):
     picked, size = [], 0
     for message in reversed(messages):
@@ -83,7 +111,8 @@ def history_prompt(messages, max_chars=120000):
         picked.append(value)
         size += len(encoded)
     omitted = sum(bool(m["content"] or m.get("attachments")) for m in messages) - len(picked)
-    return json.dumps({"conversation": list(reversed(picked)), "omitted_older_messages": omitted}, ensure_ascii=False, separators=(",", ":")), omitted
+    title_needed = not any(m["role"] == "assistant" and m["content"] for m in messages)
+    return json.dumps({"conversation": list(reversed(picked)), "omitted_older_messages": omitted, "title_needed": title_needed}, ensure_ascii=False, separators=(",", ":")), omitted
 
 
 def stop_process(process):
@@ -191,7 +220,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
             if delta:
                 answer += delta
             if stage:
-                progress(stage, prefix + answer)
+                progress(stage, prefix + hide_title_marker(answer))
         process.wait(timeout=10)
         if process.returncode or not result or result.get("is_error"):
             if result.get("subtype") in ("error_max_turns", "error_max_budget_usd"):
@@ -201,6 +230,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
         final = str(result.get("result") or answer).strip()
         if not final:
             raise cli_failure("Claude 답변을 받지 못했습니다. 다시 요청해주세요.", result, tool_calls, model)
+        final, title = split_title(final)
         references = []
         if trace.is_file():
             seen = set()
@@ -210,7 +240,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
                 if key not in seen:
                     references.append(item)
                     seen.add(key)
-        return {"text": prefix + final, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
+        return {"text": prefix + final, "title": title, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
     finally:
         stop_process(process)
         sender.join(timeout=2)
