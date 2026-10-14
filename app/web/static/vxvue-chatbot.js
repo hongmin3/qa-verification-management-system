@@ -41,7 +41,7 @@
   function clearError(){ $('error-banner').hidden=true; }
   function sidebar(open){ $('sidebar').classList.toggle('open',open); $('sidebar-backdrop').hidden=!open; }
   function stopWatch(){ if(retryTimer)clearTimeout(retryTimer);retryTimer=null; if(stream) stream.close(); stream=null; if(timer) clearInterval(timer); timer=null; }
-  function setBusy(value){ $('send-button').disabled=value; $('attach-button').disabled=value; $('job-status').hidden=!value; }
+  function setBusy(value){ $('send-button').disabled=value; $('attach-button').disabled=value; }
   function renderFiles(){ $('attached-files').replaceChildren(); files.forEach((file,i)=>{ const node=document.createElement('div'); node.className='attached-file'; const name=document.createElement('span'); name.textContent=file.name; const remove=document.createElement('button'); remove.type='button'; remove.textContent='×'; remove.setAttribute('aria-label',file.name+' 제거'); remove.onclick=()=>{files.splice(i,1);renderFiles();}; node.append(name,remove);$('attached-files').append(node); }); $('file-count').textContent=files.length?`${files.length}/10개 · 파일당 ${fileMiB}MiB`:`최대 10개 · 파일당 ${fileMiB}MiB`; }
   function addFiles(items){ if(files.length+items.length>10){showError(new Error('첨부파일은 한 번에 최대 10개입니다.'));return;} if(items.some(f=>f.size>maxFileBytes)){showError(new Error(`파일당 ${fileMiB}MiB까지 첨부할 수 있습니다.`));return;} files.push(...items); renderFiles(); }
   async function refreshList(){ history=await api('/conversations');renderList(); }
@@ -57,10 +57,23 @@
       row.append(open,rename,remove);nav.append(row);
     });
   }
+  const JOB_STAGES=['대기 중','자료 검색 준비','자료 검색','원문 확인','답변 작성'];
+  let reached=-1;
+  function progressCard(active,compact){
+    const card=$('job-progress-template').content.firstElementChild.cloneNode(true);
+    const index=JOB_STAGES.indexOf(active.stage);if(index>reached)reached=index;
+    card.classList.toggle('compact',!!compact);card.querySelector('#job-stage').textContent=active.stage;
+    card.querySelector('#job-time').textContent=Math.max(0,Math.floor((Date.now()-new Date(active.created_at).getTime())/1000))+'초';
+    card.querySelectorAll('.job-steps li').forEach((li,i)=>{li.classList.toggle('current',li.dataset.stage===active.stage);li.classList.toggle('done',i<reached&&li.dataset.stage!==active.stage);});
+    card.querySelector('.job-cancel').onclick=async()=>{try{await api('/jobs/'+active.id+'/cancel',{method:'POST'});}catch(e){showError(e);}};
+    return card;
+  }
   function messageNode(message){
     const node=document.createElement('article');node.className='chat-message '+message.role;node.dataset.messageId=message.id;
     const label=document.createElement('div');label.className='message-label';label.innerHTML=message.role==='user'?'나':'<span class="mini-mark">V</span> VXvue AI';node.append(label);
-    const body=document.createElement('div');body.className='message-body';if(message.role==='user')body.textContent=message.content;else body.innerHTML=markdown(message.content);node.append(body);
+    const running=message.role==='assistant'&&job&&job.assistant_message_id===message.id&&['QUEUED','RUNNING'].includes(job.status);
+    if(running)node.append(progressCard(job,!!message.content&&job.stage==='답변 작성'));
+    const body=document.createElement('div');body.className='message-body';if(message.role==='user')body.textContent=message.content;else body.innerHTML=markdown(message.content);if(!running||message.content)node.append(body);
     if(message.attachments?.length){ const list=document.createElement('div');list.className='message-files';message.attachments.forEach(a=>{const link=document.createElement('a');link.href=base+'/attachments/'+a.id;link.textContent='↧ '+a.name;list.append(link);});node.append(list); }
     if(message.role==='assistant' && message.content){
       const tools=document.createElement('div');tools.className='message-tools';const copy=document.createElement('button');copy.textContent='답변 복사';copy.onclick=async()=>{try{if(navigator.clipboard)await navigator.clipboard.writeText(message.content);else{const area=document.createElement('textarea');area.value=message.content;document.body.append(area);area.select();document.execCommand('copy');area.remove();}copy.textContent='복사됨';}catch(e){showError(new Error('복사하지 못했습니다. 답변을 내려받아 사용해주세요.'));}};tools.append(copy);
@@ -69,14 +82,14 @@
     }return node;
   }
   function renderMessages(){ const scroll=$('scroll-area'),nearBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180; $('messages').replaceChildren(...chat.messages.map(messageNode));$('welcome').hidden=chat.messages.length>0;if(nearBottom)scroll.scrollTop=scroll.scrollHeight; }
-  async function select(id){ const ticket=++selection;stopWatch();clearError();files=[];renderFiles();const received=await api('/conversations/'+id);if(ticket!==selection)return;chat=received;current=id;localStorage.setItem('vxvue-last-chat',id);$('chat-title').textContent=chat.title;renderList();renderMessages();sidebar(false);job=chat.jobs.find(j=>['QUEUED','RUNNING'].includes(j.status))||null;setBusy(!!job);if(job)watch(job);$('scroll-area').scrollTop=$('scroll-area').scrollHeight; }
+  async function select(id){ const ticket=++selection;stopWatch();clearError();files=[];renderFiles();const received=await api('/conversations/'+id);if(ticket!==selection)return;chat=received;current=id;localStorage.setItem('vxvue-last-chat',id);$('chat-title').textContent=chat.title;renderList();job=chat.jobs.find(j=>['QUEUED','RUNNING'].includes(j.status))||null;reached=-1;renderMessages();sidebar(false);setBusy(!!job);if(job)watch(job);$('scroll-area').scrollTop=$('scroll-area').scrollHeight; }
   function newChat(){ ++selection;stopWatch();current=null;chat=null;job=null;localStorage.removeItem('vxvue-last-chat');$('chat-title').textContent='새 대화';$('messages').replaceChildren();$('welcome').hidden=false;files=[];renderFiles();setBusy(false);renderList();sidebar(false);clearError();$('message-input').focus(); }
   function watch(value){
-    job=value;setBusy(true);const started=new Date(value.created_at).getTime();$('job-stage').textContent=value.stage;
-    timer=setInterval(()=>{$('job-time').textContent=Math.max(0,Math.floor((Date.now()-started)/1000))+'초';},1000);
+    job=value;setBusy(true);const started=new Date(value.created_at).getTime();
+    timer=setInterval(()=>{const clock=$('job-time');if(clock)clock.textContent=Math.max(0,Math.floor((Date.now()-started)/1000))+'초';},1000);
     stream=new EventSource(base+'/jobs/'+value.id+'/events');
     stream.onmessage=event=>{
-      const data=JSON.parse(event.data);job=data.job;chat.jobs=chat.jobs.map(saved=>saved.id===job.id?job:saved);$('job-stage').textContent=job.stage;
+      const data=JSON.parse(event.data);job=data.job;chat.jobs=chat.jobs.map(saved=>saved.id===job.id?job:saved);
       const message=chat.messages.find(m=>m.id===job.assistant_message_id);if(message){message.content=data.message.content;message.citations=data.message.citations;const existing=$('messages').querySelector(`[data-message-id="${message.id}"]`);if(existing){const scroll=$('scroll-area'),near=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180;existing.replaceWith(messageNode(message));if(near)scroll.scrollTop=scroll.scrollHeight;}}
       if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().then(()=>{const c=history.find(x=>x.id===current);if(c)$('chat-title').textContent=c.title;}).catch(showError);knowledgeStatus();}
     };
@@ -104,7 +117,6 @@
   $('attach-button').onclick=()=>$('file-input').click();$('file-input').onchange=()=>{addFiles(Array.from($('file-input').files));$('file-input').value='';};
   $('composer').ondragover=event=>event.preventDefault();$('composer').ondrop=event=>{event.preventDefault();if(!job)addFiles(Array.from(event.dataTransfer.files));};
   $('new-chat').onclick=newChat;$('history-search').oninput=renderList;$('toggle-sidebar').onclick=()=>sidebar(!$('sidebar').classList.contains('open'));$('sidebar-backdrop').onclick=()=>sidebar(false);
-  $('cancel-job').onclick=async()=>{if(job){try{await api('/jobs/'+job.id+'/cancel',{method:'POST'});}catch(e){showError(e);}}};
   document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('message-input').value=button.dataset.prompt;$('message-input').focus();});
   (async()=>{try{await refreshList();await knowledgeStatus();const saved=localStorage.getItem('vxvue-last-chat');if(saved&&history.some(c=>c.id===saved))await select(saved);}catch(e){showError(e);}})();
 })();

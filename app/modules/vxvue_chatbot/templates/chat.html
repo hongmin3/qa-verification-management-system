@@ -2,7 +2,7 @@
 {% block page_title %}VXvue AI 챗봇{% endblock %}
 {% block main_class %}vx-chat-main{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261014b">
+<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261014c">
 <div class="vx-chat" data-max-file-bytes="{{ max_file_bytes }}">
   <aside id="sidebar" class="chat-sidebar" aria-label="대화 이력">
     <a class="chat-brand" href="/vxvue-chatbot"><span class="brand-mark">V</span><span>VXvue <small>AI 챗봇</small></span></a>
@@ -29,7 +29,6 @@
       <div id="messages" class="chat-messages" aria-live="polite"></div>
     </div>
     <div class="composer-wrap">
-      <div id="job-status" class="job-status" hidden role="status"><span class="chat-spinner"></span><span id="job-stage"></span><span id="job-time"></span><button id="cancel-job">중지</button></div>
       <form id="composer" class="chat-composer">
         <div id="attached-files" class="attached-files"></div>
         <textarea id="message-input" rows="2" maxlength="{{ message_char_limit }}" placeholder="VXvue에 대해 질문하세요. 자료를 첨부해도 좋아요." aria-label="질문"></textarea>
@@ -39,5 +38,17 @@
     </div>
   </section>
 </div>
-<script src="/static/vxvue-chatbot.js?v=20261014" defer></script>
+<template id="job-progress-template">
+  <div id="job-progress" class="job-progress" role="status">
+    <div class="job-progress-head"><span class="job-spinner" aria-hidden="true"></span><div class="job-progress-text"><strong class="job-progress-title">답변을 준비하고 있습니다</strong><span class="job-progress-sub"><span id="job-stage"></span> · <span id="job-time">0초</span></span></div><button type="button" class="job-cancel">중지</button></div>
+    <ol class="job-steps">
+      <li data-stage="대기 중">대기</li>
+      <li data-stage="자료 검색 준비">준비</li>
+      <li data-stage="자료 검색">자료 검색</li>
+      <li data-stage="원문 확인">원문 확인</li>
+      <li data-stage="답변 작성">답변 작성</li>
+    </ol>
+  </div>
+</template>
+<script src="/static/vxvue-chatbot.js?v=20261014b" defer></script>
 {% endblock %}

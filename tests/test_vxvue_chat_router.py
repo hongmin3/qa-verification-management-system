@@ -79,6 +79,16 @@ def test_page_has_history_composer_and_max_ten_files(web):
     assert "최대 10개" in text
 
 
+# Validates: REQ-VXVUECHATBOT-001
+def test_chat_page_has_progress_card(web):
+    client, _, _ = web
+    text = client.get("/vxvue-chatbot").text
+    assert 'id="job-progress"' in text
+    for stage in ("대기 중", "자료 검색 준비", "자료 검색", "원문 확인", "답변 작성"):
+        assert f'data-stage="{stage}"' in text
+    assert 'id="job-status"' not in text
+
+
 def test_sync_status_explains_partial_failure_exclusions_and_retry(web):
     client, store, _ = web
     run_id = store.sync_start("VXvue", "product_knowledge", "knowledge_folder")
