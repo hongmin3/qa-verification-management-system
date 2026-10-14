@@ -477,8 +477,12 @@ class Corpus:
         if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
             raise ValueError('offset must be a nonnegative integer')
 
-    def search_documents(self, query, limit=20, document_kind=None, model=None, package=None):
-        self.validate_pagination(limit)
+    def search_documents(self, query, limit=20, document_kind=None, model=None, package=None, offset=0, match_mode='any', preview=False, document_id=None):
+        self.validate_pagination(limit, offset)
+        if match_mode not in ('any', 'all'):
+            raise ValueError('match_mode must be any or all')
+        if not isinstance(preview, bool):
+            raise ValueError('preview must be a boolean')
         terms = query_terms(query)
         vp_ids = query_vp_ids(query)
         vp_terms = {t: normalize_vp(t) for t in terms if normalize_vp(t) in vp_ids}
@@ -501,6 +505,8 @@ class Corpus:
                 batch = ids[start:start + 500]
                 rows = db.execute('SELECT id,document_id,text,search_text FROM chunks WHERE id IN (' + ','.join('?' for _ in batch) + ')', batch)
                 for row in rows:
+                    if document_id is not None and row['document_id'] != document_id:
+                        continue
                     if document_kind and kinds[row['document_id']] != document_kind:
                         continue
                     filters = [normalize(v) for v in (model, package) if v]
@@ -508,38 +514,54 @@ class Corpus:
                         continue
                     hits = [t for t in terms if t in row['search_text'] and (t not in vp_terms or mentions_id(row['search_text'], vp_terms[t]))]
                     defines = bool(vp_ids & definition_ids(row['text']))
-                    if not hits and not defines:
+                    if (not hits and not defines) or (match_mode == 'all' and len(hits) != len(terms)):
                         continue
                     score = len(hits) * 100 + sum(t in normalize(row['text']) for t in hits) * 10
                     if defines:
                         score += 1000
                         definitions.add(row['id'])
                     scored.append((score, row))
+            document_counts = {}
+            for _, row in scored:
+                document_counts[row['document_id']] = document_counts.get(row['document_id'], 0) + 1
             scored.sort(key=lambda x: (-x[0], x[1]['document_id'], x[1]['id']))
             # Keep the integrated top-N useful even when historical TC rows vastly outnumber specifications.
-            chosen = [x for x in scored if x[1]['id'] in definitions][:limit]
-            if document_kind is None and limit > 1:
+            chosen = [x for x in scored if x[1]['id'] in definitions]
+            if document_kind is None:
                 for category in ('specification', 'manual', 'testcase', 'issue'):
                     best = next((x for x in scored if kinds[x[1]['document_id']] == category), None)
-                    if best is not None and best not in chosen and len(chosen) < limit:
+                    if best is not None and best not in chosen:
                         chosen.append(best)
             chosen_ids = {x[1]['id'] for x in chosen}
             chosen.extend(x for x in scored if x[1]['id'] not in chosen_ids)
-            chosen = chosen[:limit]
+            chosen = chosen[offset:offset + limit]
             scope = self.scope(db)
             status = 'partial-evidence' if scope['errors'] or scope['warnings'] else ('evidence-found' if scored else 'not-found-in-readable-sources')
             results = []
             for score, candidate in chosen:
                 row = db.execute('SELECT c.*,d.metadata AS doc_metadata,d.sha FROM chunks c JOIN documents d ON c.document_id=d.id WHERE c.id=?', (candidate['id'],)).fetchone()
-                results.append(dict(self.record(row, terms=terms), relevance_score=score, definition_match=candidate['id'] in definitions))
+                record = dict(self.record(row, terms=terms), relevance_score=score, definition_match=candidate['id'] in definitions)
+                if preview:
+                    excerpt = record['evidence']
+                    pos = min((normalize(excerpt).find(t) for t in terms if t in normalize(excerpt)), default=0)
+                    start = max(0, pos - 80)
+                    record = {key: record[key] for key in ('document_id', 'document_name', 'chunk_id', 'sha256', 'location', 'requirement_ids', 'relevance_score', 'definition_match') if key in record}
+                    record.update(preview=excerpt[start:start + 300], preview_only=True)
+                results.append(record)
             self.verify_snapshot(db)
             return {'query': query, 'query_terms': terms, 'status': status, 'support_status': 'unknown',
-                    'matched': len(scored), 'returned': min(limit, len(scored)), 'truncated': len(scored) > limit,
+                    'match_mode': match_mode, 'preview_only': preview,
+                    'matched': len(scored), 'returned': len(results), 'offset': offset,
+                    'matched_documents': [{'document_id': doc, 'matched': count} for doc, count in sorted(document_counts.items())],
+                    'next_offset': offset + len(results), 'remaining': max(0, len(scored) - offset - len(results)),
+                    'truncated': offset + len(results) < len(scored),
                     'results': results,
                     'scope': scope, 'limitations': LIMITATIONS}
 
-    def get_document(self, document_id, section=None, offset=0, limit=10):
+    def get_document(self, document_id, section=None, offset=0, limit=10, context=0):
         self.validate_pagination(limit, offset)
+        if isinstance(context, bool) or not isinstance(context, int) or not 0 <= context <= 3:
+            raise ValueError('context must be an integer from 0 to 3')
         if not isinstance(document_id, str):
             raise ValueError('document_id must be a relative inventory ID')
         candidate = (self.root / document_id).resolve()
@@ -559,6 +581,12 @@ class Corpus:
             if section:
                 condition += " AND (c.unit=? OR c.unit=? OR instr(lower(COALESCE(json_extract(c.metadata,'$.location.section'),'')),?)>0)"
                 params += [section, section.removeprefix(doc_id + '::'), normalize(section)]
+            if section and context:
+                units = db.execute('SELECT id,unit FROM chunks WHERE document_id=? ORDER BY id', (doc_id,)).fetchall()
+                anchor = next((i for i, row in enumerate(units) if row['unit'] == section.removeprefix(doc_id + '::')), None)
+                if anchor is not None:
+                    condition = 'c.document_id=? AND c.id>=? AND c.id<=?'
+                    params = [doc_id, units[max(0, anchor-context)]['id'], units[min(len(units)-1, anchor+context)]['id']]
             total = db.execute('SELECT count(*) FROM chunks c WHERE ' + condition, params).fetchone()[0]
             selected = db.execute('SELECT c.*,d.metadata AS doc_metadata,d.sha FROM chunks c JOIN documents d ON c.document_id=d.id WHERE ' + condition + ' ORDER BY c.id LIMIT ? OFFSET ?', [*params,limit,offset]).fetchall()
             records = [self.record(r, full=True) for r in selected]

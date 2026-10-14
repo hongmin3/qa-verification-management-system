@@ -135,7 +135,7 @@ def test_prompt_cites_vp_ids_only():
     prompt = load_prompt("vxvue_chatbot")
     assert "VP-" in prompt.system_instruction
     assert "Legacy No." in prompt.system_instruction
-    assert prompt.version == 4
+    assert prompt.version == 5
 
 
 # Validates: REQ-VXVUECHATBOT-005

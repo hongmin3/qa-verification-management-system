@@ -99,7 +99,12 @@ class KnowledgeTools:
             target = doc[page - 1]
             scale = min(2.0, 1800 / max(target.rect.width, target.rect.height))
             pixmap = target.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-            return [{"type": "text", "text": f"원본 페이지 {page}. 표·이미지·취소선과 적용 조건을 직접 확인하세요."},
+            return [{"type": "text", "text": json.dumps({
+                        "page": page, "page_count": len(doc),
+                        "text_status": "text-available" if target.get_text().strip() else "no-extractable-text",
+                        "embedded_images": len(target.get_images()), "visual_status": "rendered-not-reviewed",
+                        "instruction": "표·이미지·취소선과 적용 조건을 직접 확인하세요. 이미지 제공은 내용 검증 완료를 뜻하지 않습니다."
+                    }, ensure_ascii=False)},
                     {"type": "image", "mimeType": "image/png", "data": base64.b64encode(pixmap.tobytes("png")).decode()}]
 
     def read_attachment(self, attachment_id, offset=0, limit=10, page=None):
@@ -134,6 +139,22 @@ class KnowledgeTools:
             return compact_response({**status, "snapshot_id": self.snapshot["id"], "source_failures": self.snapshot.get("failures", [])}, inventory=True)
         if name == "read_attachment":
             return self.read_attachment(**arguments)
+        if name == "get_document_pages":
+            requests = arguments.get("requests")
+            if not isinstance(requests, list) or not 1 <= len(requests) <= 6:
+                raise ValueError("원본 페이지 묶음은 1~6개 요청입니다.")
+            if any(not isinstance(r, dict) or set(r) != {"document_id", "page"}
+                   or not isinstance(r["document_id"], str) or isinstance(r["page"], bool)
+                   or not isinstance(r["page"], int) or r["page"] < 1 for r in requests):
+                raise ValueError("각 요청에 문서 ID와 1 이상의 정수 페이지를 지정하세요.")
+            contents = []
+            for request in requests:
+                try:
+                    contents.extend(self.call("get_document_page", request))
+                except Exception as exc:
+                    contents.extend(text_content({**request, "error": type(exc).__name__,
+                                                  "evidence_status": "incomplete"}))
+            return contents
         if name == "get_document_page":
             document_id = arguments["document_id"]
             path = self._source(document_id)
@@ -250,8 +271,9 @@ def tools():
     definitions = [
         ("batch_lookup", "독립적인 검색·문서·텍스트 첨부 조회 1~10개를 한 번에 처리. 이미지 page는 개별 호출. 각 결과 오류를 확인한다.", {"requests": {"type": "array", "minItems": 1, "maxItems": 10, "items": {"type": "object", "properties": {"tool": {"type": "string", "enum": ["search_documents", "get_document", "find_testcases", "compare_packages", "trace_requirements", "get_generator_evidence", "read_attachment"]}, "arguments": {"type": "object"}}, "required": ["tool", "arguments"], "additionalProperties": False}}}, ["requests"]),
         ("get_status", "현재 지식 목록·읽기 오류·지식 판 상태", {}, []),
-        ("search_documents", "VXvue 사양·매뉴얼·TC를 통합 검색. 검색되지 않은 자료는 미확인이다.", {"query": string, "limit": integer, "document_kind": string, "model": string, "package": string}, ["query"]),
-        ("get_document", "문서 원문 페이지·시트·셀 조회. truncated이면 next_offset으로 이어 읽기.", {"document_id": string, "section": string, "offset": integer, "limit": integer}, ["document_id"]),
+        ("search_documents", "VXvue 사양·매뉴얼·TC 검색. 목록 질문은 preview=true로 후보 확인 후 필요한 원문 조회. truncated이면 같은 조건의 next_offset으로 계속 조회. all은 모든 질의 단어, any는 하나 이상. 검색 없음은 미지원 아님.", {"query": string, "limit": integer, "offset": integer, "match_mode": {"type": "string", "enum": ["any", "all"]}, "preview": {"type": "boolean"}, "document_id": string, "document_kind": string, "model": string, "package": string}, ["query"]),
+        ("get_document", "문서 원문 조회. 정확한 section(chunk_id)에 context=1~3을 주면 앞뒤 구간도 읽는다. truncated이면 next_offset으로 이어 읽기.", {"document_id": string, "section": string, "offset": integer, "limit": integer, "context": {"type": "integer", "minimum": 0, "maximum": 3}}, ["document_id"]),
+        ("get_document_pages", "독립 PDF/이미지 원본 1~6쪽을 한 호출로 확인. 각 요청의 오류를 확인하고 관련 no-extractable-text 페이지도 포함한다.", {"requests": {"type": "array", "minItems": 1, "maxItems": 6, "items": {"type": "object", "properties": {"document_id": string, "page": {"type": "integer", "minimum": 1}}, "required": ["document_id", "page"], "additionalProperties": False}}}, ["requests"]),
         ("get_document_page", "PDF 또는 이미지 원본 페이지를 이미지로 확인", {"document_id": string, "page": {"type": "integer", "minimum": 1}}, ["document_id"]),
         ("find_testcases", "기존 TC 근거와 원문 위치. 과거 결과는 현재 지원 근거가 아니다.", {"query": string, "model": string, "limit": integer}, ["query"]),
         ("compare_packages", "패키지별 사양 근거 비교", {"query": string, "packages": {"type": "array", "items": string}, "limit": integer}, ["query", "packages"]),

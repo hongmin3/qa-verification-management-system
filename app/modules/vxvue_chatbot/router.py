@@ -239,14 +239,6 @@ def attachment(request: Request, attachment_id: str):
     return FileResponse(a["path"], filename=a["name"], media_type="application/octet-stream", headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
 
 
-@router.get("/jobs/{job_id}/answer")
-def answer(request: Request, job_id: str):
-    stored = require_job(request, job_id)
-    chat = get_storage().vxchat_get(owner(request), stored["conversation_id"])
-    message = next(m for m in chat["messages"] if m["id"] == stored["assistant_message_id"])
-    return Response(message["content"], media_type="text/markdown", headers={"Content-Disposition": 'attachment; filename="VXvue-answer.md"', "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
-
-
 @router.get("/jobs/{job_id}/source")
 def source(request: Request, job_id: str, document_id: str):
     stored = require_job(request, job_id)

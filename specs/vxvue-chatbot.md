@@ -37,7 +37,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 ### REQ-VXVUECHATBOT-001 챗봇 화면
 
-**하는 일** 허브의 VXvue AI 챗봇 카드로 `/vxvue-chatbot`에 들어간다. 왼쪽 대화 목록과 오른쪽 메시지 영역, 입력·첨부·전송·중지·복사·답변 다운로드를 제공한다.
+**하는 일** 허브의 VXvue AI 챗봇 카드로 `/vxvue-chatbot`에 들어간다. 왼쪽 대화 목록과 오른쪽 메시지 영역, 입력·첨부·전송·중지·답변 복사를 제공한다. 답변을 Markdown 파일로 내려받는 기능은 제공하지 않는다.
 
 **순서**
 
@@ -156,6 +156,19 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 **설정:** 제품의 `knowledge_source.skill_sync`에서 플러그인·Skill을 지정한다. 챗봇의 `reviewed_skill_code_hash`는 도구 변경을 검증하고 배포한 뒤 갱신한다.
 
+
+### REQ-VXVUECHATBOT-010 누락 범위 확인과 필요한 근거 조회
+
+**하는 일** 목록을 묻는 질문에서는 검색 후보를 끝까지 확인하고 필요한 원문을 읽는다. 상위 결과만 읽고 전체 목록이라고 답하지 않는다.
+
+1. 검색은 기본 단어 중 하나가 맞는 방식(any)을 유지한다. 모든 단어가 필요한 경우 all을 선택한다. 한글·영문 명칭과 표기 차이는 별도 검색으로 대조한다.
+2. offset과 next_offset으로 검색 결과를 이어 읽는다. 미리보기(preview)는 후보의 위치와 최대 300자만 제공하며, 근거 전문 확인과 구분한다. 전체 일치 수·문서별 일치 수·남은 수·이어 읽을 위치를 표시한다. 문서 ID로 범위를 좁힐 수 있다.
+3. 목록 질문은 제조사·기능처럼 구체적인 단어로 범위를 좁히고 후보를 확인한다. 관련 후보의 잘린 본문과 적용 조건만 추가로 읽는다. 미리보기만 보고 지원 여부를 확정하지 않는다.
+4. PDF의 이미지뿐인 페이지·표·취소선은 원본 페이지 도구로 확인한다. 도구는 텍스트 추출 상태와 이미지 조회 사실을 구분한다. 이미지 제공만으로 모델이 내용을 검증했다고 표시하지 않는다. 독립 페이지는 최대 6개를 한 번에 조회하고 각 페이지의 실패를 구분한다. 문서의 정확한 구간을 읽을 때 context 0~3으로 앞뒤 구간도 함께 확인할 수 있다.
+5. 전체 지식의 읽기 경고를 해당 질문의 미확인 항목으로 그대로 나열하지 않는다. 관련 위치를 확인하고, 복구 가능한 잘림·이미지 조회를 먼저 시도한다. 여전히 실패한 경우 위치·시도·남은 이유를 답변에 적는다.
+
+**지킬 것** 검색 결과 없음은 미지원이 아니다. 문서 간 조건 차이, 이미지 해상도 부족, 암호화·손상·누락, 페이지 범위 오류와 사용량 차단을 구분한다. 반복 실패나 사용량 차단에 같은 호출을 되풀이하지 않는다. 전체 검색 확인은 실제 제품의 모든 기능을 증명하지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -192,3 +205,4 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 | REQ-VXVUECHATBOT-006 | `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_retry.py`, `app/modules/vxvue_chatbot/router.py`, `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-003: `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-007 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/core/vxchat_storage.py`, `config.yaml` | TEST-VXVUECHATBOT-004: `tests/test_vxvue_chat_cost.py` | verified |
 | REQ-VXVUECHATBOT-008 | `app/core/skill_knowledge.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_push.py`, `app/modules/vxvue_chatbot/router.py`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-005: `tests/test_skill_knowledge.py`, `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_router.py` | verified |
+| REQ-VXVUECHATBOT-010 | `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/prompts/vxvue_chatbot.yaml` | `tests/test_vxvue_chat_retrieval.py` | verified |
