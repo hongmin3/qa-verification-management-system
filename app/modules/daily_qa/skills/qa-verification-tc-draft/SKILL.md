@@ -36,4 +36,4 @@ TC 는 사람이 넣는 자료라 틀릴 수 있다. TC 행을 근거로 쓸 때
 - 연구소 결과가 FIXED 가 아닌 이슈에 초안을 쓰면 코드가 Finding 을 버린다.
 - `gate_status`: G1, G2, G3, G4, G5, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

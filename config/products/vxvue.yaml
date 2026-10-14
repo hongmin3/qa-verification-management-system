@@ -53,11 +53,11 @@ issue_source:
   id_prefix: "VP"
 
 sync:
-  # 통합 SRS 수집(QA_SRS_Collect, 평일 09:00 KST)보다 40분 늦게
-  # 실행한다. 수집이 끝나지 않았으면 마지막 정상 완료본을 쓴다. PC 작업 AIRegressionAnalyzer_VXvueSpecSync 도
-  # 같은 시각(평일 09:40)이다. 사양서가 바뀌지 않았으면 다시 올리지 않는다.
+  # QA Agent 점검(평일 04:00 KST)보다 30분 먼저 실행해 전날 09:00 통합 SRS 수집본(QA_SRS_Collect)을 올린다.
+  # 수집이 끝나지 않았으면 마지막 정상 완료본을 쓴다. PC 작업 AIRegressionAnalyzer_VXvueSpecSync 도
+  # 같은 시각(평일 03:30)이다. 사양서가 바뀌지 않았으면 다시 올리지 않는다.
   day_of_week: "mon-fri"
-  schedule_time: "09:40"
+  schedule_time: "03:30"
 
 # ALM(Polarion) 프로젝트와 필드 대응 (SPEC REQ-QAINTEL-002). QA Intelligence 엔진은 여기 적힌 원본
 # 필드 이름만 읽고, 공통 모델(id·title·rd_result·occurrence_cause…)로 바꾼 뒤에는 원본 이름을 모른다.

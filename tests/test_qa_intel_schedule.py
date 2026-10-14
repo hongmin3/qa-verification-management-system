@@ -45,10 +45,10 @@ def test_extra_company_holiday():
 
 
 def test_next_run_skips_weekend_and_chuseok():
-    now = datetime(2026, 9, 23, 8, 0, tzinfo=KST)            # 수요일 07:30 이 지난 뒤
-    assert holidays.next_run(now, REPO) == datetime(2026, 9, 28, 7, 30, tzinfo=KST)   # 목~토 추석, 일요일 → 월요일
-    before = datetime(2026, 9, 23, 7, 0, tzinfo=KST)
-    assert holidays.next_run(before, REPO) == datetime(2026, 9, 23, 7, 30, tzinfo=KST)
+    now = datetime(2026, 9, 23, 8, 0, tzinfo=KST)            # 수요일 04:00 이 지난 뒤
+    assert holidays.next_run(now, REPO) == datetime(2026, 9, 28, 4, 0, tzinfo=KST)   # 목~토 추석, 일요일 → 월요일
+    before = datetime(2026, 9, 23, 3, 0, tzinfo=KST)
+    assert holidays.next_run(before, REPO) == datetime(2026, 9, 23, 4, 0, tzinfo=KST)
 
 
 @pytest.fixture
@@ -117,7 +117,7 @@ def test_one_job_per_product_plus_catchup_watch(monkeypatch):
     ids = {job.id for job in scheduler.get_jobs()}
     assert {"qa_agent_vxvue", "qa_agent_bellalun-viewer", "qa_agent_limit_catchup"} <= ids
     trigger = str(scheduler.get_job("qa_agent_vxvue").trigger)
-    assert "day_of_week='mon-fri'" in trigger and "hour='7'" in trigger and "minute='30'" in trigger
+    assert "day_of_week='mon-fri'" in trigger and "hour='4'" in trigger and "minute='0'" in trigger   # 기본 04:00 (REQ-QAINTEL-001)
     assert scheduler.get_job("qa_agent_vxvue").kwargs == {"product": "VXvue"}
 
 

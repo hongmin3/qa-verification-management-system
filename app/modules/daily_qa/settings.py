@@ -55,6 +55,10 @@ class IntelligenceSettings:
     #: 현재 상태 기준 이슈 점검의 한 작업 이슈 수와 모델 (REQ-QAINTEL-030). 모델을 비우면 ai.claude.models.light.
     audit_batch_size: int = 10
     audit_model: str = ""
+    #: 새 댓글 분석 모델 (REQ-DAILY-016 5번). 비우면 ai.claude.models.light.
+    comment_model: str = ""
+    #: 실행 한 번에 올리는 지난 날 대기 이벤트 수 (REQ-QAINTEL-006 6번). 0 이하면 올리지 않는다.
+    backlog_max_events: int = 10
 
 
 @dataclass(frozen=True)
@@ -166,8 +170,9 @@ def _intelligence(get) -> IntelligenceSettings:
     for name, default in defaults.__dict__.items():
         raw = get(f"daily_qa.intelligence.{name}", default)
         values[name] = type(default)(raw if raw is not None else default)
-    if not values["audit_model"]:
-        values["audit_model"] = str(get("ai.claude.models.light", "") or "")
+    for name in ("audit_model", "comment_model"):
+        if not values[name]:
+            values[name] = str(get("ai.claude.models.light", "") or "")
     values["audit_batch_size"] = max(1, values["audit_batch_size"])
     return IntelligenceSettings(**values)
 

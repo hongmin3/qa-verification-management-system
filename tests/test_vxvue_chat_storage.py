@@ -62,3 +62,33 @@ def test_attachment_access_and_delete_are_owned(store):
     assert store.vxchat_delete("a", chat["id"])
     assert store.vxchat_attachment("a", "f1") is None
     assert store.vxchat_job("a", job["id"]) is None
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_auto_title_skips_user_title(store):
+    chat = store.vxchat_create("owner")
+    store.vxchat_rename("owner", chat["id"], "내가 정한 제목")
+    assert store.vxchat_set_ai_title(chat["id"], "AI 제목") is False
+    assert store.vxchat_get("owner", chat["id"])["title"] == "내가 정한 제목"
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_ai_title_replaces_auto_title(store):
+    chat = store.vxchat_create("owner")
+    store.vxchat_submit("owner", chat["id"], "첫 질문", [])
+    assert store.vxchat_get("owner", chat["id"])["title_source"] == "auto"
+    assert store.vxchat_set_ai_title(chat["id"], "Theme 설정 사양") is True
+    got = store.vxchat_get("owner", chat["id"])
+    assert (got["title"], got["title_source"]) == ("Theme 설정 사양", "ai")
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_existing_db_gets_title_source_column_in_place(tmp_path):
+    import sqlite3
+    path = tmp_path / "old.db"
+    Storage(path)
+    with sqlite3.connect(path) as db:
+        db.execute("ALTER TABLE vxchat_conversations DROP COLUMN title_source")
+        db.execute("INSERT INTO vxchat_conversations VALUES('c1','o','옛 제목','t','t')")
+    reopened = Storage(path)
+    assert reopened.vxchat_get("o", "c1")["title_source"] == "auto"

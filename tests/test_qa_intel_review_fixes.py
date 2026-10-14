@@ -89,34 +89,9 @@ def test_past_period_run_does_not_abandon_or_rerun_retry_queue(tmp_path):
     assert h.store.list_events(ids=[vp300[0]["id"]])[0]["analysis_status"] == "done"
 
 
-# -- 리뷰 3: 한 이벤트의 두 분석은 각자 재시도한다 ---------------------------------------------
-
-
-def test_event_with_two_analyses_retries_only_the_failed_one(tmp_path):
-    h = _harness(tmp_path)
-    h.issues = [issue_item("VP-100", "2026-09-28T00:00:00Z", ["VP-10"], review="lab_fixed", status="resolved",
-                           cause="캐시 초기화 누락", action="초기화 추가", comment_ids=["c1"])]
-    h.comments = {"VP-100": [comment("c1", "처음 댓글입니다 확인 부탁드립니다 자세히")]}
-    h.run(DAY1)
-    h.issues[0] = issue_item("VP-100", "2026-09-29T09:00:00Z", ["VP-10"], review="lab_fixed", status="resolved",
-                             cause="캐시 초기화 누락", action="초기화 추가", comment_ids=["c1", "c2"])
-    h.comments["VP-100"].append(comment("c2", "원인은 캐시 초기화 누락으로 확인되었고 재현 절차를 바꿨습니다."))
-
-    day2 = h.run(DAY2, runner=_failing_for(h, lambda task, payload: task.skill == FIXED_SKILL))
-
-    event = next(e for e in h.events(day2["run_id"]) if e["event_type"] == "ISSUE_COMMENT_ADDED")
-    assert event["analyses"] == ["COMMENT", "FIXED_ISSUE"]
-    assert event["analysis_status"] == "failed"                  # 새 댓글 분석이 성공해도 done 이 아니다
-    assert event["remaining_analyses"] == ["FIXED_ISSUE"]
-    assert day2["stages"]["FIXED_ISSUE"]["status"] == "failed"
-    comment_calls = len(_targets(h, COMMENT_SKILL))
-
-    h.run(DAY3)
-
-    final = h.store.list_events(ids=[event["id"]])[0]
-    assert final["analysis_status"] == "done" and final["remaining_analyses"] == []
-    assert len(_targets(h, COMMENT_SKILL)) == comment_calls      # 성공한 새 댓글 분석은 다시 돌지 않는다
-    assert _targets(h, FIXED_SKILL).count("VP-100") >= 2         # 실패한 수정 완료 분석만 다시 돌았다
+# -- 리뷰 3: 한 이벤트의 두 분석 ------------------------------------------------------------------
+# 수정 완료 이슈의 새 댓글은 2026-10-14 부터 수정 완료 이슈 분석 하나로 합쳐 돈다(REQ-QAINTEL-010).
+# 합친 분석의 성공·실패·재시도는 tests/test_qa_intel_token_saving.py 가 본다.
 
 
 def test_two_analyses_failing_in_one_run_count_one_attempt(tmp_path):

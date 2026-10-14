@@ -48,7 +48,9 @@ def test_local_write_reset_and_all_or_nothing(settings_app):
     client = TestClient(app, client=("127.0.0.1", 50123))
     values = client.get("/settings/ai/values").json()
     assert values["can_edit"] is True
-    assert len(values["settings"]) == 5
+    assert len(values["settings"]) == 6
+    comment = next(row for row in values["settings"] if row["key"] == "daily_qa.intelligence.comment_model")
+    assert comment["choices"][0] == ""                        # 빈 값 = 가벼운 작업 모델 따름
     assert client.post("/settings/ai", json={"ai.claude.effort": "high", "app.port": "12"}).status_code == 422
     assert build_settings(root).get("ai.claude.effort") == "medium"
     response = client.post("/settings/ai", json={"ai.claude.effort": "high"})

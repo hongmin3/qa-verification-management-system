@@ -15,7 +15,7 @@ scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundSche
 지식 폴더 ──(scripts/sync_product_knowledge.py       ├─ SQLite: documents / analyses / sync_log
             --upload-to, 작업 스케줄러)──▶          │   /knowledge/product-knowledge/*
                                                      ├─ 공용 AI 호출 (Claude CLI 기본, Gemini 선택, 응답 캐시)
-                                                     └─ QA Agent 점검(제품별 일일·주간 정책, 07:30, 공휴일 제외, 분리 프로세스)
+                                                     └─ QA Agent 점검(제품별 일일·주간 정책, 04:00, 공휴일 제외, 분리 프로세스)
                                                           → Polarion(GET) · Claude CLI · /qa-agent 대시보드
 [사용자 브라우저]
   점검 지금 실행 ──POST /qa-agent/runs──▶ 분리 프로세스 ──▶ QA 점검 엔진
@@ -93,7 +93,7 @@ data/specifications/<uuid>.pdf                       Knowledge 등록용 실제 
   (`is_available_on_this_host()`가 False) — **실제 자동 실행은 아래 Windows 작업 스케줄러**가
   전담한다.
 - 트리거 시각은 `config/products/vxvue.yaml`의 `sync.day_of_week`(`mon-fri`)/`sync.schedule_time`
-  (`09:40`, `Asia/Seoul` 기준 — 서버 시스템 타임존이 `America/New_York`이라 명시했다).
+  (`03:30`, `Asia/Seoul` 기준 — 서버 시스템 타임존이 `America/New_York`이라 명시했다).
 - 2026-09-28 에 ALM 수집이 주 1회(월 07:00)에서 평일 통합 수집(09:00)으로 바뀌어, 그 40분 뒤
   평일마다 돌도록 옮겼다. 옛 시각(월 07:30)을 그대로 두면 월요일에 지난주 사양서를 올리게 된다.
   사양서가 바뀌지 않은 날은 다시 올리지 않고 미변경 건수만 기록하므로 매일 돌아도 부담이 없다.
@@ -107,7 +107,7 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
   | 설정 | 값 |
   |---|---|
-  | 트리거 | Weekly, 월~금 09:40 (KST) — ALM 통합 수집 `ALM_QA_Automation_Daily`(평일 09:00)보다 40분 뒤. 2026-09-28 에 월 07:30 에서 바꿨고, 바꾸기 전 설정 XML 은 이 PC 의 `backups/`(Git 제외)에 있다 |
+  | 트리거 | Weekly, 월~금 03:30 (KST) — QA Agent 점검(평일 04:00)보다 30분 먼저, 전날 09:00 수집본을 올린다. 2026-10-14 에 09:40 에서, 2026-09-28 에 월 07:30 에서 바꿨고, 바꾸기 전 설정 XML 은 이 PC 의 `backups/`(Git 제외)에 있다 |
   | 실행 파일 | `...\자동화\projects\qa-verification-management-system\.venv\Scripts\python.exe` (2026-09-28 `projects/` 재배치 때 Action 경로를 갱신했다) |
   | 인자 | `scripts\sync_vxvue_spec.py` (기본 `--target-url`이 운영 서버라 생략) |
   | LogonType | `S4U` — 비밀번호를 저장하지 않고 로그인하지 않은 상태에서도 실행 (기존 ALM 크롤러 작업과 동일 패턴) |
@@ -141,14 +141,14 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
 VXvue는 업로드 전에 활성 로컬 Skill의 최신 설치 캐시에서 지침·참조 MD를 읽어 같은 지식폴더의 `[Skill 지침] VXvue.md`에 내보낸다. 사용자 QA 규칙과 프롬프트 원본은 고치지 않는다. 검색 코드와 MCP 설정은 해시만 기록하며 변경은 별도 검증 후 배포한다(REQ-VXVUECHATBOT-008). 새 종류를 받을 수 있도록 서버와 운영 PC 코드를 반영한 뒤 예약 실행본을 갱신한다. 자세한 기준은 [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md)에 있다.
 
-기존 09:00 수집과 09:40 사양 동기화는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
+기존 09:00 수집과 03:30 사양 동기화는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
 
 ### 7.2 하루 실행 순서 (평일)
 
 ```flow
-07:30 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
+04:00 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
 08:00 PC 지식 폴더 업로드 -> 실패 시 15분마다 재시도 -> 서버 지식 사본
-09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 09:40 PC 사양서 동기화 -> 서버 신규 사양서 등록
+09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 다음 평일 03:30 PC 사양서 동기화 -> 서버 신규 사양서 등록
 ```
 
 서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않는다. 일일 모드는 Claude 세션 한도가 풀린 뒤 자동 재개하고 주간 모드는 다음 주 첫 업무일 또는 수동 실행에서 이어 간다. 자동 점검 중지나 서버 예약 비활성화는 모든 자동 실행을 막는다. PC 쪽 작업이 멈추면 서버의
@@ -171,7 +171,7 @@ PC 작업 전환 시 기존 작업 XML을 백업한다. 실제 수집·배포·�
   직접 실행한다. 수동 트리거용 백엔드 엔드포인트(`POST /knowledge/sync/specification`)
   자체는 남겨뒀다(스크립트나 다른 자동화가 재사용할 수 있도록).
 - CLI: `\.venv\Scripts\python.exe scripts\sync_vxvue_spec.py --target-url http://10.13.0.222:24357`
-  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 평일 09:40에는 위 작업
+  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 평일 03:30에는 위 작업
   스케줄러가 인자 없이 이 스크립트를 자동 실행한다(기본 대상이 운영 서버이므로 `--target-url`
   생략).
 - 같은 문서의 이전 리비전(파일명에서 `(YYMMDD)` 날짜 부분만 다른 동일 문서, 예:

@@ -316,6 +316,7 @@ def normalize_comment(comment: dict[str, Any]) -> dict[str, str]:
     return {
         "id": str(comment.get("id") or attrs.get("id") or ""),
         "created": str(attrs.get("created") or ""),
+        "author": _short(str((((comment.get("relationships") or {}).get("author") or {}).get("data") or {}).get("id") or "")),
         "text": text.strip()[:COMMENT_TEXT_LIMIT],
     }
 

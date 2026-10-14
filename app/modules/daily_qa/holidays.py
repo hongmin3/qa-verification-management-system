@@ -70,7 +70,7 @@ def parse_days(spec: str) -> set[int]:
     return result
 
 
-def next_run(now: datetime, root: Path, day_of_week: str = "mon-fri", at: str = "07:30", calendar: str = "kr",
+def next_run(now: datetime, root: Path, day_of_week: str = "mon-fri", at: str = "04:00", calendar: str = "kr",
              extra: tuple[str, ...] = (), skip_holidays: bool = True) -> datetime | None:
     """다음 자동 실행 시각(한국 시간). 요일이 맞고 공휴일이 아닌 가장 가까운 날이다."""
     hour, _, minute = at.partition(":")

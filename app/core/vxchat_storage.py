@@ -15,12 +15,18 @@ class VxChatStorageMixin:
             row = db.execute("SELECT synced_at FROM sync_log WHERE product='VXvue' AND kind='product_knowledge' AND status='SUCCESS' ORDER BY id DESC LIMIT 1").fetchone()
         return dict(row) if row else None
 
+    def vxchat_last_success_sync(self, kind):
+        with closing(self.connect()) as db, db:
+            row = db.execute("SELECT synced_at FROM sync_log WHERE product='VXvue' AND kind=? AND status='SUCCESS' ORDER BY id DESC LIMIT 1", (kind,)).fetchone()
+        return dict(row) if row else None
+
     def _initialize_vxchat(self):
         with closing(self.connect()) as db, db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS vxchat_conversations (
                     id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL,
-                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                    title_source TEXT NOT NULL DEFAULT 'auto');
                 CREATE INDEX IF NOT EXISTS vxchat_owner ON vxchat_conversations(owner,updated_at);
                 CREATE TABLE IF NOT EXISTS vxchat_messages (
                     id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, role TEXT NOT NULL,
@@ -37,11 +43,13 @@ class VxChatStorageMixin:
                 CREATE UNIQUE INDEX IF NOT EXISTS vxchat_one_active ON vxchat_jobs(conversation_id)
                     WHERE status IN ('QUEUED','RUNNING');
             """)
+            if "title_source" not in {r[1] for r in db.execute("PRAGMA table_info(vxchat_conversations)")}:
+                db.execute("ALTER TABLE vxchat_conversations ADD COLUMN title_source TEXT NOT NULL DEFAULT 'auto'")
 
     def vxchat_create(self, owner, title="새 대화"):
         value = {"id": uuid.uuid4().hex, "owner": owner, "title": title[:100], "created_at": now_iso()}
         with closing(self.connect()) as db, db:
-            db.execute("INSERT INTO vxchat_conversations VALUES(?,?,?,?,?)",
+            db.execute("INSERT INTO vxchat_conversations(id,owner,title,created_at,updated_at) VALUES(?,?,?,?,?)",
                        (value["id"], owner, value["title"], value["created_at"], value["created_at"]))
         return value
 
@@ -66,8 +74,13 @@ class VxChatStorageMixin:
 
     def vxchat_rename(self, owner, conversation_id, title):
         with closing(self.connect()) as db, db:
-            return db.execute("UPDATE vxchat_conversations SET title=?,updated_at=? WHERE id=? AND owner=?",
+            return db.execute("UPDATE vxchat_conversations SET title=?,title_source='user',updated_at=? WHERE id=? AND owner=?",
                               (title[:100], now_iso(), conversation_id, owner)).rowcount > 0
+
+    def vxchat_set_ai_title(self, conversation_id, title):
+        with closing(self.connect()) as db, db:
+            return db.execute("UPDATE vxchat_conversations SET title=?,title_source='ai' WHERE id=? AND title_source!='user'",
+                              (title[:100], conversation_id)).rowcount > 0
 
     def vxchat_submit(self, owner, conversation_id, text, attachments, max_pending=20):
         if len(attachments) > 10:

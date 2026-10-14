@@ -6,7 +6,7 @@ import hashlib
 import json
 import sqlite3
 import tempfile
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from pathlib import Path
 
 from app.modules.daily_qa.agent_runner import build_prompt
@@ -52,7 +52,8 @@ def _files(root: Path) -> list[tuple[str, str]]:
 
 def fingerprint(task, workspace, product: str, kind: str, mode: str, model: str, effort: str, profile: dict) -> str:
     payload = json.loads((workspace.in_dir / f"{task.task_id}.json").read_text(encoding="utf-8"))
-    prompt = build_prompt(task, workspace).replace(workspace.run_id, "<run>").replace(task.task_id, "<task>")
+    # 실행·작업 번호는 자리표시로 만든다. 문자열 치환은 파일 이름 같은 다른 글자까지 바꿀 수 있다.
+    prompt = build_prompt(replace(task, task_id="<task>"), replace(workspace, run_id="<run>"), inline_input=False)
     implementation = Path(__file__).parent
     value = {"version": VERSION, "product": product, "kind": kind, "mode": mode,
              "model": model, "effort": effort, "profile": profile, "skill": task.skill,

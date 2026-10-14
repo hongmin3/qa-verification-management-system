@@ -82,6 +82,8 @@
 | tc-draft (요청) | `tc_coverage` | `[{tc_id, location, covers: true/false, reason}]` |
 | spec-decision | `rd_claim`, `qa_analysis` | `{summary}`, `{summary, checks: [..]}` |
 | comment | `comments` | `[{comment_id, summary, classification, impact, follow_up}]` |
+| comment | `issue_summary` | 이슈에서 문제가 된 동작 한 문장 |
+| comment | `checked` | `{confirmed: [직접 확인한 자료와 범위], unconfirmed: [확인하지 못한 자료와 이유]}`. 입력에 있는 자료와 직접 대조한 자료를 구분한다. 구형 결과에는 없을 수 있고 누락은 검증 기록에 표시한다. |
 | spec-change-summary, coverage | `change` | `{summary, changed_requirements: [..]}` — 요구사항 5개까지 |
 | spec-change-summary | `related_issues` | `[{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]` — 5개까지 |
 | coverage | `issue_coverage` | `{has_related, issues: [{issue_id, relation: EXISTING_DEFECT/PAST_FIXED/PAST_SPEC/SAME_FUNCTION_REGRESSION, reason}]}` |

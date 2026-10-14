@@ -43,4 +43,4 @@ SRS 마다:
   근거를 반드시 함께 둔다 (위치 규칙).
 - `gate_status`: G1, G2, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

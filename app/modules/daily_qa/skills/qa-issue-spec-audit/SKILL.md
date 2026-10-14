@@ -58,4 +58,4 @@ description: 이슈 변경 기록이 없는 기간에, 지금 이슈 상태가 �
 - `evidence` 는 `source_type: "srs"` 에 `location` 으로 입력의 SRS 번호(예: `VP-767 / 바뀐 문장 2`)를 쓴다.
 - `gate_status`: G1, G2, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

@@ -336,8 +336,17 @@ class AnalysisTarget:
     events: list[dict]
 
 
+def _without_authors(value):
+    """AI 입력용 사본. 변경 이벤트에 중첩된 댓글 작성자도 보내지 않는다."""
+    if isinstance(value, dict):
+        return {key: _without_authors(item) for key, item in value.items() if key != "author"}
+    if isinstance(value, list):
+        return [_without_authors(item) for item in value]
+    return value
+
+
 def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, comments_loader=None,
-               with_tc: bool = False) -> dict | None:
+               with_tc: bool = False, latest_analysis_loader=None) -> dict | None:
     """분석 대상 하나의 입력. 대상이 오늘 스냅샷에 없으면 None (이벤트는 포기로 바뀐다).
 
     TC·매뉴얼은 사람이 넣는 자료라 틀릴 수 있다. 자동 실행(`with_tc=False`)은 TC 후보·매뉴얼 후보를
@@ -391,12 +400,38 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
     comments = None
     if kind in (FIXED_ISSUE, SPEC_DECISION) and comments_loader is not None:
         comments = comments_loader(issue["id"])
+    fresh = _new_comments(target)
     if kind == COMMENT:
-        fresh = [comment for event in target.events for comment in (event.get("after") or {}).get("comments") or []
-                 if comment.get("id") in set((event.get("after") or {}).get("significant_ids") or [])]
         known.comment_ids.update(comment["id"] for comment in fresh if comment.get("id"))
         earlier = [comment for comment in issue.get("comments") or [] if comment.get("id") not in {item.get("id") for item in fresh}]
-        return {**base, "issue": issue_view(issue), "new_comments": fresh, "earlier_comments": earlier[-5:]}
+        # 댓글 작성자는 화면용이다. 원본을 변경하지 않고 이벤트까지 포함한 입력 사본에서 뺀다.
+        mentioned = re.findall(r"(?<![A-Za-z0-9-])([A-Z]{2,}-[0-9]+)(?![A-Za-z0-9-])",
+                               "\n".join(comment.get("text", "") for comment in fresh))
+        requested = list(dict.fromkeys([*mentioned, *(issue.get("linked_ids") or [])]))
+        wanted = [value for value in requested if value != issue["id"]]
+        found, missing, omitted, unresolved = [], [], [], []
+        for value in wanted:
+            srs = corpus.srs_by_id.get(value)
+            if srs is None:
+                if value not in corpus.issue_by_id:
+                    unresolved.append(value)
+            elif len(found) >= 2:
+                omitted.append(value)
+            else:
+                text = srs.get("text", "")
+                if not text.strip():
+                    missing.append(value)
+                found.append({"id": value, "ref": f"srs:{value}", "title": srs.get("title", ""),
+                              "status": srs.get("status", ""), "text": text[:1500],
+                              "truncated": len(text) > 1500})
+        previous = latest_analysis_loader(issue["id"]) if latest_analysis_loader is not None else None
+        item = {**base, "issue": issue_view(issue), "new_comments": fresh, "earlier_comments": earlier[-5:],
+                "candidates": {"srs": found}, "missing_srs_ids": missing, "omitted_srs_ids": omitted,
+                "unresolved_reference_ids": unresolved,
+                "previous_analysis": {"summary": (previous.get("summary") or "")[:600],
+                                      "analysis_type": previous.get("analysis_type", ""),
+                                      "created_at": previous.get("created_at", "")} if previous else None}
+        return _without_authors(item)
     if comments:
         known.comment_ids.update(comment["id"] for comment in comments if comment.get("id"))
     sections = issue_sections(issue)
@@ -416,7 +451,17 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
             item["candidates"]["tcs"] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=linked[:1] + tuple(
                 corpus.srs_by_id[value].get("old_id", "") for value in linked[:1]))
         item["regression_axes"] = list(cfg.product_profile.regression_axes or DEFAULT_AXES)
-    return item
+        if fresh:
+            # 합친 새 댓글 분석의 입력 (REQ-QAINTEL-010·013).
+            known.comment_ids.update(comment["id"] for comment in fresh if comment.get("id"))
+            item["new_comments"] = fresh
+    return _without_authors(item)
+
+
+def _new_comments(target: AnalysisTarget) -> list[dict]:
+    """대상 이벤트에 딸린 의미 있는 새 댓글만 (REQ-QAINTEL-015 입력)."""
+    return [comment for event in target.events for comment in (event.get("after") or {}).get("comments") or []
+            if comment.get("id") in set((event.get("after") or {}).get("significant_ids") or [])]
 
 
 def build_tasks(kind: str, items: list[dict], batch_size: int, answers: list[dict] | None = None,
@@ -425,7 +470,7 @@ def build_tasks(kind: str, items: list[dict], batch_size: int, answers: list[dic
     prefix = TASK_PREFIX[kind]
     return [
         Task(task_id=f"{prefix}-{number:03d}", skill=skill,
-             payload={"analysis_type": kind, "items": chunk, "answered_questions": answers or [],
+             payload={"analysis_type": kind, "items": _without_authors(chunk), "answered_questions": answers or [],
                       "unreadable_documents": unreadable or []})
         for number, chunk in enumerate(_chunks(items, batch_size), start=1)
     ]

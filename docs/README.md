@@ -35,6 +35,9 @@
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
 | **AI 모델·추론 정도 화면 설정** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) · [SPEC REQ-AICALL-007](../SPEC.md) (서버 안에서만 저장, 외부는 읽기 전용) |
 | **등록된 Excel 사양서 읽기** | [SPEC REQ-PARSE-010](../SPEC.md) · 등록·동기화된 XLSX의 모든 시트·행과 원문 위치를 분석에 사용 |
+| **VXvue 챗봇 화면·답변 개선 계획(2026-10-14)** | [챗봇 개선 계획](superpowers/plans/2026-10-14-vxvue-chatbot-ui-improvements.md) · 제목 자동 판단, VP- ID 인용, 진행 카드, 사용량 표시, 지식 상태 토글, 미확인 범위 원인 |
+
+| **분석 결과 설명 개선 범위(2026-10-14)** | [분석 결과 설명 계획](superpowers/plans/2026-10-14-finding-explanation.md) |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
@@ -87,7 +90,7 @@
 | [SHARED_PLATFORM_ARCHITECTURE.md](SHARED_PLATFORM_ARCHITECTURE.md) | 두 가지 확장 방식(모듈 / 하위 서비스), 경계, 추가 체크리스트 |
 | [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md) | LLM 호출을 줄이는 흐름, 일일 점검 실측·재시도 수정과 다음 절감 방안 |
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 실행 중인 작업 차단·사용자 sudo 재시작, 하위 서비스 통합까지 |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 실행 중인 작업 차단·재시작, 하위 서비스 통합, 한도 증거·PC 예약 확인까지 |
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
 | [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |

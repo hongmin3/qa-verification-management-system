@@ -148,8 +148,38 @@ def _run_cancellable(command, *, prompt, cwd, env, timeout, check):
         return subprocess.CompletedProcess(command, process.returncode, stdout, stderr), cancelled
 
 
-def build_prompt(task: Task, run: RunWorkspace) -> str:
+#: 작업 입력 전문을 프롬프트에 넣는 최대 글자 수. 넘으면 파일을 읽게 한다 (REQ-DAILY-016 3번).
+PROMPT_INLINE_LIMIT = 200_000
+#: 작업 폴더에서 더 읽을 수 있는 자료. 있는 것만 프롬프트에 적어 Glob 으로 찾지 않게 한다.
+READABLE_FILES = ("rules/qa-guide.md", "rules/instruction-prompt.txt")
+
+
+def _inlined_documents(task: Task, run: RunWorkspace, inline_input: bool) -> list[tuple[str, str]]:
+    """프롬프트에 전문을 넣을 문서 (작업 입력, 결과 형식, 제품 규칙 Skill 참고 문서).
+
+    CLI 는 턴마다 앞의 대화 전체를 다시 읽는다. 매 작업이 같은 파일을 Read 로 나눠 읽던 턴을 없앤다.
+    """
+    documents = []
+    input_path = run.in_dir / f"{task.task_id}.json"
+    if inline_input and input_path.is_file():
+        text = input_path.read_text(encoding="utf-8")
+        if len(text) <= PROMPT_INLINE_LIMIT:
+            documents.append((run.rel(input_path), text))
+    skills = run.root / ".claude" / "skills"
+    references = [skills / "qa-common-rules" / "references" / "output-contract.md"]
+    if run.product_skill:
+        references += sorted((skills / run.product_skill / "references").glob("*.md"))
+    documents += [(run.rel(path), path.read_text(encoding="utf-8")) for path in references if path.is_file()]
+    return documents
+
+
+def build_prompt(task: Task, run: RunWorkspace, inline_input: bool = True) -> str:
+    """`inline_input=False` 는 결과 재사용 기준(REQ-QAINTEL-037)용이다. 입력 내용은 그쪽이 따로 비교한다."""
     product_rules = f"제품 규칙 Skill `{run.product_skill}` 을 먼저 읽는다.\n" if run.product_skill else ""
+    readable = [name for name in READABLE_FILES if (run.root / name).is_file()]
+    readable.append(run.rel(run.context_dir / "srs_current.jsonl"))
+    documents = _inlined_documents(task, run, inline_input)
+    inlined = "".join(f"\n<file path=\"{name}\">\n{text}\n</file>\n" for name, text in documents)
     return (
         f"/{task.skill} {run.rel(run.in_dir / f'{task.task_id}.json')}\n\n"
         f"실행 ID: {run.run_id}\n"
@@ -157,10 +187,13 @@ def build_prompt(task: Task, run: RunWorkspace) -> str:
         f"결과 파일: {run.rel(run.out_dir / f'{task.task_id}.json')}\n"
         f"전체 색인: {run.rel(run.context_dir)}/\n"
         f"{product_rules}"
+        f"더 읽을 수 있는 자료: {', '.join(readable)}. 이 밖의 파일을 Glob 으로 찾지 않는다.\n"
         "입력 후보를 먼저 비교한다. 근거가 부족하거나 서로 충돌할 때만 전체 색인을 추가 검색한다.\n"
         "후보 수·본문·근거 검사를 줄이지 않는다. 규칙에서 요구한 검토를 모두 수행한다.\n"
+        "여러 파일·검색이 필요하면 한 응답에서 함께 부른다. 규칙 원문 읽기와 전체 색인 검색은 두 번 이하의 응답으로 끝낸다.\n"
         "같은 작업에서 이미 읽은 공통 출력 형식은 재사용한다. 결과를 쓰기 전에 필수 필드를 확인한다.\n"
         "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
+        + (f"\n\n아래 파일 내용은 이미 넣었다. 이 파일들을 다시 읽지 않는다.\n{inlined}" if documents else "")
     )
 
 

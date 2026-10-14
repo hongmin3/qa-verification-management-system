@@ -13,7 +13,7 @@
 ## 구조
 
 ```flow
-앱 내장 스케줄러(제품마다 평일 07:30, 공휴일 건너뜀) -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
+앱 내장 스케줄러(제품마다 평일 04:00, 공휴일 건너뜀) -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
 대시보드 [변경사항 점검하기] -> 분리 프로세스 scripts/run_daily_qa.py --product <제품>
 분리 프로세스 -> 제품 잠금 -> Polarion 읽기(GET) -> SRS·이슈 스냅샷 -> 어제 스냅샷과 비교 -> Change Event 저장
 Change Event 저장 -(분석이 필요한 이벤트 없음)-> NO_CHANGE(Claude 0회)
@@ -144,7 +144,7 @@ dry-run 은 스냅샷·이벤트·Finding 을 저장하지 않는다. 그래서 
 Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 분석한다.
 
 9. **예약** — 따로 등록할 것이 없다. 앱(`qa-verification.service`)을 재시작하면 내장 스케줄러가
-   `daily_qa.products` 의 제품마다 평일 07:30(한국 시간)에 점검을 분리된 프로세스로 띄운다.
+   `daily_qa.products` 의 제품마다 평일 04:00(한국 시간)에 점검을 분리된 프로세스로 띄운다.
    공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다. 앱 로그 `output/logs/app.log` 에
    `scheduled_job_registered id=qa_agent_vxvue` 와 `id=qa_agent_limit_catchup` 이 보이면 등록된 것이다.
 
@@ -158,7 +158,7 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 |---|---|---|
 | `daily_qa.products` | `[daily_qa.product]` | 예약·대시보드에 올릴 제품 이름 목록. 제품마다 `config/products/<slug>.yaml` 이 있어야 한다 |
 | `daily_qa.product` | `VXvue` | 제품 목록이 없을 때의 제품, 개편 전 기록의 제품 |
-| `daily_qa.schedule.day_of_week` / `.time` | `mon-fri` / `07:30` | 예약 요일·시각(한국 시간) |
+| `daily_qa.schedule.day_of_week` / `.time` | `mon-fri` / `04:00` | 예약 요일·시각(한국 시간) |
 | `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛴다 |
 | `daily_qa.schedule.extra_holidays` | `[]` | 공휴일 표에 더할 날짜(`YYYY-MM-DD`, 회사 휴무일 등) |
 | `daily_qa.schedule.run_missed` | `true` | 예약 시각에 앱이 꺼져 있었으면 앱이 다시 돌 때 오늘 몫을 한 번 띄운다(REQ-QAINTEL-035) |
@@ -167,6 +167,8 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.intelligence.comment_fetch_limit` | `300` | 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에 |
 | `daily_qa.intelligence.comment_min_chars` | `15` | 이보다 짧은 댓글은 의미 없는 댓글로 본다 |
 | `daily_qa.intelligence.event_max_attempts` | `3` | 같은 이벤트의 분석 실패가 이 횟수면 포기(`abandoned`) |
+| `daily_qa.intelligence.backlog_max_events` | `10` | 한 실행에 올리는 지난 날 대기 이벤트 수. 오늘 이벤트는 상한 없음(REQ-QAINTEL-006 6번) |
+| `daily_qa.intelligence.comment_model` | 빈 값(`ai.claude.models.light`) | 새 댓글 분석 모델. 운영은 `claude-sonnet-5-5` |
 | `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 일일 모드에서 세션 한도 초기화 뒤 자동 재개 조건. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
 | `daily_qa.intelligence.use_knowledge_documents` | `true` | 등록된 사양서 문서 조각도 후보로 찾는다 |
 
@@ -192,7 +194,7 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | 실행별 상세 | `/qa-agent/runs/<실행 ID>` · `output/daily_qa/<실행 ID>/audit.json` |
 | AI 에 보낸 입력 | `output/daily_qa/<실행 ID>/sent/*.json` (마스킹 후 원본 그대로) |
 | Claude 가 읽고 검색한 것 | `output/daily_qa/<실행 ID>/claude_logs/*.claude.json` 의 `tool_call_log` |
-| 분석 대기·실패 이벤트 | 대시보드 "분석 대기" 수. 실패한 이벤트는 다음 실행이 다시 분석하고 3회면 포기한다. 한 이벤트가 분석 두 가지를 부르면 실패한 분석만 다시 돈다 |
+| 분석 대기·실패 이벤트 | 대시보드 "분석 대기" 수. 실패한 이벤트는 다음 실행이 다시 분석하고 3회면 포기한다. 한 이벤트가 분석 두 가지를 부르면 실패한 분석만 다시 돈다. 수정 완료 이슈의 새 댓글은 수정 완료 이슈 분석 하나로 합쳐 돈다. 지난 날 대기분은 한 실행에 10건까지만 올리고, 몇 건을 올렸는지는 `audit.json` 의 `backlog` 에 남는다 |
 | 기간 실행 | 종료일이 지난 날이면 저장 스냅샷끼리 비교하고 대기·실패 이벤트는 건드리지 않는다. 매일 실행이 이미 찾은 변경은 다시 만들지 않는다(REQ-QAINTEL-027) |
 | Claude 사용량 한도 | 대시보드 맨 위 알림·메일 첫 줄. 초기화 시각과 catch-up 예정이 보인다 |
 | 토큰 사용량 | `/cost-dashboard` 의 "QA Agent 점검(예약·수동, Claude CLI)" 줄(`qa_agent_run`) |
@@ -208,8 +210,8 @@ Polarion 설정이 없어 수집을 건너뛴 실행은 변경을 확인하지 �
 `scripts/run_daily_qa.py --issue-audit --since YYYY-MM-DD --until YYYY-MM-DD` 는 지금 이슈 전체를 그 기간의 SRS
 변화와 맞춰 본다. 판정 카드에는 "현재 상태 기준(기간 이력 없음)" 표시가 붙는다.
 
-- 점검 모델: `daily_qa.intelligence.audit_model`(비우면 `ai.claude.models.light`). 지금 설정은 세 등급이 모두
-  `claude-opus-5-5` 라 가벼운 모델로 바꿔야 사용량이 줄어든다(예: `claude-sonnet-5-5`).
+- 점검 모델: `daily_qa.intelligence.audit_model`(비우면 `ai.claude.models.light`). 운영 `config.yaml` 은
+  `claude-sonnet-5-5` 로 둔다(2026-10-14).
 - 한 작업의 이슈 수: `daily_qa.intelligence.audit_batch_size`(기본 10). 실행당 작업 상한은 `daily_qa.max_tasks_per_run`.
 - 2026-10-01 실측(08-20 이후 비교): 이슈 647건 중 연결 SRS 가 바뀐 이슈 371건, SRS 그대로인 Spec 판정 26건,
   SRS 단위 묶음 76개. 기간을 좁히면 대상이 줄어든다.
