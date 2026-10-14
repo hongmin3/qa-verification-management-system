@@ -4000,6 +4000,8 @@ python scripts/run_daily_qa.py --dry-run
 
    - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
 
+   - 공통·제품·작업 Skill과 미리 고른 제품 규칙 원문도 함께 넣는다(REQ-QAINTEL-040). 이미 넣은 Skill과 규칙 절은 다시 읽지 않는다.
+
    - 작업 입력 파일의 전문(마스킹한 내용)과, 결과 형식 문서(`qa-common-rules/references/output-contract.md`)·제품 규칙 Skill 의 `references/` 문서 전문. "이 내용은 이미 넣었으니 파일을 다시 읽지 않는다" 고 적는다. 입력이 200,000자를 넘으면 전문을 넣지 않고 파일을 읽게 한다.
 
    - 작업 폴더에서 읽을 수 있는 자료 목록(`rules/qa-guide.md`, `rules/instruction-prompt.txt`, `context/srs_current.jsonl`)과, 여러 파일·검색이 필요하면 한 응답에서 함께 부르라는 안내. 규칙 원문·전체 색인 추가 조회는 두 번 이하의 응답으로 끝내라고 적는다.

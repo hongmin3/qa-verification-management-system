@@ -1489,6 +1489,32 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 - 제품 고유 필드 이름과 값은 제품 설정·제품 어댑터·제품 규칙 Skill(`config/products/<slug>/skills/`)에만 둔다.
 - 절차는 `docs/PRODUCT_ONBOARDING.md` 에 있다. 공통 코드를 고쳐야 하는 경우도 그 문서에 적는다.
 
+
+### REQ-QAINTEL-040 분석 입력 크기와 규칙 반복 읽기 줄이기
+
+**하는 일** 같은 근거를 반복 전달하거나 규칙을 여러 번 찾는 양을 줄인다. 분석 대상, 후보 원문, 근거 위치, 모델과 판정 기준은 유지한다.
+
+**순서**
+1. 변경 분석·현재 이슈 점검의 작업을 만든 뒤, 입력 JSON이 `daily_qa.intelligence.max_input_chars`(기본 60,000자)를 넘으면 이슈 사이에서 나눈다. 기존 건수 상한도 유지한다.
+2. 입력의 같은 후보 내용은 `shared_candidates`에 한 번 넣는다. 각 이슈의 후보에는 `shared_candidate` 참조와 그 이슈의 `match`를 남긴다. 내용이나 위치가 다른 후보는 합치지 않는다. 입력 사본만 바꾸며 원본 자료는 유지한다.
+3. 공통·제품·작업 Skill과 출력 형식을 프롬프트에 넣는다. 제품 Skill의 `guide-sections.json`에 해당 작업의 절 번호가 있으면 가이드 원문에서 그 절과 하위 절을 미리 넣는다. 이미 넣은 자료를 다시 읽지 않도록 안내한다.
+4. 누락된 절이나 추가 조건에 필요한 원문은 기존 읽기 경로로 확인한다. 절 목록이 없는 제품은 기존 규칙 조회를 유지한다.
+5. 실행 기록에 작업별 입력 글자 수와 단일 대상의 기준 초과 여부를 남긴다. 분할 뒤 실행당 작업 수 제한을 적용하고 남은 이벤트는 다음 실행으로 넘긴다.
+
+> **예외** 한 이슈만으로 입력 기준을 넘으면 원문을 자르지 않고 한 작업으로 유지한다. 글자 수는 토큰 수나 구독 사용량 예측값이 아니다.
+
+### REQ-QAINTEL-041 실행 전 대기 분석 안내
+
+**하는 일** 날짜를 고르는 화면에서 저장된 대기 분석이 함께 실행된다는 사실과 그 규모를 알 수 있다.
+
+**순서**
+1. `GET /qa-agent/run-preview`는 제품과 시작일·종료일을 검증하고 저장된 대기·실패 이벤트만 읽는다. Polarion·AI 호출, 이벤트·실행 기록 저장은 하지 않는다.
+2. 변경사항 점검은 종료일이 오늘이면 실제 실행과 같은 기준으로 오늘 대기분 전체와 이전 날짜 대기분 상한을 선택한다. 종료일이 과거이면 현재 대기분을 선택하지 않는다.
+3. 현재 이슈 전체 점검은 저장된 미완료 전체 점검 이벤트를 별도로 안내한다. 새로 선정될 이슈 수는 실행 후 확정한다고 표시한다.
+4. 두 버튼 아래에 전체 대기 이벤트 수, 선택·보류 건수, 종류별 대상 수와 건수 기준 묶음 수를 표시한다. 입력 크기에 따른 추가 분할·작업 수 상한·새 변경 수집으로 달라질 수 있다고 알린다.
+5. 날짜 변경 때 갱신하고 늦게 도착한 이전 응답은 표시하지 않는다. 조회 실패를 0건으로 표시하지 않고 확인하지 못했다고 안내한다. 실행 버튼의 기존 동작은 유지한다.
+
+
 ## 11. 테스트 사양
 
 ID 규칙: `TEST-<CATEGORY>-NNN`. 모든 테스트는 가짜 Polarion·가짜 Claude 실행기를 쓴다. 실제 Claude 비용이 들지 않는다.
@@ -1818,6 +1844,22 @@ REQ-QAINTEL-039
 4. 원본 이벤트에는 작성자 ID가 남고, AI 입력의 새 댓글·이전 댓글·중첩 이벤트에는 없는지 확인한다.
 5. 390px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.
 
+### TEST-QAINTEL-026 입력 보존과 묶음 분할
+
+**대상** REQ-QAINTEL-040
+
+**절차** 같은 후보·다른 근거 위치·긴 단일 이슈·여러 이슈·특수문자가 있는 입력을 전달하고, 분할된 입력을 원래 구조로 복원한다. 필요한 규칙 절과 하위 절이 프롬프트에 포함되고 다른 절은 제외되는지 확인한다. 실제 저장 입력·실행 작업 수·대기 이벤트를 함께 확인한다.
+
+**기대 결과** 원본과 복원본이 같고 각 대상이 한 번만 포함된다. 단일 대상 초과를 제외한 작업은 글자 기준 이하다. 필요한 규칙이 누락되면 원문 조회 안내가 남는다.
+
+### TEST-QAINTEL-027 실행 전 대기 안내
+
+**대상** REQ-QAINTEL-041
+
+**절차** 오늘·과거 종료일, 두 점검 모드, 잘못된 날짜·제품, 날짜를 빠르게 바꾸는 화면을 확인한다.
+
+**기대 결과** 실제 대기 선택과 같은 건수가 보이고, 조회로 실행·이벤트가 생기지 않는다. 새 변경은 미확정으로 표시하며 오래된 응답과 조회 오류를 0건으로 표시하지 않는다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -1863,6 +1905,8 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-037 | `app/modules/daily_qa/result_cache.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/finding_detail.html` | TEST-QAINTEL-022: `tests/test_daily_qa_result_cache.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_run_progress_browser.py` | implemented |
 | REQ-QAINTEL-038 | `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-023: `tests/test_qa_automation_policy.py`, `tests/test_qa_automation_ui.py`, `tests/test_qa_run_progress_browser.py`, `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_dashboard.py` | implemented |
 | REQ-QAINTEL-039 | `app/modules/daily_qa/limit_evidence.py`, `app/modules/daily_qa/pipeline.py`, `app/main.py`, `scripts/capture_limit_evidence.py`, `scripts/sync_limit_evidence.ps1` | TEST-QAINTEL-024: `tests/test_limit_evidence.py` | verified |
+| REQ-QAINTEL-040 | `app/modules/daily_qa/input_budget.py`, `app/modules/daily_qa/rule_context.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-QAINTEL-026: `tests/test_qa_input_budget.py` | implemented |
+| REQ-QAINTEL-041 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/web/static/qa-run-preview.js` | TEST-QAINTEL-027: `tests/test_qa_run_preview.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

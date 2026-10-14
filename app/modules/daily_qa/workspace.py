@@ -181,8 +181,13 @@ def prepare(workspace_dir: Path, repo_root: Path, run_id: str, guide: Path | Non
 
 
 def write_task_input(run: RunWorkspace, task_id: str, payload: dict) -> tuple[Path, dict]:
+    from app.modules.daily_qa.input_budget import input_text
+
     path = run.in_dir / f"{task_id}.json"
-    return path, _write_json(path, payload)
+    masked, report = mask_payload(payload)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(input_text(masked), encoding="utf-8")
+    return path, report.as_dict()
 
 
 def write_context(run: RunWorkspace, srs_items: list[dict], tc_rows: list[dict], manuals: dict[str, str]) -> dict:

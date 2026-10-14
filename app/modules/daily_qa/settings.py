@@ -59,6 +59,8 @@ class IntelligenceSettings:
     comment_model: str = ""
     #: 실행 한 번에 올리는 지난 날 대기 이벤트 수 (REQ-QAINTEL-006 6번). 0 이하면 올리지 않는다.
     backlog_max_events: int = 10
+    #: 작업 입력 글자 기준. 단일 대상이 넘으면 원문을 유지한다 (REQ-QAINTEL-040).
+    max_input_chars: int = 60000
 
 
 @dataclass(frozen=True)

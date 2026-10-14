@@ -71,6 +71,14 @@ def run_status(product: str = ""):
     return dash.status(_choice(product))
 
 
+@router.get("/run-preview")
+def run_preview(product: str = "", since: str = "", until: str = ""):
+    try:
+        return JSONResponse(dash.run_preview(_choice(product), since, until), headers={"Cache-Control": "no-store"})
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
 @router.get("/automation-policy")
 def automation_policy_status(product: str = ""):
     from app.modules.daily_qa.automation_policy import get_policy

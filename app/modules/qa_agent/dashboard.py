@@ -127,6 +127,36 @@ def choose(product: str = "") -> ProductChoice | None:
 # -- 지식 문서 목록 (REQ-QAINTEL-022) --------------------------------------------
 
 
+def run_preview(choice: ProductChoice, since: str = "", until: str = "") -> dict:
+    """Saved pending work only. Never collect, launch, or update state (REQ-QAINTEL-041)."""
+    from math import ceil
+    from app.modules.daily_qa.change_events import ISSUE_AUDIT, ISSUE_AUDIT_TARGET, group_targets, merge_comment_targets
+    from app.modules.daily_qa.input_budget import select_backlog
+
+    today = datetime.now(KST).date()
+    _, past_until = parse_run_period(since, until, today)
+    cfg = choice.cfg
+    pending = choice.store.list_events(product=cfg.slug, statuses=("pending", "failed"))
+    selected, _ = select_backlog(pending, today.strftime('%Y%m%d'), cfg.intelligence.backlog_max_events)
+    if past_until:
+        selected = []
+    audit = [event for event in pending if event['event_type'] == ISSUE_AUDIT_TARGET]
+
+    def describe(events, waiting):
+        grouped = group_targets(events)
+        merge_comment_targets(grouped)
+        counts = {kind: len(targets) for kind, targets in grouped.items() if targets}
+        # This is the count-only lower estimate. SRS grouping and input sizes can add batches.
+        batches = sum(ceil(count / max(1, cfg.intelligence.audit_batch_size if kind == ISSUE_AUDIT else cfg.batch_size))
+                      for kind, count in counts.items())
+        return {"waiting": waiting, "selected": len(events), "deferred": waiting - len(events),
+                "targets": counts, "batches_by_count": batches}
+
+    return {"changes": describe(selected, len(pending)), "audit": describe(audit, len(audit)),
+            "new_changes": None, "historical": bool(past_until), "max_tasks": cfg.max_tasks_per_run,
+            "labels": ANALYSIS_LABELS}
+
+
 def manual_kinds(product: str, root=None) -> tuple[str, ...]:
     """이 제품에서 사람이 올려야 하는 지식 문서 종류. 자동 출처(ALM 등) 종류는 뺀다 (REQ-KNOW-018)."""
     from app.core.product_config import AUTOMATIC_SOURCES

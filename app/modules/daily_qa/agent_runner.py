@@ -166,16 +166,20 @@ def _inlined_documents(task: Task, run: RunWorkspace, inline_input: bool) -> lis
         if len(text) <= PROMPT_INLINE_LIMIT:
             documents.append((run.rel(input_path), text))
     skills = run.root / ".claude" / "skills"
-    references = [skills / "qa-common-rules" / "references" / "output-contract.md"]
+    references = [skills / task.skill / "SKILL.md", skills / "qa-common-rules" / "SKILL.md",
+                  skills / "qa-common-rules" / "references" / "output-contract.md"]
     if run.product_skill:
+        references.append(skills / run.product_skill / "SKILL.md")
         references += sorted((skills / run.product_skill / "references").glob("*.md"))
     documents += [(run.rel(path), path.read_text(encoding="utf-8")) for path in references if path.is_file()]
+    from app.modules.daily_qa.rule_context import guide_context
+    documents += guide_context(task, run)
     return documents
 
 
 def build_prompt(task: Task, run: RunWorkspace, inline_input: bool = True) -> str:
     """`inline_input=False` 는 결과 재사용 기준(REQ-QAINTEL-037)용이다. 입력 내용은 그쪽이 따로 비교한다."""
-    product_rules = f"제품 규칙 Skill `{run.product_skill}` 을 먼저 읽는다.\n" if run.product_skill else ""
+    product_rules = f"제품 규칙 Skill `{run.product_skill}` 을 먼저 확인한다. 아래 포함된 내용은 다시 읽지 않는다.\n" if run.product_skill else ""
     readable = [name for name in READABLE_FILES if (run.root / name).is_file()]
     readable.append(run.rel(run.context_dir / "srs_current.jsonl"))
     documents = _inlined_documents(task, run, inline_input)
@@ -190,6 +194,8 @@ def build_prompt(task: Task, run: RunWorkspace, inline_input: bool = True) -> st
         f"더 읽을 수 있는 자료: {', '.join(readable)}. 이 밖의 파일을 Glob 으로 찾지 않는다.\n"
         "입력 후보를 먼저 비교한다. 근거가 부족하거나 서로 충돌할 때만 전체 색인을 추가 검색한다.\n"
         "후보 수·본문·근거 검사를 줄이지 않는다. 규칙에서 요구한 검토를 모두 수행한다.\n"
+        "후보의 shared_candidate는 입력 shared_candidates의 같은 키 원문을 뜻한다. 그 원문과 각 후보의 match를 합쳐 검토한다. 이 키는 근거 번호가 아니며 원문의 ref·id·location을 인용한다.\n"
+        "아래 넣은 Skill·가이드 절은 이미 읽은 것으로 사용한다. Skill/Read 도구로 같은 내용을 다시 부르지 않는다. 조건별로 더 필요한 절이나 누락된 절만 원문에서 추가 확인한다.\n"
         "여러 파일·검색이 필요하면 한 응답에서 함께 부른다. 규칙 원문 읽기와 전체 색인 검색은 두 번 이하의 응답으로 끝낸다.\n"
         "같은 작업에서 이미 읽은 공통 출력 형식은 재사용한다. 결과를 쓰기 전에 필수 필드를 확인한다.\n"
         "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."

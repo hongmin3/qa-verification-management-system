@@ -51,6 +51,8 @@
   자동 실행은 TC·매뉴얼을 보지 않습니다.
   <b>현재 이슈 전체 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
 
+  <div id="qa-run-preview" class="hint" role="status" aria-live="polite" data-product="{{ selected }}">저장된 대기 분석을 확인하는 중입니다.</div>
+  <script src="/static/qa-run-preview.js?v=20261014"></script>
   {% include "_run_progress.html" %}
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}

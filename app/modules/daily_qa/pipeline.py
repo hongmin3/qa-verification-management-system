@@ -52,6 +52,7 @@ from app.modules.daily_qa.checklist_xlsx import coverage_rows_from_finding, draf
 from app.modules.daily_qa.collector import CollectionError, collect_issues, collect_srs, fetch_all_comments
 from app.modules.daily_qa.evidence_validation import draft_key, validate_finding
 from app.modules.daily_qa.intelligence import ANALYSIS_SKILLS, ON_DEMAND_SKILLS, AnalysisTarget, Corpus, build_item, build_tasks
+from app.modules.daily_qa.input_budget import select_backlog, split_tasks
 from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient
 from app.modules.daily_qa.schema import (
     ANALYSIS_SKILL_NAMES,
@@ -803,11 +804,8 @@ class _Run:
         오늘 만든 이벤트(실행 번호의 날짜가 오늘)는 상한에 들지 않는다. 같은 날 다시 도는 실행도 오늘 몫은 모두 돈다.
         """
         today = self.run_id[:8]   # 실행 번호 앞 8자리가 그 실행의 날짜다 (YYYYMMDD)
-        fresh = [event for event in events if str(event.get("run_id") or "")[:8] >= today]
-        backlog = sorted((event for event in events if str(event.get("run_id") or "")[:8] < today), key=lambda event: event["id"])
-        taken = backlog[:max(self.cfg.intelligence.backlog_max_events, 0)]
-        self.audit["backlog"] = {"waiting": len(backlog), "taken": len(taken)}
-        return taken + fresh
+        selected, self.audit["backlog"] = select_backlog(events, today, self.cfg.intelligence.backlog_max_events)
+        return selected
 
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
         self._progress("prepare_ai", "AI 분석 준비")
@@ -873,6 +871,7 @@ class _Run:
             else:
                 tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents,
                                     skill=self._skill(kind))
+            tasks = split_tasks(tasks, self.cfg.intelligence.max_input_chars)
             selected = tasks[:max(self.budget, 0)]
             self.budget -= len(selected)
             overflow = len(tasks) - len(selected)
@@ -962,6 +961,8 @@ class _Run:
         workspace, out_dir = self.workspace, self.out_dir
         entry = {"task_id": task.task_id, "skill": task.skill}
         input_path, masking = write_task_input(workspace, task.task_id, task.payload)
+        entry["input_chars"] = len(input_path.read_text(encoding="utf-8"))
+        entry["input_oversize"] = entry["input_chars"] > self.cfg.intelligence.max_input_chars
         (out_dir / "sent").mkdir(exist_ok=True)
         shutil.copy2(input_path, out_dir / "sent" / input_path.name)
         entry["masking"] = masking

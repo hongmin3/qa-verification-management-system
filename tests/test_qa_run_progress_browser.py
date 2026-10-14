@@ -93,6 +93,9 @@ def cancel_site(world, monkeypatch):
             path = urlparse(self.path).path
             if path == "/qa-agent/status":
                 self.send(state)
+            elif path == "/qa-agent/run-preview":
+                response = world["client"].get(self.path)
+                self.send(response.content, response.status_code)
             elif path == "/qa-agent":
                 self.send(world["client"].get("/qa-agent").content, content_type="text/html; charset=utf-8")
             elif path.startswith("/static/"):
