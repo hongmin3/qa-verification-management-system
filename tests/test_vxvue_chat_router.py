@@ -208,3 +208,15 @@ def test_knowledge_status_script_lists_other_excluded_once_and_flags_skill_error
     assert "제외: ${d.name}" in body and "d.kind!=='manual'" in body
     assert "(state.failed_documents||[]).forEach" not in body
     assert "skill.status==='error'?'knowledge-bad'" in body
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_masks_secret_like_exclude_reason(web):
+    client, _, router = web
+    _write_manifest(router, {"excluded": [
+        {"kind": "specification", "file_name": "S.pdf", "exclude_reason": "api_key = AIzaSyDummyKeyValue123456 포함, 담당 user@example.com"},
+        {"kind": "manual", "file_name": "M.docx", "exclude_reason": "password: Abcd1234!"}]})
+    data = client.get("/vxvue-chatbot/knowledge-status").json()
+    reasons = [e["reason"] for e in data["excluded"]] + [m["reason"] for m in data["manuals"]]
+    assert all("AIzaSyDummyKeyValue123456" not in r and "user@example.com" not in r and "Abcd1234!" not in r for r in reasons)
+    assert "[SECRET]" in data["excluded"][0]["reason"] and "[ACCOUNT]" in data["excluded"][1]["reason"]
