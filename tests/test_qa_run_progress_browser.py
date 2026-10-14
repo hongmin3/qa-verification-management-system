@@ -16,6 +16,28 @@ ROOT = Path(__file__).resolve().parents[1]
 RUN_ID = "browser-cancel-fixture"
 
 
+def browser_headless():
+    """기본은 화면 없이 띄운다. 화면을 보려면 QA_BROWSER_HEADED=1. Validates: NFR-OPS-003.
+
+    Windows 에서 화면 있는 Chromium 은 백그라운드 셸·deploy.ps1 의 pytest 에서 멈출 수 있다.
+    """
+    return os.environ.get("QA_BROWSER_HEADED", "").strip() not in ("1", "true", "yes")
+
+
+@pytest.mark.parametrize("value, headless", [
+    (None, True), ("", True), ("0", True), ("1", False), ("true", False), ("yes", False),
+])
+def test_browser_headless_unless_asked(monkeypatch, value, headless):
+    """Validates: NFR-OPS-003. CI·DISPLAY 가 없어도 기본은 화면 없이 띄운다."""
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("DISPLAY", raising=False)
+    if value is None:
+        monkeypatch.delenv("QA_BROWSER_HEADED", raising=False)
+    else:
+        monkeypatch.setenv("QA_BROWSER_HEADED", value)
+    assert browser_headless() is headless
+
+
 @pytest.fixture
 def cancel_site(world, monkeypatch):
     """실제 템플릿·JS를 읽고 취소 HTTP 응답만 대신한다. 분석 프로세스는 없다."""
@@ -117,8 +139,7 @@ def cancel_site(world, monkeypatch):
 @pytest.mark.parametrize("screen", ["dashboard", "tc_check", "tc_draft"])
 def test_cancel_in_real_http_browser(cancel_site, width, screen, tmp_path):
     with playwright.sync_playwright() as p:
-        headless = bool(os.environ.get("CI")) or (os.name != "nt" and not os.environ.get("DISPLAY"))
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(headless=browser_headless())
         context = browser.new_context(viewport={"width": width, "height": 1000})
         page = context.new_page()
         finding_id = cancel_site["draft_finding"] if screen == "tc_draft" else cancel_site["finding"]
@@ -165,7 +186,7 @@ def test_cancel_in_real_http_browser(cancel_site, width, screen, tmp_path):
 def test_automation_checkboxes_in_http_browser(cancel_site, width):
     """Validates: REQ-QAINTEL-038. 두 체크박스의 세 모드 저장·공유·작은 화면 확인."""
     with playwright.sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=browser_headless())
         context = browser.new_context(viewport={"width": width, "height": 1000})
         page = context.new_page()
         page.goto(cancel_site["base"] + "/qa-agent")
@@ -199,7 +220,7 @@ def test_automation_checkboxes_in_http_browser(cancel_site, width):
 def test_cache_in_real_http_browser(cancel_site, width):
     """Validates: REQ-QAINTEL-037. 실제 렌더링에서 새 분석 0·재사용 1·원본 링크를 구분한다."""
     with playwright.sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=browser_headless())
         page = browser.new_page(viewport={"width": width, "height": 1000})
         page.goto(f"{cancel_site['base']}/qa-agent/runs/{cancel_site['cached_run']}")
         tile = page.locator("#run-key-counts .rv-tile").filter(has_text="AI가 분석한 것")

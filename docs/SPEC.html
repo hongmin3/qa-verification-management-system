@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="2f5ae3055d7660d80d958f3669ea9a3907a0d4f905b2fad9c91606732521b356">
+<meta name="spec-source-sha256" content="1213ceb2f66d78486b6c192b79b008f65653e16a08b3d86295004963eee73f54">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>283</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>30</b><span>비기능 NFR</span></div><div class="stat"><b>178</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>204</b><span>implemented</span></div><div class="stat st-verified"><b>59</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>283</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>179</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>204</b><span>implemented</span></div><div class="stat st-verified"><b>60</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -299,6 +299,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-nfr"><a href="#NFR-PRIV-002">NFR-PRIV-002 <span>비밀값과 사내 문서 사본을 저장소에 두지 않기</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-OPS-001">NFR-OPS-001 <span>콘솔 인코딩 때문에 스크립트가 멈추지 않기</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-OPS-002">NFR-OPS-002 <span>부가 기능 실패가 본 작업을 멈추지 않기</span></a></li>
+<li class="toc-id kind-nfr"><a href="#NFR-OPS-003">NFR-OPS-003 <span>화면 없는 셸에서도 테스트가 멈추지 않기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-HUBAUTH-001">REQ-HUBAUTH-001 <span>로그인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-HUBAUTH-002">REQ-HUBAUTH-002 <span>로그아웃</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-HUBAUTH-003">REQ-HUBAUTH-003 <span>세션 유지와 자동 연장</span></a></li>
@@ -495,6 +496,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-PRIV-001">TEST-PRIV-001</a></li>
 <li class="toc-id kind-test"><a href="#TEST-PRIV-002">TEST-PRIV-002</a></li>
 <li class="toc-id kind-test"><a href="#TEST-OPS-004">TEST-OPS-004</a></li>
+<li class="toc-id kind-test"><a href="#TEST-OPS-005">TEST-OPS-005</a></li>
 <li class="toc-id kind-test"><a href="#TEST-HUBAUTH-001">TEST-HUBAUTH-001</a></li>
 <li class="toc-id kind-test"><a href="#TEST-HUBAUTH-002">TEST-HUBAUTH-002</a></li>
 <li class="toc-id kind-test"><a href="#TEST-HUBAUTH-003">TEST-HUBAUTH-003</a></li>
@@ -841,6 +843,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr class="group"><th colspan="5"><span class="gcode">NFR OPS</span> 운영 점검·백업·로그</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a></td><td data-label="이름">콘솔 인코딩 때문에 스크립트가 멈추지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/console.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-OPS-002">NFR-OPS-002</a></td><td data-label="이름">부가 기능 실패가 본 작업을 멈추지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/notifier.py</code>, <code>app/core/document_cache.py</code>, <code>app/core/knowledge_documents.py</code>, <code>scripts/monitor_health.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a></td><td data-label="이름">화면 없는 셸에서도 테스트가 멈추지 않기</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>tests/test_qa_run_progress_browser.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-005">TEST-OPS-005</a>: <code>tests/test_qa_run_progress_browser.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">HUBAUTH</span> 로그인·권한·사용자 관리·감사 기록</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUBAUTH-001">REQ-HUBAUTH-001</a></td><td data-label="이름">로그인</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/auth.py</code>, <code>services/qa-manual-hub/backend/app/security.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Login.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUBAUTH-001">TEST-HUBAUTH-001</a>: <code>services/qa-manual-hub/backend/tests/test_auth.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUBAUTH-002">REQ-HUBAUTH-002</a></td><td data-label="이름">로그아웃</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/auth.py</code>, <code>services/qa-manual-hub/backend/app/deps.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUBAUTH-001">TEST-HUBAUTH-001</a>: <code>services/qa-manual-hub/backend/tests/test_auth.py</code></td></tr>
@@ -6294,7 +6297,7 @@ python scripts/rule_capability_report.py --markdown
 <ul>
 <li><span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>, 백업, 로그, <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 마운트 설정: <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a> ~ <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a></li>
 <li>포트, 배포 스크립트, systemd, nginx: <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> ~ <a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a></li>
-<li>저장소에 비밀값·사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: <a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a>, <a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a>, <a class="idref" href="#NFR-OPS-002">NFR-OPS-002</a></li>
+<li>저장소에 비밀값·사내 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리, 화면 없는 테스트 실행: <a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a>, <a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a> ~ <a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a></li>
 </ul>
 </li>
 </ul>
@@ -8464,7 +8467,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-req" id="REQ-DEPLOY-002">
 <h3><span class="idtag">REQ-DEPLOY-002</span> 배포 스크립트</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a>, <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-DEPLOY-002">TEST-DEPLOY-002</a></span></div>
 <details class="history"><summary>변경 이력 2</summary>
 <ul>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-DEPLOY-002">REQ-DEPLOY-002</a>: 배포 전과 재시작 전에 모든 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 점검과 핵심 앱의 대기·실행 중인 분석을 확인한다. <code>-Restart -ManualRestart</code>는 인증정보를 읽지 않고 파일 반영 뒤 사용자가 실행할 재시작 명령을 안내한다.</li>
@@ -8954,6 +8957,21 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <tr><td><span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>의 조회 하나</td><td>알림 이름으로 남기고 나머지 계속</td></tr>
 </tbody>
 </table></div>
+</section>
+<section class="card kind-nfr" id="NFR-OPS-003">
+<h3><span class="idtag">NFR-OPS-003</span> 화면 없는 셸에서도 테스트가 멈추지 않기</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>tests/test_qa_run_progress_browser.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-OPS-005">TEST-OPS-005</a>: <code>tests/test_qa_run_progress_browser.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-OPS-005">TEST-OPS-005</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-14</span> <a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a>: 브라우저 화면 시험이 Windows 에서 <code>CI</code> 환경변수가 없으면 창을 띄워, 백그라운드 셸의 전체 테스트가 23분 넘게 멈췄다. 이제 기본은 창 없이 돌고, 화면을 보고 싶을 때만 <code>QA_BROWSER_HEADED=1</code> 을 준다. 배포 스크립트의 테스트 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>도 같은 이유로 멈추지 않는다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 루트 <code>pytest</code> 의 브라우저 화면 시험이 창을 띄우지 않고(headless) 돈다. 그래서 백그라운드 셸이나 배포 스크립트(<a class="idref" href="#REQ-DEPLOY-002">REQ-DEPLOY-002</a>)에서 돌려도 멈추지 않는다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>2026-10-14 에 Windows 백그라운드 셸에서 전체 테스트를 돌렸더니 창을 띄우는 Chromium 이 <code>test_cancel_in_real_http_browser</code> 에서 23분 넘게 멈췄다. 같은 파일을 <code>CI=1</code> 로 돌리면 2분 26초에 모두 통과했다.</p>
+</aside>
+<p><strong>설정</strong> 사람이 화면을 눈으로 보고 싶을 때만 환경변수 <code>QA_BROWSER_HEADED=1</code> 을 준다. <code>1</code>·<code>true</code>·<code>yes</code> 가 아니면 창 없이 돈다. <code>CI</code>·<code>DISPLAY</code> 가 있는지는 보지 않는다.</p>
+<p><strong>지킬 것</strong> 브라우저를 띄우는 새 시험은 같은 판단 함수(<code>browser_headless</code>)를 쓴다. 창 있는 실행을 기본값으로 두지 않는다.</p>
 </section>
 <h3>5.6 하위 서비스 QA Manual Hub</h3>
 <p><strong>이 기능은</strong></p>
@@ -11805,6 +11823,10 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <h3><span class="idtag">TEST-OPS-004</span></h3>
 <p><a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a>, 002 는 자동 테스트가 일부만 있다(<a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a> 의 발송 실패, <a class="idref" href="#TEST-KNOW-001">TEST-KNOW-001</a> 의 파일 하나 실패, <a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a> 의 조회 실패). 콘솔 인코딩은 사람이 확인한다: cp949 콘솔에서 <code>python scripts/sync_product_knowledge.py --dry-run</code> 이 <code>UnicodeEncodeError</code> 없이 끝나는지 본다.</p>
 </section>
+<section class="card kind-test" id="TEST-OPS-005">
+<h3><span class="idtag">TEST-OPS-005</span></h3>
+<p><a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a> 을 <code>tests/test_qa_run_progress_browser.py</code> 의 <code>test_browser_headless_unless_asked</code> 로 확인한다: <code>CI</code>·<code>DISPLAY</code> 가 없어도 기본은 창 없이 띄우고, <code>QA_BROWSER_HEADED</code> 가 <code>1</code>·<code>true</code>·<code>yes</code> 일 때만 창을 띄운다. 같은 파일의 세 화면 시험이 모두 이 판단을 쓴다.</p>
+</section>
 <h3>11.6 하위 서비스 QA Manual Hub</h3>
 <p>모든 자동 테스트는 <code>services/qa-manual-hub/backend</code>에서 PostgreSQL을 가리키고 실행한다. 테스트 전후로 표를 만들고 지우며, 테스트마다 모든 표를 비운다.</p>
 <pre><code class="language-text">cd services/qa-manual-hub/backend
@@ -12294,6 +12316,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a></td><td data-label="Implementation"><code>.gitignore</code></td><td data-label="Test"><a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a></td><td data-label="Implementation"><code>app/core/console.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-OPS-002">NFR-OPS-002</a></td><td data-label="Implementation"><code>app/core/notifier.py</code>, <code>app/core/document_cache.py</code>, <code>app/core/knowledge_documents.py</code>, <code>scripts/monitor_health.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#NFR-OPS-003">NFR-OPS-003</a></td><td data-label="Implementation"><code>tests/test_qa_run_progress_browser.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-005">TEST-OPS-005</a>: <code>tests/test_qa_run_progress_browser.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUBAUTH-001">REQ-HUBAUTH-001</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/auth.py</code>, <code>services/qa-manual-hub/backend/app/security.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Login.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUBAUTH-001">TEST-HUBAUTH-001</a>: <code>services/qa-manual-hub/backend/tests/test_auth.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUBAUTH-002">REQ-HUBAUTH-002</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/auth.py</code>, <code>services/qa-manual-hub/backend/app/deps.py</code></td><td data-label="Test"><a class="idref" href="#TEST-HUBAUTH-001">TEST-HUBAUTH-001</a>: <code>services/qa-manual-hub/backend/tests/test_auth.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUBAUTH-003">REQ-HUBAUTH-003</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/deps.py</code>, <code>services/qa-manual-hub/backend/app/security.py</code>, <code>services/qa-manual-hub/backend/app/config.py</code>, <code>services/qa-manual-hub/backend/app/main.py</code></td><td data-label="Test"><a class="idref" href="#TEST-HUBAUTH-005">TEST-HUBAUTH-005</a>, <code>services/qa-manual-hub/backend/tests/test_security_unit.py</code>, <code>services/qa-manual-hub/backend/tests/test_auth.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>

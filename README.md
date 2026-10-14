@@ -520,6 +520,9 @@ Claude 를 부르지 않고 입력 묶음과 코드 계산(추적 공백 등)만
 루트 `pytest`는 핵심 앱 테스트만 수집합니다 (`pytest.ini`의 `testpaths`). 하위 서비스는 자체
 런타임이 필요하므로 자기 디렉터리에서 따로 실행합니다.
 
+브라우저 화면 시험은 기본으로 창 없이 돕니다. 화면을 직접 보고 싶을 때만
+`$env:QA_BROWSER_HEADED = "1"` 을 주고 실행합니다.
+
 ```bash
 cd services/qa-manual-hub/backend
 export TEST_DATABASE_URL="postgresql+psycopg://user:pass@127.0.0.1:5432/qa_manual_hub_test"
