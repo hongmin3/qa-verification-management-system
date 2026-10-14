@@ -52,7 +52,7 @@ def schedule_settings(settings=None) -> dict:
     extra = settings.get("daily_qa.schedule.extra_holidays", []) or []
     return {
         "day_of_week": str(settings.get("daily_qa.schedule.day_of_week", "mon-fri") or "mon-fri"),
-        "time": str(settings.get("daily_qa.schedule.time", "07:30") or "07:30"),
+        "time": str(settings.get("daily_qa.schedule.time", "04:00") or "04:00"),
         "skip_holidays": bool(settings.get("daily_qa.schedule.skip_holidays", True)),
         "calendar": str(settings.get("daily_qa.schedule.holiday_calendar", "kr") or "kr"),
         "extra": tuple(str(item) for item in extra),

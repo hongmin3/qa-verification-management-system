@@ -75,4 +75,4 @@ description: 사람이 사양 변경 분석 화면에서 [TC 점검]을 눌렀�
 - 근거에 바뀐 SRS 위치(`VP-…`)를 반드시 넣는다. TC 는 입력 `location` 또는 `tc_id` 만 쓴다.
 - `gate_status`: G1, G2, G3, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

@@ -26,11 +26,12 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.claude_cli import login_status as claude_login_status
-from app.modules.daily_qa import automation_policy, claude_limits, issue_audit, packages, report, result_cache, rules, snapshots
+from app.modules.daily_qa import automation_policy, claude_limits, issue_audit, limit_evidence, packages, report, result_cache, rules, snapshots
 from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
 from app.modules.daily_qa.cancellation import RunCancelled, bind_lock
 from app.modules.daily_qa.change_events import (
     ANALYSIS_ORDER,
+    COMMENT,
     ENTITY_SRS,
     FIXED_ISSUE,
     ISSUE_AUDIT,
@@ -45,6 +46,7 @@ from app.modules.daily_qa.change_events import (
     detect_issue_events,
     detect_srs_events,
     group_targets,
+    merge_comment_targets,
 )
 from app.modules.daily_qa.checklist_xlsx import coverage_rows_from_finding, draft_rows_from_finding, write_draft
 from app.modules.daily_qa.collector import CollectionError, collect_issues, collect_srs, fetch_all_comments
@@ -299,6 +301,11 @@ def _load_json_state(store: DailyQaStore, key: str, default):
     return value if isinstance(value, type(default)) else default
 
 
+def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> None:
+    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다."""
+    limit_evidence.capture(limit, claude_command=cfg.claude_command, claude_token=cfg.claude_token)
+
+
 def active_limit(store: DailyQaStore, cfg: DailyQaSettings, now: datetime | None = None) -> claude_limits.LimitInfo | None:
     info = claude_limits.load(store.get_state(cfg.state_key(STATE_CLAUDE_LIMIT)))
     return info if info and info.active(now, cfg.claude_token) else None
@@ -405,7 +412,7 @@ class _Run:
         self.run_date = (today.astimezone(claude_limits.KST) if today.tzinfo else today).strftime("%Y-%m-%d")
         self.audit: dict = {"run_id": run_id, "product": cfg.slug, "dry_run": dry_run, "trigger": trigger, "tasks": []}
         self.audit["ai_settings"] = {"analysis_model": cfg.claude_model, "audit_model": cfg.intelligence.audit_model,
-                                     "effort": cfg.claude_effort}
+                                     "comment_model": cfg.intelligence.comment_model, "effort": cfg.claude_effort}
         self.ai_done = 0
         self.ai_total = 0
         self.snapshots = snapshots.for_settings(cfg)
@@ -432,7 +439,10 @@ class _Run:
         self.period = since is not None or self.until is not None
         #: 현재 상태 기준 이슈 점검 (REQ-QAINTEL-030). 점검 작업은 따로 정한 모델로 부른다.
         self.issue_audit = issue_audit
-        self.audit_runner = None
+        #: 분석 종류별로 따로 정한 모델의 실행기 (점검·새 댓글, REQ-DAILY-016 5번). 없으면 기본 실행기.
+        self.kind_runners: dict = {}
+        #: 수정 완료 이슈 분석에 합친 새 댓글 분석: 이슈 번호 → 댓글 이벤트 번호 (REQ-QAINTEL-010).
+        self.merged_comments: dict[str, list[int]] = {}
         self.audit_summary: dict | None = None
         self._audit_left: list[dict] | None = None
         #: 사람이 버튼으로 요청한 실행. 이때만 TC·매뉴얼을 AI 에 보낸다 (REQ-QAINTEL-016·032·034).
@@ -522,11 +532,12 @@ class _Run:
                                                                                   model=cfg.claude_model, effort=cfg.claude_effort,
                                                                                   cancel_check=self._check_cancel)
             if not self.dry_run:
-                # 이슈 정합성 점검은 요약 카드 판정이라 가벼운 모델로 부른다 (REQ-QAINTEL-030 순서 6).
-                self.audit_runner = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                 model=cfg.intelligence.audit_model, effort=cfg.claude_effort,
-                                                 cancel_check=self._check_cancel)
+                # 이슈 정합성 점검·새 댓글 분석은 입력이 작아 따로 정한 모델로 부른다 (REQ-QAINTEL-030 순서 6, REQ-DAILY-016 5번).
+                for kind, model in ((ISSUE_AUDIT, cfg.intelligence.audit_model), (COMMENT, cfg.intelligence.comment_model)):
+                    self.kind_runners[kind] = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
+                                                           model=model, effort=cfg.claude_effort, cancel_check=self._check_cancel)
                 self.audit["audit_model"] = cfg.intelligence.audit_model
+                self.audit["comment_model"] = cfg.intelligence.comment_model
 
     def _client(self):
         cfg = self.cfg
@@ -784,13 +795,27 @@ class _Run:
             # 지난 날 기간 실행은 재시도 대기열을 다루지 않는다. 지난 스냅샷으로 오늘의 대기 이벤트를
             # 판단하면 최신 이슈가 포기로 바뀐다. 대기열은 다음 매일 실행이 오늘 스냅샷으로 처리한다.
             return self.store.list_events(ids=self.stored_event_ids) if self.stored_event_ids else []
-        return self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed"))
+        return self._limit_backlog(self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed")))
+
+    def _limit_backlog(self, events: list[dict]) -> list[dict]:
+        """지난 날 대기 이벤트는 오래된 것부터 `backlog_max_events` 건만 올린다 (REQ-QAINTEL-006 6번).
+
+        오늘 만든 이벤트(실행 번호의 날짜가 오늘)는 상한에 들지 않는다. 같은 날 다시 도는 실행도 오늘 몫은 모두 돈다.
+        """
+        today = self.run_id[:8]   # 실행 번호 앞 8자리가 그 실행의 날짜다 (YYYYMMDD)
+        fresh = [event for event in events if str(event.get("run_id") or "")[:8] >= today]
+        backlog = sorted((event for event in events if str(event.get("run_id") or "")[:8] < today), key=lambda event: event["id"])
+        taken = backlog[:max(self.cfg.intelligence.backlog_max_events, 0)]
+        self.audit["backlog"] = {"waiting": len(backlog), "taken": len(taken)}
+        return taken + fresh
 
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
         self._progress("prepare_ai", "AI 분석 준비")
         events = self._target_events()
         self._active_event_ids = [event["id"] for event in events if event.get("id")]
         grouped = group_targets(events)
+        if not self.on_demand:
+            self.merged_comments = merge_comment_targets(grouped)
         self.targets_found = sum(len(targets) for targets in grouped.values())
         if not self.targets_found:
             for kind in ANALYSIS_ORDER:
@@ -827,7 +852,9 @@ class _Run:
             for entity_id, target_events in targets.items():
                 event_ids = [event["id"] for event in target_events if event.get("id")]
                 item = build_item(AnalysisTarget(kind, entity_id, event_ids, target_events), corpus, known, self.cfg,
-                                  comments_loader=comments_loader, with_tc=bool(self.on_demand))
+                                  comments_loader=comments_loader, with_tc=bool(self.on_demand),
+                                  latest_analysis_loader=lambda subject: self.store.latest_issue_analysis(
+                                      subject, self.cfg.slug, exclude_run_id=self.run_id))
                 if item is None:
                     if not self.dry_run and self.until is None and not self.on_demand:
                         self.store.update_events(event_ids, "abandoned", self.run_id, error="대상이 오늘 스냅샷에 없습니다")
@@ -942,8 +969,9 @@ class _Run:
         checked = None
         limit = None
         self._check_cancel()
-        runner = self.audit_runner if kind == ISSUE_AUDIT and self.audit_runner is not None else self.runner
-        model = getattr(runner, "model", None) or (self.cfg.intelligence.audit_model if kind == ISSUE_AUDIT else "") or self.cfg.claude_model
+        runner = self.kind_runners.get(kind) or self.runner
+        kind_model = {ISSUE_AUDIT: self.cfg.intelligence.audit_model, COMMENT: self.cfg.intelligence.comment_model}.get(kind, "")
+        model = getattr(runner, "model", None) or kind_model or self.cfg.claude_model
         effort = getattr(runner, "effort", None) or self.cfg.claude_effort
         cache_key = None
         cache_source = None
@@ -1071,6 +1099,8 @@ class _Run:
         limit.run_id = self.run_id
         self.store.set_state(self.cfg.state_key(STATE_CLAUDE_LIMIT), claude_limits.dump(limit))
         logger.warning("qa_agent_claude_limit product=%s kind=%s reset=%s", self.cfg.slug, limit.kind, limit.reset_at or "-")
+        if not self.dry_run:
+            capture_limit_evidence(limit, self.cfg)
         intel = self.cfg.intelligence
         if limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
             reset = datetime.fromisoformat(limit.reset_at)
@@ -1090,13 +1120,21 @@ class _Run:
             for item in outcome.task.payload.get("items") or []:
                 target = item.get("target")
                 ids = item_events.get(target) or []
-                if outcome.ok:
-                    self.store.mark_analysis(ids, kind, "done", self.run_id, finding_ids=outcome.finding_ids.get(target, []))
-                elif outcome.limit is not None:
-                    # 한도는 이벤트 탓이 아니다. 실패 횟수를 올리지 않고 대기로 남긴다.
-                    self.store.mark_analysis(ids, kind, "limit", error=outcome.error)
-                else:
-                    self.store.mark_analysis(ids, kind, "failed", self.run_id, error=outcome.error, max_attempts=max_attempts)
+                # 합친 새 댓글 분석은 수정 완료 이슈 분석 결과를 함께 받는다 (REQ-QAINTEL-006 4번).
+                analyses = [(kind, ids)]
+                if kind == FIXED_ISSUE and self.merged_comments.get(target):
+                    analyses.append((COMMENT, self.merged_comments[target]))
+                for analysis, event_ids in analyses:
+                    if outcome.ok and kind == FIXED_ISSUE and target in self.merged_comments and not outcome.finding_ids.get(target):
+                        self.store.mark_analysis(event_ids, analysis, "failed", self.run_id,
+                                                 error="합친 분석에서 이 이슈의 유효한 결과가 저장되지 않았습니다.", max_attempts=max_attempts)
+                    elif outcome.ok:
+                        self.store.mark_analysis(event_ids, analysis, "done", self.run_id, finding_ids=outcome.finding_ids.get(target, []))
+                    elif outcome.limit is not None:
+                        # 한도는 이벤트 탓이 아니다. 실패 횟수를 올리지 않고 대기로 남긴다.
+                        self.store.mark_analysis(event_ids, analysis, "limit", error=outcome.error)
+                    else:
+                        self.store.mark_analysis(event_ids, analysis, "failed", self.run_id, error=outcome.error, max_attempts=max_attempts)
 
     def _stage_result(self, kind: str, selected: list, outcomes: list[_TaskOutcome], overflow: int) -> dict:
         done = sum(outcome.ok for outcome in outcomes)

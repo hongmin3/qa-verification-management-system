@@ -62,7 +62,7 @@ def catchup_allowed(cfg, store, schedule: dict) -> bool:
 def next_run(cfg, store, schedule: dict, moment: datetime) -> datetime | None:
     if not cfg.enabled or not schedule.get("enabled", True) or get_policy(store, cfg.slug)["mode"] == "off":
         return None
-    hour, _, minute = schedule.get("time", "07:30").partition(":")
+    hour, _, minute = schedule.get("time", "04:00").partition(":")
     local = moment.astimezone(holidays.KST)
     for offset in range(40):
         day = local.date() + timedelta(days=offset)

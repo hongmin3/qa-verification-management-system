@@ -38,7 +38,7 @@ macOS/Linux는 `.venv/bin/python`을 쓰고, `secrets.example.txt`를 `secrets.t
 사용법이 보이는지 확인한다.
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q   # 59개 테스트, Gemini Mock 사용이라 비용 없음
+.\.venv\Scripts\python.exe -m pytest -q   # 외부 AI 호출을 격리한 자동 테스트
 ```
 
 ## 4. 서버에 배포하기 (예시: Ubuntu + SSH)
@@ -209,7 +209,7 @@ systemctl show qa-verification -p Restart -p RestartUSec
 1. `config/products/vxvue.yaml`의 `specification.crawler_output_dir`를 실제 크롤러 output 경로로
    맞춘다.
 2. 크롤러가 있는 Windows PC에서 `scripts/sync_vxvue_spec.py --target-url http://<서버>:24357`을
-   Windows 작업 스케줄러에 평일 09:40 으로 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
+   Windows 작업 스케줄러에 평일 03:30 으로 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
    서버에서 실행할 수 없다).
 3. 앱 내부 스케줄러(`app/core/scheduler.py`)는 신규 systemd 없이 이미 함께 뜨며, `/knowledge`
    화면의 "지금 동기화" 버튼으로 수동 실행도 가능하다.
@@ -312,3 +312,26 @@ services:
 ```
 
 값을 빈 문자열로 두면 카드 자체가 표시되지 않는다.
+
+## 9. 사용량 한도 증거와 PC 예약 확인
+
+서버가 한도를 감지하면 실제 Claude 터미널의 사용량 화면을 캡처한다. 세션 또는 주간 사용률이 100%인 경우에만 `data/limit_evidence/`에 PNG와 TXT를 남긴다. 웹 주소는 `/claude/limit-evidence`다.
+
+서버에는 `xvfb xterm xdotool imagemagick` 패키지와 `requirements.txt`의 `pyte`가 필요하다. 캡처 인증은 QA 분석과 같으며 계정 표시를 따로 지정할 때는 `daily_qa.limit_evidence.account_label`을 쓴다.
+
+운영 서버의 프로젝트 폴더에서 수동으로 확인한다. 100% 미만이면 증거 파일을 만들지 않고 그 이유를 출력한다.
+
+```bash
+.venv/bin/python scripts/capture_limit_evidence.py
+```
+
+공유폴더에 접근할 수 있는 담당자 PC의 고정 설치 폴더에서 예약을 등록한다. 10분마다 로그인한 Windows 계정으로 복사한다. 공유폴더 암호를 서버에 저장하지 않는다. 임시 파일의 SHA256을 확인한 뒤 최종 파일로 옮기며, 같은 이름의 불완전한 파일은 다시 복사한다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install_limit_evidence_sync.ps1
+schtasks /Query /TN QA_LimitEvidence_Sync /XML
+```
+
+등록 결과만으로 복사가 끝났다고 판단하지 않는다. `%LOCALAPPDATA%\qa-limit-evidence\sync.log`와 최종 공유폴더의 PNG·TXT를 확인한다. PC가 꺼져 있거나 로그아웃 상태면 복사하지 못하며 서버 원본은 유지된다.
+
+QA 예약은 평일 04:00, SRS 동기화 목표는 평일 03:30(KST)이다. 제품 설정을 바꾸어도 Windows 작업 `AIRegressionAnalyzer_VXvueSpecSync`의 시각은 바뀌지 않는다. 기존 실행 파일·인수·계정·요일을 보존해 작업 시각만 변경한 뒤 XML을 다시 확인한다. `Access is denied`면 관리자 권한으로 변경해야 하며, 실제 적용 여부는 `progress.md`에 남긴다.

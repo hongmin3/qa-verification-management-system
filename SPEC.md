@@ -32,7 +32,7 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 
 ```flow
 QA 담당자 화면 요청 -> 개정 매뉴얼 -> 사양서·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
-평일 07:30 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
+평일 04:00 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
@@ -48,7 +48,7 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 |---|---|---|---|---|
 | 매뉴얼 개정 검토 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정한 결과 화면, Word Comment 파일. Claude 대화로 돌리면 결과 Excel | 5.3 |
 | AI 사용량 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
-| QA Intelligence Agent 일일 점검 | 서버가 평일 07:30 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [변경사항 점검하기]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
+| QA Intelligence Agent 일일 점검 | 서버가 평일 04:00 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [변경사항 점검하기]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
 | QA Manual Hub | 사내 사용자가 매뉴얼을 찾거나 올릴 때 | 매뉴얼 파일 | 제품·문서·버전별로 정리된 매뉴얼과 최신본(Current) | 5.6 |
 
@@ -122,28 +122,28 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
 | 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
 | 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
-| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 07:30 줄과 같다 | 아래 07:30 줄과 같다 | REQ-QAINTEL-025 |
-| 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 07:30 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
-| 07:30 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
+| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
+| 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
+| 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
+| 04:00 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
-| 09:40 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 08:00 (매일), 미완료 시 15분마다 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 
 ```flow
-07:30 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
+03:30 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
+04:00 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
 09:00 PC: SRS 수집·PDF 배포(REQ-SYNC-003) -> 완료 PDF 를 동기화 출력과 지식 폴더에 배포
-09:40 PC: 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
 08:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 실패 시 15분마다 재시도 -> 서버 지식 사본 갱신 -> 다음 채팅·다음 날 점검이 사용
 ```
 
 순서에는 까닭이 있다.
 
-- 09:40 사양서 동기화는 09:00 ALM 통합 수집이 끝난 뒤에 돈다.
+- 03:30 사양서 동기화는 04:00 QA 점검 30분 전에 돈다. 전날 09:00 ALM 통합 수집본을 올린다(2026-10-14 에 09:40 에서 바꿈).
 
-  이유: 수집이 끝나기 전에 돌면 이전 수집본을 올릴 수 있다.
+  이유: QA 점검이 쓰는 사양서 조각을 점검 전에 맞춰 둔다. 09:00 수집과 시각이 겹치지 않아 수집 중인 파일을 올리지 않는다.
 
-- 07:30 일일 점검은 전날 정상적으로 올린 지식 사본을 쓴다. 그날 아침 바뀐 TC·매뉴얼은 다음 날 점검에 들어간다.
+- 04:00 일일 점검은 전날 정상적으로 올린 지식 사본을 쓴다. 그날 아침 바뀐 TC·매뉴얼은 다음 날 점검에 들어간다.
 
 > **참고** 담당자 PC 의 예약 작업은 "예약된 시작 시간을 놓치면 가능한 대로 빨리 실행"이 켜져 있다. PC 가 그 시각에 꺼져 있었으면 켜진 뒤에 돈다. 서버의 일일 점검은 늦게 깨어나도 1시간 안이면 돈다(REQ-SCHED-002). 공휴일에는 예약 점검을 띄우지 않고 앱 로그만 남긴다(REQ-QAINTEL-001).
 
@@ -1660,7 +1660,7 @@ Regression 축 표는 코드의 축 정의(`AXIS_LABELS`, `AXIS_DESCRIPTIONS`)�
 
 ### REQ-QAAGENT-015 제품 지식 폴더 예약 수집
 
-**하는 일** 제품마다 정한 시각에 지식 폴더(사양서·매뉴얼·TC·QA 규칙)를 수집해 등록한다. 예를 들어 VXvue 는 평일 09:40(한국 시각)에, Bellalun Viewer 는 월요일 07:45 에 돈다.
+**하는 일** 제품마다 정한 시각에 지식 폴더(사양서·매뉴얼·TC·QA 규칙)를 수집해 등록한다. 예를 들어 VXvue 는 평일 03:30(한국 시각)에, Bellalun Viewer 는 월요일 07:45 에 돈다.
 
 **언제** 앱이 켜질 때 제품마다 예약 작업을 등록한다(`sync_product_knowledge_<제품 이름표>`). 시간대는 `Asia/Seoul`.
 
@@ -3274,7 +3274,7 @@ JSON 답의 내용이다.
 
 **이 기능은**
 
-- 서버가 평일 07:30(한국 시간)에 제품마다 한 번 스스로 돈다. 주말과 대한민국 공휴일에는 돌지 않는다. QA 담당자는 `/qa-agent` 대시보드의 [변경사항 점검하기]으로 같은 점검을 바로 돌릴 수도 있다.
+- 서버가 평일 04:00(한국 시간)에 제품마다 한 번 스스로 돈다. 주말과 대한민국 공휴일에는 돌지 않는다. QA 담당자는 `/qa-agent` 대시보드의 [변경사항 점검하기]으로 같은 점검을 바로 돌릴 수도 있다.
 - Polarion 의 SRS 전체와 이슈 전체를 읽어 전날 스냅샷과 비교하고, 바뀐 것만 변경 이벤트로 남긴다. 담당자 PC 가 서버에 올린 TC Excel·매뉴얼·QA 규칙도 읽는다.
 - 변경 이벤트의 종류에 따라 다섯 가지 분석을 돌린다. 신규 이슈, 수정 완료 이슈, Spec 판정 이슈, 새 댓글, 사양 변경 분석이다. 자동 분석은 TC·매뉴얼을 보지 않는다. AI 없이 계산하는 사양–TC 연결 점검도 함께 돈다.
 - 기존 TC 검토, 검증 TC 초안, 매뉴얼 누락 후보 점검은 사람이 요청할 때만 돈다(REQ-QAINTEL-016·032·034).
@@ -3299,7 +3299,7 @@ JSON 답의 내용이다.
 실행 한 번은 이렇게 흐른다. 자료를 모두 읽어 어제와 비교하고, 바뀐 것만 AI 에 맡기고, 결과를 모아 메일을 보낸다.
 
 ```flow
-예약 실행(평일 07:30, 공휴일 제외) 또는 [변경사항 점검하기] -> 잠금 -> 사전 점검 -> SRS·이슈 전체 수집 -> 스냅샷 비교 -> 변경 이벤트
+예약 실행(평일 04:00, 공휴일 제외) 또는 [변경사항 점검하기] -> 잠금 -> 사전 점검 -> SRS·이슈 전체 수집 -> 스냅샷 비교 -> 변경 이벤트
 잠금 -(같은 제품의 다른 실행이 진행 중)-> 끝(실행 기록 없음)
 스냅샷 비교 -> TC 색인 -> 사양–TC 연결 점검(주 1회, AI 없음) -> Finding 저장
 변경 이벤트 -> 분석 대상 고르기 -> 작업 묶음 만들기 -> 마스킹 -> 작업 폴더 -> Claude Skill -> 결과 검사·근거 검증 -> Finding 저장
@@ -3352,11 +3352,11 @@ Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 �
 
 ### REQ-DAILY-001 일일 점검 실행 순서
 
-**하는 일** 서버가 평일 아침마다 제품별 점검을 한 번 돈다. 예를 들어 월요일 07:30 에 VXvue 점검이 시작해 Polarion 에서 SRS·이슈 전체를 읽고, 어제와 바뀐 것만 분석하고, 결과를 저장한 뒤 요약 메일을 보낸다.
+**하는 일** 서버가 평일 아침마다 제품별 점검을 한 번 돈다. 예를 들어 월요일 04:00 에 VXvue 점검이 시작해 Polarion 에서 SRS·이슈 전체를 읽고, 어제와 바뀐 것만 분석하고, 결과를 저장한 뒤 요약 메일을 보낸다.
 
 **언제**
 
-- 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 에 적힌 요일·시각(기본 평일 07:30, 한국 시간)에 깨어난다.
+- 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 에 적힌 요일·시각(기본 평일 04:00, 한국 시간)에 깨어난다.
 - 예약은 제품마다 하나다. 예약 이름은 `qa_agent_<slug>` 다(예: `qa_agent_vxvue`). 제품 목록은 `daily_qa.products` 이고, 없으면 `daily_qa.product` 하나다(REQ-QAINTEL-001).
 - 대한민국 공휴일에는 띄우지 않는다. 공휴일은 로컬 표 `config/holidays/kr.yaml` 과 `daily_qa.schedule.extra_holidays` 로 가린다. `daily_qa.schedule.skip_holidays` 가 false 면 공휴일에도 돈다(REQ-QAINTEL-001).
 - 예약 기능은 점검을 웹 프로세스 안에서 돌리지 않는다. `scripts/run_daily_qa.py --product <제품>` 을 웹 프로세스와 분리된 별도 프로세스로 띄우고 바로 돌아온다.
@@ -3435,7 +3435,7 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 | `daily_qa.product` | `VXvue` | 제품이 하나일 때의 제품 이름. 개편 전 기록(제품 칸이 빈 것)도 이 제품 것으로 읽는다 |
 | `daily_qa.products` | `[daily_qa.product]` | 예약을 등록할 제품 이름 목록 |
 | `daily_qa.schedule.day_of_week` | `mon-fri` | 예약 요일 |
-| `daily_qa.schedule.time` | `07:30` | 예약 시각(`HH:MM`, 한국 시간) |
+| `daily_qa.schedule.time` | `04:00` | 예약 시각(`HH:MM`, 한국 시간) |
 | `daily_qa.schedule.skip_holidays` | `true` | 공휴일에 예약 실행을 건너뛸지 |
 
 **안 될 때**
@@ -3999,8 +3999,20 @@ python scripts/run_daily_qa.py --dry-run
    - 제품 설정에 제품 규칙 Skill 이 있으면 "제품 규칙 Skill `<이름>` 을 먼저 읽는다."(VXvue 는 `vxvue-qa-rules`)
 
    - "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
+
+   - 작업 입력 파일의 전문(마스킹한 내용)과, 결과 형식 문서(`qa-common-rules/references/output-contract.md`)·제품 규칙 Skill 의 `references/` 문서 전문. "이 내용은 이미 넣었으니 파일을 다시 읽지 않는다" 고 적는다. 입력이 200,000자를 넘으면 전문을 넣지 않고 파일을 읽게 한다.
+
+   - 작업 폴더에서 읽을 수 있는 자료 목록(`rules/qa-guide.md`, `rules/instruction-prompt.txt`, `context/srs_current.jsonl`)과, 여러 파일·검색이 필요하면 한 응답에서 함께 부르라는 안내. 규칙 원문·전체 색인 추가 조회는 두 번 이하의 응답으로 끝내라고 적는다.
+
+   이유: 2026-10-14 실행의 작업 15개는 평균 21턴을 돌았다. 입력 파일을 6번 나눠 읽고, 규칙 원문과 SRS 색인을 하나씩 검색했다. CLI 는 턴마다 앞의 대화 전체를 다시 읽으므로 토큰의 90%(1,547만 개)가 이 다시 읽기였다.
 4. 실행 옵션과 환경은 NFR-SEC-001 을 따른다. 제한 시간(`task_timeout_seconds`)을 넘기면 멈추고 실패로 본다.
-5. 모델은 `--model <ai.claude.models.standard>`, 추론 정도는 `--effort <ai.claude.effort>` 로 넘긴다. 화면 AI 기능과 같은 설정을 쓴다. 값이 비면 그 인자를 넣지 않고 CLI 기본값을 쓴다. 현재 이슈 전체 점검 작업(REQ-QAINTEL-030)은 모델만 `daily_qa.intelligence.audit_model` 을 쓰고 추론 정도는 같다.
+5. 모델은 `--model <ai.claude.models.standard>`, 추론 정도는 `--effort <ai.claude.effort>` 로 넘긴다. 화면 AI 기능과 같은 설정을 쓴다. 값이 비면 그 인자를 넣지 않고 CLI 기본값을 쓴다.
+
+   - 현재 이슈 전체 점검 작업(REQ-QAINTEL-030)은 모델만 `daily_qa.intelligence.audit_model` 을 쓴다.
+   - 새 댓글 분석 작업(REQ-QAINTEL-015)은 모델만 `daily_qa.intelligence.comment_model` 을 쓴다.
+   - 두 작업의 추론 정도는 같다. 두 모델 값이 비면 `ai.claude.models.light` 다.
+
+   이유: 두 작업은 입력이 작고 판정 범위가 좁다. 운영 설정은 두 값을 `claude-sonnet-5-5` 로 둬 Opus 사용량을 아낀다.
 6. CLI 가 남긴 도구 호출 기록을 실행 폴더 `claude_logs/<작업 ID>.attempt<N>.claude.json` 으로 복사한다.
 7. 결과 파일을 검사한다(REQ-DAILY-007). 맞으면 끝낸다.
 8. 틀리면 3번부터 한 번 더 한다. CLI 가 오류로 끝나도 결과 파일 검사는 한다. 두 번째도 틀리면 그 작업은 `실패` 다.
@@ -4498,7 +4510,7 @@ REQ-QAINTEL-019 가 대신한다.
 - 운영
   - 운영 점검, 백업, 로그, 지식 폴더 마운트 설정: REQ-OPS-001 ~ REQ-OPS-004
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
-  - 저장소에 비밀값·사내 문서 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: NFR-PRIV-002, NFR-OPS-001, NFR-OPS-002
+  - 저장소에 비밀값·사내 문서 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리, 화면 없는 테스트 실행: NFR-PRIV-002, NFR-OPS-001 ~ NFR-OPS-003
 
 문서가 분석에 쓰이기까지 세 갈래가 있다. 지식 폴더 업로드, ALM 사양서 동기화, 사람이 화면에서 올리기다. 어느 길이든 문서 표에 등록돼야 분석이 검색한다. 어느 제품의 어느 자료가 어느 길로 들어오는지는 제품 설정의 출처 프로필(REQ-KNOW-018)이 정한다.
 
@@ -5244,7 +5256,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 1. 저장소 루트의 `config.yaml` 을 UTF-8 로 읽는다. 비어 있으면 빈 설정으로 본다.
 2. 같은 폴더에 `config.local.yaml` 이 있으면 읽어서 같은 키의 값을 덮어쓴다. 묶음(키 아래 키)은 안쪽 키 단위로 덮어쓰고, 적지 않은 키는 `config.yaml` 값을 그대로 쓴다.
 
-   > **예시** 담당자 PC 의 `config.local.yaml` 에 `daily_qa: {schedule: {enabled: false}}` 만 적으면, 그 PC 에서만 07:30 예약이 꺼지고 `daily_qa.schedule.time` 같은 나머지 값은 `config.yaml` 을 따른다.
+   > **예시** 담당자 PC 의 `config.local.yaml` 에 `daily_qa: {schedule: {enabled: false}}` 만 적으면, 그 PC 에서만 04:00 예약이 꺼지고 `daily_qa.schedule.time` 같은 나머지 값은 `config.yaml` 을 따른다.
 
 3. 비밀 설정을 함께 읽는다(REQ-CONF-002).
 4. 아래 표의 저장 폴더가 없으면 만든다.
@@ -5357,7 +5369,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `qa_rules.source` / `required` | `knowledge_folder` / 예 | QA 규칙 출처 |
 | `instruction_prompt.source` / `required` | `knowledge_folder` / 아니오 | 지침 프롬프트 출처 |
 | `issue_source.source` / `export_dir` / `id_prefix` | `manual` / 빈 값 / 빈 값 | Polarion 이슈 Export 폴더와 이슈 번호 앞글자(REQ-ISSUE-001) |
-| `sync.day_of_week` / `sync.schedule_time` | `*` / `07:00` | 앱 안 예약 실행 요일·시각(한국 시간). VXvue 는 `mon-fri` / `09:40` |
+| `sync.day_of_week` / `sync.schedule_time` | `*` / `07:00` | 앱 안 예약 실행 요일·시각(한국 시간). VXvue 는 `mon-fri` / `03:30` |
 | `sync.stale_after_days` | `14` | 마지막 성공 수집이 이 날수보다 오래되면 상태 판정이 `업데이트 필요` 로 본다(REQ-KNOW-019) |
 
 **순서**
@@ -5670,7 +5682,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 2. 아래 허용 키와 값만 받는다. 하나라도 틀리면 요청 전체를 거절한다(422).
 3. `data/app.db` 의 `app_setting_overrides` 에 저장하고, 이전 값·새 값·시각·접속 주소를 `app_setting_changes` 에 남긴다. 기본값 복구도 기록한다.
 4. 웹 설정 캐시를 다시 읽는다. 다음 AI 호출과 다음 별도 점검 프로세스 실행부터 새 값을 쓴다. 진행 중인 실행은 시작할 때 값을 끝까지 쓴다.
-5. 최근 변경 기록 10건과 진행 중인 일일 점검 번호를 보여 준다. 실행 기록에는 분석 모델·현재 이슈 전체 점검 모델·추론 정도를 남긴다.
+5. 최근 변경 기록 10건과 진행 중인 일일 점검 번호를 보여 준다. 실행 기록에는 분석 모델·현재 이슈 전체 점검 모델·새 댓글 분석 모델·추론 정도를 남긴다.
 
 **설정**
 
@@ -5679,6 +5691,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `ai.claude.models.light` / `standard` / `complex` | `ai.claude.allowed_models` 의 모델 |
 | `ai.claude.effort` | 빈 값(CLI 기본), `low`, `medium`, `high`, `xhigh`, `max` |
 | `daily_qa.intelligence.audit_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
+| `daily_qa.intelligence.comment_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
 
 허용 모델의 기본 목록은 `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` 이다. DB 에 저장한 값이 설정 파일보다 먼저 적용된다(REQ-AICALL-004·005, REQ-DAILY-016).
 
@@ -5694,6 +5707,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **언제** `/qa-agent` 대시보드와 AI 사용량(`/cost-dashboard`)를 열 때. 화면이 `GET /claude/usage` 를 불러 채운다. 화면을 그리는 일은 이 조회를 기다리지 않는다.
 
+VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다. 챗봇은 화면을 열 때, 답변이 끝날 때마다, 열어 둔 동안 5분마다 `GET /claude/usage` 를 다시 불러온다.
+
 **순서**
 
 1. 저장해 둔 값이 `ai.claude.usage.cache_seconds`(기본 120초)보다 새것이면 그 값을 돌려준다.
@@ -5707,6 +5722,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 5. 그래도 조회가 실패하면 일일 QA 점검이 Claude CLI 출력에서 받은 마지막 한도 정보(`rate_limit_event`)를 돌려준다. 이 값은 `data/claude_usage.json` 에 저장돼 있다.
 6. 둘 다 없으면 "사용량을 아직 알 수 없습니다" 와 이유를 돌려준다.
+7. VXvue AI 챗봇이 답변을 만들 때 받은 `rate_limit_event` 도 같은 방식으로 마지막 점검 값에 남긴다. 한도에 걸려 답변이 실패한 경우에도 남긴다. 저장에 실패해도 답변 결과는 바뀌지 않는다.
 
 **결과** `GET /claude/usage` 의 응답이다.
 
@@ -5963,9 +5979,9 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 
 | 작업 번호 | 시각(한국 시간) | 하는 일 | 건너뛰는 조건 |
 |---|---|---|---|
-| `sync_vxvue_specification` | `vxvue.yaml` `sync` (평일 09:40). 설정이 없으면 월 07:30 | 사양서 동기화(REQ-SYNC-001)를 자기 자신의 주소로 부른다 | 크롤러 output 폴더 없음, 이미 진행 중 |
-| `sync_product_knowledge_<slug>` | 제품별 `sync` (VXvue 평일 09:40). 없으면 월 07:45 | 지식 폴더 수집·등록(REQ-KNOW-011) | 폴더 경로 없음(등록 안 함), 폴더 접근 불가, 이미 진행 중 |
-| `qa_agent_<slug>` | `daily_qa.schedule` (평일 07:30). 늦게 깨어나도 1시간 안이면 돈다. `daily_qa.products` 의 제품마다 하나 | QA Agent 점검(REQ-QAINTEL-001)을 별도 프로세스로 띄운다 | 공휴일(`daily_qa.schedule.skip_holidays`), `daily_qa.enabled` 꺼짐, Polarion 설정 없음, 그 제품의 다른 실행이 진행 중 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
+| `sync_vxvue_specification` | `vxvue.yaml` `sync` (평일 03:30). 설정이 없으면 월 07:30 | 사양서 동기화(REQ-SYNC-001)를 자기 자신의 주소로 부른다 | 크롤러 output 폴더 없음, 이미 진행 중 |
+| `sync_product_knowledge_<slug>` | 제품별 `sync` (VXvue 평일 03:30). 없으면 월 07:45 | 지식 폴더 수집·등록(REQ-KNOW-011) | 폴더 경로 없음(등록 안 함), 폴더 접근 불가, 이미 진행 중 |
+| `qa_agent_<slug>` | `daily_qa.schedule` (평일 04:00). 늦게 깨어나도 1시간 안이면 돈다. `daily_qa.products` 의 제품마다 하나 | QA Agent 점검(REQ-QAINTEL-001)을 별도 프로세스로 띄운다 | 공휴일(`daily_qa.schedule.skip_holidays`), `daily_qa.enabled` 꺼짐, Polarion 설정 없음, 그 제품의 다른 실행이 진행 중 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
 | `qa_agent_limit_catchup` | 10분마다 | 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
 
 **지킬 것** 운영 서버에서는 앞의 두 작업이 폴더를 볼 수 없어 늘 건너뛴다. 이 두 작업의 자동 실행은 담당자 PC 의 작업 스케줄러가 맡는다(REQ-SYNC-001, REQ-SYNC-002).
@@ -6391,7 +6407,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 > **예시** 오늘 폴더에 `(사양서) VXvue 사양서2(260929).pdf` 가 새로 생겼으면 그 파일만 올린다. 서버에 `(사양서) VXvue 사양서2(260928).pdf` 가 있으면 지운다. `(사양서) VXvue 사양서3(260928).pdf` 는 이름이 다른 문서이므로 그대로 둔다.
 
-**언제** 담당자 PC 의 작업 스케줄러 `AIRegressionAnalyzer_VXvueSpecSync` 가 평일 09:40 에 `scripts/sync_vxvue_spec.py` 를 부른다.
+**언제** 담당자 PC 의 작업 스케줄러 `AIRegressionAnalyzer_VXvueSpecSync` 가 평일 03:30 에 `scripts/sync_vxvue_spec.py` 를 부른다.
 
 ```text
 python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [--dry-run]
@@ -6479,7 +6495,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 3. 기존 ALM의 문서 분할과 HTML·PDF 렌더링 복구를 사용한다. SRS가 한 문서에만 배정됐는지, 이전 대비 건수가 95% 이상인지, 모든 비어 있지 않은 문서의 PDF가 1페이지 이상인지 검사한다.
 4. 준비 폴더는 일반 디렉터리 생성으로 상위 폴더 권한을 상속한다. 기존 파일의 복구 사본을 준비한 후 새 PDF를 배포한다. 최종 경로에서 다시 읽어 페이지 수와 SHA-256이 원본과 같은지 확인한다.
 5. 실패하면 기존 파일을 복구한다. 정상 배포 후에만 완료 manifest와 날짜별 PDF를 `output/srs_crawler/YYYY-MM-DD/`에 공개한다. 진행 중 산출물은 동기화 대상에 넣지 않는다.
-6. 09:40 사양서 동기화와 10:00 지식 폴더 업로드가 완료본을 서버로 보낸다. 기존 문서 보관본은 자동 삭제하지 않는다.
+6. 03:30 사양서 동기화와 10:00 지식 폴더 업로드가 완료본을 서버로 보낸다. 기존 문서 보관본은 자동 삭제하지 않는다.
 
 **결과** 실행 manifest는 수집·재사용 여부, 검증 항목, 파일별 페이지·크기·SHA-256, 배포 여부를 기록한다. CLI는 정상 완료 0, 실패·중복 실행 1, 설정 미비 2로 끝난다.
 
@@ -6511,7 +6527,7 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 4. 수일 동안 PC가 꺼졌으면 마지막 완료 날짜와 비교해 최신 자료를 한 번 수집한다.
 5. 실패 중에는 서버의 이전 자료를 계속 사용한다. 성공하면 다음 날 08:00까지 대기한다.
 
-기존 09:00 사양 수집과 09:40 사양 동기화는 유지한다. 같은 PDF가 두 경로로 등록되면 챗봇 지식 판에서 같은 바이트의 원본을 한 번만 검색한다. 09:40 새 등록도 다음 요청에 반영한다.
+기존 09:00 사양 수집과 03:30 사양 동기화는 유지한다. 같은 PDF가 두 경로로 등록되면 챗봇 지식 판에서 같은 바이트의 원본을 한 번만 검색한다. 03:30 새 등록도 다음 요청에 반영한다.
 
 **설치** `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 작업을 바꾼다. 수집·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 예약이 재시도 시각보다 조금 일찍 실행되면 남은 시간만 기다렸다 시도한다(`--wait-retry`). 별도 중복 작업을 만들지 않는다.
 
@@ -6743,6 +6759,16 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | 문서 하나 읽기 | 그 문서만 건너뛰고 읽지 못한 목록에 남김(REQ-KNOW-006) |
 | 지식 파일 하나 수집·업로드 | 그 파일만 실패로 남기고 나머지 계속 |
 | 운영 점검의 조회 하나 | 알림 이름으로 남기고 나머지 계속 |
+
+### NFR-OPS-003 화면 없는 셸에서도 테스트가 멈추지 않기
+
+**하는 일** 루트 `pytest` 의 브라우저 화면 시험이 창을 띄우지 않고(headless) 돈다. 그래서 백그라운드 셸이나 배포 스크립트(REQ-DEPLOY-002)에서 돌려도 멈추지 않는다.
+
+> **예시** 2026-10-14 에 Windows 백그라운드 셸에서 전체 테스트를 돌렸더니 창을 띄우는 Chromium 이 `test_cancel_in_real_http_browser` 에서 23분 넘게 멈췄다. 같은 파일을 `CI=1` 로 돌리면 2분 26초에 모두 통과했다.
+
+**설정** 사람이 화면을 눈으로 보고 싶을 때만 환경변수 `QA_BROWSER_HEADED=1` 을 준다. `1`·`true`·`yes` 가 아니면 창 없이 돈다. `CI`·`DISPLAY` 가 있는지는 보지 않는다.
+
+**지킬 것** 브라우저를 띄우는 새 시험은 같은 판단 함수(`browser_headless`)를 쓴다. 창 있는 실행을 기본값으로 두지 않는다.
 
 ### 5.6 하위 서비스 QA Manual Hub
 
@@ -8951,7 +8977,7 @@ REQ-COST-004 확인. `tests/test_cost_dashboard.py::test_guide_does_not_claim_on
 | `test_concurrent_run_is_refused` | 잠금 파일이 있으면 실행을 거부한다 | REQ-DAILY-001 |
 | `test_missing_token_skips_ai_stages` | 토큰이 없으면 AI 단계 `건너뜀`, 사전 점검 비고에 이유 | REQ-DAILY-001 |
 | `test_scheduler_launches_detached_process_only_with_credentials` | Polarion 설정이 없으면 띄우지 않고, 있으면 분리된 프로세스로 띄운다 | REQ-DAILY-001 |
-| `test_scheduler_registers_weekday_job` | 평일 07:30 예약 등록 | REQ-DAILY-001 |
+| `test_scheduler_registers_weekday_job` | 평일 04:00 예약 등록 | REQ-DAILY-001 |
 | `test_claude_tool_logs_are_collected_into_the_run_folder` | `claude_logs/` 와 `sent/` 가 같은 실행 폴더에 모인다 | REQ-DAILY-020, 021 |
 
 ### TEST-DAILY-002
@@ -9409,6 +9435,10 @@ NFR-PRIV-002 는 자동 테스트가 없다. 사람이 확인하는 절차: `git
 
 NFR-OPS-001, 002 는 자동 테스트가 일부만 있다(TEST-USAGE-002 의 발송 실패, TEST-KNOW-001 의 파일 하나 실패, TEST-OPS-001 의 조회 실패). 콘솔 인코딩은 사람이 확인한다: cp949 콘솔에서 `python scripts/sync_product_knowledge.py --dry-run` 이 `UnicodeEncodeError` 없이 끝나는지 본다.
 
+### TEST-OPS-005
+
+NFR-OPS-003 을 `tests/test_qa_run_progress_browser.py` 의 `test_browser_headless_unless_asked` 로 확인한다: `CI`·`DISPLAY` 가 없어도 기본은 창 없이 띄우고, `QA_BROWSER_HEADED` 가 `1`·`true`·`yes` 일 때만 창을 띄운다. 같은 파일의 세 화면 시험이 모두 이 판단을 쓴다.
+
 ### 11.6 하위 서비스 QA Manual Hub
 
 모든 자동 테스트는 `services/qa-manual-hub/backend`에서 PostgreSQL을 가리키고 실행한다. 테스트 전후로 표를 만들고 지우며, 테스트마다 모든 표를 비운다.
@@ -9790,7 +9820,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-014 | `app/modules/daily_qa/tc_index.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
 | REQ-DAILY-015 | `app/modules/daily_qa/packages.py` | TEST-DAILY-003: `tests/test_daily_qa_packages.py` | implemented |
-| REQ-DAILY-016 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py`, `tests/test_daily_qa_runner.py` | implemented |
+| REQ-DAILY-016 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/settings.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py`, `tests/test_daily_qa_runner.py`, `tests/test_qa_intel_token_saving.py` | implemented |
 | REQ-DAILY-017 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
 | REQ-DAILY-018 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-019 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py` | implemented |
@@ -9835,7 +9865,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-003 | `app/core/gemini_client.py` | TEST-AICALL-003, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
-| REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html` | TEST-AICALL-005: `tests/test_claude_usage.py` | verified |
+| REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/static/vxvue-chatbot.js` | TEST-AICALL-005: `tests/test_claude_usage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
@@ -9861,7 +9891,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DEPLOY-002 | `scripts/deploy.ps1` | TEST-DEPLOY-002 | implemented |
 | REQ-DEPLOY-003 | `deploy/systemd/qa-verification.service` | TEST-DEPLOY-002 | implemented |
 | REQ-DEPLOY-004 | `deploy/nginx/qa-platform.conf` | TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
-| REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
+| REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py`, `config/products/vxvue.yaml` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
 | REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
@@ -9871,6 +9901,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | NFR-PRIV-002 | `.gitignore` | TEST-PRIV-002 | implemented |
 | NFR-OPS-001 | `app/core/console.py` | TEST-OPS-004 | implemented |
 | NFR-OPS-002 | `app/core/notifier.py`, `app/core/document_cache.py`, `app/core/knowledge_documents.py`, `scripts/monitor_health.py` | TEST-OPS-004 | implemented |
+| NFR-OPS-003 | `tests/test_qa_run_progress_browser.py` | TEST-OPS-005: `tests/test_qa_run_progress_browser.py` | verified |
 | REQ-HUBAUTH-001 | `services/qa-manual-hub/backend/app/routers/auth.py`, `services/qa-manual-hub/backend/app/security.py`, `services/qa-manual-hub/frontend/src/pages/Login.tsx` | TEST-HUBAUTH-001: `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
 | REQ-HUBAUTH-002 | `services/qa-manual-hub/backend/app/routers/auth.py`, `services/qa-manual-hub/backend/app/deps.py` | TEST-HUBAUTH-001: `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
 | REQ-HUBAUTH-003 | `services/qa-manual-hub/backend/app/deps.py`, `services/qa-manual-hub/backend/app/security.py`, `services/qa-manual-hub/backend/app/config.py`, `services/qa-manual-hub/backend/app/main.py` | TEST-HUBAUTH-005, `services/qa-manual-hub/backend/tests/test_security_unit.py`, `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |

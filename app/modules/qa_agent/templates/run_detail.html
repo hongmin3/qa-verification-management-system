@@ -68,7 +68,7 @@
   {% endif %}
   <details id="run-details" class="rv-more"><summary>자세히 · 단계, 변경 이벤트, 모든 결과, 파일</summary>
   <p class="rv-meta">실행 번호 {{ run.id }} · {{ view.trigger }} · 시작 {{ kst(run.started_at) }} · 종료 {{ kst(run.finished_at) or '진행 중' }} · {{ view.mail }}</p>
-  {% if view.ai_settings %}<p class="rv-meta">분석 모델 {{ view.ai_settings.analysis_model }} · 점검 모델 {{ view.ai_settings.audit_model }} · 추론 정도 {{ view.ai_settings.effort }}</p>{% endif %}
+  {% if view.ai_settings %}<p class="rv-meta">분석 모델 {{ view.ai_settings.analysis_model }} · 점검 모델 {{ view.ai_settings.audit_model }}{% if view.ai_settings.comment_model %} · 새 댓글 분석 모델 {{ view.ai_settings.comment_model }}{% endif %} · 추론 정도 {{ view.ai_settings.effort }}</p>{% endif %}
   {% if view.audit %}
   <div class="qa-banner"><b>현재 상태 기준 점검 · {{ view.audit.since }} ~ {{ view.audit.until }}</b><br>{{ view.audit.notice }}
     <div class="rv-tiles" style="margin:10px 0 0">{% for name, count in view.audit.rows %}<div class="rv-tile"><span>{{ name }}</span><b>{{ count }}</b></div>{% endfor %}</div>

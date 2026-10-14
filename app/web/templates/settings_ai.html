@@ -52,7 +52,7 @@
       <td data-label="출처"><span data-source="{{ row.key }}">{{ row.source }}</span></td>
       <td class="choice-cell"><label for="setting-{{ loop.index }}" class="hint">{{ row.label }} 선택</label><select id="setting-{{ loop.index }}" data-key="{{ row.key }}" {% if not can_edit %}disabled{% endif %}>
         {% if row.value not in row.choices %}<option value="{{ row.value }}" selected disabled>{{ row.value }} (허용 목록 밖)</option>{% endif %}
-        {% for choice in row.choices %}<option value="{{ choice }}" {% if choice == row.value %}selected{% endif %}>{{ choice or ('가벼운 작업 모델 따름' if row.key == 'daily_qa.intelligence.audit_model' else 'CLI 기본') }}</option>{% endfor %}
+        {% for choice in row.choices %}<option value="{{ choice }}" {% if choice == row.value %}selected{% endif %}>{{ choice or ('가벼운 작업 모델 따름' if row.key.startswith('daily_qa.intelligence.') else 'CLI 기본') }}</option>{% endfor %}
       </select></td>
     </tr>
     {% endfor %}

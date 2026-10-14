@@ -238,6 +238,17 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
             record.drop("tc_coverage", "tc_coverage", "자동 분석은 TC 를 보지 않음")
         _clean_history(sections, known, subject, record)
     elif analysis_type == COMMENT:
+        checked = sections.get("checked")
+        clean_checked = {}
+        for key, name in (("confirmed", "확인한 자료"), ("unconfirmed", "확인하지 못한 자료")):
+            values = checked.get(key) if isinstance(checked, dict) else None
+            clean = [text.strip() for text in values if isinstance(text, str) and text.strip()] if isinstance(values, list) else []
+            if not isinstance(values, list) or clean != values:
+                record.notes.append(f"{name} 목록이 없거나 형식이 틀립니다. 유효한 문자열만 표시합니다.")
+            clean_checked[key] = clean
+        if not any(clean_checked.values()):
+            record.notes.append("확인 자료 구분이 비어 있습니다. 분석 메모에서 확인 범위를 확인하세요.")
+        sections["checked"] = clean_checked
         kept = []
         for entry in sections.get("comments") or []:
             if not isinstance(entry, dict):

@@ -77,3 +77,75 @@ def test_queue_rechecks_daily_budget_before_calling_claude(tmp_path, monkeypatch
     service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
     stored = store.vxchat_job("owner", job["id"])
     assert stored["status"] == "FAILED" and "오늘 AI 사용량" in stored["error"]
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_service_stores_ai_title(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
+    result = {"text": "답변", "title": "Theme 설정 사양", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    got = store.vxchat_get("owner", chat["id"])
+    assert got["messages"][-1]["content"] == "답변" and "<!--" not in got["messages"][-1]["content"]
+    assert got["title"] == "Theme 설정 사양"
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_title_write_failure_keeps_job_done(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
+    result = {"text": "답변", "title": "제목", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
+    def boom(*a, **k):
+        raise RuntimeError("db locked")
+    monkeypatch.setattr(store, "vxchat_set_ai_title", boom)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    assert store.vxchat_job("owner", job["id"])["status"] == "DONE"
+    assert store.vxchat_get("owner", chat["id"])["messages"][-1]["content"] == "답변"
+
+
+# Validates: REQ-AICALL-006
+def test_service_records_rate_limit_for_done_and_failed(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    recorded = []
+    monkeypatch.setattr(service.claude_usage, "record_rate_limit_event", lambda info: recorded.append(info))
+    info = {"unifiedWindows": {"five_hour": {"utilization": 0.35, "resets_at": 2}}}
+    job = store.vxchat_submit("owner", chat["id"], "질문", [])
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: {"text": "답변", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}, "rate_limit": info})
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    assert store.vxchat_job("owner", job["id"])["status"] == "DONE" and recorded == [info]
+    failed = store.vxchat_submit("owner", chat["id"], "또 질문", [])
+    def limit_hit(*a, **k):
+        error = RuntimeError("한도 도달")
+        error.rate_limit = info
+        raise error
+    monkeypatch.setattr(service.agent, "run", limit_hit)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**failed, "owner": "owner"}, threading.Event())
+    assert store.vxchat_job("owner", failed["id"])["status"] == "FAILED" and recorded == [info, info]
+
+
+# Validates: REQ-AICALL-006
+def test_rate_limit_record_failure_keeps_job_done_and_failed_status(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    def boom(info):
+        raise OSError("disk full")
+    monkeypatch.setattr(service.claude_usage, "record_rate_limit_event", boom)
+    info = {"unifiedWindows": {}}
+    job = store.vxchat_submit("owner", chat["id"], "질문", [])
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: {"text": "답변", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}, "rate_limit": info})
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    assert store.vxchat_job("owner", job["id"])["status"] == "DONE"
+    failed = store.vxchat_submit("owner", chat["id"], "또 질문", [])
+    def limit_hit(*a, **k):
+        error = RuntimeError("한도 도달")
+        error.rate_limit = info
+        raise error
+    monkeypatch.setattr(service.agent, "run", limit_hit)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**failed, "owner": "owner"}, threading.Event())
+    stored = store.vxchat_job("owner", failed["id"])
+    assert stored["status"] == "FAILED" and "한도 도달" in stored["error"]

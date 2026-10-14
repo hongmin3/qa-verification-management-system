@@ -36,6 +36,14 @@ def _no_real_claude_login(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_real_limit_evidence(monkeypatch):
+    """한도를 시험하는 점검 테스트가 실제 터미널을 띄워 /usage 를 찍지 않게 한다 (REQ-QAINTEL-039)."""
+    from app.modules.daily_qa import pipeline
+
+    monkeypatch.setattr(pipeline, "capture_limit_evidence", lambda limit, cfg: None)
+
+
+@pytest.fixture(autouse=True)
 def _no_writes_to_the_real_database():
     """테스트가 개발용 `data/app.db` 의 `documents` 를 건드리면 그 자리에서 실패시킨다.
 

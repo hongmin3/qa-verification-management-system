@@ -267,8 +267,11 @@ def finding_detail(request: Request, finding_id: int):
         raise HTTPException(404, "Finding 이 없습니다.")
     events = store.list_events(ids=finding.get("event_ids") or []) if finding.get("event_ids") else []
     questions = store.list_questions(run_id=finding["run_id"], subject=finding["subject"])
+    choice = dash.choose(finding.get("product") or "")
     return templates.TemplateResponse(request, "finding_detail.html", _dash_context(
-        finding=finding, card=dash.card(finding), events=events, questions=questions, event_labels=dash.EVENT_LABELS,
+        finding=finding, card=dash.card(finding), explanation=dash.finding_explanation(
+            finding, events, polarion=choice.cfg.polarion if choice else None),
+        events=events, questions=questions, event_labels=dash.EVENT_LABELS,
         axes=AXIS_LABELS))
 
 

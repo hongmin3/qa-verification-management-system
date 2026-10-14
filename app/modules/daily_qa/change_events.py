@@ -361,3 +361,18 @@ def group_targets(events: list[dict]) -> dict[str, dict[str, list[dict]]]:
             if kind in grouped:
                 grouped[kind].setdefault(event["entity_id"], []).append(event)
     return grouped
+
+
+def merge_comment_targets(grouped: dict[str, dict[str, list[dict]]]) -> dict[str, list[int]]:
+    """같은 이슈의 새 댓글 분석을 수정 완료 이슈 분석에 합친다 (REQ-QAINTEL-010).
+
+    새 댓글 분석 대상에서 그 이슈를 빼고 댓글 이벤트를 수정 완료 이슈 분석 대상에 붙인다.
+    돌려주는 값은 이슈 번호 → 합친 댓글 이벤트 번호이고, 결과를 두 분석에 함께 적을 때 쓴다.
+    """
+    fixed, comments = grouped.get(FIXED_ISSUE, {}), grouped.get(COMMENT, {})
+    merged: dict[str, list[int]] = {}
+    for entity_id in [entity for entity in comments if entity in fixed]:
+        events = comments.pop(entity_id)
+        fixed[entity_id] += [event for event in events if all(event is not other for other in fixed[entity_id])]
+        merged[entity_id] = [event["id"] for event in events if event.get("id")]
+    return merged

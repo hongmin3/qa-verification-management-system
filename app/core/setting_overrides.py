@@ -18,7 +18,10 @@ SETTING_LABELS = {
     "ai.claude.models.complex": "복잡한 작업 모델",
     "ai.claude.effort": "추론 정도",
     "daily_qa.intelligence.audit_model": "현재 이슈 전체 점검 모델",
+    "daily_qa.intelligence.comment_model": "새 댓글 분석 모델",
 }
+#: 빈 값(가벼운 작업 모델 따름)을 고를 수 있는 키.
+OPTIONAL_MODEL_KEYS = ("daily_qa.intelligence.audit_model", "daily_qa.intelligence.comment_model")
 ALLOWED_KEYS = frozenset(SETTING_LABELS)
 DEFAULT_MODELS = ("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1")
 EFFORTS = ("", "low", "medium", "high", "xhigh", "max")
@@ -42,7 +45,7 @@ def choices(settings: Settings, key: str) -> list[str]:
     models = settings.get("ai.claude.allowed_models", list(DEFAULT_MODELS))
     if not isinstance(models, list) or not all(isinstance(model, str) and model for model in models):
         raise ValueError("허용 모델 목록을 확인해 주세요.")
-    return ([""] if key == "daily_qa.intelligence.audit_model" else []) + list(dict.fromkeys(models))
+    return ([""] if key in OPTIONAL_MODEL_KEYS else []) + list(dict.fromkeys(models))
 
 
 def validate(values: dict, settings: Settings) -> None:

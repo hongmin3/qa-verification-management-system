@@ -60,10 +60,30 @@ def identifiers(text):
     return {'requirement_ids': requirements, 'tc_ids': tcs, 'issue_ids': issues}
 
 
+def normalize_vp(value):
+    return re.sub(r'[_\s]+', '-', value.strip()).upper()
+
+
+def query_vp_ids(query):
+    return {normalize_vp(x) for x in identifiers(query)['requirement_ids'] if re.match(r'VP[-_ ]', x, re.I)}
+
+
+def definition_ids(text):
+    """VP IDs that the chunk defines in an `ID: VP-n` header, not ones it merely mentions."""
+    return {normalize_vp(x) for x in re.findall(r'(?<![A-Za-z0-9])ID:\s*(VP-\d+)(?![\w]|-\d)', text, re.I)}
+
+
+def mentions_id(search_text, vp_id):
+    """Whole-ID match, so VP-6568 is not a mention of VP-656."""
+    return re.search(r'(?<![\w-])' + re.escape(vp_id.lower()) + r'(?![\w]|-\d)', search_text) is not None
+
+
 def query_terms(query):
     if not isinstance(query, str) or not query.strip() or len(query) > 1000:
         raise ValueError('query must be nonempty and at most 1000 characters')
-    words = re.findall(r'[a-z0-9]+(?:[-_.][a-z0-9]+)*|[가-힣]+', normalize(query))
+    # VP-656, VP_656 and "vp 656" are one ID; search only the hyphen form that the documents use.
+    folded = re.sub(r'(?<![a-z0-9])vp[-_\s]+(\d+)', r'vp-\1', normalize(query))
+    words = re.findall(r'[a-z0-9]+(?:[-_.][a-z0-9]+)*|[가-힣]+', folded)
     noise = {'관련', '사양', '사양서', '매뉴얼', '문서', '기능', '검색', '조회', '비교', '조건',
              '차이', '찾아줘', '알려줘', '보여줘', '확인해줘', '해줘', '무엇', '어떤',
              'the', 'for', 'and', 'or', 'find', 'show', 'please', 'spec', 'tc'}
@@ -460,6 +480,8 @@ class Corpus:
     def search_documents(self, query, limit=20, document_kind=None, model=None, package=None):
         self.validate_pagination(limit)
         terms = query_terms(query)
+        vp_ids = query_vp_ids(query)
+        vp_terms = {t: normalize_vp(t) for t in terms if normalize_vp(t) in vp_ids}
         if document_kind and document_kind not in KINDS:
             raise ValueError('Unknown document kind')
         with closing(self.connect()) as db:
@@ -472,7 +494,7 @@ class Corpus:
             for t in terms:
                 if len(t) < 3:
                     candidates.update(r[0] for r in db.execute('SELECT id FROM chunks WHERE instr(search_text,?)>0', (t,)))
-            scored = []
+            scored, definitions = [], set()
             kinds = {r['id']: json.loads(r['metadata'])['document_kind'] for r in db.execute('SELECT id,metadata FROM documents')}
             ids = sorted(candidates)
             for start in range(0, len(ids), 500):
@@ -484,16 +506,22 @@ class Corpus:
                     filters = [normalize(v) for v in (model, package) if v]
                     if any(value not in row['search_text'] for value in filters):
                         continue
-                    hits = [t for t in terms if t in row['search_text']]
+                    hits = [t for t in terms if t in row['search_text'] and (t not in vp_terms or mentions_id(row['search_text'], vp_terms[t]))]
+                    defines = bool(vp_ids & definition_ids(row['text']))
+                    if not hits and not defines:
+                        continue
                     score = len(hits) * 100 + sum(t in normalize(row['text']) for t in hits) * 10
+                    if defines:
+                        score += 1000
+                        definitions.add(row['id'])
                     scored.append((score, row))
             scored.sort(key=lambda x: (-x[0], x[1]['document_id'], x[1]['id']))
             # Keep the integrated top-N useful even when historical TC rows vastly outnumber specifications.
-            chosen = []
+            chosen = [x for x in scored if x[1]['id'] in definitions][:limit]
             if document_kind is None and limit > 1:
                 for category in ('specification', 'manual', 'testcase', 'issue'):
                     best = next((x for x in scored if kinds[x[1]['document_id']] == category), None)
-                    if best is not None and len(chosen) < limit:
+                    if best is not None and best not in chosen and len(chosen) < limit:
                         chosen.append(best)
             chosen_ids = {x[1]['id'] for x in chosen}
             chosen.extend(x for x in scored if x[1]['id'] not in chosen_ids)
@@ -503,7 +531,7 @@ class Corpus:
             results = []
             for score, candidate in chosen:
                 row = db.execute('SELECT c.*,d.metadata AS doc_metadata,d.sha FROM chunks c JOIN documents d ON c.document_id=d.id WHERE c.id=?', (candidate['id'],)).fetchone()
-                results.append(dict(self.record(row, terms=terms), relevance_score=score))
+                results.append(dict(self.record(row, terms=terms), relevance_score=score, definition_match=candidate['id'] in definitions))
             self.verify_snapshot(db)
             return {'query': query, 'query_terms': terms, 'status': status, 'support_status': 'unknown',
                     'matched': len(scored), 'returned': min(limit, len(scored)), 'truncated': len(scored) > limit,

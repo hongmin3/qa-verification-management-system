@@ -28,4 +28,4 @@ description: 연구소가 "사양대로(SPEC)" 또는 "결함 아님(NOT_BUG)"�
 - 이슈마다 하나. `subject` = `target`. TC 초안을 만들지 않는다.
 - `gate_status`: G1, G2, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

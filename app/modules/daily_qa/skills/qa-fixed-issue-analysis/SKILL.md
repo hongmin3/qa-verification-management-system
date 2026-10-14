@@ -17,6 +17,7 @@ description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 
 - `candidates.srs[]`, `candidates.spec_docs[]`: 최신 사양 후보. `candidates.issues[]`: 비슷한 과거 이슈.
   TC 후보는 없다. 검증 TC 초안은 사람이 [검증 TC 초안 만들기]를 누를 때 `qa-verification-tc-draft` 가 만든다.
 - `regression_axes[]`: 코드가 정한 Regression 축. 이 축만 판정한다.
+- `new_comments[]`(있을 때만): 어제 없던 의미 있는 댓글. 같은 이슈의 새 댓글 분석을 이 분석에 합쳤다는 뜻이다.
 
 ## 절차 (순서대로)
 
@@ -27,7 +28,9 @@ description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 
 4. **변경 범위** (`sections.change_scope`).
 5. **부작용·Regression 범위** (`sections.regression_risk.axes`): `regression_axes` 의 축마다
    `applicable`(true/false)과 이유. 해당하지 않는 축도 false 로 남긴다.
-6. **요약과 할 일**: `summary` 한두 문장, `action` 은 QA 가 다시 확인할 것을 3줄까지.
+6. **새 댓글 반영** (`new_comments` 가 있을 때): 새 댓글이 원인·조치·사양 판정에 주는 영향을 `detail` 에
+   한두 줄로 적는다. QA 가 할 일이 생기면 `action` 에 넣는다. 새 댓글 분석 Finding 은 따로 쓰지 않는다.
+7. **요약과 할 일**: `summary` 한두 문장, `action` 은 QA 가 다시 확인할 것을 3줄까지.
    TC 초안(`draft_tcs`)은 쓰지 않는다. 쓰면 코드가 빼고 메모를 남긴다.
 
 ## Finding
@@ -36,4 +39,4 @@ description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 
 - 과거 비슷한 이슈의 재발 후보가 있으면 `sections.historical` 에 적는다.
 - `gate_status`: G1, G2, G4, G7 (제품 규칙 Skill 의 Gate 번호).
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

@@ -48,4 +48,4 @@ findings 를 비운 결과와 질문 하나만 쓰고 끝낸다.
 - **TC 초안(`draft_tcs`)을 만들지 않는다.** 만들면 Finding 이 버려진다.
 - `gate_status`: 제품 규칙 Skill 이 정한 Gate 가운데 G1, G2, G7.
 
-결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 읽는다.
+결과 JSON 을 쓰기 직전에 `qa-common-rules` 의 `references/output-contract.md` 를 확인한다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.

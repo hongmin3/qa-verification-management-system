@@ -206,7 +206,7 @@ Skill 태깅은 제품 고유 용어가 아니라 **QA 공통 용어**로 매칭
 수집이 통째로 비었을 것이다. 그래서 폴더를 볼 수 있는 쪽이 밀어 올린다 — ALM 크롤러
 동기화와 같은 방향이다. 프로토콜과 근거는 `app/core/knowledge_upload.py` 에 있다.
 
-담당자 PC 에서 평일 10:00 에 자동 실행하려면 작업 스케줄러에 등록한다. 사양서 동기화(평일 09:40) 뒤에 돌게 한다.
+담당자 PC 에서 평일 10:00 에 자동 실행하려면 작업 스케줄러에 등록한다. 사양서 동기화(평일 03:30) 뒤에 돌게 한다.
 
 ```
 schtasks /Create /TN "QA_ProductKnowledge_Sync" /SC WEEKLY /D MON,TUE,WED,THU,FRI /ST 10:00 ^
@@ -394,7 +394,7 @@ qa_intelligence:
 ### 9.9 예약 켜기
 
 `config.yaml` 의 `daily_qa.products` 에 제품 이름을 더하고 앱을 재시작한다. 제품마다 예약
-`qa_agent_<slug>`(평일 07:30, 공휴일 제외)가 생기고 대시보드에 제품 선택이 나타난다.
+`qa_agent_<slug>`(평일 04:00, 공휴일 제외)가 생기고 대시보드에 제품 선택이 나타난다.
 
 ```yaml
 daily_qa:

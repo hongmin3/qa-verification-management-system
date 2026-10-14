@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+import re
+from urllib.parse import quote, urlparse
 
 from app.modules.daily_qa import claude_limits, holidays
 from app.modules.daily_qa.change_events import (
@@ -54,7 +56,7 @@ VERDICT_LABELS = {
     "ROOT_CAUSE_INFORMATION": "원인 정보",
     "RESOLUTION_INFORMATION": "조치 정보",
     "REPRODUCTION_INFORMATION": "재현 조건 정보",
-    "SPEC_CLAIM": "사양 주장",
+    "SPEC_CLAIM": "사양이라는 댓글 주장",
     "REQUIREMENT_INFORMATION": "요구사항 정보",
     "QA_ACTION_REQUIRED": "QA 조치 필요",
     "OTHER_SIGNIFICANT_INFORMATION": "기타 의미 있는 정보",
@@ -75,6 +77,9 @@ VERDICT_LABELS = {
     "QA_CHECK_NEEDED": "QA 확인 필요",
     "CONFLICTS_WITH_PAST_DECISION": "과거 판정과 다름",
     "SPEC_UNCLEAR": "사양 불명확",
+    "Review Needed": "확인 필요",
+    "Confirmed": "근거 확인됨",
+    "Unsupported": "뒷받침 근거 없음",
 }
 ANALYSIS_TYPE_LABELS = {**ANALYSIS_LABELS, "SRS_REMOVED": "삭제 SRS 참조 TC"}
 #: 대시보드에 보일 수동 업로드 지식 문서의 종류. QA 규칙(.md)·지침 프롬프트는 지식 문서로 관리하지 않아
@@ -284,6 +289,53 @@ def card(finding: dict) -> dict:
         "created": kst(finding.get("created_at")),
         "confidence": finding.get("confidence", ""),
     }
+
+
+def finding_explanation(finding: dict, events: list[dict], polarion=None) -> dict:
+    """저장된 기록만 풀어 쓴다. 옛 결과의 확인 범위·작성자를 추측하지 않는다."""
+    sections = finding.get("sections") or {}
+    interpretations = {str(entry.get("comment_id")): entry for entry in sections.get("comments") or []
+                       if isinstance(entry, dict)}
+    comments, seen = [], set()
+    for event in events:
+        after = event.get("after") or {}
+        for comment in after.get("comments") or []:
+            comment_id = str(comment.get("id") or "")
+            significant = after.get("significant_ids") or []
+            if comment_id in seen or (significant and comment_id not in significant):
+                continue
+            seen.add(comment_id)
+            interpretation = interpretations.get(comment_id, {})
+            comments.append({"id": comment_id, "created": kst(comment.get("created")),
+                             "author": comment.get("author") or "작성자 정보 없음", "text": comment.get("text") or "",
+                             "summary": interpretation.get("summary") or "해석이 저장되지 않았습니다.",
+                             "classification": interpretation.get("classification") or "",
+                             "impact": interpretation.get("impact") or "", "follow_up": interpretation.get("follow_up") or ""})
+    for comment_id, entry in interpretations.items():
+        if comment_id not in seen:
+            comments.append({"id": comment_id, "created": "", "author": "작성자 정보 없음", "text": "원문이 저장되지 않았습니다.",
+                             "summary": entry.get("summary") or "", "classification": entry.get("classification") or "",
+                             "impact": entry.get("impact") or "", "follow_up": entry.get("follow_up") or ""})
+    checked = sections.get("checked")
+    checked = checked if isinstance(checked, dict) else {}
+    lists = {key: [text for text in checked.get(key, []) if isinstance(text, str) and text.strip()]
+             if isinstance(checked.get(key), list) else [] for key in ("confirmed", "unconfirmed")}
+    locations = {comment["id"]: f"댓글 {number}" + (f" ({comment['created']})" if comment["created"] else "")
+                 for number, comment in enumerate(comments, start=1)}
+    mentioned = re.findall(r"(?<![A-Za-z0-9-])([A-Z]{2,}-[0-9]+)(?![A-Za-z0-9-])",
+                           "\n".join([finding.get("detail") or "", *(c["text"] for c in comments)]))
+    ids = list(dict.fromkeys([*((finding.get("related_ids") or {}).get("srs") or []), *mentioned]))
+    host = (polarion.host if polarion else "").rstrip("/")
+    parsed = urlparse(host)
+    links = []
+    if parsed.scheme in ("http", "https") and parsed.netloc and not parsed.username and polarion.project_id:
+        links = [{"id": value, "url": f"{host}/polarion/#/project/{quote(polarion.project_id, safe='')}/workitem?id={quote(value, safe='')}"}
+                 for value in ids if value != finding["subject"]]
+    return {"issue": sections.get("issue_summary") or finding.get("subject_title") or finding["subject"],
+            "comments": comments, **lists, "has_checked": any(lists.values()),
+            "comment_locations": locations, "srs_links": links,
+            "memo": finding.get("detail") or "분석 메모가 저장되지 않았습니다.",
+            "events": [EVENT_LABELS.get(event.get("event_type"), event.get("event_type", "")) for event in events]}
 
 
 def sort_cards(cards: list[dict]) -> list[dict]:
