@@ -23,6 +23,7 @@
 | **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
+| **2026-10-14 통합 배포와 운영 기능 검증 현황** | [운영 검증 기록](verification/2026-10-14-production-integration.md) |
 | **실서버 반영 후 확인하기** | [배포 후 테스트](POST_DEPLOY_TESTS.md) · 챗봇 운영·지식·예약·실제 CLI 확인 결과는 [progress](../progress.md) |
 | **할당량 소진 알림 설정** | [배포 후 테스트 §3.8](POST_DEPLOY_TESTS.md) → `scripts/test_notification.py` |
 | **현재 AI 실행 경로와 모델을 확인하기** | [QA 점검 구조](QA_AGENT_ARCHITECTURE.md) · [모델 설정 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) |
