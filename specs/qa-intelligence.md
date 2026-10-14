@@ -526,7 +526,12 @@ AI 분석만 실패한 경우는 스냅샷을 정상으로 저장하고, 이벤�
 
 **하는 일** 어제 없던 댓글만 읽어 QA 판단에 영향이 있는 정보인지 나눈다. 댓글 전체를 매일 다시 분석하지 않는다. Skill `qa-comment-analysis`.
 
-**입력** 새 댓글(의미 있는 댓글만), 이슈 요약, 이전 댓글 최근 5개, 그 이슈의 가장 최근 분석 요약.
+**입력** 새 댓글(의미 있는 댓글만), 이슈 요약, 이전 댓글 최근 5개, 같은 제품·이슈의 가장 최근 분석 요약(이번 실행 제외, 600자까지).
+
+- 이슈 연결 번호와 새 댓글의 정확한 SRS 번호로 현재 수집한 사양을 찾아 2건·건당 1,500자까지 넣는다. 본문이 빈 사양 번호와 잘린 본문을 표시한다. 알려진 관련 이슈는 누락 사양으로 취급하지 않고, 유형을 확인하지 못한 번호는 별도로 표시한다. 새 댓글에 나온 번호를 먼저 본다.
+- 댓글 작성자 ID는 원본과 화면에 저장한다. AI 입력의 댓글과 변경 이벤트에서는 뺀다. 이름이나 소속을 추측하지 않는다.
+- 요약은 누가 어떤 이슈에서 무엇을 말했고 QA가 무엇을 확인해야 하는지 한두 문장으로 쓴다. 사양과 비교하지 못했으면 그 한계를 적는다.
+- 확인한 자료와 확인하지 못한 자료는 `sections.checked.confirmed`·`unconfirmed` 목록으로 구분한다. 입력에 있다는 이유만으로 확인했다고 쓰지 않는다. 비어 있거나 형식이 틀린 목록은 검증 기록에 남긴다.
 
 **순서**
 
@@ -740,7 +745,9 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 
 1. 맨 위 핵심 덩어리: 결론 단계, 판정 이름·신뢰도, 한두 문장 요약, 바뀐 사양(요구사항 5개까지), 근거 3개까지, QA 할 일 3줄까지.
 2. 같은 덩어리의 버튼: 사양 변경 분석이면 [기존 TC 검토], 수정 완료 이슈 분석이면 [검증 TC 초안 만들기]. 다른 분석에는 버튼이 없다.
-3. `자세히`: 아래 표의 구획, 칩, 근거 전체, 추가 확인사항, 근거 검증 기록, 변경 이벤트.
+3. 맨 위의 `이 분석이 한 일`: 이슈 내용, 새로 생긴 일, 댓글별 해석, 확인한 자료·확인하지 못한 자료, 판단과 이유를 보인다. 댓글 원문·작성 시각·작성자 ID는 저장된 변경 이벤트에서 읽는다. 작성자가 없으면 `작성자 정보 없음`으로 보인다.
+4. 기존 결과에 확인 자료 구분이 없으면 그 사실과 분석 메모를 맨 위에 보인다. 옛 결과를 다시 분석하거나 저장 내용을 바꾸지 않는다.
+5. `자세히`: 아래 표의 구획, 칩, 근거 전체, 추가 확인사항, 근거 검증 기록, 변경 이벤트.
 
 | 분석 종류 | `자세히` 의 구획 |
 |---|---|
@@ -1271,6 +1278,7 @@ AI가 분석한 것
 **지킬 것**
 
 - 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 `자세히` 에 있다.
+- 판정·신뢰도·댓글 분류는 한국어로 보이고 원래 코드는 도움말에 남긴다. 새 댓글 요약의 작성 기준은 REQ-QAINTEL-015를 따른다. 다른 분석 종류의 요약 규칙은 이번 변경에서 바꾸지 않는다.
 - 조치 문장(`action`)은 Finding 표에 칸이 없어 `sections.action` 에 함께 저장한다. 저장하지 않으면 카드의 할 일이 비어 보인다.
 
 ### REQ-QAINTEL-034 매뉴얼 점검 (요청할 때만)
@@ -1710,6 +1718,16 @@ REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
 #### Expected Result
 저장한 모드가 예약·만회·한도 재개·다음 실행 표시·메일에 함께 적용된다. 기존 데이터는 보존되고 자동 중지와 사용자 실행 중단은 구분된다. 외부 AI와 메일을 호출하지 않는다.
 
+### TEST-QAINTEL-024 분석 설명과 댓글 입력 범위
+
+**관련 요구사항** REQ-QAINTEL-015, REQ-QAINTEL-020, REQ-QAINTEL-033
+
+1. 저장된 새 댓글 결과에서 원문·작성 시각·작성자·분류·영향과 분석 메모를 상세 상단에서 읽는다. 구형 결과에 확인 자료 구분이 없으면 누락 안내가 보이는지 확인한다.
+2. 같은 제품·이슈의 직전 요약만 새 댓글 입력에 들어가는지 확인한다. 이번 실행·다른 제품·다른 이슈·옛 비분석 결과는 제외한다.
+3. 새 댓글에 나온 정확한 번호를 먼저 찾아 연결 사양을 2건·1,500자까지 넣고, 누락·잘림·상한 제외를 표시한다. 한국어 조사 뒤 번호와 비슷한 번호를 구별한다.
+4. 원본 이벤트에는 작성자 ID가 남고, AI 입력의 새 댓글·이전 댓글·중첩 이벤트에는 없는지 확인한다.
+5. 390px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -1730,12 +1748,12 @@ REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
 | REQ-QAINTEL-012 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-new-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
 | REQ-QAINTEL-013 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/skills/qa-fixed-issue-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-014 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-spec-decision-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
-| REQ-QAINTEL-015 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/skills/qa-comment-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py` | verified |
+| REQ-QAINTEL-015 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/product_adapter.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/skills/qa-comment-analysis/SKILL.md` | TEST-QAINTEL-010: `tests/test_qa_intel_analysis.py`, TEST-QAINTEL-024: `tests/test_qa_finding_explanation.py` | verified |
 | REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/daily_qa/schema.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-020 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
+| REQ-QAINTEL-020 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-024: `tests/test_qa_finding_explanation.py` | verified |
 | REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py`, TEST-QAINTEL-020: `tests/test_qa_run_progress.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
@@ -1748,7 +1766,7 @@ REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
 | REQ-QAINTEL-028 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | verified |
 | REQ-QAINTEL-031 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/workspace.py`, `app/modules/daily_qa/skills/qa-spec-change-summary/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_validation.py` | verified |
 | REQ-QAINTEL-032 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/qa_agent/router.py`, `scripts/run_daily_qa.py`, `app/modules/daily_qa/skills/qa-verification-tc-draft/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_pipeline.py`, `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py` | verified |
+| REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py`, TEST-QAINTEL-024: `tests/test_qa_finding_explanation.py` | verified |
 | REQ-QAINTEL-034 | `app/modules/daily_qa/pipeline.py`, `scripts/run_daily_qa.py` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_failures.py`, `tests/test_daily_qa_pipeline.py` | verified |
 | REQ-QAINTEL-035 | `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-019: `tests/test_qa_intel_schedule.py` | verified |
 | REQ-QAINTEL-036 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/cancellation.py`, `app/modules/daily_qa/windows_job.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-021: `tests/test_qa_run_cancel.py`, `tests/test_qa_run_progress_ui.py`, `tests/qa_run_progress_ui.cjs`, `tests/test_qa_run_progress_browser.py` | implemented |

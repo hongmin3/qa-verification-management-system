@@ -827,7 +827,9 @@ class _Run:
             for entity_id, target_events in targets.items():
                 event_ids = [event["id"] for event in target_events if event.get("id")]
                 item = build_item(AnalysisTarget(kind, entity_id, event_ids, target_events), corpus, known, self.cfg,
-                                  comments_loader=comments_loader, with_tc=bool(self.on_demand))
+                                  comments_loader=comments_loader, with_tc=bool(self.on_demand),
+                                  latest_analysis_loader=lambda subject: self.store.latest_issue_analysis(
+                                      subject, self.cfg.slug, exclude_run_id=self.run_id))
                 if item is None:
                     if not self.dry_run and self.until is None and not self.on_demand:
                         self.store.update_events(event_ids, "abandoned", self.run_id, error="대상이 오늘 스냅샷에 없습니다")

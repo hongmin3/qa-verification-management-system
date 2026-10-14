@@ -189,6 +189,7 @@ class Finding(BaseModel):
     action: str = ""
     draft_tcs: list[DraftTc] = Field(default_factory=list)
     #: QA Intelligence 분석 구획. 모양은 분석 종류마다 다르고 `evidence_validation.py` 가 검사한다.
+    #: COMMENT의 checked는 confirmed/unconfirmed 문자열 목록이다. 구형 결과 누락은 개별 검증 기록에 남긴다.
     sections: dict = Field(default_factory=dict)
 
 

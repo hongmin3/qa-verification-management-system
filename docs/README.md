@@ -35,7 +35,7 @@
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
 | **AI 모델·추론 정도 화면 설정** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) · [SPEC REQ-AICALL-007](../SPEC.md) (서버 안에서만 저장, 외부는 읽기 전용) |
 | **등록된 Excel 사양서 읽기** | [SPEC REQ-PARSE-010](../SPEC.md) · 등록·동기화된 XLSX의 모든 시트·행과 원문 위치를 분석에 사용 |
-| **분석 결과 카드가 이해되지 않는 문제 개선(2026-10-14, 미실행)** | [분석 결과 설명 계획](superpowers/plans/2026-10-14-finding-explanation.md) |
+| **분석 결과 설명 개선 범위(2026-10-14)** | [분석 결과 설명 계획](superpowers/plans/2026-10-14-finding-explanation.md) |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
 | **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |

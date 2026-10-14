@@ -293,6 +293,16 @@ class DailyQaStorageMixin:
             ).fetchall()
         return [self._daily_qa_finding_dict(row) for row in rows]
 
+    def daily_qa_latest_issue_analysis(self, subject: str, product: str, exclude_run_id: str = "") -> dict | None:
+        """같은 제품·이슈의 직전 분석. 이번 실행에서 생긴 결과는 맥락으로 재사용하지 않는다."""
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM daily_qa_findings WHERE subject=? AND product=? "
+                "AND analysis_type!='' AND run_id!=? ORDER BY id DESC LIMIT 1",
+                (subject, product, exclude_run_id),
+            ).fetchone()
+        return self._daily_qa_finding_dict(row) if row else None
+
     def daily_qa_get_finding(self, finding_id: int) -> dict | None:
         with self.connect() as db:
             row = db.execute("SELECT * FROM daily_qa_findings WHERE id=?", (finding_id,)).fetchone()

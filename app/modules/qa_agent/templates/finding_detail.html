@@ -33,7 +33,7 @@
 
   <div class="qa-key" id="key-result">
     <div class="qa-card-head"><span class="level {{ card.level_class }}">{{ card.level }}</span>
-      <span class="hint" style="margin:0">판정 {{ card.verdict_label }} · 신뢰도 {{ finding.confidence or '-' }}</span></div>
+      <span class="hint" style="margin:0">판정 {{ card.verdict_label }} · 신뢰도 <span title="{{ finding.confidence or '' }}">{{ label(finding.confidence or '-') }}</span></span></div>
     <div class="qa-summary">{{ finding.summary }}</div>
     {% set change = s.change or {} %}
     {% if change.summary or change.changed_requirements %}
@@ -41,7 +41,7 @@
       {% if change.changed_requirements %}<ul>{% for r in change.changed_requirements[:5] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}</div>
     {% endif %}
     {% if finding.evidence %}
-    <div><b>근거</b><ul>{% for ev in finding.evidence[:3] %}<li><b>{{ ev.location }}</b> {{ ev.summary }}</li>{% endfor %}</ul></div>
+    <div><b>근거</b><ul>{% for ev in finding.evidence[:3] %}<li><b title="{{ ev.location }}">{{ explanation.comment_locations.get(ev.ref or ev.location, ev.location) if ev.source_type == 'comment' else ev.location }}</b> {{ ev.summary }}</li>{% endfor %}</ul></div>
     {% endif %}
     {% if card.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in card.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
     {% if kind in ('SPEC_COVERAGE', 'FIXED_ISSUE') %}
@@ -55,6 +55,32 @@
     {% endif %}
   </div>
 
+  <div class="qa-section" id="analysis-explanation">
+    <h3>이 분석이 한 일</h3>
+    <p><b>{% if kind == 'SPEC_COVERAGE' or kind == 'TC_CHECK' %}사양 내용{% else %}이슈 내용{% endif %}</b> {{ explanation.issue }}</p>
+    <p><b>새로 생긴 일</b> {{ explanation.events|join(' · ') or '변경 이벤트가 저장되지 않았습니다.' }}</p>
+    {% for c in explanation.comments %}
+    <div class="qa-section">
+      <p><b>댓글 {{ loop.index }}</b> · {{ c.created or '작성 시각 정보 없음' }} · {{ c.author }}</p>
+      <details class="comment-original"><summary>댓글 원문 보기</summary>{{ text_block(c.text) }}</details>
+      <p><b>댓글 해석</b> {{ c.summary }}</p>
+      {% if c.classification %}<p><span class="pill" title="{{ c.classification }}">{{ label(c.classification) }}</span></p>{% endif %}
+      {% if c.impact %}<p><b>QA 판단에 주는 영향</b> {{ c.impact }}</p>{% endif %}
+      {% if c.follow_up %}<p><b>추가로 확인할 점</b> {{ c.follow_up }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% if explanation.has_checked %}
+    <p><b>AI가 확인했다고 기록한 자료</b></p>
+    <ul>{% for item in explanation.confirmed %}<li>{{ item }}</li>{% else %}<li>확인한 자료가 기록되지 않았습니다.</li>{% endfor %}</ul>
+    <p><b>확인하지 못한 자료</b></p>
+    <ul>{% for item in explanation.unconfirmed %}<li>{{ item }}</li>{% else %}<li>미확인 자료가 기록되지 않았습니다.</li>{% endfor %}</ul>
+    {% else %}<p class="qa-banner">확인 자료 구분이 저장되지 않은 결과입니다. 분석 메모에서 확인 범위를 확인하세요.</p>{% endif %}
+    <p><b>확인 범위와 한계 · 분석 메모</b></p>{{ text_block(explanation.memo) }}
+    {% if explanation.srs_links %}<p><b>댓글·분석에서 언급한 번호의 원문</b>
+      {% for link in explanation.srs_links %}<a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.id }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+    <p><b>판단과 이유</b> <span title="{{ finding.verdict }}">{{ card.verdict_label }}</span> · {{ finding.summary }}</p>
+  </div>
+
   <details class="qa-more"><summary>자세히</summary>
   {% if finding.detail %}<div class="qa-section"><h3>분석 메모</h3>{{ text_block(finding.detail) }}</div>{% endif %}
   {% if card.badges %}<div class="tags">{% for badge in card.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>{% endif %}
@@ -66,7 +92,7 @@
     <div class="qa-section"><h3>중복 이슈 검토</h3>
       <p><span class="pill">{{ (s.duplicate or {}).verdict or '-' }}</span> {{ label((s.duplicate or {}).verdict or '') }} {{ (s.duplicate or {}).summary or '' }}</p>
       {{ issue_list((s.duplicate or {}).candidates) }}</div>
-    <div class="qa-section"><h3>사양과 비교</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+    <div class="qa-section"><h3>사양과 비교</h3><p><span class="pill" title="{{ finding.verdict }}">{{ label(finding.verdict) }}</span></p>
       {{ text_block((s.specification or {}).summary) }}
       {% if (s.specification or {}).questions_for_lab %}<p><b>연구소·기획에 확인할 것</b></p><ul>{% for q in s.specification.questions_for_lab %}<li>{{ q }}</li>{% endfor %}</ul>{% endif %}</div>
     <div class="qa-section"><h3>과거 이슈 검토</h3>
@@ -82,7 +108,7 @@
   {% elif view == 'FIXED_ISSUE' %}
     <div class="qa-section"><h3>원인 설명 검토</h3>{{ text_block((s.root_cause_review or {}).summary) }}{{ text_block((s.root_cause_review or {}).assessment) }}</div>
     <div class="qa-section"><h3>수정 내용 검토</h3>{{ text_block((s.resolution_review or {}).summary) }}{{ text_block((s.resolution_review or {}).assessment) }}</div>
-    <div class="qa-section"><h3>사양 일치 여부</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+    <div class="qa-section"><h3>사양 일치 여부</h3><p><span class="pill" title="{{ finding.verdict }}">{{ label(finding.verdict) }}</span></p>
       {{ text_block((s.specification or {}).summary) }}{{ text_block((s.change_scope or {}).summary) }}</div>
     <div class="qa-section"><h3>변경 영향과 회귀 위험</h3>
       <div class="table-wrap"><table class="history"><thead><tr><th>축</th><th>해당</th><th>이유</th></tr></thead><tbody>
@@ -94,7 +120,7 @@
 
   {% elif view == 'SPEC_DECISION' %}
     <div class="qa-section"><h3>연구소 설명</h3>{{ text_block((s.rd_claim or {}).summary) }}</div>
-    <div class="qa-section"><h3>사양 근거</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>{{ text_block((s.specification or {}).summary) }}</div>
+    <div class="qa-section"><h3>사양 근거</h3><p><span class="pill" title="{{ finding.verdict }}">{{ label(finding.verdict) }}</span></p>{{ text_block((s.specification or {}).summary) }}</div>
     <div class="qa-section"><h3>과거 판정</h3>
       <div class="tags">{% for flag in (s.historical or {}).flags or [] %}<span class="pill">{{ label(flag) }}</span>{% endfor %}</div>
       {{ issue_list((s.historical or {}).candidates) }}</div>
@@ -104,8 +130,8 @@
   {% elif view == 'COMMENT' %}
     {% for entry in s.comments or [] %}
     <div class="qa-section"><h3>새 댓글 <span class="mono">{{ entry.comment_id }}</span></h3>{{ text_block(entry.summary) }}
-      <p><b>Classification</b> <span class="pill">{{ entry.classification }}</span> {{ label(entry.classification) }}</p>
-      <p><b>Impact</b></p>{{ text_block(entry.impact) }}
+      <p><b>분류</b> <span class="pill" title="{{ entry.classification }}">{{ label(entry.classification) }}</span></p>
+      <p><b>QA 판단에 주는 영향</b></p>{{ text_block(entry.impact) }}
       {% if entry.follow_up %}<p><b>추가 확인사항</b></p>{{ text_block(entry.follow_up) }}{% endif %}</div>
     {% endfor %}
 
@@ -115,7 +141,7 @@
     <div class="qa-section"><h3>과거 이슈의 검증 범위</h3>
       <p>{% if (s.issue_coverage or {}).has_related %}관련 Issue 있음{% else %}관련 Issue 없음{% endif %}</p>
       {{ issue_list((s.issue_coverage or {}).issues) }}</div>
-    <div class="qa-section"><h3>Checklist의 검증 범위</h3><p><span class="pill">{{ finding.verdict }}</span> {{ label(finding.verdict) }}</p>
+    <div class="qa-section"><h3>Checklist의 검증 범위</h3><p><span class="pill" title="{{ finding.verdict }}">{{ label(finding.verdict) }}</span></p>
       <div class="table-wrap"><table class="history"><thead><tr><th>TC</th><th>조치</th><th>이유</th><th>추천 수정</th><th>Expected 충돌</th></tr></thead><tbody>
       {% for tc in (s.checklist_coverage or {}).tcs or [] %}
         <tr><td>{{ tc.tc_id }}<div class="hint" style="margin:0">{{ tc.location }}</div></td><td><span class="pill">{{ tc.decision }}</span></td><td>{{ tc.reason }}</td><td>{{ tc.recommended_change }}</td>

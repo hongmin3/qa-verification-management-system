@@ -11,6 +11,7 @@ description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-
 
 결과는 짧게 쓴다. QA 담당자는 카드에서 결론·한두 문장 요약·할 일 3줄까지만 본다.
 `summary` 는 결론부터 한두 문장, `action` 은 QA 할 일을 줄바꿈으로 3줄까지 쓴다.
+새 댓글 분석의 요약·확인 자료 구분은 `qa-comment-analysis`의 읽히는 설명 규칙을 함께 따른다.
 
 ## 규칙 층
 
