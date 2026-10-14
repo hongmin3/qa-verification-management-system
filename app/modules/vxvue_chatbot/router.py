@@ -273,10 +273,22 @@ def knowledge_status():
     manifest = load_manifest("VXvue", get_settings().root)
     excluded = [{"name": a.get("file_name", ""), "reason": a.get("exclude_reason", "")} for a in manifest.get("excluded", [])]
     failed = [{"name": a.get("file_name", ""), "reason": mask_text(a["error"])[0]} for a in manifest.get("assets", []) if a.get("error")]
+    manuals = []
+    for entry, status in [(a, "failed" if a.get("error") else "ready") for a in manifest.get("assets", []) if a.get("kind") == "manual"] + [(a, "excluded") for a in manifest.get("excluded", []) if a.get("kind") == "manual"]:
+        reason = entry.get("error") if status == "failed" else entry.get("exclude_reason") if status == "excluded" else ""
+        manuals.append({"name": entry.get("file_name", ""), "status": status, "modified_at": entry.get("modified"), "reason": mask_text(reason or "")[0]})
+    spec_attempt = store.latest_sync("VXvue", "specification")
+    spec_success = store.vxchat_last_success_sync("specification")
+    skill = skill_status(get_settings().root, get_settings().get("vxvue_chatbot.reviewed_skill_code_hash", ""))
+    skill_asset = next((a for a in manifest.get("assets", []) if a.get("kind") == "skill_instruction"), None)
+    skill["synced_at"] = (skill_asset.get("collected_at") or skill_asset.get("modified")) if skill_asset else None
     return {"last_attempt": {"synced_at": latest["synced_at"], "status": latest["status"], "detail": mask_text(latest["detail"])[0]} if latest else None,
             "last_success_at": successful["synced_at"] if successful else None,
             "next_retry_at": retry, "stale": stale,
             "excluded": excluded, "failed_documents": failed,
-            "skill": skill_status(get_settings().root, get_settings().get("vxvue_chatbot.reviewed_skill_code_hash", "")),
+            "skill": skill, "manuals": manuals,
+            "specification_sync": {"last_success_at": spec_success["synced_at"] if spec_success else None,
+                                   "last_attempt_at": spec_attempt["synced_at"] if spec_attempt else None,
+                                   "status": spec_attempt["status"] if spec_attempt else None, "schedule": "평일 09:40"},
             "schedule": "매일 08:00 KST · 실패 시 15분마다 재시도",
             "documents": sum(len(store.active_documents(kind, "VXvue")) for kind in ("specification", "manual", "testcase")) + len([a for a in manifest.get("assets", []) if a.get("kind") in ("qa_rules", "instruction_prompt", "skill_instruction")])}

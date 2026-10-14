@@ -15,6 +15,11 @@ class VxChatStorageMixin:
             row = db.execute("SELECT synced_at FROM sync_log WHERE product='VXvue' AND kind='product_knowledge' AND status='SUCCESS' ORDER BY id DESC LIMIT 1").fetchone()
         return dict(row) if row else None
 
+    def vxchat_last_success_sync(self, kind):
+        with closing(self.connect()) as db, db:
+            row = db.execute("SELECT synced_at FROM sync_log WHERE product='VXvue' AND kind=? AND status='SUCCESS' ORDER BY id DESC LIMIT 1", (kind,)).fetchone()
+        return dict(row) if row else None
+
     def _initialize_vxchat(self):
         with closing(self.connect()) as db, db:
             db.executescript("""

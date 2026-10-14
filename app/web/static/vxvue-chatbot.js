@@ -107,21 +107,57 @@
     };
     stream.onerror=()=>{const ticket=selection;stopWatch();retryTimer=setTimeout(async()=>{if(current&&ticket===selection){try{await select(current);}catch(e){showError(e);setBusy(false);}}},2000);};
   }
+  function knowledgeStatusPanel(state){
+    const when=v=>v?new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음';
+    const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+    const spec=state.specification_sync||{},skill=state.skill||{},manuals=state.manuals||[];
+    const specBad=['FAILED','PARTIAL'].includes(spec.status);
+    const warn=!!(state.stale||skill.status==='error'||skill.code_review_needed||specBad||state.failed_documents?.length||manuals.some(m=>m.status==='failed')||(state.last_attempt&&state.last_attempt.status!=='SUCCESS'));
+    const details=node('details','','knowledge-details');
+    let saved='';try{saved=localStorage.getItem('vxvue-knowledge-open')||'';}catch{}
+    details.open=saved==='1';
+    details.addEventListener('toggle',()=>{try{localStorage.setItem('vxvue-knowledge-open',details.open?'1':'0');}catch{}});
+    details.appendChild(node('summary',`서버 지식 ${state.documents}개 · 마지막 정상 동기화 ${state.last_success_at?when(state.last_success_at):'아직 정상 동기화 기록 없음'}${warn?' · 확인 필요':''}`));
+    const body=node('div','','knowledge-body');
+    const label={ready:'정상',failed:'읽기 실패',excluded:'제외'};
+    body.appendChild(node('h4','매뉴얼'));
+    if(manuals.length){
+      const table=node('table','','knowledge-table'),head=table.createTHead().insertRow();
+      ['이름','상태','마지막 업데이트'].forEach(t=>head.appendChild(node('th',t)));
+      const rows=table.createTBody();
+      manuals.forEach(m=>{const r=rows.insertRow(),name=r.insertCell(),st=r.insertCell(),upd=r.insertCell();
+        name.textContent=m.name;st.textContent=label[m.status]||m.status;st.className='knowledge-'+m.status;
+        if(m.reason){st.appendChild(document.createElement('br'));st.appendChild(node('small',m.reason));}
+        upd.textContent=when(m.modified_at);});
+      const wrap=node('div','','knowledge-table-wrap');wrap.appendChild(table);body.appendChild(wrap);
+    }else body.appendChild(node('p','등록된 매뉴얼이 없습니다.','knowledge-empty'));
+    body.appendChild(node('h4','사양서 자동 업데이트'));
+    const specList=node('ul');
+    [`일정: ${spec.schedule||'평일 09:40'}`,`마지막 성공: ${when(spec.last_success_at)}`,`마지막 시도: ${spec.last_attempt_at?when(spec.last_attempt_at)+' · '+(spec.status||''):'기록 없음'}`].forEach((t,i)=>{const li=node('li',t);if(i===2&&specBad)li.className='knowledge-bad';specList.appendChild(li);});
+    body.appendChild(specList);
+    body.appendChild(node('h4','로컬 Skill'));
+    const skillList=node('ul');
+    skillList.appendChild(node('li',skill.version?`최신 버전 ${skill.version} · 동기화 ${when(skill.synced_at)}`:(skill.status==='error'?'Skill 지침 읽기 실패':'Skill 지침 동기화 대기')));
+    if(skill.code_review_needed)skillList.appendChild(node('li','도구 검토 필요: 검색 도구 코드가 검토한 판과 다릅니다.','knowledge-bad'));
+    body.appendChild(skillList);
+    const att=state.last_attempt;
+    if(att&&att.status!=='SUCCESS'||state.stale||state.failed_documents?.length){
+      body.appendChild(node('h4','지식 동기화'));
+      const syncList=node('ul');
+      if(att&&att.status!=='SUCCESS')syncList.appendChild(node('li',`마지막 시도 ${att.status}${att.detail?' · '+att.detail:''}${state.next_retry_at?' · 다음 시도 '+when(state.next_retry_at):''}`,'knowledge-bad'));
+      if(state.stale)syncList.appendChild(node('li','지식 최신화 확인 필요','knowledge-bad'));
+      (state.failed_documents||[]).forEach(d=>syncList.appendChild(node('li',`읽기 실패: ${d.name}${d.reason?' · '+d.reason:''}`,'knowledge-bad')));
+      body.appendChild(syncList);
+    }
+    details.appendChild(body);
+    return {details,warn};
+  }
   async function knowledgeStatus(){
+    const box=$('knowledge-status');
     try{
-      const state=await api('/knowledge-status'),when=state.last_success_at?new Date(state.last_success_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'아직 정상 동기화 기록 없음';
-      const label=$('knowledge-status');label.textContent=`서버 지식 ${state.documents}개 · 마지막 정상 동기화 ${when} · 매일 08:00 / 실패 시 15분 재시도`;
-      if(state.last_attempt?.status && state.last_attempt.status!=='SUCCESS')label.textContent+=' · '+state.last_attempt.status+' · '+state.last_attempt.detail;
-      if(state.next_retry_at)label.textContent+=' · 다음 시도 '+new Date(state.next_retry_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
-      if(state.excluded?.length)label.textContent+=' · 제외 '+state.excluded.length+'개: '+state.excluded.slice(0,3).map(a=>a.name).join(', ');
-      if(state.failed_documents?.length)label.textContent+=' · 읽기 실패: '+state.failed_documents.slice(0,3).map(a=>a.name).join(', ');
-      if(state.skill?.version)label.textContent+=' · 로컬 Skill '+state.skill.version;
-      if(state.skill?.status==='waiting')label.textContent+=' · 로컬 Skill 지침 동기화 대기';
-      if(state.skill?.status==='error')label.textContent+=' · 로컬 Skill 지침 읽기 실패';
-      if(state.skill?.code_review_needed)label.textContent+=' · 도구 갱신 검토 필요';
-      if(state.stale)label.textContent+=' · 지식 최신화 확인 필요';
-      label.classList.toggle('warning',state.stale||state.skill?.status==='error'||state.skill?.code_review_needed||(state.last_attempt&&state.last_attempt.status!=='SUCCESS'));
-    }catch{$('knowledge-status').textContent='지식 갱신 상태를 확인하지 못했습니다.';}
+      const {details,warn}=knowledgeStatusPanel(await api('/knowledge-status'));
+      box.replaceChildren(details);box.classList.toggle('warning',warn);
+    }catch{box.textContent='지식 갱신 상태를 확인하지 못했습니다.';}
   }
   let usageTicket=0;
   function usageChip(name,w,u,label){

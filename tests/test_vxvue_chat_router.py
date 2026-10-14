@@ -119,3 +119,69 @@ def test_sync_status_lists_manifest_exclusions_and_read_failures(web):
     assert response.json()["excluded"][0]["name"] == "old.md"
     assert response.json()["failed_documents"][0]["name"] == "broken.pdf"
     assert response.headers["cache-control"] == "no-store"
+
+
+def _write_manifest(router, data):
+    import json
+    from app.core.product_knowledge import manifest_path
+    path = manifest_path("VXvue", router.get_settings().root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_lists_manuals(web):
+    client, _, router = web
+    _write_manifest(router, {
+        "assets": [
+            {"kind": "manual", "file_name": "A.docx", "modified": "2026-10-01T09:00:00+09:00", "collected_at": "2026-10-13T08:00:00+09:00"},
+            {"kind": "manual", "file_name": "B.pdf", "modified": "2026-09-20T09:00:00+09:00", "error": "parse failed"},
+            {"kind": "specification", "file_name": "S.pdf", "modified": "2026-09-01T09:00:00+09:00"}],
+        "excluded": [{"kind": "manual", "file_name": "old.docx", "exclude_reason": "older revision"},
+                     {"kind": "testcase", "file_name": "tc.xlsx", "exclude_reason": "x"}]})
+    manuals = client.get("/vxvue-chatbot/knowledge-status").json()["manuals"]
+    assert [m["name"] for m in manuals] == ["A.docx", "B.pdf", "old.docx"]
+    assert [m["status"] for m in manuals] == ["ready", "failed", "excluded"]
+    assert manuals[0]["modified_at"] == "2026-10-01T09:00:00+09:00"
+    assert manuals[1]["reason"] == "parse failed"
+    assert manuals[2]["reason"] == "older revision"
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_spec_sync(web):
+    client, store, _ = web
+    empty = client.get("/vxvue-chatbot/knowledge-status").json()["specification_sync"]
+    assert empty == {"last_success_at": None, "last_attempt_at": None, "status": None, "schedule": "평일 09:40"}
+    ok = store.sync_start("VXvue", "specification", "alm_crawler")
+    store.sync_finish(ok, "SUCCESS", "")
+    store.sync_finish(store.sync_start("VXvue", "product_knowledge", "knowledge_folder"), "SUCCESS", "")
+    bad = store.sync_start("VXvue", "specification", "alm_crawler")
+    store.sync_finish(bad, "FAILED", "login failed")
+    spec = client.get("/vxvue-chatbot/knowledge-status").json()["specification_sync"]
+    assert spec["status"] == "FAILED" and spec["schedule"] == "평일 09:40"
+
+    assert spec["last_success_at"] != spec["last_attempt_at"]
+    with store.connect() as db:
+        row = db.execute("SELECT synced_at FROM sync_log WHERE id=?", (ok,)).fetchone()
+    assert spec["last_success_at"] == row["synced_at"]
+
+
+# Validates: REQ-VXVUECHATBOT-008
+def test_knowledge_status_skill_synced_at(web):
+    client, _, router = web
+    assert client.get("/vxvue-chatbot/knowledge-status").json()["skill"]["synced_at"] is None
+    _write_manifest(router, {"assets": [{"kind": "skill_instruction", "file_name": "[Skill 지침] VXvue.md",
+                                          "modified": "2026-10-10T09:00:00+09:00", "collected_at": "2026-10-13T17:38:00+09:00"}]})
+    skill = client.get("/vxvue-chatbot/knowledge-status").json()["skill"]
+    assert skill["synced_at"] == "2026-10-13T17:38:00+09:00"
+    assert "version" in skill and "status" in skill and "code_review_needed" in skill
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_script_builds_collapsible_panel():
+    script = (Path(__file__).resolve().parents[1] / "app/web/static/vxvue-chatbot.js").read_text(encoding="utf-8")
+    start = script.index("function knowledgeStatusPanel")
+    end = script.index("async function knowledgeStatus()")
+    body = script[start:end]
+    assert "createElement" in body and "'details'" in body and "innerHTML" not in body
+    assert "vxvue-knowledge-open" in body and "specification_sync" in body and "매일 08:00" not in script

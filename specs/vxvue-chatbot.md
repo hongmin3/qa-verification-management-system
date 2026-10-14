@@ -118,7 +118,9 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 1. 등록된 VXvue 문서 목록과 원본 해시로 읽기 전용 지식 판을 만든다.
 2. 임시 폴더에 복사·검사 후 준비된 판을 사용한다.
 3. 답변 하나는 같은 판을 사용하고 판 번호와 조회 근거를 저장한다.
-4. 마지막 시도·마지막 성공·제외·실패·다음 재시도를 표시한다.
+4. 상단에는 지식 문서 수와 마지막 정상 동기화만 한 줄로 보인다. 펼치면 매뉴얼별 상태·마지막 업데이트 일시, 사양서 자동 업데이트(평일 09:40)의 마지막 성공·시도 일시, 적용 중인 Skill 최신 버전과 동기화 일시를 보인다. 실패·읽기 오류가 있으면 접힌 줄에도 경고로 보인다.
+
+   > **참고** 실행 시각 문구(`매일 08:00 / 실패 시 15분 재시도`)와 제외 파일 목록은 접힌 줄에 두지 않는다. 제외 파일은 펼친 매뉴얼 목록에 `제외` 상태로만 보인다. 접힌 상태와 펼친 상태는 브라우저에 기억한다.
 
 **지킬 것** 파일 업로드 성공과 검색 준비를 구분한다. 실패 문서는 숨기지 않는다. 부분 실패는 정상 최신화로 표시하지 않는다. 동기화한 지식 원본·지침·검색 색인·대화·첨부는 Git에 넣지 않는다. Skill 어댑터와 공개 프롬프트 틀만 코드로 관리한다.
 
@@ -148,7 +150,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 3. 검색 코드·MCP 설정은 해시만 기록한다. 코드 내용·설정·자격증명을 전송하거나 실행하지 않는다. 서버에서 검토한 코드 해시와 다르면 도구 갱신 검토 필요를 표시한다.
 4. 챗봇은 동기화 자산 목록의 Skill 지침과 QA 규칙 MD·지침 TXT를 읽는다. QA 규칙과 프롬프트는 각각 최신 개정본의 전문을 적용한다. 서버용 연결 지침은 허용된 도구와 원문 조회 방법을 안내한다.
 5. Skill 지침이 바뀌면 고정 사본의 참조 MD 대신 동기화한 내용을 적용한다. 질문별 원본 판에는 Skill 버전과 문서 해시도 남긴다.
-6. 누락·읽기 실패·해시 불일치는 조회 상태에 표시한다. 최신 필수 규칙을 읽지 못하면 AI 호출 전에 중단한다. PC가 꺼져 있으면 마지막 정상 동기화본을 사용한다.
+6. 누락·읽기 실패·해시 불일치는 조회 상태에 표시한다. 상태 화면에는 서버가 마지막으로 받은 Skill 버전과 그 동기화 일시도 보인다. 최신 필수 규칙을 읽지 못하면 AI 호출 전에 중단한다. PC가 꺼져 있으면 마지막 정상 동기화본을 사용한다.
 
 > **예외** 처음 배포할 때 Skill 동기화본이 없으면 화면에 동기화 대기를 표시하고 서버 연결의 기존 참조 MD를 적용한다. 이후 Skill 자산이 등록되면 그 내용을 사용하며 읽기 실패를 옛 사본으로 숨기지 않는다.
 
@@ -189,4 +191,4 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 | REQ-VXVUECHATBOT-005 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/skill/SKILL.md`, `app/prompts/vxvue_chatbot.yaml` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-006 | `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_retry.py` | TEST-VXVUECHATBOT-003: `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-007 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/core/vxchat_storage.py` | TEST-VXVUECHATBOT-004: `tests/test_vxvue_chat_cost.py` | verified |
-| REQ-VXVUECHATBOT-008 | `app/core/skill_knowledge.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_push.py` | TEST-VXVUECHATBOT-005: `tests/test_skill_knowledge.py`, `tests/test_vxvue_chat_knowledge.py` | verified |
+| REQ-VXVUECHATBOT-008 | `app/core/skill_knowledge.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_push.py` | TEST-VXVUECHATBOT-005: `tests/test_skill_knowledge.py`, `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_router.py` | verified |
