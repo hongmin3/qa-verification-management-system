@@ -72,34 +72,53 @@ def event_update(event):
     return "", ""
 
 
-TITLE_MARKER = "<!-- title:"
-_TITLE_RE = re.compile(r"[ \t]*<!--\s*title:(.*?)-->\s*$", re.S)
+_MARKER_OPEN = re.compile(r"<!--\s*title:")
+_MARKER_PARTIAL = re.compile(r"<(?:!(?:-(?:-\s*(?:t(?:i(?:t(?:l(?:e)?)?)?)?)?)?)?)?$")
+
+
+def _trailing_marker(text):
+    """Return (start, title or None) for a title marker at the very end of text, else None.
+
+    Only the last `<!-- title:` counts. A closed marker must be followed by whitespace only;
+    an unclosed one runs to the end of the text and never yields a title.
+    """
+    found = None
+    for found in _MARKER_OPEN.finditer(text):
+        pass
+    if not found:
+        return None
+    rest = text[found.end():]
+    close = rest.find("-->")
+    if close < 0:
+        return found.start(), None
+    if rest[close + 3:].strip():
+        return None
+    title = rest[:close].strip()
+    if not 1 <= len(title) <= 40 or "\n" in title or "\r" in title:
+        title = None
+    return found.start(), title
 
 
 def split_title(text):
     """Remove the trailing `<!-- title: ... -->` line and return (body, title or None)."""
-    match = _TITLE_RE.search(text)
-    if not match:
+    marker = _trailing_marker(text)
+    if not marker:
         return text, None
-    title = match.group(1).strip()
-    body = text[:match.start()].rstrip()
-    if not 1 <= len(title) <= 40 or "\n" in title or "\r" in title:
-        return body, None
-    return body, title
+    return text[:marker[0]].rstrip(), marker[1]
 
 
 def hide_title_marker(text):
     """Cut the title marker, including a half-streamed prefix of it, from text shown while streaming."""
-    index = text.find(TITLE_MARKER)
-    if index >= 0:
-        return text[:index].rstrip()
-    for size in range(min(len(TITLE_MARKER) - 1, len(text)), 0, -1):
-        if text.endswith(TITLE_MARKER[:size]):
-            return text[:-size].rstrip()
+    marker = _trailing_marker(text)
+    if marker:
+        return text[:marker[0]].rstrip()
+    partial = _MARKER_PARTIAL.search(text)
+    if partial:
+        return text[:partial.start()].rstrip()
     return text
 
 
-def history_prompt(messages, max_chars=120000):
+def history_prompt(messages, max_chars=120000, *, jobs=None, title_source="auto"):
     picked, size = [], 0
     for message in reversed(messages):
         if not message["content"] and not message.get("attachments"):
@@ -111,7 +130,9 @@ def history_prompt(messages, max_chars=120000):
         picked.append(value)
         size += len(encoded)
     omitted = sum(bool(m["content"] or m.get("attachments")) for m in messages) - len(picked)
-    title_needed = not any(m["role"] == "assistant" and m["content"] for m in messages)
+    # Only a finished (DONE) answer counts: a cancelled or failed first job leaves a status message with text.
+    answered = {j["assistant_message_id"] for j in jobs if j["status"] == "DONE"} if jobs is not None else None
+    title_needed = title_source != "user" and not any(m["role"] == "assistant" and m["content"] and (answered is None or m.get("id") in answered) for m in messages)
     return json.dumps({"conversation": list(reversed(picked)), "omitted_older_messages": omitted, "title_needed": title_needed}, ensure_ascii=False, separators=(",", ":")), omitted
 
 
@@ -152,11 +173,12 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
-    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id,
+    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text", "conversation_meta")}, "attachments": attachments, "job_id": job_id,
                                         "batch_token_budget": int(settings.get("vxvue_chatbot.batch_token_budget", 30000))}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")
-    prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)))
+    meta = snapshot.get("conversation_meta") or {}
+    prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)), jobs=meta.get("jobs"), title_source=meta.get("title_source", "auto"))
     prompt = prompt[:-1] + ',"source_failures":' + json.dumps(snapshot.get("failures", []), ensure_ascii=False, separators=(",", ":")) + "}"
     if snapshot.get("skill_metadata"):
         prompt = prompt[:-1] + ',"skill_code_review_needed":' + json.dumps(snapshot["skill_metadata"]["code_hash"] != settings.get("vxvue_chatbot.reviewed_skill_code_hash", "")) + "}"

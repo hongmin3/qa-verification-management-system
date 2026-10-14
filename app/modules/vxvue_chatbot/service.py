@@ -1,5 +1,6 @@
 """Bounded persistent queue with one background worker, independent of HTTP connections."""
 from pathlib import Path
+import logging
 import threading
 import json
 from functools import lru_cache
@@ -56,11 +57,16 @@ def run_job(store, settings, job, cancel_event):
         attachments = [a for message in chat["messages"] for a in message["attachments"]]
         if cancel_event.is_set():
             raise InterruptedError()
+        snapshot = {**snapshot, "conversation_meta": {"jobs": chat["jobs"], "title_source": chat.get("title_source", "auto")}}
         result = agent.run(chat["messages"], snapshot, attachments, job["id"], settings, cancel_event,
                            lambda stage, content: store.vxchat_progress(job["id"], stage, content))
         store.vxchat_finish(job["id"], "DONE", result["text"], citations=result["citations"], usage=result["usage"], model=result["model"], masking=result.get("masking"), metrics=result.get("metrics"))
         if result.get("title"):
-            store.vxchat_set_ai_title(job["conversation_id"], result["title"])
+            try:
+                store.vxchat_set_ai_title(job["conversation_id"], result["title"])
+            except Exception:
+                # Best effort: the answer is already saved, so a title failure must not fail the job.
+                logging.getLogger(__name__).warning("AI 대화 제목 저장 실패", exc_info=True)
     except InterruptedError:
         store.vxchat_finish(job["id"], "CANCELLED", "답변 생성을 중지했습니다.")
     except Exception as exc:

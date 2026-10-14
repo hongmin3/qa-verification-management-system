@@ -70,13 +70,23 @@ def test_split_title_extracts_marker():
 
 
 # Validates: REQ-VXVUECHATBOT-002
-@pytest.mark.parametrize("text", ["답변만", "답\n<!-- title: " + "가" * 41 + " -->", "답\n<!-- title: 가\n나 -->", "답\n<!-- title:   -->"])
-def test_title_marker_missing_or_invalid(text):
+def test_title_marker_missing_or_invalid():
     agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
-    body, title = agent.split_title(text)
-    assert title is None
-    assert "<!-- title:" not in body or text.startswith("답\n<!--") is False or True
-    assert body.startswith("답")
+    assert agent.split_title("답변만") == ("답변만", None)
+    for marker in ("<!-- title: " + "가" * 41 + " -->", "<!-- title: 가\n나 -->", "<!-- title:   -->"):
+        body, title = agent.split_title("답\n" + marker)
+        assert title is None and "<!--" not in body and body == "답"
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_split_title_handles_unclosed_trailing_and_quoted_markers():
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    assert agent.split_title("답\n<!-- title: abc") == ("답", None)
+    assert agent.split_title("답\n<!-- title: 제목 -->  \n\n") == ("답", "제목")
+    assert agent.split_title("답\n<!--title:제목-->") == ("답", "제목")
+    quoted = "예: `<!-- title: 예시 -->` 처럼 쓴다.\n\n본문 계속"
+    assert agent.split_title(quoted + "\n<!-- title: 진짜 -->") == (quoted, "진짜")
+    assert agent.split_title(quoted) == (quoted, None)
 
 
 # Validates: REQ-VXVUECHATBOT-002
@@ -95,3 +105,18 @@ def test_streaming_hides_title_marker():
     assert agent.hide_title_marker("본문\n<!-- title: 제목") == "본문"
     assert agent.hide_title_marker("본문\n<!-- ti") == "본문"
     assert agent.hide_title_marker("본문 <b") == "본문 <b"
+    assert agent.hide_title_marker("본문\n<!--title:제") == "본문"
+    assert agent.hide_title_marker("본문\n<!--   title: 제목 -->\n") == "본문"
+    assert agent.hide_title_marker("본문\n<!--  ") == "본문"
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_history_prompt_title_needed_counts_only_done_answers_and_skips_user_title():
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    messages = [{"id": "u1", "role": "user", "content": "q", "attachments": []}, {"id": "a1", "role": "assistant", "content": "답변 생성을 중지했습니다.", "attachments": []},
+                {"id": "u2", "role": "user", "content": "q2", "attachments": []}, {"id": "a2", "role": "assistant", "content": "", "attachments": []}]
+    jobs = [{"assistant_message_id": "a1", "status": "CANCELLED"}, {"assistant_message_id": "a2", "status": "RUNNING"}]
+    assert json.loads(agent.history_prompt(messages, jobs=jobs)[0])["title_needed"] is True
+    done = [{"assistant_message_id": "a1", "status": "DONE"}, *jobs[1:]]
+    assert json.loads(agent.history_prompt(messages, jobs=done)[0])["title_needed"] is False
+    assert json.loads(agent.history_prompt(messages, jobs=jobs, title_source="user")[0])["title_needed"] is False

@@ -90,3 +90,18 @@ def test_service_stores_ai_title(tmp_path, monkeypatch):
     got = store.vxchat_get("owner", chat["id"])
     assert got["messages"][-1]["content"] == "답변" and "<!--" not in got["messages"][-1]["content"]
     assert got["title"] == "Theme 설정 사양"
+
+
+# Validates: REQ-VXVUECHATBOT-002
+def test_title_write_failure_keeps_job_done(tmp_path, monkeypatch):
+    store = seeded(tmp_path)
+    chat = store.vxchat_create("owner")
+    job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
+    result = {"text": "답변", "title": "제목", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
+    def boom(*a, **k):
+        raise RuntimeError("db locked")
+    monkeypatch.setattr(store, "vxchat_set_ai_title", boom)
+    service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
+    assert store.vxchat_job("owner", job["id"])["status"] == "DONE"
+    assert store.vxchat_get("owner", chat["id"])["messages"][-1]["content"] == "답변"
