@@ -6,7 +6,8 @@
 - 운영 서버 준비(완료): `sudo apt install xvfb xterm xdotool imagemagick`, 운영 venv 에 `pyte==0.8.2`. 서버 시간대가 `America/New_York` 이라 캡처 때만 `TZ=Asia/Seoul` 로 연다.
 - 실제 확인: 운영 서버에서 새 캡처 함수(`run_xterm`)를 임시 복사본으로 한 번 실행했다. 5.1초 만에 `Current session 100% used`·`Current week 62% used` 화면을 찍었고 Xvfb·xterm 프로세스가 남지 않았다. 테스트 자료 `tests/fixtures/limit_evidence/usage_full.raw` 는 이때 받은 실제 CLI 출력이다.
 - 시험: `tests/test_limit_evidence.py`·`tests/test_qa_intel_failures.py`·`tests/test_claude_usage.py` 37 passed. 전체 시험은 사용자 요청으로 다른 변경과 함께 돌린다(미실행).
-- 남은 일: master 머지·운영 배포, 담당자 PC 에서 `scripts/install_limit_evidence_sync.ps1` 등록, 실제 한도 감지 때 자동 캡처와 공유폴더 복사 확인.
+- 통합: 사용자 요청으로 `claude/infallible-lewin-8ababd`(브라우저 시험 창 없는 실행, NFR-OPS-003)와 `claude/chatbot-ui-improvements-e508ed`(챗봇 상단 사용량·지식 상태)를 이 브랜치에 일반 병합했다. 충돌은 CHANGELOG·progress·learnings-log 의 같은 자리 추가뿐이라 양쪽을 모두 남겼고 `docs/SPEC.html` 은 다시 만들었다. 병합본 전체 시험 1527 passed·8 skipped(29분 53초).
+- 남은 일(사용자 확인 후 진행): master 머지·운영 배포, 담당자 PC 에서 `scripts/install_limit_evidence_sync.ps1` 등록, 실제 한도 감지 때 자동 캡처와 공유폴더 복사 확인.
 
 ## 2026-10-14 브라우저 화면 시험의 기본을 창 없는 실행으로 (NFR-OPS-003)
 
