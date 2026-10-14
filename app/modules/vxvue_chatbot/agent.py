@@ -123,7 +123,8 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
-    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id}, ensure_ascii=False), encoding="utf-8")
+    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id,
+                                        "batch_char_limit": int(settings.get("vxvue_chatbot.batch_char_limit", 60000))}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")
     prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)))
@@ -139,6 +140,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     args = build_command(command, prompt_file, config_file, model=model, effort=effort,
                          max_turns=int(settings.get("vxvue_chatbot.max_turns", 24)), max_budget_usd=float(settings.get("vxvue_chatbot.max_budget_usd", 0)))
     env = claude_cli.build_env(token)
+    env["MAX_MCP_OUTPUT_TOKENS"] = str(settings.get("vxvue_chatbot.mcp_output_tokens", 40000))
     ttl = settings.get("vxvue_chatbot.prompt_cache_ttl", "")
     if ttl in ("5m", "1h"):
         env["CLAUDE_CODE_PROMPT_CACHE_TTL"] = ttl

@@ -100,7 +100,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 1. 필요한 규칙 두 종류를 찾고 전문을 읽는다. 없거나 읽을 수 없으면 분석을 시작하지 않는다.
 2. 규칙과 일반 자료·첨부를 구분해 전달한다.
-3. 검색·원문 조회로 문서명·개정·페이지 또는 시트·셀의 근거를 찾는다.
+3. 검색·원문 조회로 문서명·개정·페이지 또는 시트·셀의 근거를 찾는다. ID 질의는 그 ID를 정의한 사양 항목을 먼저 보인다.
 4. 사실·자료 기반 판단·추가 확인를 구분해 답한다.
 
 **지킬 것** 검색 결과 없음은 미지원 판정이 아니다. 로그·Expected·Pass/Fail을 만들지 않는다. 원본 TC와 완료 결과를 보존한다. 이미지·표·취소선 판단에는 원본 페이지를 조회하거나 제한을 알린다. 인용 링크는 이번 작업에서 조회한 자료만 연결한다.
@@ -130,6 +130,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 2. 검색 결과마다 반복되는 전체 문서 목록·서버 경로·조회 시각을 제외한다. 문서 목록은 상태 조회에서 제공한다. 근거 본문·개정·위치·취소선·역할·경고·잘림 여부는 유지한다.
 3. 여러 검색 또는 문서·첨부 조회를 한 번의 도구 호출로 처리한다. 개별 오류는 다른 조회 결과와 함께 표시한다.
    검색은 기본 6개 후보, 원문은 기본 4개 구간을 반환한다. limit을 늘리거나 next_offset으로 이어 조회할 수 있다.
+   묶음 응답은 설정한 글자 상한(기본 60,000자) 안에서 돌려주고, 넘친 요청은 줄인 근거와 이어 읽을 위치를 남긴다.
 4. 대화 이력은 기존 한도까지 원문을 유지하고 JSON의 불필요한 공백만 줄인다. 자동 요약을 위한 추가 AI 호출은 만들지 않는다.
 5. 도구 왕복을 포함한 최대 진행 횟수를 설정한다. 한도에 도달하면 중단 이유를 표시하고 자동으로 전체 요청을 재실행하지 않는다.
 6. 새 입력·캐시 쓰기·캐시 읽기·출력 토큰, 진행 횟수와 CLI의 비용 추정치를 구분해 저장한다. 비용 추정치를 청구액이나 구독 잔여 사용량으로 표현하지 않는다.
@@ -169,7 +170,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 ### TEST-VXVUECHATBOT-004 사용량 절감과 근거 보존
 
-고정 실행 경로, 지침 전문, 압축 전후 근거·경고·취소선 보존, 묶음 조회의 부분 오류, 이력 내용 보존, 진행 횟수 한도와 캐시 토큰 분리를 확인한다. 합성 문서를 실제 CLI로 조회하고 답변·출처·사용량을 확인한다.
+고정 실행 경로, 지침 전문, 압축 전후 근거·경고·취소선 보존, 묶음 조회의 부분 오류, 묶음 응답의 글자 상한과 넘친 요청의 이어 읽기 표시, 이력 내용 보존, 진행 횟수 한도와 캐시 토큰 분리를 확인한다. 합성 문서를 실제 CLI로 조회하고 답변·출처·사용량을 확인한다.
 
 ### TEST-VXVUECHATBOT-005 Skill 자동 반영과 자산 연결
 
@@ -185,7 +186,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 | REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py` | verified |
 | REQ-VXVUECHATBOT-003 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/mcp_server.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-004 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
-| REQ-VXVUECHATBOT-005 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/vxvue_chatbot/skill/SKILL.md`, `app/prompts/vxvue_chatbot.yaml` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_service.py` | verified |
+| REQ-VXVUECHATBOT-005 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/skill/SKILL.md`, `app/prompts/vxvue_chatbot.yaml` | TEST-VXVUECHATBOT-002: `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-006 | `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_retry.py` | TEST-VXVUECHATBOT-003: `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-007 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/core/vxchat_storage.py` | TEST-VXVUECHATBOT-004: `tests/test_vxvue_chat_cost.py` | verified |
 | REQ-VXVUECHATBOT-008 | `app/core/skill_knowledge.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_push.py` | TEST-VXVUECHATBOT-005: `tests/test_skill_knowledge.py`, `tests/test_vxvue_chat_knowledge.py` | verified |

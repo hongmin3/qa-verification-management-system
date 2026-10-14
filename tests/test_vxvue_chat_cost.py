@@ -130,3 +130,59 @@ def test_runner_keeps_directory_and_system_stable_between_jobs(tmp_path, monkeyp
     assert paths[0] == paths[1] == tmp_path / "work" / "vxvue-chatbot"
     assert (paths[0] / "one" / "system.txt").read_bytes() == (paths[1] / "two" / "system.txt").read_bytes()
     assert "missing" in (paths[1] / "two" / "input.json").read_text(encoding="utf-8")
+
+
+def fake_search_session(tmp_path, evidence_chars=1800, results_per_search=6):
+    store = seeded(tmp_path)
+    snapshot = prepare_knowledge(store, tmp_path / "snapshots")
+    session = mcp_server.KnowledgeTools(snapshot, [], tmp_path / "trace", "job")
+    def search(**arguments):
+        return {"query": arguments["query"], "limitations": ["same limitation"], "scope": {"files": 1},
+                "results": [{"document_id": "d.md", "chunk_id": f"d.md::p{n}", "evidence": "가" * evidence_chars, "evidence_truncated": False}
+                            for n in range(results_per_search)]}
+    session.corpus.search_documents = search
+    return session
+
+
+# Validates: REQ-VXVUECHATBOT-007
+def test_batch_respects_char_budget(tmp_path):
+    session = fake_search_session(tmp_path)
+    requests = [{"tool": "search_documents", "arguments": {"query": f"q{n}"}} for n in range(10)]
+    result = session.call("batch_lookup", {"requests": requests})
+    assert len(json.dumps(result, ensure_ascii=False)) <= 60000
+    assert result["budget"]["limit_chars"] == 60000 and result["budget"]["trimmed"]
+    index = result["budget"]["trimmed"][0]
+    entry = result["results"][index]
+    if entry.get("deferred"):
+        assert entry["is_error"] is False and "개별 호출" in entry["reason"]
+    else:
+        assert all(r["evidence_truncated"] is True and r["chunk_id"] for r in entry["value"]["results"])
+    assert any(not r.get("deferred") and any(x["evidence_truncated"] for x in r["value"]["results"]) for r in result["results"][index:]) or entry.get("deferred")
+    assert result["budget"]["used_chars"] <= 60000
+
+
+# Validates: REQ-VXVUECHATBOT-007
+def test_batch_drops_repeated_limitations(tmp_path):
+    session = fake_search_session(tmp_path, evidence_chars=10, results_per_search=1)
+    requests = [{"tool": "search_documents", "arguments": {"query": f"q{n}"}} for n in range(3)]
+    result = session.call("batch_lookup", {"requests": requests})
+    assert result["limitations"] == ["same limitation"]
+    assert all("limitations" not in r["value"] for r in result["results"])
+    assert result["budget"]["trimmed"] == []
+
+
+# Validates: REQ-VXVUECHATBOT-007
+def test_cli_env_sets_mcp_output_tokens(tmp_path, monkeypatch):
+    captured = {}
+    class Stop(Exception):
+        pass
+    def popen(args, **kwargs):
+        captured.update(kwargs["env"])
+        raise Stop
+    monkeypatch.setattr(agent.subprocess, "Popen", popen)
+    monkeypatch.setattr(agent.claude_cli, "resolve_command", lambda c: sys.executable)
+    settings = SimpleNamespace(secrets=SimpleNamespace(claude_code_oauth_token=""), get=lambda key, default=None: {"ai.claude.workdir": str(tmp_path / "work")}.get(key, default))
+    snapshot = {"id": "s", "root": str(tmp_path), "index": str(tmp_path / "i"), "documents": [], "rules": "RULES"}
+    with pytest.raises(Stop):
+        agent.run([{"role": "user", "content": "hi"}], snapshot, [], "job1", settings, threading.Event(), lambda *a: None)
+    assert captured["MAX_MCP_OUTPUT_TOKENS"] == "40000"

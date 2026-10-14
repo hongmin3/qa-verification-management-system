@@ -40,7 +40,8 @@ def compact_response(value, inventory=False):
 
 
 class KnowledgeTools:
-    def __init__(self, snapshot, attachments, trace_path, job_id=""):
+    def __init__(self, snapshot, attachments, trace_path, job_id="", batch_char_limit=60000):
+        self.batch_char_limit = int(batch_char_limit)
         self.snapshot = snapshot
         self.corpus = Corpus(snapshot["root"], snapshot["index"])
         self.attachments = {a["id"]: a for a in attachments}
@@ -140,8 +141,12 @@ class KnowledgeTools:
             raise ValueError("묶음 조회는 1~10개 요청입니다.")
         if any(not isinstance(r, dict) or r.get("tool") not in allowed or not isinstance(r.get("arguments", {}), dict) for r in requests):
             raise ValueError("묶음 조회에는 허용된 읽기 도구만 사용할 수 있습니다.")
-        results, scope = [], None
-        for request in requests:
+        results, scope, limitations, trimmed, used = [], None, None, [], 0
+
+        def size(entry):
+            return len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")))
+
+        for number, request in enumerate(requests):
             try:
                 value = self.call(request["tool"], request.get("arguments", {}))
                 if isinstance(value, list):
@@ -153,11 +158,44 @@ class KnowledgeTools:
                         scope = value["scope"]
                     if value["scope"] == scope:
                         value.pop("scope")
-                results.append({"tool": request["tool"], "value": value, "is_error": False})
+                if isinstance(value, dict) and "limitations" in value:
+                    if limitations is None:
+                        limitations = value["limitations"]
+                    if value["limitations"] == limitations:
+                        value.pop("limitations")
+                entry = {"tool": request["tool"], "value": value, "is_error": False}
             except Exception as exc:
-                results.append({"tool": request["tool"], "is_error": True, "error": type(exc).__name__, "evidence_status": "incomplete"})
-        return {"results": results, "scope": scope}
+                entry = {"tool": request["tool"], "is_error": True, "error": type(exc).__name__, "evidence_status": "incomplete"}
+            if used + size(entry) > self.batch_char_limit:
+                trimmed.append(number)
+                entry = self._shorten(entry)
+                if used + size(entry) > self.batch_char_limit:
+                    entry = {"tool": request["tool"], "is_error": False, "deferred": True, "reason": "응답 크기 상한 — 개별 호출로 다시 조회"}
+            used += size(entry)
+            results.append(entry)
+        response = {"results": results, "scope": scope}
+        if limitations is not None:
+            response["limitations"] = limitations
+        response["budget"] = {"limit_chars": self.batch_char_limit, "used_chars": used, "trimmed": trimmed}
+        return response
 
+    @staticmethod
+    def _shorten(entry, keep=300):
+        """Cut evidence to its head; chunk_id and document_id stay so the caller can read on."""
+        def cut(value):
+            if isinstance(value, list):
+                return [cut(v) for v in value]
+            if not isinstance(value, dict):
+                return value
+            result = {k: cut(v) for k, v in value.items()}
+            if isinstance(result.get("evidence"), str) and len(result["evidence"]) > keep:
+                result["evidence"] = result["evidence"][:keep]
+                result["evidence_truncated"] = True
+            return result
+        shortened = dict(entry)
+        if "value" in shortened:
+            shortened["value"] = cut(shortened["value"])
+        return shortened
 
 def tools():
     string = {"type": "string"}
@@ -213,4 +251,5 @@ if __name__ == "__main__":
     parser.add_argument("--trace", required=True, type=Path)
     args = parser.parse_args()
     context = json.loads(args.context.read_text(encoding="utf-8"))
-    serve(KnowledgeTools(context["snapshot"], context["attachments"], args.trace, context["job_id"]))
+    serve(KnowledgeTools(context["snapshot"], context["attachments"], args.trace, context["job_id"],
+                                context.get("batch_char_limit", 60000)))
