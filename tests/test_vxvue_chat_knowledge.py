@@ -157,9 +157,12 @@ def definition_corpus(tmp_path, definition_text):
 
 
 # Validates: REQ-VXVUECHATBOT-005
-def test_definition_chunk_ranks_first(tmp_path):
+@pytest.mark.parametrize("query", ["VP-656", "vp 656", "VP_656"])
+def test_definition_chunk_ranks_first(tmp_path, query):
     corpus = definition_corpus(tmp_path, "07-10-40 Theme\n\nID: VP-656   Status:  draft      Legacy No.: 1\n")
-    result = corpus.search_documents("VP-656", limit=6)
+    (corpus.root / "(사양서) Long.md").write_text("Other (VP-6568 - Other) 언급\n", encoding="utf-8")
+    result = corpus.search_documents(query, limit=6)
+    assert "(사양서) Long.md" not in [r["document_id"] for r in result["results"]]
     assert result["results"][0]["document_id"] == "(사양서) Z.md"
     assert result["results"][0]["definition_match"] is True
     assert not any(r.get("definition_match") for r in result["results"][1:])

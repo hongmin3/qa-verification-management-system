@@ -81,7 +81,9 @@ def mentions_id(search_text, vp_id):
 def query_terms(query):
     if not isinstance(query, str) or not query.strip() or len(query) > 1000:
         raise ValueError('query must be nonempty and at most 1000 characters')
-    words = re.findall(r'[a-z0-9]+(?:[-_.][a-z0-9]+)*|[가-힣]+', normalize(query))
+    # VP-656, VP_656 and "vp 656" are one ID; search only the hyphen form that the documents use.
+    folded = re.sub(r'(?<![a-z0-9])vp[-_\s]+(\d+)', r'vp-\1', normalize(query))
+    words = re.findall(r'[a-z0-9]+(?:[-_.][a-z0-9]+)*|[가-힣]+', folded)
     noise = {'관련', '사양', '사양서', '매뉴얼', '문서', '기능', '검색', '조회', '비교', '조건',
              '차이', '찾아줘', '알려줘', '보여줘', '확인해줘', '해줘', '무엇', '어떤',
              'the', 'for', 'and', 'or', 'find', 'show', 'please', 'spec', 'tc'}
@@ -505,10 +507,11 @@ class Corpus:
                     if any(value not in row['search_text'] for value in filters):
                         continue
                     hits = [t for t in terms if t in row['search_text'] and (t not in vp_terms or mentions_id(row['search_text'], vp_terms[t]))]
-                    if not hits:
+                    defines = bool(vp_ids & definition_ids(row['text']))
+                    if not hits and not defines:
                         continue
                     score = len(hits) * 100 + sum(t in normalize(row['text']) for t in hits) * 10
-                    if vp_ids & definition_ids(row['text']):
+                    if defines:
                         score += 1000
                         definitions.add(row['id'])
                     scored.append((score, row))

@@ -2,6 +2,7 @@
 import argparse
 import base64
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -11,7 +12,7 @@ import xml.etree.ElementTree as ET
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from app.modules.vxvue_chatbot.skill.scripts.corpus import Corpus
+from app.modules.vxvue_chatbot.skill.scripts.corpus import Corpus, query_terms
 from app.modules.vxvue_chatbot.skill.scripts import knowledge as generator
 from app.core.security_filter import mask_payload
 
@@ -19,6 +20,13 @@ from app.core.security_filter import mask_payload
 def text_content(value):
     masked, _ = mask_payload(value)
     return [{"type": "text", "text": json.dumps(masked, ensure_ascii=False, separators=(",", ":"))}]
+
+
+def estimate_tokens(value):
+    """Rough token count of the serialized JSON: ASCII about 4 chars per token, other characters 1.5."""
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    ascii_chars = sum(c < "\x80" for c in text)
+    return math.ceil(ascii_chars / 4 + (len(text) - ascii_chars) * 1.5)
 
 
 def compact_response(value, inventory=False):
@@ -40,8 +48,9 @@ def compact_response(value, inventory=False):
 
 
 class KnowledgeTools:
-    def __init__(self, snapshot, attachments, trace_path, job_id="", batch_char_limit=60000):
-        self.batch_char_limit = int(batch_char_limit)
+    def __init__(self, snapshot, attachments, trace_path, job_id="", batch_token_budget=30000):
+        self.batch_token_budget = int(batch_token_budget)
+        self._trace_buffer = None
         self.snapshot = snapshot
         self.corpus = Corpus(snapshot["root"], snapshot["index"])
         self.attachments = {a["id"]: a for a in attachments}
@@ -64,9 +73,16 @@ class KnowledgeTools:
             result["reference_url"] = f"/vxvue-chatbot/jobs/{self.job_id}/source?document_id={quote(doc, safe='')}"
             if self.job_id:
                 citation = {k: result[k] for k in ("document_id", "document_name", "chunk_id", "location", "sha256", "reference_url") if k in result}
-                with self.trace_path.open("a", encoding="utf-8") as log:
-                    log.write(json.dumps(citation, ensure_ascii=False) + "\n")
+                if self._trace_buffer is not None:
+                    self._trace_buffer.append(citation)
+                else:
+                    self._write_trace([citation])
         return result
+
+    def _write_trace(self, citations):
+        with self.trace_path.open("a", encoding="utf-8") as log:
+            for citation in citations:
+                log.write(json.dumps(citation, ensure_ascii=False) + "\n")
 
     def _source(self, document_id):
         root = Path(self.snapshot["root"]).resolve()
@@ -141,12 +157,15 @@ class KnowledgeTools:
             raise ValueError("묶음 조회는 1~10개 요청입니다.")
         if any(not isinstance(r, dict) or r.get("tool") not in allowed or not isinstance(r.get("arguments", {}), dict) for r in requests):
             raise ValueError("묶음 조회에는 허용된 읽기 도구만 사용할 수 있습니다.")
-        results, scope, limitations, trimmed, used = [], None, None, [], 0
+        results, traces, scope, limitations, trimmed, used = [], [], None, None, [], 0
+        deferred_reason = "응답 크기 상한을 넘어 개별 호출로 다시 조회해야 합니다"
 
-        def size(entry):
-            return len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")))
+        def deferred(request):
+            return {"tool": request["tool"], "arguments": request.get("arguments", {}), "is_error": False,
+                    "deferred": True, "reason": deferred_reason}
 
         for number, request in enumerate(requests):
+            self._trace_buffer = []
             try:
                 value = self.call(request["tool"], request.get("arguments", {}))
                 if isinstance(value, list):
@@ -166,30 +185,58 @@ class KnowledgeTools:
                 entry = {"tool": request["tool"], "value": value, "is_error": False}
             except Exception as exc:
                 entry = {"tool": request["tool"], "is_error": True, "error": type(exc).__name__, "evidence_status": "incomplete"}
-            if used + size(entry) > self.batch_char_limit:
+            finally:
+                citations, self._trace_buffer = self._trace_buffer, None
+            if used + estimate_tokens(entry) > self.batch_token_budget:
                 trimmed.append(number)
-                entry = self._shorten(entry)
-                if used + size(entry) > self.batch_char_limit:
-                    entry = {"tool": request["tool"], "is_error": False, "deferred": True, "reason": "응답 크기 상한 — 개별 호출로 다시 조회"}
-            used += size(entry)
+                entry = self._shorten(entry, request)
+                if used + estimate_tokens(entry) > self.batch_token_budget:
+                    entry, citations = deferred(request), []
+            used += estimate_tokens(entry)
             results.append(entry)
-        response = {"results": results, "scope": scope}
-        if limitations is not None:
-            response["limitations"] = limitations
-        response["budget"] = {"limit_chars": self.batch_char_limit, "used_chars": used, "trimmed": trimmed}
+            traces.append(citations)
+
+        def assemble():
+            response = {"results": results, "scope": scope}
+            if limitations is not None:
+                response["limitations"] = limitations
+            response["budget"] = {"limit_tokens": self.batch_token_budget, "used_tokens": 0, "trimmed": sorted(trimmed)}
+            response["budget"]["used_tokens"] = estimate_tokens(response)
+            return response
+
+        response = assemble()
+        # Scope, limitations and separators are not counted per request, so fit the whole response.
+        for number in range(len(results) - 1, -1, -1):
+            if response["budget"]["used_tokens"] <= self.batch_token_budget:
+                break
+            if not results[number].get("deferred"):
+                results[number], traces[number] = deferred(requests[number]), []
+                if number not in trimmed:
+                    trimmed.append(number)
+                response = assemble()
+        self._write_trace([c for citations in traces for c in citations])
         return response
 
     @staticmethod
-    def _shorten(entry, keep=300):
-        """Cut evidence to its head; chunk_id and document_id stay so the caller can read on."""
+    def _shorten(entry, request, keep=300):
+        """Cut evidence to 300 characters around the first query term; chunk_id and document_id stay so the caller can read on."""
+        try:
+            terms = query_terms(request.get("arguments", {}).get("query"))
+        except ValueError:
+            terms = []
+
         def cut(value):
             if isinstance(value, list):
                 return [cut(v) for v in value]
             if not isinstance(value, dict):
                 return value
             result = {k: cut(v) for k, v in value.items()}
-            if isinstance(result.get("evidence"), str) and len(result["evidence"]) > keep:
-                result["evidence"] = result["evidence"][:keep]
+            text = result.get("evidence")
+            if isinstance(text, str) and len(text) > keep:
+                folded = text.casefold()
+                pos = min((folded.find(t) for t in terms if t in folded), default=0)
+                start = min(max(0, pos - keep // 3), len(text) - keep)
+                result["evidence"] = text[start:start + keep]
                 result["evidence_truncated"] = True
             return result
         shortened = dict(entry)
@@ -252,4 +299,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     context = json.loads(args.context.read_text(encoding="utf-8"))
     serve(KnowledgeTools(context["snapshot"], context["attachments"], args.trace, context["job_id"],
-                                context.get("batch_char_limit", 60000)))
+                                context.get("batch_token_budget", 30000)))

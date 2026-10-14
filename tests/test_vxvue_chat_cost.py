@@ -132,40 +132,66 @@ def test_runner_keeps_directory_and_system_stable_between_jobs(tmp_path, monkeyp
     assert "missing" in (paths[1] / "two" / "input.json").read_text(encoding="utf-8")
 
 
-def fake_search_session(tmp_path, evidence_chars=1800, results_per_search=6):
+def fake_search_session(tmp_path, evidence="가" * 1800, results_per_search=6):
     store = seeded(tmp_path)
     snapshot = prepare_knowledge(store, tmp_path / "snapshots")
     session = mcp_server.KnowledgeTools(snapshot, [], tmp_path / "trace", "job")
     def search(**arguments):
         return {"query": arguments["query"], "limitations": ["same limitation"], "scope": {"files": 1},
-                "results": [{"document_id": "d.md", "chunk_id": f"d.md::p{n}", "evidence": "가" * evidence_chars, "evidence_truncated": False}
+                "results": [{"document_id": f"doc-{arguments['query']}.md", "chunk_id": f"doc-{arguments['query']}.md::p{n}", "evidence": evidence, "evidence_truncated": False}
                             for n in range(results_per_search)]}
     session.corpus.search_documents = search
     return session
 
 
+def search_requests(count):
+    return [{"tool": "search_documents", "arguments": {"query": f"q{n}"}} for n in range(count)]
+
+
 # Validates: REQ-VXVUECHATBOT-007
-def test_batch_respects_char_budget(tmp_path):
+def test_batch_respects_token_budget(tmp_path):
     session = fake_search_session(tmp_path)
-    requests = [{"tool": "search_documents", "arguments": {"query": f"q{n}"}} for n in range(10)]
+    requests = search_requests(10)
     result = session.call("batch_lookup", {"requests": requests})
-    assert len(json.dumps(result, ensure_ascii=False)) <= 60000
-    assert result["budget"]["limit_chars"] == 60000 and result["budget"]["trimmed"]
-    index = result["budget"]["trimmed"][0]
-    entry = result["results"][index]
-    if entry.get("deferred"):
-        assert entry["is_error"] is False and "개별 호출" in entry["reason"]
-    else:
-        assert all(r["evidence_truncated"] is True and r["chunk_id"] for r in entry["value"]["results"])
-    assert any(not r.get("deferred") and any(x["evidence_truncated"] for x in r["value"]["results"]) for r in result["results"][index:]) or entry.get("deferred")
-    assert result["budget"]["used_chars"] <= 60000
+    assert mcp_server.estimate_tokens(result) <= 30000
+    assert result["budget"]["limit_tokens"] == 30000 and result["budget"]["used_tokens"] <= 30000
+    assert result["budget"]["trimmed"] == [1,2,3,4,5,6,7,8,9]
+    for number, entry in enumerate(result["results"]):
+        if number == 0:
+            assert not entry.get("deferred") and entry["value"]["results"][0]["evidence_truncated"] is False
+        elif number in {5, 6, 7, 8, 9}:
+            assert entry["deferred"] is True and entry["is_error"] is False
+            assert entry["tool"] == "search_documents" and entry["arguments"] == requests[number]["arguments"]
+            assert "—" not in entry["reason"]
+        else:
+            assert all(r["evidence_truncated"] is True and len(r["evidence"]) == 300 and r["chunk_id"] for r in entry["value"]["results"])
+    assert mcp_server.estimate_tokens("abcdabcd가") == 4
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_deferred_request_documents_are_not_traced(tmp_path):
+    session = fake_search_session(tmp_path)
+    result = session.call("batch_lookup", {"requests": search_requests(10)})
+    traced = {json.loads(line)["document_id"] for line in (tmp_path / "trace").read_text(encoding="utf-8").splitlines()}
+    returned = {r["document_id"] for e in result["results"] if not e.get("deferred") for r in e["value"]["results"]}
+    deferred = {f"doc-q{n}.md" for n, e in enumerate(result["results"]) if e.get("deferred")}
+    assert deferred and traced == returned and not traced & deferred
+
+
+# Validates: REQ-VXVUECHATBOT-007
+def test_shortened_evidence_keeps_text_around_query_match(tmp_path):
+    evidence = "가" * 900 + "NEEDLE문장" + "나" * 900
+    session = fake_search_session(tmp_path, evidence=evidence)
+    requests = [{"tool": "search_documents", "arguments": {"query": "needle"}}] * 4
+    result = session.call("batch_lookup", {"requests": requests})
+    shortened = [e for e in result["results"] if not e.get("deferred") and e["value"]["results"][0]["evidence_truncated"]]
+    assert shortened and all("NEEDLE" in r["evidence"] for e in shortened for r in e["value"]["results"])
 
 
 # Validates: REQ-VXVUECHATBOT-007
 def test_batch_drops_repeated_limitations(tmp_path):
-    session = fake_search_session(tmp_path, evidence_chars=10, results_per_search=1)
-    requests = [{"tool": "search_documents", "arguments": {"query": f"q{n}"}} for n in range(3)]
-    result = session.call("batch_lookup", {"requests": requests})
+    session = fake_search_session(tmp_path, evidence="x" * 10, results_per_search=1)
+    result = session.call("batch_lookup", {"requests": search_requests(3)})
     assert result["limitations"] == ["same limitation"]
     assert all("limitations" not in r["value"] for r in result["results"])
     assert result["budget"]["trimmed"] == []

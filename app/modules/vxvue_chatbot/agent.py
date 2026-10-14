@@ -124,7 +124,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
     context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id,
-                                        "batch_char_limit": int(settings.get("vxvue_chatbot.batch_char_limit", 60000))}, ensure_ascii=False), encoding="utf-8")
+                                        "batch_token_budget": int(settings.get("vxvue_chatbot.batch_token_budget", 30000))}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")
     prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)))
