@@ -4498,7 +4498,7 @@ REQ-QAINTEL-019 가 대신한다.
 - 운영
   - 운영 점검, 백업, 로그, 지식 폴더 마운트 설정: REQ-OPS-001 ~ REQ-OPS-004
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
-  - 저장소에 비밀값·사내 문서 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리: NFR-PRIV-002, NFR-OPS-001, NFR-OPS-002
+  - 저장소에 비밀값·사내 문서 사본 두지 않기, 콘솔 인코딩, 부가 기능 실패 처리, 화면 없는 테스트 실행: NFR-PRIV-002, NFR-OPS-001 ~ NFR-OPS-003
 
 문서가 분석에 쓰이기까지 세 갈래가 있다. 지식 폴더 업로드, ALM 사양서 동기화, 사람이 화면에서 올리기다. 어느 길이든 문서 표에 등록돼야 분석이 검색한다. 어느 제품의 어느 자료가 어느 길로 들어오는지는 제품 설정의 출처 프로필(REQ-KNOW-018)이 정한다.
 
@@ -6743,6 +6743,16 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | 문서 하나 읽기 | 그 문서만 건너뛰고 읽지 못한 목록에 남김(REQ-KNOW-006) |
 | 지식 파일 하나 수집·업로드 | 그 파일만 실패로 남기고 나머지 계속 |
 | 운영 점검의 조회 하나 | 알림 이름으로 남기고 나머지 계속 |
+
+### NFR-OPS-003 화면 없는 셸에서도 테스트가 멈추지 않기
+
+**하는 일** 루트 `pytest` 의 브라우저 화면 시험이 창을 띄우지 않고(headless) 돈다. 그래서 백그라운드 셸이나 배포 스크립트(REQ-DEPLOY-002)에서 돌려도 멈추지 않는다.
+
+> **예시** 2026-10-14 에 Windows 백그라운드 셸에서 전체 테스트를 돌렸더니 창을 띄우는 Chromium 이 `test_cancel_in_real_http_browser` 에서 23분 넘게 멈췄다. 같은 파일을 `CI=1` 로 돌리면 2분 26초에 모두 통과했다.
+
+**설정** 사람이 화면을 눈으로 보고 싶을 때만 환경변수 `QA_BROWSER_HEADED=1` 을 준다. `1`·`true`·`yes` 가 아니면 창 없이 돈다. `CI`·`DISPLAY` 가 있는지는 보지 않는다.
+
+**지킬 것** 브라우저를 띄우는 새 시험은 같은 판단 함수(`browser_headless`)를 쓴다. 창 있는 실행을 기본값으로 두지 않는다.
 
 ### 5.6 하위 서비스 QA Manual Hub
 
@@ -9409,6 +9419,10 @@ NFR-PRIV-002 는 자동 테스트가 없다. 사람이 확인하는 절차: `git
 
 NFR-OPS-001, 002 는 자동 테스트가 일부만 있다(TEST-USAGE-002 의 발송 실패, TEST-KNOW-001 의 파일 하나 실패, TEST-OPS-001 의 조회 실패). 콘솔 인코딩은 사람이 확인한다: cp949 콘솔에서 `python scripts/sync_product_knowledge.py --dry-run` 이 `UnicodeEncodeError` 없이 끝나는지 본다.
 
+### TEST-OPS-005
+
+NFR-OPS-003 을 `tests/test_qa_run_progress_browser.py` 의 `test_browser_headless_unless_asked` 로 확인한다: `CI`·`DISPLAY` 가 없어도 기본은 창 없이 띄우고, `QA_BROWSER_HEADED` 가 `1`·`true`·`yes` 일 때만 창을 띄운다. 같은 파일의 세 화면 시험이 모두 이 판단을 쓴다.
+
 ### 11.6 하위 서비스 QA Manual Hub
 
 모든 자동 테스트는 `services/qa-manual-hub/backend`에서 PostgreSQL을 가리키고 실행한다. 테스트 전후로 표를 만들고 지우며, 테스트마다 모든 표를 비운다.
@@ -9871,6 +9885,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | NFR-PRIV-002 | `.gitignore` | TEST-PRIV-002 | implemented |
 | NFR-OPS-001 | `app/core/console.py` | TEST-OPS-004 | implemented |
 | NFR-OPS-002 | `app/core/notifier.py`, `app/core/document_cache.py`, `app/core/knowledge_documents.py`, `scripts/monitor_health.py` | TEST-OPS-004 | implemented |
+| NFR-OPS-003 | `tests/test_qa_run_progress_browser.py` | TEST-OPS-005: `tests/test_qa_run_progress_browser.py` | verified |
 | REQ-HUBAUTH-001 | `services/qa-manual-hub/backend/app/routers/auth.py`, `services/qa-manual-hub/backend/app/security.py`, `services/qa-manual-hub/frontend/src/pages/Login.tsx` | TEST-HUBAUTH-001: `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
 | REQ-HUBAUTH-002 | `services/qa-manual-hub/backend/app/routers/auth.py`, `services/qa-manual-hub/backend/app/deps.py` | TEST-HUBAUTH-001: `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
 | REQ-HUBAUTH-003 | `services/qa-manual-hub/backend/app/deps.py`, `services/qa-manual-hub/backend/app/security.py`, `services/qa-manual-hub/backend/app/config.py`, `services/qa-manual-hub/backend/app/main.py` | TEST-HUBAUTH-005, `services/qa-manual-hub/backend/tests/test_security_unit.py`, `services/qa-manual-hub/backend/tests/test_auth.py` | implemented |
