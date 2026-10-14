@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="70a6e7f51f9dcc1e26984524363c17726181e6b0cce6f07016d5e93833bf1b80">
+<meta name="spec-source-sha256" content="d68be7bbd142f2ceea943def5721d7b4b35f02f181dec05bd61417a69fb3214a">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -14365,8 +14365,9 @@ AI가 분석한 것
 <section class="card kind-req" id="REQ-QAINTEL-039">
 <h3><span class="idtag">REQ-QAINTEL-039</span> 사용량 한도 증거 캡처</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/limit_evidence.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/main.py</code>, <code>scripts/capture_limit_evidence.py</code>, <code>scripts/sync_limit_evidence.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a>: <code>tests/test_limit_evidence.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: Windows PowerShell에서 한글 증거 파일명이 깨져 복사에 실패하던 문제를 고쳤다. 목록 응답에 UTF-8을 지정해 파일명을 그대로 읽는다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 캡처에 분석과 같은 인증을 전달하고 사용량 조회를 허용한다. 터미널 제목을 고정해 실제 창을 찾으며, 계정과 초기화 시각이 같은 한도만 중복을 막는다. 초기화 시각을 모르면 다음 감지 때 다시 확인한다. 공유폴더 복사는 임시 파일의 SHA256을 확인한 뒤 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>해 불완전한 기존 파일도 복구한다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 서버 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 계정이 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간 한도에 걸리면 그 순간의 <code>/usage</code> 화면을 실제 터미널 창(가상 디스플레이의 xterm)에서 찍어 <code>data/limit_evidence/</code> 에 PNG와 화면 글자 TXT로 남긴다. 화면이 100% 일 때만 남기고 같은 계정·초기화 시각의 한도는 한 번만 찍는다. 파일 이름은 <code>스크린샷 YYYY-MM-DD HHMMSS_Claude13_세션한도.png</code> 형식이다. <code>/claude/limit-evidence</code> 에서 사진을 보고, <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>(<code>scripts/install_limit_evidence_sync.ps1</code>)이 10분마다 팀 공유폴더로 복사한다. 공유폴더 비밀번호는 서버에 두지 않는다(사용자 결정).</li>
 </ul>

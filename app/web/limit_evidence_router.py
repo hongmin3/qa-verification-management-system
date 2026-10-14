@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.modules.daily_qa import limit_evidence
@@ -20,9 +20,9 @@ def limit_evidence_page(request: Request) -> HTMLResponse:
 
 
 @router.get("/limit-evidence.json")
-def limit_evidence_list() -> dict:
+def limit_evidence_list() -> JSONResponse:
     """담당자 PC 의 공유폴더 복사 작업도 이 목록을 읽을 수 있다."""
-    return {"items": limit_evidence.list_evidence()}
+    return JSONResponse({"items": limit_evidence.list_evidence()}, media_type="application/json; charset=utf-8")
 
 
 @router.get("/limit-evidence/files/{name}")

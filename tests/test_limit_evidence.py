@@ -184,7 +184,10 @@ def test_web_lists_and_serves_evidence_only_inside_folder(tmp_path, monkeypatch)
     (tmp_path / "episodes.json").write_text("{}", encoding="utf-8")
     client = TestClient(app)
 
-    items = client.get("/claude/limit-evidence.json").json()["items"]
+    response = client.get("/claude/limit-evidence.json")
+    # Windows PowerShell 5.1 uses the declared charset for non-ASCII file names.
+    assert "charset=utf-8" in response.headers["content-type"]
+    items = response.json()["items"]
     assert [(item["name"], item["limit"]) for item in items] == [("스크린샷 2026-10-14 202600_Claude13_세션한도.png", "세션한도")]
     page = client.get("/claude/limit-evidence")
     assert page.status_code == 200 and "세션한도" in page.text and "/claude/limit-evidence/files/" in page.text
