@@ -137,16 +137,18 @@
     body.appendChild(specList);
     body.appendChild(node('h4','로컬 Skill'));
     const skillList=node('ul');
-    skillList.appendChild(node('li',skill.version?`최신 버전 ${skill.version} · 동기화 ${when(skill.synced_at)}`:(skill.status==='error'?'Skill 지침 읽기 실패':'Skill 지침 동기화 대기')));
+    skillList.appendChild(node('li',skill.version?`최신 버전 ${skill.version} · 동기화 ${when(skill.synced_at)}`:(skill.status==='error'?'Skill 지침 읽기 실패':'Skill 지침 동기화 대기'),skill.status==='error'?'knowledge-bad':''));
     if(skill.code_review_needed)skillList.appendChild(node('li','도구 검토 필요: 검색 도구 코드가 검토한 판과 다릅니다.','knowledge-bad'));
     body.appendChild(skillList);
     const att=state.last_attempt;
-    if(att&&att.status!=='SUCCESS'||state.stale||state.failed_documents?.length){
+    const otherFailed=(state.failed_documents||[]).filter(d=>d.kind!=='manual'),otherExcluded=(state.excluded||[]).filter(d=>d.kind!=='manual');
+    if(att&&att.status!=='SUCCESS'||state.stale||otherFailed.length||otherExcluded.length){
       body.appendChild(node('h4','지식 동기화'));
       const syncList=node('ul');
       if(att&&att.status!=='SUCCESS')syncList.appendChild(node('li',`마지막 시도 ${att.status}${att.detail?' · '+att.detail:''}${state.next_retry_at?' · 다음 시도 '+when(state.next_retry_at):''}`,'knowledge-bad'));
       if(state.stale)syncList.appendChild(node('li','지식 최신화 확인 필요','knowledge-bad'));
-      (state.failed_documents||[]).forEach(d=>syncList.appendChild(node('li',`읽기 실패: ${d.name}${d.reason?' · '+d.reason:''}`,'knowledge-bad')));
+      otherFailed.forEach(d=>syncList.appendChild(node('li',`읽기 실패: ${d.name}${d.reason?' · '+d.reason:''}`,'knowledge-bad')));
+      otherExcluded.forEach(d=>syncList.appendChild(node('li',`제외: ${d.name}${d.reason?' ('+d.reason+')':''}`)));
       body.appendChild(syncList);
     }
     details.appendChild(body);

@@ -271,8 +271,8 @@ def knowledge_status():
         retry = match[1] if match else (datetime.fromisoformat(latest["synced_at"]) + timedelta(minutes=15)).isoformat()
     stale = not successful or datetime.now(timezone.utc) - datetime.fromisoformat(successful["synced_at"]) > timedelta(hours=26)
     manifest = load_manifest("VXvue", get_settings().root)
-    excluded = [{"name": a.get("file_name", ""), "reason": a.get("exclude_reason", "")} for a in manifest.get("excluded", [])]
-    failed = [{"name": a.get("file_name", ""), "reason": mask_text(a["error"])[0]} for a in manifest.get("assets", []) if a.get("error")]
+    excluded = [{"name": a.get("file_name", ""), "reason": a.get("exclude_reason", ""), "kind": a.get("kind", "")} for a in manifest.get("excluded", [])]
+    failed = [{"name": a.get("file_name", ""), "reason": mask_text(a["error"])[0], "kind": a.get("kind", "")} for a in manifest.get("assets", []) if a.get("error")]
     manuals = []
     for entry, status in [(a, "failed" if a.get("error") else "ready") for a in manifest.get("assets", []) if a.get("kind") == "manual"] + [(a, "excluded") for a in manifest.get("excluded", []) if a.get("kind") == "manual"]:
         reason = entry.get("error") if status == "failed" else entry.get("exclude_reason") if status == "excluded" else ""

@@ -185,3 +185,26 @@ def test_knowledge_status_script_builds_collapsible_panel():
     body = script[start:end]
     assert "createElement" in body and "'details'" in body and "innerHTML" not in body
     assert "vxvue-knowledge-open" in body and "specification_sync" in body and "매일 08:00" not in script
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_excluded_and_failed_carry_kind(web):
+    client, _, router = web
+    _write_manifest(router, {
+        "assets": [{"kind": "manual", "file_name": "B.pdf", "error": "parse failed"},
+                   {"kind": "specification", "file_name": "S.pdf", "error": "bad spec"}],
+        "excluded": [{"kind": "specification", "file_name": "old-spec.pdf", "exclude_reason": "older revision"},
+                     {"kind": "manual", "file_name": "old.docx", "exclude_reason": "older revision"}]})
+    data = client.get("/vxvue-chatbot/knowledge-status").json()
+    assert [(e["name"], e["kind"], e["reason"]) for e in data["excluded"]] == [("old-spec.pdf", "specification", "older revision"), ("old.docx", "manual", "older revision")]
+    assert [(e["name"], e["kind"]) for e in data["failed_documents"]] == [("B.pdf", "manual"), ("S.pdf", "specification")]
+    assert [m["name"] for m in data["manuals"]] == ["B.pdf", "old.docx"]
+
+
+# Validates: REQ-VXVUECHATBOT-006
+def test_knowledge_status_script_lists_other_excluded_once_and_flags_skill_error():
+    script = (Path(__file__).resolve().parents[1] / "app/web/static/vxvue-chatbot.js").read_text(encoding="utf-8")
+    body = script[script.index("function knowledgeStatusPanel"):script.index("async function knowledgeStatus()")]
+    assert "제외: ${d.name}" in body and "d.kind!=='manual'" in body
+    assert "(state.failed_documents||[]).forEach" not in body
+    assert "skill.status==='error'?'knowledge-bad'" in body
