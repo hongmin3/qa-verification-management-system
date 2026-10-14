@@ -84,7 +84,7 @@
     const node=document.createElement('article');node.className='chat-message '+message.role;node.dataset.messageId=message.id;
     const label=document.createElement('div');label.className='message-label';label.innerHTML=message.role==='user'?'나':'<span class="mini-mark">V</span> VXvue AI';node.append(label);
     const running=message.role==='assistant'&&job&&job.assistant_message_id===message.id&&['QUEUED','RUNNING'].includes(job.status);
-    if(running&&!withoutCard)node.append(progressCard(job,!!message.content&&job.stage==='답변 작성'));
+    if(running&&withoutCard!==true)node.append(progressCard(job,!!message.content&&job.stage==='답변 작성'));
     const body=document.createElement('div');body.className='message-body';if(message.role==='user')body.textContent=message.content;else body.innerHTML=markdown(message.content);if(!running||message.content)node.append(body);
     if(message.attachments?.length){ const list=document.createElement('div');list.className='message-files';message.attachments.forEach(a=>{const link=document.createElement('a');link.href=base+'/attachments/'+a.id;link.textContent='↧ '+a.name;list.append(link);});node.append(list); }
     if(message.role==='assistant' && message.content){
@@ -93,7 +93,7 @@
       if(message.citations?.length){const detail=document.createElement('details');detail.className='citations';const summary=document.createElement('summary');summary.textContent=`조회한 근거 ${message.citations.length}개`;detail.append(summary);const list=document.createElement('ul');message.citations.forEach(c=>{const row=document.createElement('li'),link=document.createElement('a');link.className='citation-link';link.href=safeLink(c.reference_url);link.target='_blank';link.rel='noopener noreferrer';link.textContent=(c.document_name||c.document_id)+' · '+JSON.stringify(c.location||{});row.append(link);list.append(row);});detail.append(list);node.append(detail);}
     }return node;
   }
-  function renderMessages(){ const scroll=$('scroll-area'),nearBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180; $('messages').replaceChildren(...chat.messages.map(messageNode));$('welcome').hidden=chat.messages.length>0;if(nearBottom)scroll.scrollTop=scroll.scrollHeight; }
+  function renderMessages(){ const scroll=$('scroll-area'),nearBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180; $('messages').replaceChildren(...chat.messages.map(m=>messageNode(m)));$('welcome').hidden=chat.messages.length>0;if(nearBottom)scroll.scrollTop=scroll.scrollHeight; }
   async function select(id){ const ticket=++selection;stopWatch();clearError();files=[];renderFiles();const received=await api('/conversations/'+id);if(ticket!==selection)return;chat=received;current=id;localStorage.setItem('vxvue-last-chat',id);$('chat-title').textContent=chat.title;renderList();job=chat.jobs.find(j=>['QUEUED','RUNNING'].includes(j.status))||null;reached=-1;renderMessages();sidebar(false);setBusy(!!job);if(job)watch(job);$('scroll-area').scrollTop=$('scroll-area').scrollHeight; }
   function newChat(){ ++selection;stopWatch();current=null;chat=null;job=null;localStorage.removeItem('vxvue-last-chat');$('chat-title').textContent='새 대화';$('messages').replaceChildren();$('welcome').hidden=false;files=[];renderFiles();setBusy(false);renderList();sidebar(false);clearError();$('message-input').focus(); }
   function watch(value){
