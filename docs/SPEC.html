@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="f9b697105f312c233bfb89dc5e875862bd656cc7e82c266a0939b9b94b08faa6">
+<meta name="spec-source-sha256" content="2f5ae3055d7660d80d958f3669ea9a3907a0d4f905b2fad9c91606732521b356">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>282</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>30</b><span>비기능 NFR</span></div><div class="stat"><b>177</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>204</b><span>implemented</span></div><div class="stat st-verified"><b>58</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>283</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>30</b><span>비기능 NFR</span></div><div class="stat"><b>178</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>204</b><span>implemented</span></div><div class="stat st-verified"><b>59</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -562,6 +562,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-QAINTEL-036">REQ-QAINTEL-036 <span>진행 중인 실행 중단</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-QAINTEL-037">REQ-QAINTEL-037 <span>같은 분석 결과 다시 쓰기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-QAINTEL-038">REQ-QAINTEL-038 <span>자동 점검 일일·주간·중지 설정</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-QAINTEL-039">REQ-QAINTEL-039 <span>사용량 한도 증거 캡처</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-QAINTEL-001">NFR-QAINTEL-001 <span>AI 는 변경이 있을 때만 부른다</span></a></li>
 <li class="toc-id kind-nfr"><a href="#NFR-QAINTEL-002">NFR-QAINTEL-002 <span>제품 공통 엔진</span></a></li>
 <li class="toc-2"><a href="#doc-qa-intelligence-sec-11">11. 테스트 사양</a></li>
@@ -588,6 +589,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-QAINTEL-021">TEST-QAINTEL-021 <span>공유 실행 중단</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-QAINTEL-022">TEST-QAINTEL-022 <span>분석 결과 재사용</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-QAINTEL-023">TEST-QAINTEL-023 <span>자동 점검 주기와 중지 경계</span></a></li>
+<li class="toc-id kind-test"><a href="#TEST-QAINTEL-024">TEST-QAINTEL-024 <span>사용량 한도 증거 캡처</span></a></li>
 <li class="toc-2"><a href="#doc-qa-intelligence-sec-12">12. 요구사항 추적성</a></li>
 <li class="toc-2"><a href="#doc-qa-intelligence-sec-13">13. 미확정 사항</a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot">QA 검증 관리 시스템 — VXvue AI 챗봇 기능 사양</a></li>
@@ -951,6 +953,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-036">REQ-QAINTEL-036</a></td><td data-label="이름">진행 중인 실행 중단</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/daily_qa_storage.py</code>, <code>app/modules/daily_qa/cancellation.py</code>, <code>app/modules/daily_qa/windows_job.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/dashboard.py</code>, <code>app/web/static/qa-run-progress.js</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-021">TEST-QAINTEL-021</a>: <code>tests/test_qa_run_cancel.py</code>, <code>tests/test_qa_run_progress_ui.py</code>, <code>tests/qa_run_progress_ui.cjs</code>, <code>tests/test_qa_run_progress_browser.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-037">REQ-QAINTEL-037</a></td><td data-label="이름">같은 분석 결과 다시 쓰기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/daily_qa/result_cache.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/modules/qa_agent/run_view.py</code>, <code>app/modules/qa_agent/templates/run_detail.html</code>, <code>app/modules/qa_agent/templates/finding_detail.html</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-022">TEST-QAINTEL-022</a>: <code>tests/test_daily_qa_result_cache.py</code>, <code>tests/test_qa_intel_run_view.py</code>, <code>tests/test_qa_intel_dashboard.py</code>, <code>tests/test_qa_run_progress_browser.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a></td><td data-label="이름">자동 점검 일일·주간·중지 설정</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a></td><td data-label="이름">사용량 한도 증거 캡처</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/limit_evidence.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/main.py</code>, <code>scripts/capture_limit_evidence.py</code>, <code>scripts/sync_limit_evidence.ps1</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a>: <code>tests/test_limit_evidence.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR QAINTEL</span> QA Intelligence Agent</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></td><td data-label="이름">AI 는 변경이 있을 때만 부른다</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/pipeline.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a>: <code>tests/test_qa_intel_pipeline.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-QAINTEL-002">NFR-QAINTEL-002</a></td><td data-label="이름">제품 공통 엔진</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/product_adapter.py</code>, <code>docs/PRODUCT_ONBOARDING.md</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-002">TEST-QAINTEL-002</a>: <code>tests/test_qa_intel_products.py</code></td></tr>
@@ -12650,7 +12653,7 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <li><span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 차이 흡수: <a class="idref" href="#REQ-QAINTEL-002">REQ-QAINTEL-002</a>(<span class="term" title="config/products/&lt;slug&gt;.yaml. 제품마다 다른 Polarion 프로젝트·조회식·필드 이름·연구소 결과 값·Checklist 형식을 적는다" tabindex="0">제품 설정</span>·<span class="term" title="Polarion 원본 필드 이름을 제품 설정으로 바꿔 만든 공통 모양의 SRS(SpecificationItem)·이슈(IssueItem)·댓글(IssueComment) 기록이다. 분석 엔진은 원본 필드 이름을 모른다" tabindex="0">공통 모델</span>), <a class="idref" href="#REQ-QAINTEL-023">REQ-QAINTEL-023</a>(<span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 데이터 분리), <a class="idref" href="#NFR-QAINTEL-002">NFR-QAINTEL-002</a></li>
 <li>과거 기록: <a class="idref" href="#REQ-QAINTEL-029">REQ-QAINTEL-029</a>(ALM-QA-Automation 의 과거 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span> 가져오기), <a class="idref" href="#REQ-QAINTEL-030">REQ-QAINTEL-030</a>(<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 기록이 없는 기간의 현재 상태 기준 점검)</li>
 <li>무엇이 바뀌었나: <a class="idref" href="#REQ-QAINTEL-003">REQ-QAINTEL-003</a>(<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span>), <a class="idref" href="#REQ-QAINTEL-004">REQ-QAINTEL-004</a>(<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>), <a class="idref" href="#REQ-QAINTEL-005">REQ-QAINTEL-005</a>(이벤트), <a class="idref" href="#REQ-QAINTEL-006">REQ-QAINTEL-006</a>(저장·재시도), <a class="idref" href="#REQ-QAINTEL-008">REQ-QAINTEL-008</a>(<span class="term" title="비교할 전날 스냅샷이 없어 오늘 것만 저장한 상태다. 이때는 이벤트를 만들지 않는다" tabindex="0">기준 스냅샷</span>), <a class="idref" href="#REQ-QAINTEL-009">REQ-QAINTEL-009</a>(<span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 실패), <a class="idref" href="#REQ-QAINTEL-028">REQ-QAINTEL-028</a>(삭제된 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 를 가리키는 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>)</li>
-<li>AI 를 부를지: <a class="idref" href="#REQ-QAINTEL-007">REQ-QAINTEL-007</a>(변경 없음·상태만 바뀜), <a class="idref" href="#REQ-QAINTEL-010">REQ-QAINTEL-010</a>(분석 대상 고르기), <a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a>(사용량 한도·실행 예외), <a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></li>
+<li>AI 를 부를지: <a class="idref" href="#REQ-QAINTEL-007">REQ-QAINTEL-007</a>(변경 없음·상태만 바뀜), <a class="idref" href="#REQ-QAINTEL-010">REQ-QAINTEL-010</a>(분석 대상 고르기), <a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a>(사용량 한도·실행 예외), <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>(한도 증거 캡처), <a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></li>
 <li>분석하기(자동): <a class="idref" href="#REQ-QAINTEL-011">REQ-QAINTEL-011</a>(<span class="term" title="이슈 전체를 AI 에 넘기지 않고, 코드가 Exact → BM25 검색으로 관련 후보만 골라 넣는 것이다" tabindex="0">후보 압축</span>), <a class="idref" href="#REQ-QAINTEL-012">REQ-QAINTEL-012</a> ~ <a class="idref" href="#REQ-QAINTEL-015">REQ-QAINTEL-015</a>, <a class="idref" href="#REQ-QAINTEL-031">REQ-QAINTEL-031</a>(사양 변경 분석)</li>
 <li>사람이 요청할 때만: <a class="idref" href="#REQ-QAINTEL-016">REQ-QAINTEL-016</a>(기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토), <a class="idref" href="#REQ-QAINTEL-032">REQ-QAINTEL-032</a>(검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안), <a class="idref" href="#REQ-QAINTEL-034">REQ-QAINTEL-034</a>(매뉴얼 점검)</li>
 <li>결과 믿기: <a class="idref" href="#REQ-QAINTEL-017">REQ-QAINTEL-017</a>(<span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 검증), <a class="idref" href="#REQ-QAINTEL-018">REQ-QAINTEL-018</a>(초안 Excel), <a class="idref" href="#REQ-QAINTEL-026">REQ-QAINTEL-026</a>(<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 사용량 기록)</li>
@@ -13687,7 +13690,7 @@ AI가 분석한 것
 </section>
 <section class="card kind-req" id="REQ-QAINTEL-025">
 <h3><span class="idtag">REQ-QAINTEL-025</span> Claude 사용량 한도와 실행 예외</h3>
-<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-DAILY-012">REQ-DAILY-012</a>, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-DAILY-022">REQ-DAILY-022</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>, <a class="idref" href="#TEST-QAINTEL-011">TEST-QAINTEL-011</a>, <a class="idref" href="#TEST-QAINTEL-013">TEST-QAINTEL-013</a>, <a class="idref" href="#TEST-QAINTEL-023">TEST-QAINTEL-023</a></span></div>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-DAILY-012">REQ-DAILY-012</a>, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-DAILY-022">REQ-DAILY-022</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>, <a class="idref" href="#TEST-QAINTEL-011">TEST-QAINTEL-011</a>, <a class="idref" href="#TEST-QAINTEL-013">TEST-QAINTEL-013</a>, <a class="idref" href="#TEST-QAINTEL-023">TEST-QAINTEL-023</a></span></div>
 <details class="history"><summary>변경 이력 3</summary>
 <ul>
 <li><span class="hist">2026-10-01 · 과거 SRS 기록 가져오기 · 기간 실행 고침</span> <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a>, <a class="idref" href="#REQ-DAILY-012">REQ-DAILY-012</a>, <a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a>: <code>CLAUDE_CODE_OAUTH_TOKEN</code> 이 없으면 그 PC 의 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span> 로그인(<code>claude auth status</code>)을 확인해 로그인으로 부른다. 전에는 로그인돼 있어도 AI <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>를 건너뛰었다. 로그인이 다시 확인되면 남아 있던 인증 실패 기록을 푼다. <code>--check</code> 는 <code>Claude 인증 — CLI 로그인(claude.ai)</code> 처럼 방식을 보인다.</li>
@@ -14272,6 +14275,62 @@ AI가 분석한 것
 <p><strong>결과</strong> 화면에 저장한 두 값, 현재 모드, 다음 자동 실행 시각 또는 중지 이유를 표시한다. 주간 한도 대기는 다음 주 예약 또는 수동 실행에서 이어 간다는 안내를 표시한다.</p>
 <p><strong>지킬 것</strong> 중지로 바꿔도 진행 중인 분석을 강제로 종료하지 않는다. 다음 자동 실행과 다음 메일부터 막는다. 진행 중인 실행의 종료는 <a href="../specs/REQ-QAINTEL-036">분석 중단</a>을 사용한다. 기존 기록·대기 이벤트·결과·수신자는 설정 변경으로 지우거나 바꾸지 않는다.</p>
 </section>
+<section class="card kind-req" id="REQ-QAINTEL-039">
+<h3><span class="idtag">REQ-QAINTEL-039</span> 사용량 한도 증거 캡처</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/limit_evidence.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/main.py</code>, <code>scripts/capture_limit_evidence.py</code>, <code>scripts/sync_limit_evidence.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a>: <code>tests/test_limit_evidence.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 서버 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 계정이 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간 한도에 걸리면 그 순간의 <code>/usage</code> 화면을 실제 터미널 창(가상 디스플레이의 xterm)에서 찍어 <code>data/limit_evidence/</code> 에 PNG와 화면 글자 TXT로 남긴다. 화면이 100% 일 때만 남기고 같은 한도는 한 번만 찍는다. 파일 이름은 <code>스크린샷 YYYY-MM-DD HHMMSS_Claude13_세션한도.png</code> 형식이다. <code>/claude/limit-evidence</code> 에서 사진을 보고, <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>(<code>scripts/install_limit_evidence_sync.ps1</code>)이 10분마다 팀 공유폴더로 복사한다. 공유폴더 비밀번호는 서버에 두지 않는다(사용자 결정).</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 서버의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 계정이 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>(5시간) 한도나 주간 한도에 걸리면, 그 순간의 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span> <code>/usage</code> 화면을 실제 터미널 창에서 찍어 PNG로 남긴다. 팀 공유폴더(<code>99. AI 사용량 한도 초과</code>)에 올릴 증거 사진으로 쓴다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p><code>스크린샷 2026-10-14 202600_Claude13_세션한도.png</code> 에 <code>Current session 100% used</code> 와 초기화 시각이 보인다. 같은 이름의 <code>.txt</code> 에 그 화면의 글자가 그대로 들어 있다.</p>
+</aside>
+<p><strong>언제</strong> <span class="term" title="서버가 평일 아침마다 제품별로 스스로 돌리는 QA Intelligence Agent 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>이 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 한도를 감지한 순간(<a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a> 의 <code>_hit_limit</code>)이다. 시험 실행(<code>--dry-run</code>)과 인증 실패·CLI 없음에는 찍지 않는다. 사람이 <code>scripts/capture_limit_evidence.py</code> 로 직접 찍을 수도 있다.</p>
+<p><strong>순서</strong></p>
+<ol>
+<li>화면 없는 가상 디스플레이(<code>Xvfb</code>)에 실제 터미널 프로그램(<code>xterm</code>)을 띄우고, 그 안에서 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span> 를 연다. 표시 시간대는 한국 시간(<code>TZ=Asia/Seoul</code>)이다.</li>
+<li>폴더 신뢰 확인이 나오면 &quot;Yes&quot; 를 고른다. 입력 칸이 뜨면 <code>/usage</code> 를 입력한다. 키 입력은 <code>xdotool</code> 이 실제 키보드 입력처럼 보낸다.</li>
+<li>사용량 패널이 그려지면 터미널 창의 픽셀을 그대로 PNG로 저장한다(<code>import -window</code>). 같은 순간의 화면 글자는 CLI 원본 출력(<code>script</code>)을 터미널 화면으로 다시 그려(<code>pyte</code>) 얻는다.</li>
+<li>화면 글자에서 <code>Current session</code> 또는 <code>Current week</code> 가 <code>100% used</code> 인지 확인한다. 둘 다 100% 가 아니면 증거 폴더에 넣지 않고 이유를 로그에 남긴다.</li>
+<li>증거 폴더(<code>data/limit_evidence/</code>)에 PNG 와 <code>.txt</code> 를 저장한다. <code>.txt</code> 에는 화면 글자, 감지한 한도 문장 원문, 한국 시간, 계정 표시가 들어간다. <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 값은 넣지 않는다.</li>
+<li>사람이 웹 화면 <code>/claude/limit-evidence</code> 에서 목록과 사진을 본다.</li>
+<li><span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 의 Windows 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>(<code>scripts/sync_limit_evidence.ps1</code>, 10분마다)이 새 파일만 받아 공유폴더에 복사한다.</li>
+</ol>
+<p class="why"><span class="why-label">이유</span> 공유폴더에 쓰려면 담당자의 Windows 계정이 필요하다. 그 비밀번호를 공용 서버에 두지 않으려고, 이미 로그인된 PC 가 복사를 맡는다.</p>
+<p><strong>결과</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>파일 이름</td><td><code>스크린샷 YYYY-MM-DD HHMMSS_&lt;계정&gt;_&lt;세션한도·주간한도&gt;.png</code> 와 같은 이름의 <code>.txt</code>. 시각은 한국 시간이다</td></tr>
+<tr><td>계정 표시</td><td>설정값이 없으면 CLI 로그인 이메일 앞부분(<code>Claude13@vieworks.com</code> → <code>Claude13</code>)</td></tr>
+<tr><td>한도 이름</td><td>화면에서 100% 인 쪽. <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>이 100% 면 <code>세션한도</code>, 아니고 주간이 100% 면 <code>주간한도</code></td></tr>
+<tr><td>웹 화면</td><td><code>/claude/limit-evidence</code> 에 최신 순 목록과 사진. <code>/claude/limit-evidence.json</code> 은 같은 목록의 JSON</td></tr>
+</tbody>
+</table></div>
+<p><strong>설정</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>키</th><th>기본값</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td><code>daily_qa.limit_evidence.enabled</code></td><td><code>true</code></td><td><code>false</code> 면 찍지 않는다</td></tr>
+<tr><td><code>daily_qa.limit_evidence.account_label</code></td><td><code>&quot;&quot;</code></td><td>파일 이름의 계정 표시. 비우면 CLI 로그인 이메일 앞부분</td></tr>
+<tr><td><code>daily_qa.limit_evidence.timeout_seconds</code></td><td><code>60</code></td><td>터미널을 띄우고 패널이 보일 때까지 기다리는 최대 시간</td></tr>
+</tbody>
+</table></div>
+<p><strong>안 될 때</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>상황</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td><code>Xvfb</code>·<code>xterm</code>·<code>xdotool</code>·<code>import</code> 중 하나가 없음</td><td>찍지 않고 <code>limit_evidence_skipped reason=tools_missing</code> 로그</td></tr>
+<tr><td>제한 시간 안에 패널이 안 보임</td><td>띄운 프로그램을 모두 끝내고 <code>reason=timeout</code> 로그</td></tr>
+<tr><td>화면이 100% 가 아님</td><td>저장하지 않고 <code>reason=not_full</code> 로그</td></tr>
+<tr><td>같은 한도(<span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>와 초기화 시각이 같음)를 이미 찍음</td><td>다시 찍지 않는다</td></tr>
+<tr><td>다른 점검 프로세스가 찍는 중</td><td>기다리지 않고 건너뛴다</td></tr>
+</tbody>
+</table></div>
+<p><strong>지킬 것</strong> 캡처가 실패해도 한도 처리와 점검은 그대로 이어 간다. 사진은 그리거나 고치지 않는다. 터미널 창을 찍은 그대로 둔다. <code>/usage</code> 만 입력하므로 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>을 쓰지 않는다.</p>
+</section>
 <section class="card kind-nfr" id="NFR-QAINTEL-001">
 <h3><span class="idtag">NFR-QAINTEL-001</span> AI 는 변경이 있을 때만 부른다</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/pipeline.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a>: <code>tests/test_qa_intel_pipeline.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a></span></div>
@@ -14626,6 +14685,25 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p>저장한 모드가 예약·만회·한도 재개·다음 실행 표시·메일에 함께 적용된다. 기존 데이터는 보존되고 자동 중지와 사용자 실행 중단은 구분된다. 외부 AI와 메일을 호출하지 않는다.</p>
 </div></section>
 </section>
+<section class="card kind-test" id="TEST-QAINTEL-024">
+<h3><span class="idtag">TEST-QAINTEL-024</span> 사용량 한도 증거 캡처</h3>
+<section class="field"><h4>검증 대상</h4><div class="field-body">
+<p><a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a></p>
+</div></section>
+<section class="field"><h4>절차</h4><div class="field-body">
+<ol>
+<li>서버에서 실제로 받은 CLI 원본 출력(<code>tests/fixtures/limit_evidence/usage_full.raw</code>)을 화면 글자로 다시 그리고, <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span> 100%·주간 62% 를 읽는지 확인한다. 100% 가 아닌 화면은 저장하지 않는지 확인한다.</li>
+<li>파일 이름의 시각·계정·한도 이름, 이메일에서 계정 표시를 만드는 규칙을 확인한다.</li>
+<li>가짜 캡처 실행기로 저장·같은 한도 중복 방지·다른 프로세스가 찍는 중일 때 건너뛰기·도구 없음·실패해도 예외가 밖으로 나가지 않는지 확인한다.</li>
+<li>점검 파이프라인이 한도를 감지하면 캡처를 한 번 부르고, 시험 실행과 인증 실패에는 부르지 않는지 확인한다.</li>
+<li><code>/claude/limit-evidence</code>, <code>.json</code>, 파일 내려받기와 폴더 밖 경로 거부를 확인한다.</li>
+<li>실제 확인: 운영 서버에서 <code>scripts/capture_limit_evidence.py</code> 로 한 장 찍어 사진을 눈으로 본다.</li>
+</ol>
+</div></section>
+<section class="field"><h4>Expected Result</h4><div class="field-body">
+<p>100% 화면만 증거로 남고 같은 한도는 한 번만 찍힌다. 캡처 실패가 점검을 멈추지 않는다. 테스트는 실제 터미널·<span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 를 띄우지 않는다.</p>
+</div></section>
+</section>
 </section>
 <section class="chapter" id="doc-qa-intelligence-sec-12">
 <h2>12. 요구사항 추적성</h2>
@@ -14671,6 +14749,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-036">REQ-QAINTEL-036</a></td><td data-label="Implementation"><code>app/core/daily_qa_storage.py</code>, <code>app/modules/daily_qa/cancellation.py</code>, <code>app/modules/daily_qa/windows_job.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/dashboard.py</code>, <code>app/web/static/qa-run-progress.js</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-021">TEST-QAINTEL-021</a>: <code>tests/test_qa_run_cancel.py</code>, <code>tests/test_qa_run_progress_ui.py</code>, <code>tests/qa_run_progress_ui.cjs</code>, <code>tests/test_qa_run_progress_browser.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-037">REQ-QAINTEL-037</a></td><td data-label="Implementation"><code>app/modules/daily_qa/result_cache.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/modules/qa_agent/run_view.py</code>, <code>app/modules/qa_agent/templates/run_detail.html</code>, <code>app/modules/qa_agent/templates/finding_detail.html</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-022">TEST-QAINTEL-022</a>: <code>tests/test_daily_qa_result_cache.py</code>, <code>tests/test_qa_intel_run_view.py</code>, <code>tests/test_qa_intel_dashboard.py</code>, <code>tests/test_qa_run_progress_browser.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a></td><td data-label="Implementation"><code>app/modules/daily_qa/automation_policy.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/dashboard.py</code>, <code>app/core/daily_qa_storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-023">TEST-QAINTEL-023</a>: <code>tests/test_qa_automation_policy.py</code>, <code>tests/test_qa_automation_ui.py</code>, <code>tests/test_qa_run_progress_browser.py</code>, <code>tests/test_qa_intel_schedule.py</code>, <code>tests/test_qa_intel_dashboard.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a></td><td data-label="Implementation"><code>app/modules/daily_qa/limit_evidence.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/main.py</code>, <code>scripts/capture_limit_evidence.py</code>, <code>scripts/sync_limit_evidence.ps1</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a>: <code>tests/test_limit_evidence.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></td><td data-label="Implementation"><code>app/modules/daily_qa/pipeline.py</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a>: <code>tests/test_qa_intel_pipeline.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-QAINTEL-002">NFR-QAINTEL-002</a></td><td data-label="Implementation"><code>app/modules/daily_qa/product_adapter.py</code>, <code>docs/PRODUCT_ONBOARDING.md</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-002">TEST-QAINTEL-002</a>: <code>tests/test_qa_intel_products.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 </tbody>

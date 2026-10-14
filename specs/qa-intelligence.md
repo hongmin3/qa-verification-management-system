@@ -101,7 +101,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 - 제품 차이 흡수: REQ-QAINTEL-002(제품 설정·공통 모델), REQ-QAINTEL-023(제품별 데이터 분리), NFR-QAINTEL-002
 - 과거 기록: REQ-QAINTEL-029(ALM-QA-Automation 의 과거 SRS 스냅샷 가져오기), REQ-QAINTEL-030(이슈 기록이 없는 기간의 현재 상태 기준 점검)
 - 무엇이 바뀌었나: REQ-QAINTEL-003(SRS), REQ-QAINTEL-004(이슈), REQ-QAINTEL-005(이벤트), REQ-QAINTEL-006(저장·재시도), REQ-QAINTEL-008(기준 스냅샷), REQ-QAINTEL-009(수집 실패), REQ-QAINTEL-028(삭제된 SRS 를 가리키는 TC)
-- AI 를 부를지: REQ-QAINTEL-007(변경 없음·상태만 바뀜), REQ-QAINTEL-010(분석 대상 고르기), REQ-QAINTEL-025(사용량 한도·실행 예외), NFR-QAINTEL-001
+- AI 를 부를지: REQ-QAINTEL-007(변경 없음·상태만 바뀜), REQ-QAINTEL-010(분석 대상 고르기), REQ-QAINTEL-025(사용량 한도·실행 예외), REQ-QAINTEL-039(한도 증거 캡처), NFR-QAINTEL-001
 - 분석하기(자동): REQ-QAINTEL-011(후보 압축), REQ-QAINTEL-012 ~ REQ-QAINTEL-015, REQ-QAINTEL-031(사양 변경 분석)
 - 사람이 요청할 때만: REQ-QAINTEL-016(기존 TC 검토), REQ-QAINTEL-032(검증 TC 초안), REQ-QAINTEL-034(매뉴얼 점검)
 - 결과 믿기: REQ-QAINTEL-017(근거 검증), REQ-QAINTEL-018(초안 Excel), REQ-QAINTEL-026(토큰 사용량 기록)
@@ -1395,6 +1395,55 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 **지킬 것** 중지로 바꿔도 진행 중인 분석을 강제로 종료하지 않는다. 다음 자동 실행과 다음 메일부터 막는다. 진행 중인 실행의 종료는 [분석 중단](REQ-QAINTEL-036)을 사용한다. 기존 기록·대기 이벤트·결과·수신자는 설정 변경으로 지우거나 바꾸지 않는다.
 
+### REQ-QAINTEL-039 사용량 한도 증거 캡처
+
+**하는 일** 서버의 Claude 계정이 세션(5시간) 한도나 주간 한도에 걸리면, 그 순간의 Claude CLI `/usage` 화면을 실제 터미널 창에서 찍어 PNG로 남긴다. 팀 공유폴더(`99. AI 사용량 한도 초과`)에 올릴 증거 사진으로 쓴다.
+
+> **예시** `스크린샷 2026-10-14 202600_Claude13_세션한도.png` 에 `Current session 100% used` 와 초기화 시각이 보인다. 같은 이름의 `.txt` 에 그 화면의 글자가 그대로 들어 있다.
+
+**언제** 일일 점검이 Claude 한도를 감지한 순간(REQ-QAINTEL-025 의 `_hit_limit`)이다. 시험 실행(`--dry-run`)과 인증 실패·CLI 없음에는 찍지 않는다. 사람이 `scripts/capture_limit_evidence.py` 로 직접 찍을 수도 있다.
+
+**순서**
+
+1. 화면 없는 가상 디스플레이(`Xvfb`)에 실제 터미널 프로그램(`xterm`)을 띄우고, 그 안에서 Claude CLI 를 연다. 표시 시간대는 한국 시간(`TZ=Asia/Seoul`)이다.
+2. 폴더 신뢰 확인이 나오면 "Yes" 를 고른다. 입력 칸이 뜨면 `/usage` 를 입력한다. 키 입력은 `xdotool` 이 실제 키보드 입력처럼 보낸다.
+3. 사용량 패널이 그려지면 터미널 창의 픽셀을 그대로 PNG로 저장한다(`import -window`). 같은 순간의 화면 글자는 CLI 원본 출력(`script`)을 터미널 화면으로 다시 그려(`pyte`) 얻는다.
+4. 화면 글자에서 `Current session` 또는 `Current week` 가 `100% used` 인지 확인한다. 둘 다 100% 가 아니면 증거 폴더에 넣지 않고 이유를 로그에 남긴다.
+5. 증거 폴더(`data/limit_evidence/`)에 PNG 와 `.txt` 를 저장한다. `.txt` 에는 화면 글자, 감지한 한도 문장 원문, 한국 시간, 계정 표시가 들어간다. 토큰 값은 넣지 않는다.
+6. 사람이 웹 화면 `/claude/limit-evidence` 에서 목록과 사진을 본다.
+7. 담당자 PC 의 Windows 예약 작업(`scripts/sync_limit_evidence.ps1`, 10분마다)이 새 파일만 받아 공유폴더에 복사한다.
+
+이유: 공유폴더에 쓰려면 담당자의 Windows 계정이 필요하다. 그 비밀번호를 공용 서버에 두지 않으려고, 이미 로그인된 PC 가 복사를 맡는다.
+
+**결과**
+
+| 항목 | 내용 |
+|---|---|
+| 파일 이름 | `스크린샷 YYYY-MM-DD HHMMSS_<계정>_<세션한도·주간한도>.png` 와 같은 이름의 `.txt`. 시각은 한국 시간이다 |
+| 계정 표시 | 설정값이 없으면 CLI 로그인 이메일 앞부분(`Claude13@vieworks.com` → `Claude13`) |
+| 한도 이름 | 화면에서 100% 인 쪽. 세션이 100% 면 `세션한도`, 아니고 주간이 100% 면 `주간한도` |
+| 웹 화면 | `/claude/limit-evidence` 에 최신 순 목록과 사진. `/claude/limit-evidence.json` 은 같은 목록의 JSON |
+
+**설정**
+
+| 키 | 기본값 | 뜻 |
+|---|---|---|
+| `daily_qa.limit_evidence.enabled` | `true` | `false` 면 찍지 않는다 |
+| `daily_qa.limit_evidence.account_label` | `""` | 파일 이름의 계정 표시. 비우면 CLI 로그인 이메일 앞부분 |
+| `daily_qa.limit_evidence.timeout_seconds` | `60` | 터미널을 띄우고 패널이 보일 때까지 기다리는 최대 시간 |
+
+**안 될 때**
+
+| 상황 | 동작 |
+|---|---|
+| `Xvfb`·`xterm`·`xdotool`·`import` 중 하나가 없음 | 찍지 않고 `limit_evidence_skipped reason=tools_missing` 로그 |
+| 제한 시간 안에 패널이 안 보임 | 띄운 프로그램을 모두 끝내고 `reason=timeout` 로그 |
+| 화면이 100% 가 아님 | 저장하지 않고 `reason=not_full` 로그 |
+| 같은 한도(종류와 초기화 시각이 같음)를 이미 찍음 | 다시 찍지 않는다 |
+| 다른 점검 프로세스가 찍는 중 | 기다리지 않고 건너뛴다 |
+
+**지킬 것** 캡처가 실패해도 한도 처리와 점검은 그대로 이어 간다. 사진은 그리거나 고치지 않는다. 터미널 창을 찍은 그대로 둔다. `/usage` 만 입력하므로 Claude 토큰을 쓰지 않는다.
+
 ### NFR-QAINTEL-001 AI 는 변경이 있을 때만 부른다
 
 - 수집과 스냅샷 비교는 매 실행 한다. AI 는 `analysis_required` 가 참인 이벤트가 있을 때만 부른다.
@@ -1710,6 +1759,22 @@ REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
 #### Expected Result
 저장한 모드가 예약·만회·한도 재개·다음 실행 표시·메일에 함께 적용된다. 기존 데이터는 보존되고 자동 중지와 사용자 실행 중단은 구분된다. 외부 AI와 메일을 호출하지 않는다.
 
+### TEST-QAINTEL-024 사용량 한도 증거 캡처
+
+#### 검증 대상
+REQ-QAINTEL-039
+
+#### 절차
+1. 서버에서 실제로 받은 CLI 원본 출력(`tests/fixtures/limit_evidence/usage_full.raw`)을 화면 글자로 다시 그리고, 세션 100%·주간 62% 를 읽는지 확인한다. 100% 가 아닌 화면은 저장하지 않는지 확인한다.
+2. 파일 이름의 시각·계정·한도 이름, 이메일에서 계정 표시를 만드는 규칙을 확인한다.
+3. 가짜 캡처 실행기로 저장·같은 한도 중복 방지·다른 프로세스가 찍는 중일 때 건너뛰기·도구 없음·실패해도 예외가 밖으로 나가지 않는지 확인한다.
+4. 점검 파이프라인이 한도를 감지하면 캡처를 한 번 부르고, 시험 실행과 인증 실패에는 부르지 않는지 확인한다.
+5. `/claude/limit-evidence`, `.json`, 파일 내려받기와 폴더 밖 경로 거부를 확인한다.
+6. 실제 확인: 운영 서버에서 `scripts/capture_limit_evidence.py` 로 한 장 찍어 사진을 눈으로 본다.
+
+#### Expected Result
+100% 화면만 증거로 남고 같은 한도는 한 번만 찍힌다. 캡처 실패가 점검을 멈추지 않는다. 테스트는 실제 터미널·Claude 를 띄우지 않는다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -1754,6 +1819,7 @@ REQ-QAINTEL-038, REQ-QAINTEL-001, REQ-QAINTEL-025, REQ-QAINTEL-035
 | REQ-QAINTEL-036 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/cancellation.py`, `app/modules/daily_qa/windows_job.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-021: `tests/test_qa_run_cancel.py`, `tests/test_qa_run_progress_ui.py`, `tests/qa_run_progress_ui.cjs`, `tests/test_qa_run_progress_browser.py` | implemented |
 | REQ-QAINTEL-037 | `app/modules/daily_qa/result_cache.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/finding_detail.html` | TEST-QAINTEL-022: `tests/test_daily_qa_result_cache.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_run_progress_browser.py` | implemented |
 | REQ-QAINTEL-038 | `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-023: `tests/test_qa_automation_policy.py`, `tests/test_qa_automation_ui.py`, `tests/test_qa_run_progress_browser.py`, `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_dashboard.py` | implemented |
+| REQ-QAINTEL-039 | `app/modules/daily_qa/limit_evidence.py`, `app/modules/daily_qa/pipeline.py`, `app/main.py`, `scripts/capture_limit_evidence.py`, `scripts/sync_limit_evidence.ps1` | TEST-QAINTEL-024: `tests/test_limit_evidence.py` | verified |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

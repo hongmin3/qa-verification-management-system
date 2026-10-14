@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-10-14 사용량 한도 증거 캡처 (REQ-QAINTEL-039)
+
+- 요청: 주간·5시간 한도 초과 때 팀 공유폴더(`99. AI 사용량 한도 초과`)에 넣을 증거 사진을 그리지 말고 실제 터미널 화면으로 남긴다. 사용자 결정: 서버 계정 기준, 계정 표시 `Claude13` 형식, 공유폴더 비밀번호는 서버에 두지 않고 담당자 PC가 복사한다.
+- 운영 서버 준비(완료): `sudo apt install xvfb xterm xdotool imagemagick`, 운영 venv 에 `pyte==0.8.2`. 서버 시간대가 `America/New_York` 이라 캡처 때만 `TZ=Asia/Seoul` 로 연다.
+- 실제 확인: 운영 서버에서 새 캡처 함수(`run_xterm`)를 임시 복사본으로 한 번 실행했다. 5.1초 만에 `Current session 100% used`·`Current week 62% used` 화면을 찍었고 Xvfb·xterm 프로세스가 남지 않았다. 테스트 자료 `tests/fixtures/limit_evidence/usage_full.raw` 는 이때 받은 실제 CLI 출력이다.
+- 시험: `tests/test_limit_evidence.py`·`tests/test_qa_intel_failures.py`·`tests/test_claude_usage.py` 37 passed. 전체 시험은 사용자 요청으로 다른 변경과 함께 돌린다(미실행).
+- 남은 일: master 머지·운영 배포, 담당자 PC 에서 `scripts/install_limit_evidence_sync.ps1` 등록, 실제 한도 감지 때 자동 캡처와 공유폴더 복사 확인.
+
 ## 2026-10-14 상단 메뉴 정리와 홈 메뉴 (REQ-WEB-007·REQ-WEB-001)
 
 - 요청: 웹 상단 탭에서 필요 없는 버튼과 합칠 버튼을 정리하고, 홈에도 상단 메뉴를 보인다(홈에서는 QA 홈 제외). 사용자가 A안(메뉴 정리)을 고른 뒤 B안(단일 이슈 분석·규칙 구현현황 코드 제거)과 다른 두 채팅("API 매뉴얼 위치", "VXvue 검증 AI DB 매뉴얼 페이지 고도화") 결과를 합쳐 master 머지·운영 배포까지 요청했다.

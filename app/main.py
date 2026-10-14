@@ -17,6 +17,7 @@ from app.modules.manual_review.router import resume_queued_jobs as resume_queued
 from app.web.router import build_router
 from app.modules.vxvue_chatbot import service as vxvue_chatbot_service
 
+from app.web.limit_evidence_router import router as limit_evidence_router
 from app.web.settings_router import router as settings_router
 
 settings = get_settings()
@@ -54,6 +55,7 @@ app = FastAPI(title=settings.get("app.name"), version="0.1.0", lifespan=lifespan
 app.mount("/static", StaticFiles(directory=settings.root / "app" / "web" / "static"), name="static")
 app.include_router(build_router())
 app.include_router(settings_router)
+app.include_router(limit_evidence_router)
 
 
 @app.get("/health")

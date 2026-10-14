@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.claude_cli import login_status as claude_login_status
-from app.modules.daily_qa import automation_policy, claude_limits, issue_audit, packages, report, result_cache, rules, snapshots
+from app.modules.daily_qa import automation_policy, claude_limits, issue_audit, limit_evidence, packages, report, result_cache, rules, snapshots
 from app.modules.daily_qa.agent_runner import ClaudeRunner, FakeRunner
 from app.modules.daily_qa.cancellation import RunCancelled, bind_lock
 from app.modules.daily_qa.change_events import (
@@ -297,6 +297,11 @@ def _load_json_state(store: DailyQaStore, key: str, default):
         logger.warning("daily_qa_state_unreadable key=%s", key)
         return default
     return value if isinstance(value, type(default)) else default
+
+
+def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> None:
+    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다."""
+    limit_evidence.capture(limit, claude_command=cfg.claude_command)
 
 
 def active_limit(store: DailyQaStore, cfg: DailyQaSettings, now: datetime | None = None) -> claude_limits.LimitInfo | None:
@@ -1071,6 +1076,8 @@ class _Run:
         limit.run_id = self.run_id
         self.store.set_state(self.cfg.state_key(STATE_CLAUDE_LIMIT), claude_limits.dump(limit))
         logger.warning("qa_agent_claude_limit product=%s kind=%s reset=%s", self.cfg.slug, limit.kind, limit.reset_at or "-")
+        if not self.dry_run:
+            capture_limit_evidence(limit, self.cfg)
         intel = self.cfg.intelligence
         if limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
             reset = datetime.fromisoformat(limit.reset_at)

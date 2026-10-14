@@ -230,6 +230,13 @@ daily_qa:
   workspace_dir: ""
   # Claude CLI 실행 파일. PATH 에 있으면 이름만 둔다.
   claude_command: "claude"
+  # 사용량 한도 증거 캡처 (REQ-QAINTEL-039). 한도에 걸리면 xterm 의 claude /usage 화면을
+  # data/limit_evidence/ 에 PNG·TXT 로 남긴다. 서버에 xvfb·xterm·xdotool·imagemagick 이 있어야 한다.
+  limit_evidence:
+    enabled: true
+    # 파일 이름의 계정 표시. 비우면 CLI 로그인 이메일 앞부분(Claude13@vieworks.com → Claude13).
+    account_label: ""
+    timeout_seconds: 60
   # 작업 하나(입력 묶음 하나)당 제한 시간(초). 넘으면 그 작업만 실패로 남는다.
   task_timeout_seconds: 900
   # 한 실행에서 AI 에 보낼 작업 묶음 수 상한 (비용·시간 보호).
