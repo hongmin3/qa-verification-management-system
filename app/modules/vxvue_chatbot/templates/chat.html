@@ -2,7 +2,7 @@
 {% block page_title %}VXvue AI 챗봇{% endblock %}
 {% block main_class %}vx-chat-main{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261013b">
+<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261014g">
 <div class="vx-chat" data-max-file-bytes="{{ max_file_bytes }}">
   <aside id="sidebar" class="chat-sidebar" aria-label="대화 이력">
     <a class="chat-brand" href="/vxvue-chatbot"><span class="brand-mark">V</span><span>VXvue <small>AI 챗봇</small></span></a>
@@ -13,7 +13,7 @@
   </aside>
   <div id="sidebar-backdrop" hidden></div>
   <section class="chat-workspace">
-    <div class="chat-topbar"><button id="toggle-sidebar" aria-label="대화 목록 열기">☰</button><div><strong id="chat-title">새 대화</strong><small>VXvue 지식으로 함께 검토합니다.</small></div><span class="provider-badge">Claude</span></div>
+    <div class="chat-topbar"><button id="toggle-sidebar" aria-label="대화 목록 열기">☰</button><div><strong id="chat-title">새 대화</strong><small>VXvue 지식으로 함께 검토합니다.</small></div><div id="usage-chips" class="usage-chips" role="group" aria-label="Claude 사용량" aria-live="polite"><span class="usage-chip" data-window="five_hour" title="Claude 5시간 사용량을 불러오는 중입니다">5시간 확인 중…</span><span class="usage-chip" data-window="seven_day" title="Claude 주간 사용량을 불러오는 중입니다">주간 확인 중…</span></div></div>
     <div id="knowledge-status" class="knowledge-banner" role="status">지식 갱신 상태 확인 중…</div>
     <div id="error-banner" class="chat-error" hidden role="alert"></div>
     <div id="scroll-area" class="chat-scroll">
@@ -29,7 +29,6 @@
       <div id="messages" class="chat-messages" aria-live="polite"></div>
     </div>
     <div class="composer-wrap">
-      <div id="job-status" class="job-status" hidden role="status"><span class="chat-spinner"></span><span id="job-stage"></span><span id="job-time"></span><button id="cancel-job">중지</button></div>
       <form id="composer" class="chat-composer">
         <div id="attached-files" class="attached-files"></div>
         <textarea id="message-input" rows="2" maxlength="{{ message_char_limit }}" placeholder="VXvue에 대해 질문하세요. 자료를 첨부해도 좋아요." aria-label="질문"></textarea>
@@ -39,5 +38,17 @@
     </div>
   </section>
 </div>
-<script src="/static/vxvue-chatbot.js?v=20261013" defer></script>
+<template id="job-progress-template">
+  <div id="job-progress" class="job-progress" role="status">
+    <div class="job-progress-head"><span class="job-spinner" aria-hidden="true"></span><div class="job-progress-text"><strong class="job-progress-title">답변을 준비하고 있습니다</strong><span class="job-progress-sub"><span id="job-stage"></span> · <span id="job-time">0초</span></span></div><button type="button" class="job-cancel">중지</button></div>
+    <ol class="job-steps">
+      <li data-stage="대기 중">대기</li>
+      <li data-stage="자료 검색 준비">준비</li>
+      <li data-stage="자료 검색">자료 검색</li>
+      <li data-stage="원문 확인">원문 확인</li>
+      <li data-stage="답변 작성">답변 작성</li>
+    </ol>
+  </div>
+</template>
+<script src="/static/vxvue-chatbot.js?v=20261014g" defer></script>
 {% endblock %}

@@ -5694,6 +5694,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 **언제** `/qa-agent` 대시보드와 AI 사용량(`/cost-dashboard`)를 열 때. 화면이 `GET /claude/usage` 를 불러 채운다. 화면을 그리는 일은 이 조회를 기다리지 않는다.
 
+VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다. 챗봇은 화면을 열 때, 답변이 끝날 때마다, 열어 둔 동안 5분마다 `GET /claude/usage` 를 다시 불러온다.
+
 **순서**
 
 1. 저장해 둔 값이 `ai.claude.usage.cache_seconds`(기본 120초)보다 새것이면 그 값을 돌려준다.
@@ -5707,6 +5709,7 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 5. 그래도 조회가 실패하면 일일 QA 점검이 Claude CLI 출력에서 받은 마지막 한도 정보(`rate_limit_event`)를 돌려준다. 이 값은 `data/claude_usage.json` 에 저장돼 있다.
 6. 둘 다 없으면 "사용량을 아직 알 수 없습니다" 와 이유를 돌려준다.
+7. VXvue AI 챗봇이 답변을 만들 때 받은 `rate_limit_event` 도 같은 방식으로 마지막 점검 값에 남긴다. 한도에 걸려 답변이 실패한 경우에도 남긴다. 저장에 실패해도 답변 결과는 바뀌지 않는다.
 
 **결과** `GET /claude/usage` 의 응답이다.
 
@@ -9849,7 +9852,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-003 | `app/core/gemini_client.py` | TEST-AICALL-003, `tests/test_gemini_client_core.py` | implemented |
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
-| REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html` | TEST-AICALL-005: `tests/test_claude_usage.py` | verified |
+| REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/static/vxvue-chatbot.js` | TEST-AICALL-005: `tests/test_claude_usage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |

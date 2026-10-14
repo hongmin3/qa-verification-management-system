@@ -1,9 +1,11 @@
 """Bounded persistent queue with one background worker, independent of HTTP connections."""
 from pathlib import Path
+import logging
 import threading
 import json
 from functools import lru_cache
 
+from app.core import claude_usage
 from app.core.config import get_settings
 from app.core.storage import Storage
 from app.core.usage import daily_token_status
@@ -38,6 +40,16 @@ def cancel(job_id):
             event.set()
 
 
+def _record_rate_limit(info):
+    """Keep the last Claude limit report the run received; a storage failure never changes the job outcome."""
+    if not info:
+        return
+    try:
+        claude_usage.record_rate_limit_event(info)
+    except Exception:
+        logging.getLogger(__name__).warning("Claude 사용량 한도 정보 저장 실패", exc_info=True)
+
+
 def run_job(store, settings, job, cancel_event):
     if not store.vxchat_start(job["id"]):
         return
@@ -56,12 +68,21 @@ def run_job(store, settings, job, cancel_event):
         attachments = [a for message in chat["messages"] for a in message["attachments"]]
         if cancel_event.is_set():
             raise InterruptedError()
+        snapshot = {**snapshot, "conversation_meta": {"jobs": chat["jobs"], "title_source": chat.get("title_source", "auto")}}
         result = agent.run(chat["messages"], snapshot, attachments, job["id"], settings, cancel_event,
                            lambda stage, content: store.vxchat_progress(job["id"], stage, content))
         store.vxchat_finish(job["id"], "DONE", result["text"], citations=result["citations"], usage=result["usage"], model=result["model"], masking=result.get("masking"), metrics=result.get("metrics"))
+        _record_rate_limit(result.get("rate_limit"))
+        if result.get("title"):
+            try:
+                store.vxchat_set_ai_title(job["conversation_id"], result["title"])
+            except Exception:
+                # Best effort: the answer is already saved, so a title failure must not fail the job.
+                logging.getLogger(__name__).warning("AI 대화 제목 저장 실패", exc_info=True)
     except InterruptedError:
         store.vxchat_finish(job["id"], "CANCELLED", "답변 생성을 중지했습니다.")
     except Exception as exc:
+        _record_rate_limit(getattr(exc, "rate_limit", None))
         # Only messages defined by this feature are public. Arbitrary IO/CLI data is not.
         detail = str(exc) if isinstance(exc, (ValueError, TimeoutError)) or (type(exc) is RuntimeError) else f"처리 중 {type(exc).__name__} 오류가 발생했습니다. 관리자에게 서버 상태 확인을 요청해주세요."
         store.vxchat_finish(job["id"], "FAILED", detail, error=detail, metrics=getattr(exc, "metrics", None), usage=getattr(exc, "usage", None), model=getattr(exc, "model", ""))

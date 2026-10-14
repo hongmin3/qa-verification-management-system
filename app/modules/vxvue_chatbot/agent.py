@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import os
 import queue
+import re
 import signal
 import subprocess
 import sys
@@ -40,8 +41,9 @@ def usage_metrics(result, tool_calls=0):
     return value
 
 
-def cli_failure(message, result, tool_calls, model):
+def cli_failure(message, result, tool_calls, model, rate_limit=None):
     failure = RuntimeError(message)
+    failure.rate_limit = rate_limit
     failure.metrics = usage_metrics(result, tool_calls)
     failure.usage = claude_cli.usage_to_tokens(result.get("usage"))
     failure.model = model
@@ -71,7 +73,53 @@ def event_update(event):
     return "", ""
 
 
-def history_prompt(messages, max_chars=120000):
+_MARKER_OPEN = re.compile(r"<!--\s*title:")
+_MARKER_PARTIAL = re.compile(r"<(?:!(?:-(?:-\s*(?:t(?:i(?:t(?:l(?:e)?)?)?)?)?)?)?)?$")
+
+
+def _trailing_marker(text):
+    """Return (start, title or None) for a title marker at the very end of text, else None.
+
+    Only the last `<!-- title:` counts. A closed marker must be followed by whitespace only;
+    an unclosed one runs to the end of the text and never yields a title.
+    """
+    found = None
+    for found in _MARKER_OPEN.finditer(text):
+        pass
+    if not found:
+        return None
+    rest = text[found.end():]
+    close = rest.find("-->")
+    if close < 0:
+        return found.start(), None
+    if rest[close + 3:].strip():
+        return None
+    title = rest[:close].strip()
+    if not 1 <= len(title) <= 40 or "\n" in title or "\r" in title:
+        title = None
+    return found.start(), title
+
+
+def split_title(text):
+    """Remove the trailing `<!-- title: ... -->` line and return (body, title or None)."""
+    marker = _trailing_marker(text)
+    if not marker:
+        return text, None
+    return text[:marker[0]].rstrip(), marker[1]
+
+
+def hide_title_marker(text):
+    """Cut the title marker, including a half-streamed prefix of it, from text shown while streaming."""
+    marker = _trailing_marker(text)
+    if marker:
+        return text[:marker[0]].rstrip()
+    partial = _MARKER_PARTIAL.search(text)
+    if partial:
+        return text[:partial.start()].rstrip()
+    return text
+
+
+def history_prompt(messages, max_chars=120000, *, jobs=None, title_source="auto"):
     picked, size = [], 0
     for message in reversed(messages):
         if not message["content"] and not message.get("attachments"):
@@ -83,7 +131,10 @@ def history_prompt(messages, max_chars=120000):
         picked.append(value)
         size += len(encoded)
     omitted = sum(bool(m["content"] or m.get("attachments")) for m in messages) - len(picked)
-    return json.dumps({"conversation": list(reversed(picked)), "omitted_older_messages": omitted}, ensure_ascii=False, separators=(",", ":")), omitted
+    # Only a finished (DONE) answer counts: a cancelled or failed first job leaves a status message with text.
+    answered = {j["assistant_message_id"] for j in jobs if j["status"] == "DONE"} if jobs is not None else None
+    title_needed = title_source != "user" and not any(m["role"] == "assistant" and m["content"] and (answered is None or m.get("id") in answered) for m in messages)
+    return json.dumps({"conversation": list(reversed(picked)), "omitted_older_messages": omitted, "title_needed": title_needed}, ensure_ascii=False, separators=(",", ":")), omitted
 
 
 def stop_process(process):
@@ -123,10 +174,12 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
-    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text")}, "attachments": attachments, "job_id": job_id}, ensure_ascii=False), encoding="utf-8")
+    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text", "conversation_meta")}, "attachments": attachments, "job_id": job_id,
+                                        "batch_token_budget": int(settings.get("vxvue_chatbot.batch_token_budget", 30000))}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")
-    prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)))
+    meta = snapshot.get("conversation_meta") or {}
+    prompt, omitted = history_prompt(messages, int(settings.get("vxvue_chatbot.history_char_limit", 120000)), jobs=meta.get("jobs"), title_source=meta.get("title_source", "auto"))
     prompt = prompt[:-1] + ',"source_failures":' + json.dumps(snapshot.get("failures", []), ensure_ascii=False, separators=(",", ":")) + "}"
     if snapshot.get("skill_metadata"):
         prompt = prompt[:-1] + ',"skill_code_review_needed":' + json.dumps(snapshot["skill_metadata"]["code_hash"] != settings.get("vxvue_chatbot.reviewed_skill_code_hash", "")) + "}"
@@ -139,6 +192,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     args = build_command(command, prompt_file, config_file, model=model, effort=effort,
                          max_turns=int(settings.get("vxvue_chatbot.max_turns", 24)), max_budget_usd=float(settings.get("vxvue_chatbot.max_budget_usd", 0)))
     env = claude_cli.build_env(token)
+    env["MAX_MCP_OUTPUT_TOKENS"] = str(settings.get("vxvue_chatbot.mcp_output_tokens", 40000))
     ttl = settings.get("vxvue_chatbot.prompt_cache_ttl", "")
     if ttl in ("5m", "1h"):
         env["CLAUDE_CODE_PROMPT_CACHE_TTL"] = ttl
@@ -146,7 +200,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     events = queue.Queue()
     options = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
     prefix = f"이전 메시지 {omitted}개는 이번 답변의 입력에서 제외되었습니다.\n\n" if omitted else ""
-    answer, result, tool_calls = "", {}, 0
+    answer, result, tool_calls, rate_limit = "", {}, 0, None
     process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                text=True, encoding="utf-8", cwd=execution_dir, env=env, **options)
     def reader():
@@ -183,22 +237,25 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
                 continue
             if event.get("type") == "result":
                 result = event
+            elif event.get("type") == "rate_limit_event" and isinstance(event.get("rate_limit_info"), dict):
+                rate_limit = event["rate_limit_info"]
             if event.get("type") == "assistant":
                 tool_calls += sum(block.get("type") == "tool_use" for block in event.get("message", {}).get("content", []))
             stage, delta = event_update(event)
             if delta:
                 answer += delta
             if stage:
-                progress(stage, prefix + answer)
+                progress(stage, prefix + hide_title_marker(answer))
         process.wait(timeout=10)
         if process.returncode or not result or result.get("is_error"):
             if result.get("subtype") in ("error_max_turns", "error_max_budget_usd"):
-                raise cli_failure("이번 요청의 AI 진행 횟수 또는 비용 제한에 도달했습니다. 범위를 나눠 이어 요청해주세요.", result, tool_calls, model)
+                raise cli_failure("이번 요청의 AI 진행 횟수 또는 비용 제한에 도달했습니다. 범위를 나눠 이어 요청해주세요.", result, tool_calls, model, rate_limit)
             # Never return arbitrary CLI stderr, which can include sensitive settings.
-            raise cli_failure(failure_message(result), result, tool_calls, model)
+            raise cli_failure(failure_message(result), result, tool_calls, model, rate_limit)
         final = str(result.get("result") or answer).strip()
         if not final:
-            raise cli_failure("Claude 답변을 받지 못했습니다. 다시 요청해주세요.", result, tool_calls, model)
+            raise cli_failure("Claude 답변을 받지 못했습니다. 다시 요청해주세요.", result, tool_calls, model, rate_limit)
+        final, title = split_title(final)
         references = []
         if trace.is_file():
             seen = set()
@@ -208,7 +265,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
                 if key not in seen:
                     references.append(item)
                     seen.add(key)
-        return {"text": prefix + final, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
+        return {"text": prefix + final, "title": title, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "rate_limit": rate_limit, "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
     finally:
         stop_process(process)
         sender.join(timeout=2)

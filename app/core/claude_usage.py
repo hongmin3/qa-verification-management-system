@@ -188,6 +188,7 @@ def record_rate_limit_event(info: dict, settings=None, now: datetime | None = No
     if not windows:
         return
     _write_state(settings, {**state, "windows": windows, "measured_at": _kst(now)})
+    reset_cache()      # 120초 안에 다시 불러도 새로 받은 값을 보이게 한다
 
 
 def _maybe_refresh(settings, now: datetime, refresh) -> bool:

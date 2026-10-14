@@ -67,6 +67,18 @@ def test_cache_prevents_repeated_calls(env):
     assert len(calls) == 2
 
 
+def test_recording_rate_limit_event_drops_cached_usage(env):
+    settings, calls, http_ok = env
+    first = claude_usage.get_usage(settings, now=NOW, http_get=http_ok)
+    info = {"unifiedWindows": {"five_hour": {"utilization": 0.5, "resetsAt": 1792000000}}}
+    claude_usage.record_rate_limit_event(info, settings, now=NOW.replace(second=20))
+    second = claude_usage.get_usage(settings, now=NOW.replace(second=30), http_get=http_ok)      # 120초 안이지만 캐시는 비워졌다
+    assert len(calls) == 2 and second is not first
+    claude_usage.record_rate_limit_event("not-a-dict", settings, now=NOW)           # 저장하지 않은 입력은 캐시를 건드리지 않는다
+    claude_usage.get_usage(settings, now=NOW.replace(second=40), http_get=http_ok)
+    assert len(calls) == 2
+
+
 def _event_line(info: dict) -> str:
     return json.dumps({"type": "rate_limit_event", "rate_limit_info": info, "session_id": "s"})
 

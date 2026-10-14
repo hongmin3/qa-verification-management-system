@@ -127,3 +127,58 @@ def test_generator_cell_records_have_snapshot_citations(sources, tmp_path, monke
     reference = value["vss"][0]["source"]
     assert reference["reference_url"].startswith("/vxvue-chatbot/jobs/job/source")
     assert reference["location"] == {"sheet": "VSS", "cell": "E7"}
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_prompt_cites_vp_ids_only():
+    from app.core.prompt_manager import load_prompt
+    prompt = load_prompt("vxvue_chatbot")
+    assert "VP-" in prompt.system_instruction
+    assert "Legacy No." in prompt.system_instruction
+    assert prompt.version == 4
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_prompt_ignores_draft_status():
+    from app.core.prompt_manager import load_prompt
+    text = load_prompt("vxvue_chatbot").system_instruction
+    assert "draft" in text
+    assert "확인 필요 항목으로 쓰지 않는다" in text
+
+
+def definition_corpus(tmp_path, definition_text):
+    from app.modules.vxvue_chatbot.skill.scripts.corpus import Corpus
+    root = tmp_path / "kb"
+    root.mkdir()
+    for number in range(7):
+        (root / f"(사양서) A{number}.md").write_text(f"Setting > System > Theme (VP-656 - Theme ) 언급 {number}\n", encoding="utf-8")
+    (root / "(사양서) Z.md").write_text(definition_text, encoding="utf-8")
+    return Corpus(root, tmp_path / "index.sqlite3")
+
+
+# Validates: REQ-VXVUECHATBOT-005
+@pytest.mark.parametrize("query", ["VP-656", "vp 656", "VP_656"])
+def test_definition_chunk_ranks_first(tmp_path, query):
+    corpus = definition_corpus(tmp_path, "07-10-40 Theme\n\nID: VP-656   Status:  draft      Legacy No.: 1\n")
+    (corpus.root / "(사양서) Long.md").write_text("Other (VP-6568 - Other) 언급\n", encoding="utf-8")
+    result = corpus.search_documents(query, limit=6)
+    assert "(사양서) Long.md" not in [r["document_id"] for r in result["results"]]
+    assert result["results"][0]["document_id"] == "(사양서) Z.md"
+    assert result["results"][0]["definition_match"] is True
+    assert not any(r.get("definition_match") for r in result["results"][1:])
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_prefix_id_is_not_definition(tmp_path):
+    corpus = definition_corpus(tmp_path, "07-10-40 Theme\n\nID: VP-6568   Status:  draft\n")
+    result = corpus.search_documents("VP-656", limit=6)
+    assert result["results"][0]["document_id"] != "(사양서) Z.md"
+    assert not any(r.get("definition_match") for r in result["results"])
+
+
+# Validates: REQ-VXVUECHATBOT-005
+def test_definition_ranks_first_with_extra_words(tmp_path):
+    corpus = definition_corpus(tmp_path, "07-10-40 Theme\n\nID: VP-656   Status:  draft\n")
+    result = corpus.search_documents("Setting System Theme VP-656 상세", limit=6)
+    assert result["results"][0]["document_id"] == "(사양서) Z.md"
+    assert result["results"][0]["definition_match"] is True
