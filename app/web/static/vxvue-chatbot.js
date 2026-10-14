@@ -103,7 +103,7 @@
     stream.onmessage=event=>{
       const data=JSON.parse(event.data);job=data.job;chat.jobs=chat.jobs.map(saved=>saved.id===job.id?job:saved);
       const message=chat.messages.find(m=>m.id===job.assistant_message_id);if(message){message.content=data.message.content;message.citations=data.message.citations;const existing=$('messages').querySelector(`[data-message-id="${message.id}"]`);if(existing){const scroll=$('scroll-area'),near=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<180;(job&&['QUEUED','RUNNING'].includes(job.status)?refreshRunningMessage(existing,message):existing.replaceWith(messageNode(message)));if(near)scroll.scrollTop=scroll.scrollHeight;}}
-      if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().then(()=>{const c=history.find(x=>x.id===current);if(c)$('chat-title').textContent=c.title;}).catch(showError);knowledgeStatus();}
+      if(!['QUEUED','RUNNING'].includes(job.status)){stopWatch();setBusy(false);job=null;refreshList().then(()=>{const c=history.find(x=>x.id===current);if(c)$('chat-title').textContent=c.title;}).catch(showError);knowledgeStatus();refreshUsage();}
     };
     stream.onerror=()=>{const ticket=selection;stopWatch();retryTimer=setTimeout(async()=>{if(current&&ticket===selection){try{await select(current);}catch(e){showError(e);setBusy(false);}}},2000);};
   }
@@ -123,6 +123,25 @@
       label.classList.toggle('warning',state.stale||state.skill?.status==='error'||state.skill?.code_review_needed||(state.last_attempt&&state.last_attempt.status!=='SUCCESS'));
     }catch{$('knowledge-status').textContent='지식 갱신 상태를 확인하지 못했습니다.';}
   }
+  let usageTicket=0;
+  function usageChip(name,w,u,label){
+    const chip=document.querySelector(`.usage-chip[data-window="${name}"]`);if(!chip)return;
+    chip.classList.remove('warn','empty','unknown');
+    if(!w||typeof w.used_percent!=='number'){chip.textContent=label+' 사용량 알 수 없음';chip.classList.add('unknown');chip.title=(u&&u.error)||'사용량을 아직 알 수 없습니다';return;}
+    chip.textContent=`${label} ${w.used_percent}%`+(w.resets_at?` · ${w.resets_at} 초기화`:'');
+    const source={live:'지금 조회',last_run:'마지막 점검 값'}[u.source]||'';
+    chip.title=[`Claude ${label} 한도 ${w.used_percent}% 사용 (${w.remaining_percent}% 남음)`,w.resets_at&&`${w.resets_at} 초기화`,source,u.measured_at&&`${u.measured_at} 측정`].filter(Boolean).join(' · ');
+    if(w.remaining_percent<=0)chip.classList.add('empty');else if(w.remaining_percent<20)chip.classList.add('warn');
+  }
+  async function refreshUsage(){
+    const ticket=++usageTicket;
+    try{
+      const response=await fetch('/claude/usage',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
+      if(!response.ok)throw new Error('사용량 조회 실패 ('+response.status+')');
+      const usage=await response.json();if(ticket!==usageTicket)return;
+      usageChip('five_hour',usage.five_hour,usage,'5시간');usageChip('seven_day',usage.seven_day,usage,'주간');
+    }catch(error){if(ticket!==usageTicket)return;const u={error:error.message||'사용량을 불러오지 못했습니다'};usageChip('five_hour',null,u,'5시간');usageChip('seven_day',null,u,'주간');}
+  }
   $('composer').onsubmit=async event=>{event.preventDefault();if(job)return;clearError();const text=$('message-input').value.trim();if(!text&&!files.length)return;$('send-button').disabled=true;try{if(!current){const made=await api('/conversations',{method:'POST'});current=made.id;}const data=new FormData();data.set('text',text);files.forEach(file=>data.append('files',file));await api('/conversations/'+current+'/messages',{method:'POST',body:data});$('message-input').value='';$('message-input').style.height='';files=[];renderFiles();await refreshList();await select(current);}catch(e){showError(e);setBusy(false);}};
   $('message-input').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('composer').requestSubmit();}};
   $('message-input').oninput=()=>{const input=$('message-input');input.style.height='auto';input.style.height=Math.min(180,input.scrollHeight)+'px';};
@@ -130,5 +149,6 @@
   $('composer').ondragover=event=>event.preventDefault();$('composer').ondrop=event=>{event.preventDefault();if(!job)addFiles(Array.from(event.dataTransfer.files));};
   $('new-chat').onclick=newChat;$('history-search').oninput=renderList;$('toggle-sidebar').onclick=()=>sidebar(!$('sidebar').classList.contains('open'));$('sidebar-backdrop').onclick=()=>sidebar(false);
   document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('message-input').value=button.dataset.prompt;$('message-input').focus();});
+  refreshUsage();setInterval(()=>{if(!document.hidden)refreshUsage();},300000);
   (async()=>{try{await refreshList();await knowledgeStatus();const saved=localStorage.getItem('vxvue-last-chat');if(saved&&history.some(c=>c.id===saved))await select(saved);}catch(e){showError(e);}})();
 })();

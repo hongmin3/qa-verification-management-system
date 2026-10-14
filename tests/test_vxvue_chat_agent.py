@@ -120,3 +120,41 @@ def test_history_prompt_title_needed_counts_only_done_answers_and_skips_user_tit
     done = [{"assistant_message_id": "a1", "status": "DONE"}, *jobs[1:]]
     assert json.loads(agent.history_prompt(messages, jobs=done)[0])["title_needed"] is False
     assert json.loads(agent.history_prompt(messages, jobs=jobs, title_source="user")[0])["title_needed"] is False
+
+
+def _run_fake_cli(tmp_path, monkeypatch, events):
+    agent = importlib.import_module("app.modules.vxvue_chatbot.agent")
+    script = tmp_path / "fake_cli.py"
+    script.write_text("import sys\nfor line in %r:\n    print(line, flush=True)\n" % [json.dumps(e) for e in events], encoding="utf-8")
+    settings = SimpleNamespace(secrets=SimpleNamespace(claude_code_oauth_token=""), get=lambda key, default=None: {"ai.claude.workdir": str(tmp_path / "work")}.get(key, default))
+    monkeypatch.setattr(agent.claude_cli, "resolve_command", lambda command: sys.executable)
+    monkeypatch.setattr(agent, "build_command", lambda *args, **kwargs: [sys.executable, str(script)])
+    return agent, lambda: agent.run([{"role": "user", "content": "q"}], {"rules": "rules"}, [], "fake", settings, threading.Event(), lambda *args: None)
+
+
+# Validates: REQ-AICALL-006
+def test_run_returns_rate_limit_event(tmp_path, monkeypatch):
+    first = {"unifiedWindows": {"five_hour": {"utilization": 0.1, "resets_at": 1}}}
+    last = {"unifiedWindows": {"five_hour": {"utilization": 0.35, "resets_at": 2}, "seven_day": {"utilization": 0.62, "resets_at": 3}}}
+    events = [{"type": "rate_limit_event", "rate_limit_info": first}, {"type": "rate_limit_event", "rate_limit_info": last},
+              {"type": "rate_limit_event", "rate_limit_info": "not-a-dict"},
+              {"type": "result", "subtype": "success", "is_error": False, "result": "답변", "usage": {}}]
+    _, call = _run_fake_cli(tmp_path, monkeypatch, events)
+    assert call()["rate_limit"] == last
+
+
+# Validates: REQ-AICALL-006
+def test_run_rate_limit_is_none_without_event(tmp_path, monkeypatch):
+    _, call = _run_fake_cli(tmp_path, monkeypatch, [{"type": "result", "subtype": "success", "is_error": False, "result": "답변", "usage": {}}])
+    assert call()["rate_limit"] is None
+
+
+# Validates: REQ-AICALL-006
+def test_failed_run_keeps_rate_limit_on_exception(tmp_path, monkeypatch):
+    info = {"unifiedWindows": {"five_hour": {"utilization": 1.0, "resets_at": 2}}}
+    events = [{"type": "rate_limit_event", "rate_limit_info": info},
+              {"type": "result", "subtype": "error_during_execution", "is_error": True, "result": "You've hit your limit", "usage": {}}]
+    _, call = _run_fake_cli(tmp_path, monkeypatch, events)
+    with pytest.raises(RuntimeError) as caught:
+        call()
+    assert caught.value.rate_limit == info

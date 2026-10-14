@@ -89,6 +89,14 @@ def test_chat_page_has_progress_card(web):
     assert 'id="job-status"' not in text
 
 
+# Validates: REQ-AICALL-006
+def test_chat_page_has_usage_chips(web):
+    client, _, _ = web
+    text = client.get("/vxvue-chatbot").text
+    assert 'data-window="five_hour"' in text and 'data-window="seven_day"' in text
+    assert 'class="provider-badge"' not in text
+
+
 def test_sync_status_explains_partial_failure_exclusions_and_retry(web):
     client, store, _ = web
     run_id = store.sync_start("VXvue", "product_knowledge", "knowledge_folder")

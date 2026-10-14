@@ -2,7 +2,7 @@
 {% block page_title %}VXvue AI 챗봇{% endblock %}
 {% block main_class %}vx-chat-main{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261014c">
+<link rel="stylesheet" href="/static/vxvue-chatbot.css?v=20261014e">
 <div class="vx-chat" data-max-file-bytes="{{ max_file_bytes }}">
   <aside id="sidebar" class="chat-sidebar" aria-label="대화 이력">
     <a class="chat-brand" href="/vxvue-chatbot"><span class="brand-mark">V</span><span>VXvue <small>AI 챗봇</small></span></a>
@@ -13,7 +13,7 @@
   </aside>
   <div id="sidebar-backdrop" hidden></div>
   <section class="chat-workspace">
-    <div class="chat-topbar"><button id="toggle-sidebar" aria-label="대화 목록 열기">☰</button><div><strong id="chat-title">새 대화</strong><small>VXvue 지식으로 함께 검토합니다.</small></div><span class="provider-badge">Claude</span></div>
+    <div class="chat-topbar"><button id="toggle-sidebar" aria-label="대화 목록 열기">☰</button><div><strong id="chat-title">새 대화</strong><small>VXvue 지식으로 함께 검토합니다.</small></div><div id="usage-chips" class="usage-chips" role="group" aria-label="Claude 사용량" aria-live="polite"><span class="usage-chip" data-window="five_hour" title="Claude 5시간 사용량을 불러오는 중입니다">5시간 확인 중…</span><span class="usage-chip" data-window="seven_day" title="Claude 주간 사용량을 불러오는 중입니다">주간 확인 중…</span></div></div>
     <div id="knowledge-status" class="knowledge-banner" role="status">지식 갱신 상태 확인 중…</div>
     <div id="error-banner" class="chat-error" hidden role="alert"></div>
     <div id="scroll-area" class="chat-scroll">
@@ -50,5 +50,5 @@
     </ol>
   </div>
 </template>
-<script src="/static/vxvue-chatbot.js?v=20261014d" defer></script>
+<script src="/static/vxvue-chatbot.js?v=20261014e" defer></script>
 {% endblock %}

@@ -41,8 +41,9 @@ def usage_metrics(result, tool_calls=0):
     return value
 
 
-def cli_failure(message, result, tool_calls, model):
+def cli_failure(message, result, tool_calls, model, rate_limit=None):
     failure = RuntimeError(message)
+    failure.rate_limit = rate_limit
     failure.metrics = usage_metrics(result, tool_calls)
     failure.usage = claude_cli.usage_to_tokens(result.get("usage"))
     failure.model = model
@@ -199,7 +200,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     events = queue.Queue()
     options = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
     prefix = f"이전 메시지 {omitted}개는 이번 답변의 입력에서 제외되었습니다.\n\n" if omitted else ""
-    answer, result, tool_calls = "", {}, 0
+    answer, result, tool_calls, rate_limit = "", {}, 0, None
     process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                text=True, encoding="utf-8", cwd=execution_dir, env=env, **options)
     def reader():
@@ -236,6 +237,8 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
                 continue
             if event.get("type") == "result":
                 result = event
+            elif event.get("type") == "rate_limit_event" and isinstance(event.get("rate_limit_info"), dict):
+                rate_limit = event["rate_limit_info"]
             if event.get("type") == "assistant":
                 tool_calls += sum(block.get("type") == "tool_use" for block in event.get("message", {}).get("content", []))
             stage, delta = event_update(event)
@@ -246,12 +249,12 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
         process.wait(timeout=10)
         if process.returncode or not result or result.get("is_error"):
             if result.get("subtype") in ("error_max_turns", "error_max_budget_usd"):
-                raise cli_failure("이번 요청의 AI 진행 횟수 또는 비용 제한에 도달했습니다. 범위를 나눠 이어 요청해주세요.", result, tool_calls, model)
+                raise cli_failure("이번 요청의 AI 진행 횟수 또는 비용 제한에 도달했습니다. 범위를 나눠 이어 요청해주세요.", result, tool_calls, model, rate_limit)
             # Never return arbitrary CLI stderr, which can include sensitive settings.
-            raise cli_failure(failure_message(result), result, tool_calls, model)
+            raise cli_failure(failure_message(result), result, tool_calls, model, rate_limit)
         final = str(result.get("result") or answer).strip()
         if not final:
-            raise cli_failure("Claude 답변을 받지 못했습니다. 다시 요청해주세요.", result, tool_calls, model)
+            raise cli_failure("Claude 답변을 받지 못했습니다. 다시 요청해주세요.", result, tool_calls, model, rate_limit)
         final, title = split_title(final)
         references = []
         if trace.is_file():
@@ -262,7 +265,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
                 if key not in seen:
                     references.append(item)
                     seen.add(key)
-        return {"text": prefix + final, "title": title, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
+        return {"text": prefix + final, "title": title, "citations": references, "usage": claude_cli.usage_to_tokens(result.get("usage")), "model": model, "metrics": usage_metrics(result, tool_calls), "rate_limit": rate_limit, "masking": {"system": system_mask.as_dict(), "history": history_mask.as_dict()}}
     finally:
         stop_process(process)
         sender.join(timeout=2)
