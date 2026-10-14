@@ -9,6 +9,10 @@
 - 규칙 구현현황: master 에서 매일 점검 기준의 `자동 점검 범위` 로 바뀌어 현재 기능이 됐다. 사용자 결정으로 화면은 남기고 상단 메뉴 대신 점검 현황 화면의 `자동 점검 범위 보기` 링크로 연다.
 - 메뉴 이름은 master 의 업무 중심 이름(허브 카드 이름)을 따른다. 챗봇 대화 화면은 머리 영역을 숨기는 전체 화면이라 메뉴가 없다.
 - 지식 규칙: `knowledge/core-web-ui.md` 의 template-inheritance·module-navigation-rule 을 사용자 승인으로 새 메뉴 구조에 맞게 고치고 tier 를 must → should 로 내렸다.
+- 검증: worktree 전체 테스트 1470 passed·4 failed·8 skipped(`CI=1`). 실패 4개는 `tests/test_polarion_issue.py::test_real_export_*` 로, 2026-10-14 09:00 ALM 이슈 수집이 만든 `polarion_backup/20261014_090023-2e25da01` 폴더를 로그인 계정이 읽지 못해(WinError 5, `icacls` 도 거부) 난다. 이 PC 에서만 도는 실제 자료 검사이고 서버에서는 건너뛴다. 원인 조사는 별도 작업으로 넘겼다.
+- 브라우저 테스트(`tests/test_qa_run_progress_browser.py`)는 Windows 에서 `CI` 가 없으면 화면에 보이는 Chromium 을 띄워 백그라운드 실행에서 23분 넘게 멈췄다. `CI=1` 이면 10 passed(2분 26초). 기본값을 바꾸는 일은 별도 작업으로 넘겼다.
+- 운영 배포(2026-10-14, 사용자 요청): 원본 폴더 master 를 `d9cf6c8` 로 빨리 감기·push → 서버 백업(`backups/qa-backup-20261014T001912Z.zip` 검증 ok, `~/qa-app-backup-20261013-201953.tgz`) → 서버 `config.yaml`·`config/products/vxvue.yaml` 이 저장소 판과 값이 같음(순서·따옴표만 다름)을 확인 → `CI=1` 과 사용자 승인으로 위 4개만 제외(`PYTEST_ADDOPTS --deselect`)하고 `scripts/deploy.ps1 -Restart`. 첫 시도는 다른 세션의 테스트와 겹쳐 브라우저 테스트 1개가 페이지 열기 30초를 넘겨 테스트 단계에서 중단됐다(서버 변경 없음). 재시도는 1476 passed·2 skipped·4 deselected, 전송·의존성·재기동 후 `/health` ok.
+- 배포 확인: 서버에서 `/`·`/qa-agent`·`/qa-agent/period`·`/qa-agent/rules`·`/manual-review`·`/knowledge`·`/cost-dashboard`·`/settings/ai`·`/vxvue-chatbot`·`/vxvue-chatbot/guide` 200, 공통 메뉴 순서와 강조가 의도대로다. 점검 현황에 `자동 점검 범위 보기` 가 있고 `/qa-agent/issue-analysis` 는 404, nginx 80 은 200. `app/web/templates/_nav.html` SHA256 이 로컬과 같다.
 
 ## 2026-10-13 운영 성공 답변 최종 확인
 
