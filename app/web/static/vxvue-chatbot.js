@@ -128,10 +128,15 @@
     const chip=document.querySelector(`.usage-chip[data-window="${name}"]`);if(!chip)return;
     chip.classList.remove('warn','empty','unknown');
     if(!w||typeof w.used_percent!=='number'){chip.textContent=label+' 사용량 알 수 없음';chip.classList.add('unknown');chip.title=(u&&u.error)||'사용량을 아직 알 수 없습니다';return;}
-    chip.textContent=`${label} ${w.used_percent}%`+(w.resets_at?` · ${w.resets_at} 초기화`:'');
+    chip.textContent=`${label} ${w.used_percent}%`+(w.resets_at?` · ${shortReset(w.resets_at)} 초기화`:'');
     const source={live:'지금 조회',last_run:'마지막 점검 값'}[u.source]||'';
     chip.title=[`Claude ${label} 한도 ${w.used_percent}% 사용 (${w.remaining_percent}% 남음)`,w.resets_at&&`${w.resets_at} 초기화`,source,u.measured_at&&`${u.measured_at} 측정`].filter(Boolean).join(' · ');
     if(w.remaining_percent<=0)chip.classList.add('empty');else if(w.remaining_percent<20)chip.classList.add('warn');
+  }
+  function shortReset(text){
+    const m=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(String(text));if(!m)return String(text);
+    const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
+    return `${m[1]}-${m[2]}-${m[3]}`===today?m[4]:`${m[2]}/${m[3]} ${m[4]}`;
   }
   async function refreshUsage(){
     const ticket=++usageTicket;
@@ -149,6 +154,6 @@
   $('composer').ondragover=event=>event.preventDefault();$('composer').ondrop=event=>{event.preventDefault();if(!job)addFiles(Array.from(event.dataTransfer.files));};
   $('new-chat').onclick=newChat;$('history-search').oninput=renderList;$('toggle-sidebar').onclick=()=>sidebar(!$('sidebar').classList.contains('open'));$('sidebar-backdrop').onclick=()=>sidebar(false);
   document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('message-input').value=button.dataset.prompt;$('message-input').focus();});
-  refreshUsage();setInterval(()=>{if(!document.hidden)refreshUsage();},300000);
+  refreshUsage();setInterval(()=>{if(!document.hidden)refreshUsage();},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshUsage();});
   (async()=>{try{await refreshList();await knowledgeStatus();const saved=localStorage.getItem('vxvue-last-chat');if(saved&&history.some(c=>c.id===saved))await select(saved);}catch(e){showError(e);}})();
 })();
