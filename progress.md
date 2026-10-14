@@ -1,5 +1,12 @@
 # 진행 상태
 
+## 2026-10-14 브라우저 화면 시험의 기본을 창 없는 실행으로 (NFR-OPS-003)
+
+- 문제: `tests/test_qa_run_progress_browser.py::test_cancel_in_real_http_browser` 가 Windows 에서 `CI` 가 없으면 창 있는 Chromium 을 띄웠다. 백그라운드 셸의 전체 테스트가 이 시험에서 23분 넘게 멈췄다(Chromium CPU 거의 0). `scripts/deploy.ps1` 도 같은 `pytest` 를 돌리므로 배포가 멈출 수 있었다.
+- 수정: 판단 함수 `browser_headless()` 를 두고 같은 파일의 세 화면 시험이 모두 쓴다. 기본은 창 없이, `QA_BROWSER_HEADED=1`(`true`·`yes`)일 때만 창을 띄운다. 창 있는 실행을 일부러 고른 기록은 커밋 `135f38e`·문서 어디에도 없었다.
+- 회귀 확인: 새 `test_browser_headless_unless_asked` 를 수정 전 조건식으로 돌리면 기본 3개 경우가 `assert False is True`(창 있는 실행)로 실패하고, 수정 후에는 통과한다.
+- 검증: `CI`·`DISPLAY` 를 지운 백그라운드 셸(표준입력 없음)에서 이 파일 16 passed(7분 51초, `chrome-headless-shell` 로 뜬 것 확인), 전체 1,480 passed·8 skipped(24분 8초, 종료 코드 0)로 멈추지 않았다. 이 PC 의 오늘 실행은 이전 기록(911초)보다 느렸다. 원인은 따로 보지 않았다.
+
 ## 2026-10-14 상단 메뉴 정리와 홈 메뉴 (REQ-WEB-007·REQ-WEB-001)
 
 - 요청: 웹 상단 탭에서 필요 없는 버튼과 합칠 버튼을 정리하고, 홈에도 상단 메뉴를 보인다(홈에서는 QA 홈 제외). 사용자가 A안(메뉴 정리)을 고른 뒤 B안(단일 이슈 분석·규칙 구현현황 코드 제거)과 다른 두 채팅("API 매뉴얼 위치", "VXvue 검증 AI DB 매뉴얼 페이지 고도화") 결과를 합쳐 master 머지·운영 배포까지 요청했다.
