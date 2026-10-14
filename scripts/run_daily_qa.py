@@ -76,7 +76,9 @@ def check(cfg) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="QA Agent 점검")
     parser.add_argument("--product", default=None, help="제품 이름 (기본: daily_qa.products 의 첫 제품)")
-    parser.add_argument("--trigger", default="manual_cli", choices=("scheduled", "manual", "manual_cli", "catchup"))
+    parser.add_argument("--trigger", default="manual_cli", choices=("scheduled", "manual", "manual_cli", "catchup", "prepare"))
+    parser.add_argument('--selection-id', default='')
+    parser.add_argument('--analysis-scope', choices=('all', 'spec', 'issues'), default='all')
     parser.add_argument("--since", type=date.fromisoformat, default=None, help="기간 분석 시작일 YYYY-MM-DD (그날 또는 그 전 스냅샷이 기준)")
     parser.add_argument("--until", type=date.fromisoformat, default=None, help="기간 분석 종료일 YYYY-MM-DD (비우면 오늘, 새로 수집)")
     parser.add_argument("--issue-audit", action="store_true", help="이슈 기록이 없는 기간을 현재 이슈 상태 기준으로 점검한다")
@@ -104,7 +106,8 @@ def main() -> int:
     try:
         outcome = run_daily(cfg, dry_run=args.dry_run, force_weekly=args.weekly, send_email=sender, trigger=args.trigger,
                             since=args.since, until=args.until, issue_audit=args.issue_audit,
-                            on_demand=args.on_demand, finding_id=args.finding)
+                            on_demand=args.on_demand, finding_id=args.finding,
+                            selection_id=args.selection_id, analysis_scope=args.analysis_scope)
     except RunLocked as exc:
         print(str(exc))
         return 3

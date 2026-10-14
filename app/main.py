@@ -73,7 +73,7 @@ def operations_status() -> dict:
 @app.get("/claude/usage")
 def claude_usage_status() -> dict:
     """Claude 구독 계정의 5시간·주간 사용률과 초기화 시각 (REQ-AICALL-006). 토큰 값은 넣지 않는다."""
-    return claude_usage.get_usage()
+    return claude_usage.get_usage(allow_refresh=False)
 
 
 @app.get("/config/status")

@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const scenario = process.argv[2];
 const elements = Object.fromEntries(['qa-progress', 'qa-spinner', 'qa-progress-step', 'qa-progress-time',
   'qa-progress-link', 'qa-cancel', 'qa-cancel-message', 'run-now', 'audit-now', 'last-run', 'last-status'].map(id => [id, {
-    id, hidden: id.startsWith('qa-'), _disabled: false, textContent: '', href: '', listeners: {},
+    id, hidden: id.startsWith('qa-'), _disabled: false, textContent: '', href: '', listeners: {}, dataset: {},
     get disabled() { return this._disabled; }, set disabled(value) { this._disabled = !!value; },
     addEventListener(name, callback) { this.listeners[name] = callback; }
   }]));
@@ -19,9 +19,11 @@ if (scenario === 'shared') state.cancel_requested = true;
 if (scenario === 'email') state.progress = {...state.progress, phase: 'email', label: '메일'};
 let requested = [], resolveCancel, timerId = 0;
 const timers = new Map();
+const statusEvents = [];
 const context = {window: {addEventListener() {}}, document: {
+  dispatchEvent(event) { statusEvents.push(event); },
   getElementById: id => elements[id], querySelectorAll: () => startButtons
-}, AbortController, Date, Promise, encodeURIComponent,
+}, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }, AbortController, Date, Promise, encodeURIComponent,
   setTimeout(callback, delay) { const id = ++timerId; timers.set(id, {callback, delay}); return id; },
   clearTimeout(id) { timers.delete(id); }, setInterval() { return 1; }, clearInterval() {},
   fetch: async (url, options = {}) => {
@@ -41,6 +43,8 @@ async function poll() {
 }
 (async () => {
   await settle();
+  assert.equal(statusEvents[0].type, 'qa:status');
+  assert.equal(statusEvents[0].detail.running, true);
   const cancel = elements['qa-cancel'];
   assert.equal(cancel.hidden, false, '진행 중 실행의 중단 버튼이 보여야 한다');
   assert.ok(startButtons.every(button => button.disabled));

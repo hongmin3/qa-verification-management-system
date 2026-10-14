@@ -98,3 +98,11 @@ def test_pipeline_splits_before_task_budget_and_leaves_unprocessed_events(tmp_pa
     assert audit['tasks'][0]['input_chars'] > 1000
     assert audit['tasks'][0]['input_oversize'] is True
     assert any(e['entity_id'] == 'VP-201' and e['analysis_status'] == 'pending' for e in h.events())
+
+
+def test_user_instruction_prompt_is_included_verbatim(tmp_path):
+    run = _workspace(tmp_path)
+    text = '사용자 기준: 장비 조건과 예외를 모두 검토한다.\n판정 근거를 생략하지 않는다.'
+    (run.root / 'rules/instruction-prompt.txt').write_text(text, encoding='utf-8')
+    prompt = build_prompt(Task('FIX-001', 'qa-fixed-issue-analysis', {}), run)
+    assert text in prompt

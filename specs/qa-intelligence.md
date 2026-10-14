@@ -1515,6 +1515,82 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 5. 날짜 변경 때 갱신하고 늦게 도착한 이전 응답은 표시하지 않는다. 조회 실패를 0건으로 표시하지 않고 확인하지 못했다고 안내한다. 실행 버튼의 기존 동작은 유지한다.
 
 
+### REQ-QAINTEL-042 절약 모드와 선택 분석
+
+**하는 일** 기간을 고르면 AI 없이 대상부터 준비하고, 사용자가 선택한 대상만 분석한다.
+
+- `daily_qa.savings.enabled`가 true이면 수동 준비는 AI 없이 수집·대상 확인만 한다. 예약 실행은 REQ-QAINTEL-048에 따라 두 분석을 예산 안에서 수행한다. 기본은 false로 기존 설치를 보존한다.
+- 목적은 `spec`(사양 변경과 검증 범위), `issues`(신규·업데이트 이슈와 QA 대응), `all`(둘 다)이다. 수동 준비 화면은 자동 전체 선택을 하지 않는다.
+- 준비한 대상은 제품·기간·자료/규칙/설정 지문과 함께 저장한다. 생성 30분 경과, 제품 불일치, 자료 변경, 선택 밖 대상은 실행 전에 거절한다.
+- 선택하지 않은 대상과 예산 때문에 실행하지 못한 대상은 미분석으로 남긴다. 사양·이슈별 저장 자료의 실제 비교 시작일과 종료일, 요청 기간 중 확인하지 못한 범위를 준비 화면·실행 기록·메일에 표시한다. 자료가 부족하면 전체 기간 완료로 표시하지 않는다.
+- 절약 모드에서는 한도 초기화 후 자동 AI 재개와 형식 실패의 자동 AI 재시도를 하지 않는다. 메일은 기존 수신자·주기를 쓰며 미분석·대기를 완료와 구분한다.
+
+### REQ-QAINTEL-043 공통 호출 예산과 모델
+
+**하는 일** 이 점검 기능의 제품 전체에 호출 횟수 상한을 적용한다.
+
+- 절약 모드의 기본 상한은 실행당 2회, KST 하루 전체 제품 합산 4회다. 호출 직전에 SQLite 트랜잭션으로 예약한다.
+- 캐시 재사용은 0회다. 시작한 CLI의 실패·취소·사용량 불명은 호출에 포함하고, 미시작이 확인된 경우만 반환한다.
+- 일반 분석은 이 기능 전용 Sonnet 5.5·medium 설정을 사용한다. 댓글·이슈 점검 모델 배정은 유지한다. Opus 상세 재검토는 사용자가 선택한 대상만 실행한다.
+- 이 정책은 챗봇·매뉴얼·TC 별도 요청의 모델 설정을 바꾸지 않는다. 사용량 조회에서는 인증 갱신용 AI 호출을 하지 않는다.
+- 횟수 상한은 계정 5시간 사용률의 상한이 아니다. 확인할 수 없는 사용량은 추정 불가로 표시한다.
+
+### REQ-QAINTEL-044 사용자 지침과 분석 품질 보존
+
+**하는 일** 비용 최적화 뒤에도 사용자 지침 프롬프트와 QA 규칙 MD를 분석 기준으로 사용한다.
+
+- 지침 프롬프트는 마스킹 후 전문을 전달한다. QA 규칙은 요구되는 절과 하위 절 원문을 보존하고, 필요하면 원문 전체를 추가 확인할 수 있어야 한다.
+- 지침을 임의 요약해 대체하거나 필수 검토 항목·근거·Regression 축을 비용 때문에 삭제하지 않는다.
+- 지침 파일 또는 필수 규칙을 확인할 수 없으면 분석 완료로 처리하지 않는다. 사용된 파일 해시를 실행 기록에 남긴다. 필수 검토 항목·Gate 판정·회귀 축 판단·선택 TC 비교가 빠진 결과는 보존하되 완료나 재사용 대상으로 처리하지 않는다. 관련 TC가 없으면 확인 범위와 보완 방법을 남긴다.
+- 단일 구조화 응답 경로는 초기 기본값에서 끈다. 같은 자료의 필수 근거·충돌·예외 누락 검증을 통과한 경우에만 사용한다.
+- 토큰 합계는 입력·캐시 생성·캐시 읽기·출력 합이다. 추론은 출력에 포함하므로 다시 더하지 않는다.
+
+### REQ-QAINTEL-045 검증 버전과 두 분석의 역할
+
+**하는 일** 사양 변경 분석과 이슈 분석을 선택한 검증 버전의 Checklist TC와 함께 검토한다. 절약 모드에서 적용하며 REQ-QAINTEL-012·013·014·015·016·031·032의 TC 제외·별도 요청 제한보다 이 요구사항을 우선한다. 절약 모드를 끈 설치는 기존 제한을 유지한다.
+
+1. 자동 점검과 메일 설정에서 등록된 변경사항 Checklist의 실제 시트 이름을 선택한다. 파일과 시트를 함께 저장하며, `V1.1.0`이 하나일 때 처음 선택한다. 없거나 중복이면 선택 필요로 표시한다.
+2. 사양 분석은 기간의 SRS 변경을 관련 이슈·선택한 TC와 비교한다. 검증이 빠졌으면 기존 TC 보완 또는 체크리스트 초안을 제안한다. 관련 이슈 존재만으로 검증됐다고 판단하지 않는다.
+3. 이슈 분석은 기간의 신규·내용·원인·조치·연구소 결과·중요 댓글 변경을 검토한다. 연구소의 사양 주장과 문서 수정 주장을 원문과 대조하고 QA 대응·수정 확인 방법·TC 보완점을 제안한다.
+4. 선택 시트가 없거나 읽지 못하면 다른 버전으로 대신하지 않는다. TC 확인 불가를 표시하고 전체 검토 완료로 처리하지 않는다.
+5. 초안은 원문 사양을 근거로 작성하고 Step과 Expected 번호를 맞춘다. 사양이 불명확하면 확인할 질문을 남긴다. 원본 Excel과 이슈 상태는 바꾸지 않는다.
+
+### REQ-QAINTEL-046 대상별 결과 연결과 결과 탐색
+
+> **예외** 절약 모드에서는 REQ-QAINTEL-019·033의 판정별 카드 정렬·접기보다 이 요구사항의 전체 결과 정렬을 우선한다.
+
+**하는 일** 기간을 넓혀도 유효한 기존 분석을 AI 호출 없이 표시하고 이슈·사양 결과를 검색한다.
+
+- 제품·분석 종류·원문·검색 가능한 근거·지침·선택한 TC 버전이 같으면 대상별 기존 결과를 연결한다. 기간·묶음·실행 번호만 달라진 경우는 새 분석 이유가 아니다. 다른 변경 전후 비교와 과거 자료 기준은 구분한다.
+- 실패·부분 결과·미확인 자료·미해결 질문은 검증 완료 결과로 재사용하지 않는다. 비교 기록이 없는 과거 결과는 이력으로 표시하며 최신 여부 미확인으로 구분한다.
+- 분석결과 목록을 전체·이슈 분석·사양 분석으로 나눈다. 제품·기간·작성자·이슈/사양 번호·내용 검색·판정·처리 상태로 필터하고 50개씩 나눈다. 조건은 결과 수와 페이지를 계산하기 전에 적용한다.
+- 이슈 최초 작성자 ID와 표시 이름을 원본에서 읽는다. 담당자·댓글 작성자와 구분한다. 이름이 없으면 이름 미확인과 ID를 보이고, 작성자 정보 갱신은 AI 재분석을 만들지 않는다.
+- 원본 분석 시각·모델·결과 ID를 보존한다. 재사용을 새 분석으로 표시하지 않는다.
+- 기본 정렬은 이슈의 최신 업데이트 순이다. 작성자별·이슈 번호별·분석 시각순 정렬을 선택할 수 있다. 이슈 업데이트 일시와 AI 분석 일시를 구분해 한국 시간으로 표시하며 업데이트 정보가 없는 항목은 미확인으로 표시한다.
+
+### REQ-QAINTEL-047 분석 판정과 QA 처리 상태
+
+> **예외** REQ-QAINTEL-019·020의 기존 승인·거절 양식은 추가하지 않는다. 이 요구사항의 QA 처리자 이름과 상태 기록을 별도로 제공한다.
+
+**하는 일** AI가 무엇을 판단했는지와 사람이 업무를 마쳤는지를 구분한다.
+
+- 분석 판정은 `사양과 다름`, `검토 필요`, `근거 부족`, `참고`, `문제 없음`이다. REQ-QAINTEL-033의 판정 연결을 유지하고 설명을 화면에 제공한다.
+- 처리 상태는 `미처리`, `진행 중`, `확인 완료`, `보류`다. 사람이 변경하며 변경 시각·담당자·메모를 이력으로 남긴다. 참고하거나 조치할 것이 없는 결과도 확인 후 완료로 둘 수 있다.
+- 완료는 해당 분석의 QA 처리 완료다. 이슈 종료·실제 장비 검증 PASS·사양 적합성을 대신하지 않는다. AI 판정과 과거 처리 이력은 바꾸지 않는다.
+- 새로운 근거로 분석 결과가 생기면 새 결과는 미처리이며 과거 결과의 완료 상태를 자동 복사하지 않는다. 유효 결과 재사용은 원본의 처리 상태를 보여준다.
+- 상세는 판단과 할 일·근거 자료·분석 기록으로 나눈다. 미확인·필수 확인사항은 상단에 보이고 필수 검토 항목과 회귀 축은 보존한다.
+
+### REQ-QAINTEL-048 두 분석의 예약 실행과 요약 메일
+
+**하는 일** 예약 주기에 수집한 사양 변경과 이슈 변경을 한 번씩 검토하고 한 통으로 알린다.
+
+- 수집·비교를 한 번 수행하고 사양 분석과 이슈 분석이 자료를 공유한다. 매일 전체 이슈를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 REQ-QAINTEL-043의 공통 예산에 포함한다.
+- 일일 모드는 직전 정상 수집 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·버전·완료·재사용·미분석·실패를 구분한다. 예산 때문에 끝내지 못한 대상은 대기로 보존한다.
+- 메일은 제품·검증 버전·실제 기간, 실행 결과, 사양 분석과 이슈 분석의 건수·판정, 남은 대상·자료 누락, 결과 링크 순서로 구성한다. 기존 수신자와 주기를 유지한다.
+- 사내 원문과 상세 AI 판단 문장은 메일에 넣지 않는 REQ-DAILY-008의 원칙을 유지한다. 전체 결과는 제품·실행·종류 조건이 있는 웹 링크에서 확인한다.
+- 변경 없음·기존 결과만 재사용·예산 소진을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 하고 한도 초기화만으로 자동 AI 재실행하지 않는다.
+- 이슈 분석은 최초 작성자 ID별로 묶고 이름을 섹션 제목에 표시한다. 같은 이름의 서로 다른 사람은 ID로 구분한다. 각 작성자 안에서는 이슈 업데이트가 최신인 순서로 번호·업데이트 일시·판정·결과 링크를 보여준다. 이름이 없으면 이름 미확인과 ID를 표시한다.
+
 ## 11. 테스트 사양
 
 ID 규칙: `TEST-<CATEGORY>-NNN`. 모든 테스트는 가짜 Polarion·가짜 Claude 실행기를 쓴다. 실제 Claude 비용이 들지 않는다.
@@ -1907,6 +1983,13 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-039 | `app/modules/daily_qa/limit_evidence.py`, `app/modules/daily_qa/pipeline.py`, `app/main.py`, `scripts/capture_limit_evidence.py`, `scripts/sync_limit_evidence.ps1` | TEST-QAINTEL-024: `tests/test_limit_evidence.py` | verified |
 | REQ-QAINTEL-040 | `app/modules/daily_qa/input_budget.py`, `app/modules/daily_qa/rule_context.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-QAINTEL-026: `tests/test_qa_input_budget.py` | implemented |
 | REQ-QAINTEL-041 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/web/static/qa-run-preview.js` | TEST-QAINTEL-027: `tests/test_qa_run_preview.py` | implemented |
+| REQ-QAINTEL-042 | `app/modules/daily_qa/execution_plan.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py` | `tests/test_qa_execution_plan.py`, `tests/test_qa_savings_review.py` | implemented |
+| REQ-QAINTEL-043 | `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py` | `tests/test_qa_execution_budget.py`, `tests/test_qa_model_policy.py` | implemented |
+| REQ-QAINTEL-044 | `app/modules/daily_qa/agent_runner.py`, `scripts/measure_qa_usage.py` | `tests/test_qa_usage_measurement.py`, `tests/test_qa_input_budget.py`, `tests/test_qa_savings_review.py` | implemented |
+| REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |
+| REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, `tests/test_qa_results_reader.py` | implemented |
+| REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/web/static/qa-reading.js` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
+| REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

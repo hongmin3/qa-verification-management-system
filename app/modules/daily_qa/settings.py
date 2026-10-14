@@ -89,6 +89,12 @@ class DailyQaSettings:
     claude_effort: str = ""
     #: 같은 성공 작업 묶음의 결과를 재사용한다 (REQ-QAINTEL-037).
     result_cache_enabled: bool = True
+    savings_enabled: bool = False
+    savings_per_run: int = 2
+    savings_per_day: int = 4
+    analysis_model: str = "claude-sonnet-5-5"
+    review_model: str = "claude-opus-5-5"
+    structured_enabled: bool = False
 
     @property
     def product_profile(self) -> ProductProfile:
@@ -210,6 +216,12 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         claude_model=str(get("ai.claude.models.standard", "") or ""),
         claude_effort=str(get("ai.claude.effort", "") or ""),
         result_cache_enabled=bool(get("daily_qa.result_cache.enabled", True)),
+        savings_enabled=bool(get("daily_qa.savings.enabled", False)),
+        savings_per_run=max(0, int(get("daily_qa.savings.per_run", 2))),
+        savings_per_day=max(0, int(get("daily_qa.savings.per_day", 4))),
+        analysis_model=str(get("daily_qa.savings.analysis_model", "claude-sonnet-5-5")),
+        review_model=str(get("daily_qa.savings.review_model", "claude-opus-5-5")),
+        structured_enabled=bool(get("daily_qa.savings.structured_enabled", False)),
         task_timeout_seconds=int(get("daily_qa.task_timeout_seconds", 900) or 900),
         max_tasks_per_run=int(get("daily_qa.max_tasks_per_run", 30) or 30),
         batch_size=max(1, int(get("daily_qa.batch_size", 5) or 5)),

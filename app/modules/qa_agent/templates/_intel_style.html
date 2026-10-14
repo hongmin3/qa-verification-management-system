@@ -1,4 +1,10 @@
 <style>
+.qa-reading-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0;border-bottom:1px solid #d0d7de;padding-bottom:10px}
+.qa-reading-tabs a{padding:10px;border-radius:6px;text-decoration:none}
+.qa-reading-tabs a[aria-selected=true]{background:#176c87;color:white}
+[data-qa-panel][hidden]{display:none}
+#processing .qa-actions{display:flex;flex-wrap:wrap;gap:12px}#processing label{max-width:100%}
+.qa-selection-row{padding:10px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere}.qa-selection-row input{width:auto}
 .qa-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
 .qa-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;display:grid;gap:6px}
 .qa-card h4{margin:0;font-size:15px}.qa-card h4 small{font-weight:400;color:#5b6b82}

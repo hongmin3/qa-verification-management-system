@@ -214,7 +214,7 @@ def _maybe_refresh(settings, now: datetime, refresh) -> bool:
     return True
 
 
-def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet | None = None, refresh=None) -> dict:
+def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet | None = None, refresh=None, allow_refresh: bool = True) -> dict:
     """`GET /claude/usage` 의 응답 (REQ-AICALL-006 결과 표)."""
     settings = _settings(settings)
     now = now or datetime.now(timezone.utc)
@@ -228,7 +228,7 @@ def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet |
             return dict(cached)
     http_get = http_get or _default_http_get
     windows, error = _fetch_live(settings, http_get)
-    if windows is None and error == "로그인 토큰 만료" and _maybe_refresh(settings, now, refresh):
+    if allow_refresh and windows is None and error == "로그인 토큰 만료" and _maybe_refresh(settings, now, refresh):
         windows, error = _fetch_live(settings, http_get)
     if windows is not None:
         result = {"source": "live", **windows, "measured_at": _kst(now), "error": ""}

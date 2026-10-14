@@ -80,6 +80,8 @@ def _audit_line(audit: dict) -> str:
 
 def build_email(run_id: str, status_label: str, stages: dict, summary: dict, review_url: str, rules_warning: str,
                 product: str = "") -> tuple[str, str, str]:
+    if summary.get('savings_enabled'):
+        return _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product)
     prefix = f"[QA Agent] {product} " if product else "[QA Agent] "
     subject = f"{prefix}{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건"
     limit = summary.get("claude_limit") or {}
@@ -149,3 +151,80 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
         "<p style='color:#666'>모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다.</p></div>"
     )
     return subject, "\n".join(text), body
+
+
+def _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product):
+    from urllib.parse import urlencode, urlsplit
+    version = (summary.get('verification_sheet') or {}).get('sheet') or '버전 미선택'
+    targets = summary.get('scope_targets') or {}
+    pending = summary.get('pending_analysis_events', 0)
+    reused = summary.get('target_reused') or []
+    parsed = urlsplit(review_url)
+    base = f'{parsed.scheme}://{parsed.netloc}' if parsed.netloc else ''
+    def link(category):
+        return base + '/qa-agent/results?' + urlencode({'product': product, 'run_id': run_id, 'category': category})
+    basis = summary.get('basis') or {}
+    period = summary.get('period') or {}
+    lines = [f'{product} · 검증 버전 {version} · {status_label}',
+             f"실제 비교 기준: 사양 {basis.get('srs') or '기준 없음'} / 이슈 {basis.get('issues') or '기준 없음'}",
+             f"요청 종료일: {period.get('until') or run_id[:8]}",
+             f'미분석·대기 변경 {pending}건 · 이번 실행의 미완료 대상을 포함한 제품 전체 대기 건수입니다.',
+             'AI 판정과 QA 처리 완료는 별도입니다.', '',
+             f"[사양 분석] 대상 {targets.get('spec', 0)}항목 · 기존 결과 {sum(r['kind'] == 'SPEC_COVERAGE' for r in reused)}항목", link('spec'),
+             f"[이슈 분석] 대상 {targets.get('issues', 0)}항목 · 기존 결과 {sum(r['kind'] != 'SPEC_COVERAGE' for r in reused)}항목", link('issues'), '']
+    for kind, coverage in (summary.get('coverage') or {}).items():
+        label = '사양' if kind == 'srs' else '이슈'
+        lines += [f"{label} 확인 가능한 자료: {coverage.get('start') or '기준 없음'} ~ {coverage.get('end') or '자료 없음'}"]
+        lines.extend('미확인 기간: ' + warning for warning in coverage.get('warnings', []))
+    from app.modules.qa_agent.dashboard import VERDICT_LEVEL
+    counts = Counter()
+    for verdicts in summary.get('by_verdict', {}).values():
+        for verdict, count in verdicts.items():
+            counts[VERDICT_LEVEL.get(verdict, '검토 필요')] += count
+    lines += ['[이번에 생성된 결과의 AI 판정] ' + (' · '.join(f'{name} {count}건' for name, count in counts.items()) or '새 결과 없음')]
+    lines += _issue_author_lines(summary.get('issue_results') or [], base)
+    if rules_warning:
+        lines.append('지침 확인 필요: ' + rules_warning)
+    for label, status, note in _stage_lines(stages):
+        if status not in ('완료', '건너뜀', '오늘은 대상 아님'):
+            lines.append(f'{label}: {status} {note}')
+    if summary.get('call_budget_exhausted'):
+        lines.append('새 AI 호출 예산을 모두 사용했습니다. 남은 항목은 완료로 처리하지 않았습니다.')
+    lines += ['', f"새 Claude 호출 {summary.get('claude_calls', 0)}회 · 기존 결과 {len(reused)}항목 재사용",
+              '변경과 새 분석 대상이 없으면 AI를 호출하지 않습니다.', '점검 기록: ' + review_url]
+    subject = f'[QA] {product} {version} · 사양 {targets.get("spec", 0)} / 이슈 {targets.get("issues", 0)} · 미분석·대기 {pending}'
+    body = '<div style="font-family:sans-serif;max-width:760px">'
+    for line in lines:
+        if line in (link('spec'), link('issues'), '점검 기록: ' + review_url) or line.startswith(base + '/qa-agent/findings/'):
+            url = review_url if line.startswith('점검 기록: ') else line
+            body += f'<p><a href="{html.escape(url, quote=True)}">결과 열기</a></p>'
+        else:
+            body += '<p>' + html.escape(line) + '</p>'
+    return subject, '\n'.join(lines), body + '</div>'
+
+
+def _issue_author_lines(rows, base):
+    from datetime import datetime, timezone
+    from app.modules.qa_agent.dashboard import VERDICT_LEVEL
+    groups = {}
+    for row in rows:
+        person = str(row.get('reporter_id') or '')
+        group = groups.setdefault(person, {'name': row.get('reporter_name') or '이름 미확인', 'issues': {}})
+        issue = group['issues'].setdefault(row['subject'], {'updated': row.get('issue_updated_at') or '', 'results': []})
+        issue['results'].append(row)
+    def moment(value):
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return datetime.min.replace(tzinfo=timezone.utc)
+    lines = []
+    for person, group in sorted(groups.items(), key=lambda pair: (not bool(pair[0]), pair[1]['name'], pair[0])):
+        lines += ['', f"[이슈 작성자: {group['name']} ({person or 'ID 미확인'})] {len(group['issues'])}건"]
+        for subject, issue in sorted(group['issues'].items(), key=lambda pair: (moment(pair[1]['updated']), pair[0]), reverse=True):
+            date = moment(issue['updated'])
+            stamp = date.astimezone(claude_limits.KST).strftime('%Y-%m-%d %H:%M') if date.year > 1 else '미확인'
+            verdicts = ' · '.join(dict.fromkeys(VERDICT_LEVEL.get(row.get('verdict'), '검토 필요') for row in issue['results']))
+            lines.append(f'{subject} · 이슈 업데이트 {stamp} (한국 시간) · {verdicts}')
+            lines.extend(base + '/qa-agent/findings/' + str(row['id']) for row in issue['results'])
+    return lines

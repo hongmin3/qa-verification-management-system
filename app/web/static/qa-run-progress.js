@@ -13,9 +13,10 @@ window.QARunProgress = function (product) {
   const started = () => { panel.hidden = false; spinner.hidden = false; step.textContent = '준비'; link.hidden = true; };
   const lock = value => buttons.forEach(button => {
     button.disabled = value;
-    if (button.id === 'run-now') button.textContent = value ? '실행 중…' : '변경사항 점검하기';
+    if (button.id === 'run-now') button.textContent = value ? '실행 중…' : button.dataset.idleLabel || '변경사항 점검하기';
   });
   function render(data) {
+    document.dispatchEvent(new CustomEvent('qa:status', {detail: data}));
     latest = data;
     const last = data.last_run, progress = data.progress || {};
     currentRunId = data.running ? data.current_run_id || (last && last.status === 'RUNNING' ? last.id : null) : null;

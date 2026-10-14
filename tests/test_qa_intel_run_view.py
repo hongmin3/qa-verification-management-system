@@ -9,6 +9,19 @@ def cards(count, verdict="TC 없음", analysis_type=""):
                             "analysis_type": analysis_type, "summary": "확인할 결과"}) for i in range(count)]
 
 
+def test_prepared_pending_targets_are_not_reported_as_zero_analysis_needed():
+    run = {'status': 'SUCCESS', 'stages': {'events': {'status':'ok','counts':{'total':0,'analysis_required':0}}},
+           'summary': {'collection_only':True,'prepared_targets':4,'claude_calls':0}}
+    view = run_view.build(run, [], [], [])
+    assert '대상 4개' in view['headline'] and '아직 AI 분석을 실행하지 않았습니다' in view['headline']
+    assert '분석이 필요한 것은 0' not in view['headline']
+
+
+def test_savings_limit_explains_next_schedule_instead_of_auto_resume():
+    view = run_view.build({'status':'PARTIAL','summary':{'savings_enabled':True,'claude_limit':{'kind':'SESSION'}}}, [], [], [])
+    assert '다음 예정 점검' in view['actions'][0]['todo']
+
+
 def test_collection_failure_is_first_even_with_214_rule_findings():
     run = {"status": "PARTIAL", "stages": {
         "collect_srs": {"status": "failed", "note": "Polarion 요청이 3회 실패했습니다 (ConnectError)"},

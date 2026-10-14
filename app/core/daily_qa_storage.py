@@ -230,6 +230,8 @@ class DailyQaStorageMixin:
         data["summary"] = json.loads(data.pop("summary_json") or "{}")
         data["progress"] = json.loads(data.pop("progress_json", "{}") or "{}")
         data["status_label"] = RUN_STATUSES.get(data["status"], data["status"])
+        if data['summary'].get('collection_only') and data['status'] in ('SUCCESS', 'NO_CHANGE', 'BASELINE'):
+            data['status_label'] = '분석 준비 완료'
         return data
 
     # -- Finding -----------------------------------------------------------

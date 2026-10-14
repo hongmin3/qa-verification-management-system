@@ -110,8 +110,8 @@ def test_old_comment_explanation_shows_original_and_limit_before_details(world):
     response = world['client'].get(f'/qa-agent/findings/{fid}')
     assert response.status_code == 200
     page = response.text
-    top = page.split('<details class="qa-more">')[0]
-    assert '이 분석이 한 일' in top
+    top = page.split('id="evidence-panel"')[0]
+    assert '판단과 할 일' in top
     assert '원인은 캐시 초기화 누락으로 확인되었습니다.' in top
     assert 'VP-580 본문은 입력에 없어 대조하지 못했습니다.' in top
     assert '작성자 정보 없음' in top
@@ -186,11 +186,19 @@ def test_comment_explanation_in_http_browser(world):
                     page.goto(f'http://127.0.0.1:{server.server_port}/qa-agent/findings/{finding["id"]}',
                               wait_until='domcontentloaded', timeout=120000)
                     explanation = page.locator('#analysis-explanation')
-                    assert '이 분석이 한 일' in explanation.inner_text()
+                    assert '판단과 할 일' in explanation.inner_text()
+                    explanation.locator('details > summary').first.click()
                     original = explanation.locator('.comment-original').first
                     original.locator('summary').click()
                     assert original.get_attribute('open') is not None
                     assert '원인은 캐시 초기화 누락' in original.inner_text()
+                    page.get_by_role('tab', name='근거 자료', exact=True).click()
+                    assert page.locator('#evidence-panel').is_visible()
+                    assert not explanation.is_visible()
+                    page.get_by_role('tab', name='근거 자료', exact=True).press('ArrowRight')
+                    assert page.locator('#processing').is_visible()
+                    page.get_by_role('tab', name='분석 기록·처리 상태', exact=True).press('Home')
+                    assert explanation.is_visible()
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
                     assert not errors
                     page.close()

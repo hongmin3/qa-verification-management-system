@@ -9,6 +9,11 @@ description: 연구소가 "사양대로(SPEC)" 또는 "결함 아님(NOT_BUG)"�
 
 ## 입력
 
+`verification_mode=true`이면 선택한 버전의 `candidates.tcs`도 비교한다. 연구소가 사양이라고 설명해도
+원문에 그 동작과 적용 버전·예외가 명시돼 있는지 확인한다. 문서 수정 주장도 수정된 사양 본문과 대조한다.
+말과 원문이 다르면 이슈 설명 수정·TC 보완·실제 장비 동작 확인 중 필요한 조치를 근거와 함께 제안한다.
+확인할 수 없는 사실은 단정하지 않는다. `sections.tc_coverage`에 TC 위치·`covers`·이유를 남긴다.
+
 `in/SPC-*.json` 의 `items[]`: `target`, `events[]`, `issue`(본문·재현 절차·발생 원인·조치 내용·
 연구소 댓글 `comments[]`), `candidates.srs[]`, `candidates.spec_docs[]`, `candidates.issues[]`(비슷한 과거 이슈와 처리 결과).
 

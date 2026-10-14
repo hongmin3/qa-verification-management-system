@@ -110,7 +110,7 @@ def test_dashboard_renders_summary_cards_and_recent_runs(world):
     response = world["client"].get("/qa-agent")
     assert response.status_code == 200
     page = response.text
-    for heading in ("등록 자료와 최신 상태", "점검 실행 <span class=\"hint\">· VXvue</span>", "최신 분석 결과", "최근 실행"):
+    for heading in ("등록 자료와 최신 상태", "점검 실행 <span class=\"hint\">· VXvue</span>", "분석결과", "최근 실행"):
         assert heading in page
     assert "[VP-200]" in page and "[VP-100]" in page
     assert f"/qa-agent/runs/{world['changed']['run_id']}" in page
@@ -572,7 +572,7 @@ def test_card_has_at_most_three_todos_and_no_badge_row(world):
     card = dash.card(finding)
     assert card["todos"] == ["첫째", "둘째", "셋째"] and card["level"] == "검토 필요"
     page = world["client"].get("/qa-agent").text
-    cards = page[page.index("최신 분석 결과"):page.index("최근 실행")]
+    cards = page[page.index("분석결과"):page.index("최근 실행")]
     assert 'class="tags"' not in cards and "기존 Issue" not in cards        # 칩 줄이 없다
     assert 'class="level ' in cards
 
@@ -596,10 +596,10 @@ def test_old_coverage_finding_renders_key_block_and_details(world):
            "draft_tcs": [], "confidence": "Review Needed", "action": "TC_2 Expected 수정"}
     finding_id = store.add_finding(world["changed"]["run_id"], "qa-spec-coverage-analysis", "COV-001", old, product="vxvue")
     page = world["client"].get(f"/qa-agent/findings/{finding_id}").text
-    key = page[page.index('id="key-result"'):page.index('<details class="qa-more">')]
+    key = page[page.index('id="key-result"'):page.index('id="evidence-panel"')]
     assert "검토 필요" in key and "옛 Coverage 요약" in key and "정렬 바뀜" in key and "TC_2 Expected 수정" in key
     assert 'data-action="tc-check"' in key
-    assert "<h3>Checklist의 검증 범위" in page[page.index('<details class="qa-more">'):]
+    assert "<h3>Checklist의 검증 범위" in page[page.index('id="evidence-panel"'):]
 
 
 def test_detail_shows_on_demand_buttons_only_for_their_analysis(world):

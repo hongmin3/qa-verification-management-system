@@ -102,12 +102,15 @@ def test_srs_spec_doc_and_tc_candidates_never_exceed_their_limits(tmp_path, pool
 
 
 @pytest.mark.parametrize("with_tc", [False, True])
-def test_new_issue_input_never_carries_tc_candidates(tmp_path, with_tc):
-    """신규 이슈 분석은 TC 를 보지 않는다. 요청 실행도 없다 (REQ-QAINTEL-012 입력)."""
+def test_new_issue_input_tc_candidates_follow_verification_mode(tmp_path, with_tc):
+    """REQ-QAINTEL-045: 통합 검증에서만 신규 이슈에 선택 TC 후보를 보낸다."""
     cfg = cfg_with(tmp_path, tc_limit=15)
     corpus = corpus_of([mk_issue("VP-900")], tcs=[mk_tc(number) for number in range(12)])
     item, _ = item_for(NEW_ISSUE, "VP-900", corpus, cfg, with_tc=with_tc)
-    assert "tcs" not in item["candidates"]
+    if with_tc:
+        assert len(item['candidates']['tcs']) == 12
+    else:
+        assert 'tcs' not in item['candidates']
 
 
 def test_zero_spec_doc_limit_sends_no_spec_doc(tmp_path):

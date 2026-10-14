@@ -339,7 +339,8 @@ class AnalysisTarget:
 def _without_authors(value):
     """AI 입력용 사본. 변경 이벤트에 중첩된 댓글 작성자도 보내지 않는다."""
     if isinstance(value, dict):
-        return {key: _without_authors(item) for key, item in value.items() if key != "author"}
+        return {key: _without_authors(item) for key, item in value.items() if key not in
+                ('author', 'reporter_id', 'reporter_name', 'reporter_source', 'reporter_synced_at')}
     if isinstance(value, list):
         return [_without_authors(item) for item in value]
     return value
@@ -431,6 +432,11 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
                 "previous_analysis": {"summary": (previous.get("summary") or "")[:600],
                                       "analysis_type": previous.get("analysis_type", ""),
                                       "created_at": previous.get("created_at", "")} if previous else None}
+        if with_tc:
+            terms = extract_terms(issue.get('title', ''), *(comment.get('text', '') for comment in fresh))
+            spec = corpus.spec_candidates(terms, issue.get('title', ''), intel.spec_candidates, intel.spec_doc_candidates, known)
+            item['candidates'].update(srs=spec['srs'], spec_docs=spec['spec_docs'],
+                tcs=corpus.tc_candidates(terms, issue.get('title', ''), cfg.tc_candidate_limit))
         return _without_authors(item)
     if comments:
         known.comment_ids.update(comment["id"] for comment in comments if comment.get("id"))
@@ -445,6 +451,9 @@ def build_item(target: AnalysisTarget, corpus: Corpus, known: KnownIds, cfg, com
             "candidates": {"issues": corpus.similar_issues(issue, intel.issue_candidates), "srs": spec["srs"],
                            "spec_docs": spec["spec_docs"]},
             "search": spec["search"]}
+    if with_tc:
+        linked = tuple(value for value in issue.get('linked_ids') or () if value in corpus.srs_by_id)
+        item['candidates']['tcs'] = corpus.tc_candidates(terms, query, cfg.tc_candidate_limit, srs_ids=linked)
     if kind == FIXED_ISSUE:
         if with_tc:
             linked = tuple(value for value in issue.get("linked_ids") or () if value in corpus.srs_by_id)
