@@ -9,11 +9,12 @@ from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
 from app.core.qa_execution_storage import QaExecutionStorageMixin
 from app.core.vxchat_storage import VxChatStorageMixin
+from app.core.vxdesk_storage import VxDeskStorageMixin
 
 from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
 
 
-class Storage(DailyQaStorageMixin, VxChatStorageMixin, QaExecutionStorageMixin):
+class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExecutionStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -21,6 +22,7 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, QaExecutionStorageMixin):
         self._initialize_daily_qa()
         self._initialize_qa_execution()
         self._initialize_vxchat()
+        self._initialize_vxdesk()
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
