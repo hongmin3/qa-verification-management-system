@@ -53,6 +53,8 @@ from app.modules.daily_qa.collector import CollectionError, collect_issues, coll
 from app.modules.daily_qa.evidence_validation import draft_key, validate_finding
 from app.modules.daily_qa.intelligence import ANALYSIS_SKILLS, ON_DEMAND_SKILLS, AnalysisTarget, Corpus, build_item, build_tasks
 from app.modules.daily_qa.input_budget import select_backlog, split_tasks
+from app.core import claude_usage
+from app.core.notifier import mask_address
 from app.modules.daily_qa import execution_budget
 from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient
 from app.modules.daily_qa.schema import (
@@ -177,6 +179,20 @@ def default_spec_chunks(product: str, cfg: DailyQaSettings) -> tuple[list, dict,
     return chunks, labels, [str(item.get("name") or item.get("id") or "") for item in failures]
 
 
+def _saved_usage_reading() -> dict:
+    try:
+        return claude_usage.saved_reading()
+    except Exception:  # noqa: BLE001 - 사용량 기록을 못 읽어도 점검은 계속한다
+        return {"five_hour": None, "seven_day": None, "measured_at": ""}
+
+
+def _mail_note(email: dict, recipients: tuple[str, ...], now: datetime) -> str:
+    """메일 단계 비고: `발송 <한국 시간> · 수신 <가린 주소> · Message-ID <값>` (REQ-MAIL-002). 주소 원문은 쓰지 않는다."""
+    masks = list(email.get("recipient_masks") or []) or [mask_address(item) for item in recipients]
+    stamp = now.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M")
+    return f"발송 {stamp} · 수신 {', '.join(masks) or '기본 수신자'} · Message-ID {email.get('message_id') or '확인 못 함'}"
+
+
 def _stage(status: str, note: str = "", **counts) -> dict:
     return {"status": status, "note": note, **({"counts": counts} if counts else {})}
 
@@ -264,9 +280,13 @@ def run_daily(
             outcome["summary"]["automation_policy"] = automation_policy.get_policy(store, cfg.slug)
             outcome["summary"]["automatic_resume_enabled"] = bool(not cfg.savings_enabled and cfg.enabled and schedule_settings()["enabled"])
             outcome["summary"]["pending_analysis_events"] = len(store.list_events(product=cfg.slug, statuses=("pending", "failed")))
+            if cfg.savings_enabled:
+                next_run = automation_policy.next_run(cfg, store, schedule_settings(), today)
+                outcome["summary"]["next_run"] = next_run.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M") if next_run else ""
+            usage = claude_usage.reading_for_run(run_id, store.storage, before=outcome["summary"].get("usage_before")) if cfg.savings_enabled else None
             subject, text, body = report.build_email(
                 run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
-                product=cfg.product,
+                product=cfg.product, usage=usage,
             )
             if outcome["summary"].get("collection_only"):
                 subject = "[변경 목록, AI 미분석] " + subject
@@ -281,8 +301,10 @@ def run_daily(
             # 사용자 제공 발송기도 실행 잠금과 종료 기록을 남긴다.
             email = {"status": "failed", "error": type(exc).__name__}
         store.set_email_status(run_id, str(email.get("status", "")))
-        outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok"
-                                            if email.get("status") == "sent" else "skipped", str(email.get("error") or email.get("reason") or ""))
+        sent = email.get("status") == "sent"
+        outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok" if sent else "skipped",
+                                            _mail_note(email, cfg.email_to, datetime.now(timezone.utc)) if sent
+                                            else str(email.get("error") or email.get("reason") or ""))
         if email.get("status") == "failed" and outcome["status"] != "FAILED":
             outcome["status"] = "PARTIAL"
         store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
@@ -396,6 +418,8 @@ class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
                  spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all"):
         self.selection_id = selection_id
+        #: 실행을 시작할 때 저장해 둔 가장 최근 사용률. 메일의 "실행 전 값"이다 (REQ-QAINTEL-048). 못 읽으면 값 없음.
+        self.usage_before = _saved_usage_reading()
         self.collection_only = cfg.savings_enabled and trigger == 'prepare' and not on_demand
         if analysis_scope not in ('all', 'spec', 'issues'):
             raise ValueError('알 수 없는 분석 범위입니다.')
@@ -1220,7 +1244,10 @@ class _Run:
                     execution_budget.finish_call(self.store.storage, ticket, {})
                 raise
             if ticket:
-                execution_budget.finish_call(self.store.storage, ticket, outcome.meta or {})
+                # 메일의 대상별 사용량(REQ-QAINTEL-048)이 읽도록 모델·분석 종류·대상 번호를 호출 기록에 함께 남긴다.
+                execution_budget.finish_call(self.store.storage, ticket, {
+                    **(outcome.meta or {}), "model": model, "kind": kind or "",
+                    "targets": [item.get("target") for item in task.payload.get("items") or [] if item.get("target")]})
             self.claude_calls += 0 if self.dry_run or (outcome.meta or {}).get("cli_started") is False else 1
             self._add_usage(outcome.meta)
             entry[f"attempt{attempt}"] = {"ok": outcome.ok, "seconds": round(outcome.seconds, 1), "error": outcome.error[:300], "meta": outcome.meta}
@@ -1325,6 +1352,17 @@ class _Run:
         outcome.cache_hit = cache_source is not None  # type: ignore[attr-defined]
         outcome.rejected = len(rejected)  # type: ignore[attr-defined]
         return outcome
+
+    def _stored_results(self, category: str) -> list[dict]:
+        """이번 실행에 연결된 결과 목록(메일의 확인할 이슈·사양). 화면 검색과 같은 저장소 조회를 쓴다."""
+        results, page = [], 1
+        while True:
+            found = self.store.storage.qa_search_findings(self.cfg.slug, category=category, run_id=self.run_id, page=page)
+            results.extend({key: row.get(key) for key in ('id', 'subject', 'subject_title', 'reporter_id', 'reporter_name',
+                'issue_updated_at', 'verdict', 'analysis_type')} for row in found['items'])
+            if not found['items'] or len(results) >= found['total']:
+                return results
+            page += 1
 
     def _add_usage(self, meta: dict | None) -> None:
         """작업 한 번의 Claude 사용량을 더한다. 실패한 시도도 이미 쓴 토큰은 센다."""
@@ -1611,16 +1649,10 @@ class _Run:
         summary['basis'] = self.basis
         summary['period'] = self.audit.get('period', {})
         summary['coverage'] = self.audit.get('coverage', {})
+        summary['usage_before'] = self.usage_before
         if self.cfg.savings_enabled and not self.dry_run:
-            issue_results, page = [], 1
-            while True:
-                found = self.store.storage.qa_search_findings(self.cfg.slug, category='issues', run_id=self.run_id, page=page)
-                issue_results.extend({key: row.get(key) for key in ('id', 'subject', 'reporter_id', 'reporter_name',
-                    'issue_updated_at', 'verdict', 'analysis_type')} for row in found['items'])
-                if len(issue_results) >= found['total']:
-                    break
-                page += 1
-            summary['issue_results'] = issue_results
+            summary['issue_results'] = self._stored_results('issues')
+            summary['spec_results'] = self._stored_results('spec')
         summary["events"] = self.audit.get("events", {})
         summary["ai_settings"] = self.audit["ai_settings"]
         summary["claude_calls"] = self.claude_calls

@@ -49,6 +49,19 @@ class QaExecutionStorageMixin:
         with self.connect() as db:
             db.execute("UPDATE qa_call_reservations SET state=?,outcome_json=? WHERE id=? AND state='reserved'",(state,json.dumps(outcome),key))
 
+    def qa_run_calls(self, run_id):
+        """한 실행의 호출 기록(시작 순서): `[{"state": ..., "outcome": {...}}]`. 읽을 수 없는 기록은 빈 결과로 둔다."""
+        with self.connect() as db:
+            rows = db.execute('SELECT state,outcome_json FROM qa_call_reservations WHERE run_id=? ORDER BY rowid', (run_id,)).fetchall()
+        calls = []
+        for state, raw in rows:
+            try:
+                outcome = json.loads(raw or '{}')
+            except ValueError:
+                outcome = {}
+            calls.append({'state': state, 'outcome': outcome if isinstance(outcome, dict) else {}})
+        return calls
+
     def qa_call_usage(self, day):
         with self.connect() as db:
             rows=db.execute('SELECT state,count(*) AS n FROM qa_call_reservations WHERE day=? GROUP BY state',(day,)).fetchall()

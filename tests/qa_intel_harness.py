@@ -73,6 +73,8 @@ class Harness:
             "skill": task.skill, "task_id": task.task_id, "gate_status": getattr(self, 'gate_status', {"G1": "PASS"}), "findings": findings,
             "open_questions": [], "human_review_required": True}, ensure_ascii=False), encoding="utf-8")
         meta = {"usage": self.usage, "total_cost_usd": 0.01} if self.usage else {}
+        if getattr(self, "rate_limit", None):
+            meta["rate_limit"] = self.rate_limit
         return RunnerOutcome(True, 0, 0.0, meta=meta)
 
     def run(self, day: datetime, **kwargs) -> dict:

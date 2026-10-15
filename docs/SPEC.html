@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="3c61efb32da50ccee978bd7bd732c5edc50eac14874afd05df70177cc188a014">
+<meta name="spec-source-sha256" content="ca1ea6149abfc15bc9e55fb9048793e82ed32170e97b6091eb578d314f467c56">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -822,9 +822,9 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a></td><td data-label="이름">할당량 소진·모델 사용 불가 알림</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-USAGE-004">REQ-USAGE-004</a></td><td data-label="이름">비용 추정</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/model_router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-002">TEST-AICALL-002</a>: <code>tests/test_model_router.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">MAIL</span> 메일 발송 공통</th></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a></td><td data-label="이름">메일 발송 공통</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/notifier.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a></td><td data-label="이름">메일 발송 공통</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a></td><td data-label="이름">정기 보고 메일</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a></td><td data-label="이름">메일 설정 확인·시험 발송</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>scripts/test_notification.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a></td><td data-label="이름">메일 설정 확인·시험 발송</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>scripts/test_notification.py</code>, <code>app/core/notifier.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">SCHED</span> 앱 내장 예약 실행기</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-SCHED-001">REQ-SCHED-001</a></td><td data-label="이름">앱 안 예약 실행기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/scheduler.py</code>, <code>app/main.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a></td><td data-label="이름">등록된 예약 작업</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
@@ -978,7 +978,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-045">REQ-QAINTEL-045</a></td><td data-label="이름">검증 버전과 두 분석의 역할</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/daily_qa/workflow_settings.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/intelligence.py</code></td><td data-label="테스트"><code>tests/test_qa_workflow_settings.py</code>, <code>tests/test_qa_savings_workflow.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-046">REQ-QAINTEL-046</a></td><td data-label="이름">대상별 결과 연결과 결과 탐색</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/daily_qa/target_reuse.py</code>, <code>app/core/qa_execution_storage.py</code>, <code>app/modules/qa_agent/result_views.py</code></td><td data-label="테스트"><code>tests/test_qa_target_reuse.py</code>, <code>tests/test_qa_issue_reporter.py</code>, <code>tests/test_qa_results_reader.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-047">REQ-QAINTEL-047</a></td><td data-label="이름">분석 판정과 QA 처리 상태</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/templates/finding_detail.html</code>, <code>app/web/static/qa-reading.js</code></td><td data-label="테스트"><code>tests/test_qa_results_reader.py</code>, <code>tests/test_qa_finding_explanation.py</code></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td><td data-label="이름">두 분석의 예약 실행과 요약 메일</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/report.py</code></td><td data-label="테스트"><code>tests/test_qa_savings_workflow.py</code>, <code>tests/test_qa_workflow_email.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td><td data-label="이름">두 분석의 예약 실행과 요약 메일</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR QAINTEL</span> QA Intelligence Agent</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></td><td data-label="이름">AI 는 변경이 있을 때만 부른다</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/pipeline.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a>: <code>tests/test_qa_intel_pipeline.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-QAINTEL-002">NFR-QAINTEL-002</a></td><td data-label="이름">제품 공통 엔진</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/product_adapter.py</code>, <code>docs/PRODUCT_ONBOARDING.md</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAINTEL-002">TEST-QAINTEL-002</a>: <code>tests/test_qa_intel_products.py</code></td></tr>
@@ -1200,7 +1200,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>알림</th><th>언제 오나</th><th>받는 곳</th><th>담는 것</th><th>요구사항</th></tr></thead>
 <tbody>
-<tr><td data-label="알림">QA Agent 요약 메일(제목 <code>[QA Agent]</code>)</td><td data-label="언제 오나">점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기)</td><td data-label="받는 곳"><code>DAILY_QA_EMAIL_TO</code> 의 수신자</td><td data-label="담는 것">오늘 변경 요약, 새 <span class="term" title="AI 가 낸 판정 한 건. 근거 위치와 사람 검토 상태를 함께 저장한다. 화면에도 이 이름으로 보인다" tabindex="0">Finding</span> 수, 실패한 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>와 첫 실패 이유, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량 한도와 초기화 시각, 점검 기록 보기 링크</td><td data-label="요구사항"><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a></td></tr>
+<tr><td data-label="알림">QA Agent 요약 메일(제목 <code>[QA Agent] &lt;제품&gt; …</code>)</td><td data-label="언제 오나">점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기)</td><td data-label="받는 곳"><code>DAILY_QA_EMAIL_TO</code> 의 수신자</td><td data-label="담는 것">상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·사양과 결과 링크, 남은 일, 이번 실행의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량, 점검 기록 보기 링크</td><td data-label="요구사항"><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td></tr>
 <tr><td data-label="알림">QA Agent 대시보드</td><td data-label="언제 오나">메일 링크를 누르거나 아무 때나</td><td data-label="받는 곳"><code>/qa-agent</code></td><td data-label="담는 것">마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안, 기간별 결과. 승인·거절 입력은 없다</td><td data-label="요구사항"><a class="idref" href="#REQ-QAINTEL-019">REQ-QAINTEL-019</a>, <a class="idref" href="#REQ-QAINTEL-020">REQ-QAINTEL-020</a></td></tr>
 <tr><td data-label="알림"><span class="term" title="Google 의 생성형 AI. 설정(ai.provider: gemini)으로 고르면 QA Agent·매뉴얼 개정 검토이 Claude 대신 부른다" tabindex="0">Gemini</span> 할당량 소진·모델 사용 불가 메일</td><td data-label="언제 오나">분석 중 사람이 조치해야 하는 <span class="term" title="Google 의 생성형 AI. 설정(ai.provider: gemini)으로 고르면 QA Agent·매뉴얼 개정 검토이 Claude 대신 부른다" tabindex="0">Gemini</span> 오류가 날 때. 같은 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 <span class="term" title="같은 종류의 알림 메일을 다시 보내지 않는 시간(notifications.email.cooldown_minutes)이다" tabindex="0">재발송 대기 시간</span> 동안 다시 보내지 않는다</td><td data-label="받는 곳"><code>NOTIFY_EMAIL_TO</code> 의 수신자</td><td data-label="담는 것">발생 시각, 모델, 가린 오류 문구, 조치 방법</td><td data-label="요구사항"><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a></td></tr>
 <tr><td data-label="알림">ALM 통합 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 메일</td><td data-label="언제 오나">평일 09:00 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 뒤</td><td data-label="받는 곳">ALM-QA-Automation 설정의 수신자</td><td data-label="담는 것">바뀐 사양과 연결된 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>, 우선순위</td><td data-label="요구사항">이 저장소 밖</td></tr>
@@ -7802,7 +7802,7 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-AICALL-006">
 <h3><span class="idtag">REQ-AICALL-006</span> Claude 사용량 남은 양 보기</h3>
-<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/claude_usage.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/main.py</code>, <code>app/web/templates/_claude_usage.html</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/static/vxvue-chatbot.js</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a>: <code>tests/test_claude_usage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code>, <code>tests/test_vxvue_chat_router.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a></span></div>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/claude_usage.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/main.py</code>, <code>app/web/templates/_claude_usage.html</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/static/vxvue-chatbot.js</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a>: <code>tests/test_claude_usage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code>, <code>tests/test_vxvue_chat_router.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>, <a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a></span></div>
 <details class="history"><summary>변경 이력 3</summary>
 <ul>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-AICALL-006">REQ-AICALL-006</a>: 챗봇 상단에 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 5시간·주간 사용량 칸 두 개를 보인다. 사용한 비율과 짧은 초기화 시각을 함께 보이고, 남은 비율이 20% 아래면 주황, 0%면 빨강이다. 화면을 열 때, 답변이 끝난 직후, 화면이 보이는 동안 5분마다 갱신한다. 서버 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 계정 하나의 사용률이며 챗봇과 <span class="term" title="서버가 평일 아침마다 제품별로 스스로 돌리는 QA Intelligence Agent 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>이 함께 쓴다.</li>
@@ -7978,7 +7978,7 @@ python scripts/rule_capability_report.py --markdown
 <li>메일을 보낸다. 성공하면 발송 시각과 보낸 수를 기록한다(<code>sent</code>).</li>
 <li>보내다 실패해도 선점 시각은 이미 기록됐으므로 대기 시간이 걸린다(<code>failed</code>).</li>
 </ol>
-<p><strong>결과</strong> 메일 제목은 <code>[QA 시스템] &lt;제목 이름&gt;</code> 이다. 본문에는 다음이 들어간다.</p>
+<p><strong>결과</strong> 메일 제목은 <code>[QA Agent] &lt;제목 이름&gt;</code> 이다(<a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>). 본문에는 다음이 들어간다.</p>
 <ul>
 <li>발생 시각, 모델·프롬프트 이름과 판</li>
 <li>가린 오류 문구(1500자까지)</li>
@@ -8025,14 +8025,29 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-MAIL-001">
 <h3><span class="idtag">REQ-MAIL-001</span> 메일 발송 공통</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a>, <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#REQ-CONF-002">REQ-CONF-002</a>, <a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a>, <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#REQ-CONF-002">REQ-CONF-002</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>, <a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a>, <a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 메일 제목·본문 재구성</span> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>: 모든 메일 제목이 <code>[QA Agent]</code>로 시작한다. 예약 점검 요약은 <code>[QA Agent] &lt;제품&gt; &lt;MM/DD&gt; 점검 · 검토 필요 N건 · 대기 N건</code>(실패·한도는 뒤에 덧붙임)이고, 운영 알림은 <code>[QA Agent] &lt;알림 이름&gt;</code>이다. 제목은 <code>mail_subject</code> 한 곳에서 만든다. 기존 <code>[QA 시스템]</code>·<code>[QA]</code> 머리말은 없어진다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 알림 메일(<a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a>)과 정기 보고 메일(<a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>)이 같은 SMTP 설정으로 나간다. 설정이 없으면 보내지 않고, 다른 동작에는 영향이 없다.</p>
 <p><strong>순서</strong></p>
 <ol>
 <li>켜져 있고 서버·발신자·수신자가 모두 있어야 &quot;보낼 조건이 됨&quot;(<code>configured</code>)이다. 계정은 필수가 아니다(인증 없는 사내 SMTP 도 있다).</li>
 <li>접속 제한 시간은 20초다.</li>
 <li>발송 함수는 어떤 경우에도 예외를 올리지 않고 결과 상태만 돌려준다.</li>
+<li>제목은 제목 생성 함수(<code>mail_subject</code>) 한 곳에서만 만든다. 모든 메일 제목은 <code>[QA Agent]</code>로 시작하고, <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>이 있는 메일은 그 뒤에 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 이름이 온다.</li>
 </ol>
+<p class="why"><span class="why-label">이유</span> 메일 프로그램의 분류 규칙이 <code>[QA Agent] &lt;제품&gt;</code> 머리말로 폴더를 나누기 때문이다. 머리말이 메일마다 다르면 규칙이 일부 메일을 놓친다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>메일</th><th>제목</th></tr></thead>
+<tbody>
+<tr><td>운영 알림(한도·인증·할당량)</td><td><code>[QA Agent] &lt;알림 이름&gt;</code></td></tr>
+<tr><td>예약 점검 요약</td><td><code>[QA Agent] &lt;제품&gt; &lt;MM/DD&gt; 점검 · 검토 필요 &lt;N&gt;건 · 대기 &lt;N&gt;건</code> 뒤에 실패일 때만 <code> · 일부 실패</code> 또는 <code> · 실패</code>, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 한도에 걸렸으면 <code> · &lt;한도 이름&gt;</code></td></tr>
+<tr><td>시험 발송(<a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>)</td><td><code>[QA Agent] [시험] &lt;알림 이름&gt;</code></td></tr>
+</tbody>
+</table></div>
 <p><strong>결과</strong> 설정 상태를 값은 빼고 알려 준다: <code>enabled</code>, <code>configured</code>, <code>host_set</code>, <code>sender_set</code>, <code>recipient_count</code>, <code>credentials_set</code>, <code>cooldown_minutes</code>, <code>warnings</code>.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>경고 조건</th><th>문구 요지</th></tr></thead>
@@ -8058,20 +8073,35 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-MAIL-002">
 <h3><span class="idtag">REQ-MAIL-002</span> 정기 보고 메일</h3>
-<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>, <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 메일 제목·본문 재구성</span> <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>: 발송 결과에 <code>message_id</code>(메일 고유 번호)와 가린 수신 주소를 담는다. 점검 기록의 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>에 <code>발송 시각 · 수신 · Message-ID</code>를 남긴다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 일일 QA 점검 요약처럼 정해진 보고를 한 통 보낸다. <span class="term" title="같은 종류의 알림 메일을 다시 보내지 않는 시간(notifications.email.cooldown_minutes)이다" tabindex="0">재발송 대기 시간</span>을 적용하지 않는다.</p>
 <p><strong>순서</strong></p>
 <ol>
 <li>수신자를 넘기면 그 주소로, 아니면 <code>NOTIFY_EMAIL_TO</code> 로 보낸다(일일 QA 는 <code>DAILY_QA_EMAIL_TO</code> 를 넘긴다).</li>
 <li>글 본문을 넣고, HTML 본문이 있으면 함께 넣는다.</li>
+<li>메일마다 <code>Message-ID</code>(메일 고유 번호)를 발신 주소의 도메인으로 만들어 직접 넣는다. 나중에 메일 서버 기록과 대조할 수 있게 하기 위해서다.</li>
 <li>예외를 올리지 않는다.</li>
 </ol>
-<p><strong>결과</strong> <code>sent</code>(수신자 수), <code>not_configured</code>, <code>failed</code>(오류 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 로그와 결과에서 가린다.</p>
+<p><strong>결과</strong> <code>sent</code>(수신자 수, 가린 수신 주소 <code>recipient_masks</code>, 메일 고유 번호 <code>message_id</code>), <code>not_configured</code>, <code>failed</code>(오류 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 로그와 결과에서 가린다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>가린 주소는 앞 세 글자만 남긴다: <code>hon***@vieworks.com</code>. 아이디가 세 글자 이하이면 첫 글자만 남긴다.</p>
+</aside>
+<p>예약 점검 메일을 보내면 점검 기록의 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span> 비고에 <code>발송 &lt;한국 시간&gt; · 수신 &lt;가린 주소&gt; · Message-ID &lt;값&gt;</code>을 남긴다. 메일을 받지 못했다는 문의가 오면 이 줄로 발송 여부와 메일 서버 기록을 대조한다. 본문의 구성과 링크 규칙은 <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>이 정한다.</p>
 <p>정기 점검은 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>가 끝날 때까지 <code>RUNNING</code>으로 남긴다. 메일 실패는 점검 기록 보기의 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>에 기록하며, 앞 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>가 성공했어도 실행 결과는 <code>PARTIAL</code>이다. 앞 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>의 실패 결과는 그대로 유지한다.</p>
 </section>
 <section class="card kind-req" id="REQ-MAIL-003">
 <h3><span class="idtag">REQ-MAIL-003</span> 메일 설정 확인·시험 발송</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/test_notification.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/test_notification.py</code>, <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 메일 제목·본문 재구성</span> <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>: 설정 화면이 쓸 시험 발송 함수 <code>send_test</code>를 추가했다. 재발송 대기 기록을 건드리지 않는다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 운영자가 메일 설정이 맞는지 보고 시험 메일을 보낸다.</p>
 <p><strong>언제</strong> 운영자가 명령을 직접 돌릴 때.</p>
 <pre><code class="language-text">python scripts/test_notification.py                                   # 설정 상태만
@@ -8085,6 +8115,13 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li>최근 알림 기록을 찍는다.</li>
 <li><code>--send</code> 면 그 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>의 대기 시간 기록을 지우고 &quot;테스트 발송입니다. 실제 오류가 아닙니다.&quot; 알림을 보낸다. 실패하면 종료 코드 1 이다.</li>
 </ol>
+<p><strong>설정 탭에서 보내는 시험 발송</strong> 시험 발송 함수(<code>send_test(kind, recipients)</code>)가 화면에서 고른 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>의 시험 메일을 고른 수신자에게만 보낸다.</p>
+<ul>
+<li><span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 알림 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span> 값(<code>claude_usage_limit</code> 등) 또는 <code>report</code>(예약 점검 요약 예시)다.</li>
+<li><span class="term" title="같은 종류의 알림 메일을 다시 보내지 않는 시간(notifications.email.cooldown_minutes)이다" tabindex="0">재발송 대기 시간</span>을 쓰지도 지우지도 않는다. 실제 알림의 대기 기록에 영향이 없다.</li>
+<li>제목은 <code>[QA Agent] [시험] &lt;알림 이름&gt;</code>이고 본문 첫 줄에 &quot;시험 발송입니다. 실제 오류가 아닙니다.&quot;를 쓴다.</li>
+<li>결과는 <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>와 같다(<code>status</code>, <code>recipients</code>, <code>recipient_masks</code>, <code>message_id</code>). 알 수 없는 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 보내지 않고 <code>failed</code>를 돌려준다.</li>
+</ul>
 </section>
 <section class="card kind-req" id="REQ-SCHED-001">
 <h3><span class="idtag">REQ-SCHED-001</span> 앱 안 예약 실행기</h3>
@@ -11742,10 +11779,11 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <h3><span class="idtag">TEST-USAGE-002</span></h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a>, <a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a></span></div>
 <p><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a>, <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a> 을 <code>tests/test_notifier.py</code> 로 확인한다: 오류 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span> <span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>, 대상 아닌 오류는 무시, 할당량 오류에 메일 한 통, 조치 방법·맥락 포함, 오류 문구 <span class="term" title="외부로 보내는 글에서 환자 이름·IP·경로 같은 값을 [PATIENT_NAME] 같은 자리표로 바꾸는 일이다" tabindex="0">가리기</span>, 같은 오류 두 번째는 억제, <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>별 대기 시간 분리, 대기 시간이 지나면 다시 보냄, 발송 실패에도 대기 시간 시작, 수신자 없음·설정 꺼짐이면 안 보냄, 상태에 값 없음, 계정 없음 경고, 실제 호출 경로에서 알림, 알림 기록.</p>
+<p>메일 제목과 발송 결과는 같은 파일의 다음 시험이 확인한다: 모든 제목이 <code>[QA Agent]</code>로 시작, 발송 결과의 <code>Message-ID</code>가 실제 메일 머리글과 같음, 가린 수신 주소, 시험 발송이 대기 기록을 건드리지 않음.</p>
 </section>
 <section class="card kind-test" id="TEST-MAIL-001">
 <h3><span class="idtag">TEST-MAIL-001</span></h3>
-<p><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>, 003 은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 <code>scripts/test_notification.py</code> 를 실행해 상태를 보고 <code>--send</code> 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a> 이 본문 내용을 본다.</p>
+<p><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>의 <code>Message-ID</code>·가린 주소와 <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>의 시험 발송 함수는 <code>tests/test_notifier.py</code>가 확인한다. 명령줄 시험 발송(<code>scripts/test_notification.py</code>)은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 <code>scripts/test_notification.py</code> 를 실행해 상태를 보고 <code>--send</code> 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a> 이 본문 내용을 본다.</p>
 </section>
 <section class="card kind-test" id="TEST-SCHED-001">
 <h3><span class="idtag">TEST-SCHED-001</span></h3>
@@ -12328,9 +12366,9 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-002">REQ-USAGE-002</a></td><td data-label="Implementation"><code>app/modules/qa_agent/router.py</code>, <code>app/core/storage.py</code>, <code>app/core/usage.py</code>, <code>app/modules/manual_review/router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-001">TEST-USAGE-001</a>: <code>tests/test_persistent_analyses.py</code>, <code>tests/test_cost_dashboard.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a></td><td data-label="Implementation"><code>app/core/notifier.py</code>, <code>app/core/gemini_client.py</code>, <code>app/core/storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code>, <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-004">REQ-USAGE-004</a></td><td data-label="Implementation"><code>app/core/model_router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-002">TEST-AICALL-002</a>: <code>tests/test_model_router.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a></td><td data-label="Implementation"><code>app/core/notifier.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a></td><td data-label="Implementation"><code>app/core/notifier.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a></td><td data-label="Implementation"><code>scripts/test_notification.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a></td><td data-label="Implementation"><code>app/core/notifier.py</code>, <code>app/modules/daily_qa/report.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code>, <code>tests/test_qa_workflow_email.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a></td><td data-label="Implementation"><code>app/core/notifier.py</code>, <code>app/modules/daily_qa/pipeline.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code>, <code>tests/test_qa_workflow_email.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a></td><td data-label="Implementation"><code>scripts/test_notification.py</code>, <code>app/core/notifier.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-SCHED-001">REQ-SCHED-001</a></td><td data-label="Implementation"><code>app/core/scheduler.py</code>, <code>app/main.py</code></td><td data-label="Test"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a></td><td data-label="Implementation"><code>app/modules/knowledge/scheduled_jobs.py</code>, <code>app/modules/qa_agent/scheduled_jobs.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code></td><td data-label="Test"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a>: <code>tests/test_daily_qa_pipeline.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a></td><td data-label="Implementation"><code>app/web/router.py</code>, <code>app/web/templates/hub.html</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -14630,9 +14668,10 @@ AI가 분석한 것
 </section>
 <section class="card kind-req" id="REQ-QAINTEL-048">
 <h3><span class="idtag">REQ-QAINTEL-048</span> 두 분석의 예약 실행과 요약 메일</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/report.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_savings_workflow.py</code>, <code>tests/test_qa_workflow_email.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>, <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a></span></div>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-15 메일 제목·본문 재구성</span> <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>: 예약 점검 메일 본문을 상태 띠·숫자 네 칸·확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·확인할 사양·남은 일·<span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량·바닥글 순서로 다시 짰다. 링크는 <code>daily_qa.review_base_url</code> 기준 절대 주소이고 값이 없으면 <code>서버 주소 미설정</code> 문구를 쓴다. 이번 실행의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량(실행 전·후 5시간 사용률, 주간 사용률, 대상별 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>)을 보인다.</li>
 <li><span class="hist">2026-10-14 선택 분석과 통합 점검</span> <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>: 예약 시 사양·<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석을 함께 실행하고 검증 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>·실제 기간·재사용·미분석과 결과 링크를 메일 한 통으로 묶는다. <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 결과는 최초 작성자별로 묶고 각 작성자의 최신 업데이트부터 나열한다. 새 기능은 절약 모드에서 적용하며 기존 설치의 설정을 자동으로 덮어쓰지 않는다.</li>
 </ul>
 </details>
@@ -14640,7 +14679,36 @@ AI가 분석한 것
 <ul>
 <li><span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>·비교를 한 번 수행하고 사양 분석과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석이 자료를 공유한다. 매일 전체 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 <a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>의 공통 예산에 포함한다.</li>
 <li>일일 모드는 직전 정상 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·<span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>·완료·재사용·미분석·실패를 구분한다. 예산 때문에 끝내지 못한 대상은 대기로 보존한다.</li>
-<li>메일은 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>·검증 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>·실제 기간, 실행 결과, 사양 분석과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석의 건수·<span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>, 남은 대상·자료 누락, 결과 링크 순서로 구성한다. 기존 수신자와 주기를 유지한다.</li>
+<li>메일은 아래 표의 순서로 구성한다. 기존 수신자와 주기를 유지한다. 제목은 <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>이 정한다.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead><tr><th>순서</th><th>구획</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>상태 띠</td><td>완료(초록)·일부 실패(주황)·실패(빨강)와 한 줄 요약</td></tr>
+<tr><td>2</td><td>숫자 네 칸</td><td>새 결과 · 검토 필요 · 대기 · AI 호출</td></tr>
+<tr><td>3</td><td>확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span></td><td>작성자별로 묶고 각 작성자 안에서 최신 업데이트 순. 번호·제목·<span class="term" title="변경 이벤트를 받아 돌리는 AI 분석이다. 신규 이슈(NEW_ISSUE), 수정 완료 이슈(FIXED_ISSUE), Spec 판정 이슈(SPEC_DECISION), 새 댓글(COMMENT), 사양 변경 Coverage(SPEC_COVERAGE)가 있다(REQ-QAINTEL-010)" tabindex="0">분석 종류</span>·<span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 업데이트(한국 시간), <code>결과 열기</code></td></tr>
+<tr><td>4</td><td>확인할 사양</td><td>번호·제목·<span class="term" title="변경 이벤트를 받아 돌리는 AI 분석이다. 신규 이슈(NEW_ISSUE), 수정 완료 이슈(FIXED_ISSUE), Spec 판정 이슈(SPEC_DECISION), 새 댓글(COMMENT), 사양 변경 Coverage(SPEC_COVERAGE)가 있다(REQ-QAINTEL-010)" tabindex="0">분석 종류</span>·<span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>, <code>결과 열기</code></td></tr>
+<tr><td>5</td><td>남은 일</td><td>대기 건수와 다음 자동 실행 시각, <code>상세 분석</code> 링크, 실패 이유를 쉬운 말로 한 줄씩, 자료 누락 기간</td></tr>
+<tr><td>6</td><td>이번 예약 실행의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량</td><td>호출 수·총 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>·모델·5시간 사용량·주간 사용량·대상별 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span></td></tr>
+<tr><td>7</td><td>바닥글</td><td>비교 기준일·확인 가능한 자료 기간·검증 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>·실행 번호·<code>점검 기록 열기</code>·AI 초안 안내</td></tr>
+</tbody>
+</table></div>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>제목: <code>[QA Agent] VXvue 10/15 점검 · 검토 필요 2건 · 대기 12건 · 일부 실패</code></p>
+</aside>
+<ul>
+<li>숫자 네 칸의 <code>새 결과</code>는 이번 실행이 새로 저장한 결과 수다. <code>검토 필요</code>는 그 가운데 <span class="term" title="화면에 보이는 결론이다. 사양과 다름, 검토 필요, 근거 부족, 참고, 문제 없음 다섯 가지다(REQ-QAINTEL-033)" tabindex="0">결론 단계</span>가 <code>문제 없음</code>·<code>참고</code>가 아닌 것(<code>사양과 다름</code>·<code>검토 필요</code>·<code>근거 부족</code>)의 수다.</li>
+<li>본문에 <code>audit.json</code>, <code>Gate G1</code> 같은 파일 이름·점검 코드와 <code>묶음</code>, <code>상한 초과로 미룸</code> 같은 내부 표현을 쓰지 않는다. 그런 내용은 점검 기록 화면에서 본다.</li>
+<li>링크는 모두 설정 <code>daily_qa.review_base_url</code>로 만든 절대 주소다. 이 값이 비어 있으면 링크 대신 <code>서버 주소 미설정 · 설정 탭에서 입력</code>을 쓴다. 이유: 메일 프로그램은 <code>/qa-agent/…</code> 같은 상대 주소를 열 수 없다.</li>
+<li>HTML 본문은 표 기반 배치와 인라인 스타일만 쓴다(Outlook이 스타일 시트와 새 배치 방식을 무시하기 때문이다). 글 본문도 같은 순서로 쓴다.</li>
+<li><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량은 이번 실행의 호출 기록과 <a class="idref" href="#REQ-AICALL-006">REQ-AICALL-006</a>의 저장 값에서 읽는다(<code>reading_for_run</code>).
+<ol>
+<li>5시간 사용량 줄: <code>실행 전 &lt;a&gt;% → 실행 후 &lt;b&gt;% (+&lt;b-a&gt;%p) · 초기화 &lt;시각&gt;</code>. 실행 전 값은 점검이 시작될 때 저장해 둔 가장 최근 측정값이다.</li>
+<li>실행 전 값이 없으면 <code>실행 전 값 미확인</code>이라고 쓰고 증가량은 쓰지 않는다. 값은 지어내지 않는다.</li>
+<li>주간 사용량 줄: <code>실행 후 &lt;c&gt;% · 초기화 &lt;시각&gt;</code>.</li>
+<li>이번 실행이 AI를 호출하지 않았으면 <code>이번 실행은 AI를 호출하지 않았습니다.</code>를 함께 쓴다. 호출 기록 자체를 읽지 못했으면 <code>사용량 기록 없음</code>이라고 쓴다.</li>
+</ol>
+</li>
 <li>사내 원문과 상세 AI 판단 문장은 메일에 넣지 않는 <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>의 원칙을 유지한다. 전체 결과는 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>·실행·<span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span> 조건이 있는 웹 링크에서 확인한다.</li>
 <li>변경 없음·기존 결과만 재사용·예산 소진을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 하고 한도 초기화만으로 자동 AI 재실행하지 않는다.</li>
 <li><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 분석은 최초 작성자 ID별로 묶고 이름을 섹션 제목에 표시한다. 같은 이름의 서로 다른 사람은 ID로 구분한다. 각 작성자 안에서는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 업데이트가 최신인 순서로 번호·업데이트 일시·<span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>·결과 링크를 보여준다. 이름이 없으면 이름 미확인과 ID를 표시한다.</li>
@@ -15068,7 +15136,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-045">REQ-QAINTEL-045</a></td><td data-label="Implementation"><code>app/modules/daily_qa/workflow_settings.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/intelligence.py</code></td><td data-label="Test"><code>tests/test_qa_workflow_settings.py</code>, <code>tests/test_qa_savings_workflow.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-046">REQ-QAINTEL-046</a></td><td data-label="Implementation"><code>app/modules/daily_qa/target_reuse.py</code>, <code>app/core/qa_execution_storage.py</code>, <code>app/modules/qa_agent/result_views.py</code></td><td data-label="Test"><code>tests/test_qa_target_reuse.py</code>, <code>tests/test_qa_issue_reporter.py</code>, <code>tests/test_qa_results_reader.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-047">REQ-QAINTEL-047</a></td><td data-label="Implementation"><code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/templates/finding_detail.html</code>, <code>app/web/static/qa-reading.js</code></td><td data-label="Test"><code>tests/test_qa_results_reader.py</code>, <code>tests/test_qa_finding_explanation.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td><td data-label="Implementation"><code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/report.py</code></td><td data-label="Test"><code>tests/test_qa_savings_workflow.py</code>, <code>tests/test_qa_workflow_email.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td><td data-label="Implementation"><code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/report.py</code>, <code>app/modules/daily_qa/templates/report_email.html</code>, <code>app/core/claude_usage.py</code>, <code>app/core/qa_execution_storage.py</code></td><td data-label="Test"><code>tests/test_qa_savings_workflow.py</code>, <code>tests/test_qa_workflow_email.py</code>, <code>tests/test_claude_usage.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-QAINTEL-001">NFR-QAINTEL-001</a></td><td data-label="Implementation"><code>app/modules/daily_qa/pipeline.py</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-005">TEST-QAINTEL-005</a>: <code>tests/test_qa_intel_pipeline.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-QAINTEL-002">NFR-QAINTEL-002</a></td><td data-label="Implementation"><code>app/modules/daily_qa/product_adapter.py</code>, <code>docs/PRODUCT_ONBOARDING.md</code></td><td data-label="Test"><a class="idref" href="#TEST-QAINTEL-002">TEST-QAINTEL-002</a>: <code>tests/test_qa_intel_products.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 </tbody>

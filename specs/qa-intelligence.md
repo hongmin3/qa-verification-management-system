@@ -1592,7 +1592,30 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 - 수집·비교를 한 번 수행하고 사양 분석과 이슈 분석이 자료를 공유한다. 매일 전체 이슈를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 REQ-QAINTEL-043의 공통 예산에 포함한다.
 - 일일 모드는 직전 정상 수집 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·버전·완료·재사용·미분석·실패를 구분한다. 예산 때문에 끝내지 못한 대상은 대기로 보존한다.
-- 메일은 제품·검증 버전·실제 기간, 실행 결과, 사양 분석과 이슈 분석의 건수·판정, 남은 대상·자료 누락, 결과 링크 순서로 구성한다. 기존 수신자와 주기를 유지한다.
+- 메일은 아래 표의 순서로 구성한다. 기존 수신자와 주기를 유지한다. 제목은 REQ-MAIL-001이 정한다.
+
+| 순서 | 구획 | 내용 |
+|---|---|---|
+| 1 | 상태 띠 | 완료(초록)·일부 실패(주황)·실패(빨강)와 한 줄 요약 |
+| 2 | 숫자 네 칸 | 새 결과 · 검토 필요 · 대기 · AI 호출 |
+| 3 | 확인할 이슈 | 작성자별로 묶고 각 작성자 안에서 최신 업데이트 순. 번호·제목·분석 종류·판정, 이슈 업데이트(한국 시간), `결과 열기` |
+| 4 | 확인할 사양 | 번호·제목·분석 종류·판정, `결과 열기` |
+| 5 | 남은 일 | 대기 건수와 다음 자동 실행 시각, `상세 분석` 링크, 실패 이유를 쉬운 말로 한 줄씩, 자료 누락 기간 |
+| 6 | 이번 예약 실행의 Claude 사용량 | 호출 수·총 토큰·모델·5시간 사용량·주간 사용량·대상별 토큰 |
+| 7 | 바닥글 | 비교 기준일·확인 가능한 자료 기간·검증 버전·실행 번호·`점검 기록 열기`·AI 초안 안내 |
+
+> **예시** 제목: `[QA Agent] VXvue 10/15 점검 · 검토 필요 2건 · 대기 12건 · 일부 실패`
+
+- 숫자 네 칸의 `새 결과`는 이번 실행이 새로 저장한 결과 수다. `검토 필요`는 그 가운데 결론 단계가 `문제 없음`·`참고`가 아닌 것(`사양과 다름`·`검토 필요`·`근거 부족`)의 수다.
+- 본문에 `audit.json`, `Gate G1` 같은 파일 이름·점검 코드와 `묶음`, `상한 초과로 미룸` 같은 내부 표현을 쓰지 않는다. 그런 내용은 점검 기록 화면에서 본다.
+- 링크는 모두 설정 `daily_qa.review_base_url`로 만든 절대 주소다. 이 값이 비어 있으면 링크 대신 `서버 주소 미설정 · 설정 탭에서 입력`을 쓴다. 이유: 메일 프로그램은 `/qa-agent/…` 같은 상대 주소를 열 수 없다.
+- HTML 본문은 표 기반 배치와 인라인 스타일만 쓴다(Outlook이 스타일 시트와 새 배치 방식을 무시하기 때문이다). 글 본문도 같은 순서로 쓴다.
+- Claude 사용량은 이번 실행의 호출 기록과 REQ-AICALL-006의 저장 값에서 읽는다(`reading_for_run`).
+
+  1. 5시간 사용량 줄: `실행 전 <a>% → 실행 후 <b>% (+<b-a>%p) · 초기화 <시각>`. 실행 전 값은 점검이 시작될 때 저장해 둔 가장 최근 측정값이다.
+  2. 실행 전 값이 없으면 `실행 전 값 미확인`이라고 쓰고 증가량은 쓰지 않는다. 값은 지어내지 않는다.
+  3. 주간 사용량 줄: `실행 후 <c>% · 초기화 <시각>`.
+  4. 이번 실행이 AI를 호출하지 않았으면 `이번 실행은 AI를 호출하지 않았습니다.`를 함께 쓴다. 호출 기록 자체를 읽지 못했으면 `사용량 기록 없음`이라고 쓴다.
 - 사내 원문과 상세 AI 판단 문장은 메일에 넣지 않는 REQ-DAILY-008의 원칙을 유지한다. 전체 결과는 제품·실행·종류 조건이 있는 웹 링크에서 확인한다.
 - 변경 없음·기존 결과만 재사용·예산 소진을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 하고 한도 초기화만으로 자동 AI 재실행하지 않는다.
 - 이슈 분석은 최초 작성자 ID별로 묶고 이름을 섹션 제목에 표시한다. 같은 이름의 서로 다른 사람은 ID로 구분한다. 각 작성자 안에서는 이슈 업데이트가 최신인 순서로 번호·업데이트 일시·판정·결과 링크를 보여준다. 이름이 없으면 이름 미확인과 ID를 표시한다.
@@ -1995,7 +2018,7 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |
 | REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, `tests/test_qa_results_reader.py` | implemented |
 | REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/web/static/qa-reading.js` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
-| REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py` | implemented |
+| REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/modules/daily_qa/templates/report_email.html`, `app/core/claude_usage.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

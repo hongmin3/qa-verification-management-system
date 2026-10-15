@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+</head>
+{#- Outlook 호환: 표 배치와 인라인 스타일만 쓴다. 스타일 시트·class·flex·grid 를 쓰지 않는다 (REQ-QAINTEL-048). -#}
+{% macro open_link(url, label) -%}
+{%- if url -%}
+<a href="{{ url }}" style="color:#2563eb;text-decoration:underline;">{{ label }}</a>
+{%- else -%}
+<span style="color:#6b7280;font-size:12px;">{{ no_link_notice }}</span>
+{%- endif -%}
+{%- endmacro %}
+{% macro heading(text) -%}
+<tr><td style="padding:22px 24px 8px 24px;font-size:16px;font-weight:bold;color:#111827;border-top:1px solid #e5e7eb;">{{ text }}</td></tr>
+{%- endmacro %}
+<body style="margin:0;padding:0;background-color:#f3f4f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f4f6" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:16px;">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:640px;max-width:100%;background-color:#ffffff;font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
+
+<tr><td bgcolor="{{ band.color }}" style="background-color:{{ band.color }};padding:16px 24px;color:#ffffff;">
+<div style="font-size:12px;">{{ product }} · {{ run_id }}</div>
+<div style="font-size:20px;font-weight:bold;">{{ band.label }}</div>
+<div style="font-size:14px;">{{ band.headline }}</div>
+</td></tr>
+
+<tr><td style="padding:16px 24px 4px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+{%- for name, value in numbers %}
+<td width="25%" align="center" style="padding:10px 4px;border:1px solid #e5e7eb;">
+<div style="font-size:12px;color:#6b7280;">{{ name }}</div>
+<div style="font-size:22px;font-weight:bold;">{{ value }}</div>
+</td>
+{%- endfor %}
+</tr></table>
+<div style="padding-top:8px;font-size:12px;color:#6b7280;">{{ number_note }}</div>
+</td></tr>
+
+{{ heading("확인할 이슈") }}
+<tr><td style="padding:0 24px 8px 24px;font-size:13px;">{{ open_link(issue_all, "이번 실행의 이슈 결과 전체 보기") }}</td></tr>
+{%- if issue_groups %}
+<tr><td style="padding:0 24px;">
+<table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;font-size:13px;">
+<tr bgcolor="#f9fafb" style="background-color:#f9fafb;">
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">이슈</td>
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">분석 종류 · 판정</td>
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">업데이트(KST)</td>
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">결과</td>
+</tr>
+{%- for group in issue_groups %}
+<tr><td colspan="4" bgcolor="#eef2ff" style="background-color:#eef2ff;font-weight:bold;">작성자 {{ group.name }} ({{ group.id }}) · {{ group.issues|length }}건</td></tr>
+{%- for issue in group.issues %}{% for row in issue.rows %}
+<tr>
+<td style="border-bottom:1px solid #e5e7eb;"><b>{{ issue.subject }}</b> {{ issue.title }}</td>
+<td style="border-bottom:1px solid #e5e7eb;">{{ row.kind }} · <span style="color:{{ row.color }};font-weight:bold;">{{ row.level }}</span></td>
+<td style="border-bottom:1px solid #e5e7eb;white-space:nowrap;">{{ issue.updated }}</td>
+<td style="border-bottom:1px solid #e5e7eb;white-space:nowrap;">{{ open_link(row.url, "결과 열기") }}</td>
+</tr>
+{%- endfor %}{% endfor %}
+{%- endfor %}
+</table>
+</td></tr>
+{%- else %}
+<tr><td style="padding:0 24px;color:#6b7280;">이번 실행에서 확인할 이슈 결과가 없습니다.</td></tr>
+{%- endif %}
+
+{{ heading("확인할 사양") }}
+<tr><td style="padding:0 24px 8px 24px;font-size:13px;">{{ open_link(spec_all, "이번 실행의 사양 결과 전체 보기") }}</td></tr>
+{%- if spec_rows %}
+<tr><td style="padding:0 24px;">
+<table role="presentation" width="100%" cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;font-size:13px;">
+<tr bgcolor="#f9fafb" style="background-color:#f9fafb;">
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">사양</td>
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">분석 종류 · 판정</td>
+<td style="border-bottom:1px solid #d1d5db;font-weight:bold;">결과</td>
+</tr>
+{%- for row in spec_rows %}
+<tr>
+<td style="border-bottom:1px solid #e5e7eb;"><b>{{ row.subject }}</b> {{ row.title }}</td>
+<td style="border-bottom:1px solid #e5e7eb;">{{ row.kind }} · <span style="color:{{ row.color }};font-weight:bold;">{{ row.level }}</span></td>
+<td style="border-bottom:1px solid #e5e7eb;white-space:nowrap;">{{ open_link(row.url, "결과 열기") }}</td>
+</tr>
+{%- endfor %}
+</table>
+</td></tr>
+{%- else %}
+<tr><td style="padding:0 24px;color:#6b7280;">이번 실행에서 확인할 사양 결과가 없습니다.</td></tr>
+{%- endif %}
+
+{{ heading("남은 일") }}
+<tr><td style="padding:0 24px;font-size:13px;">
+<div>대기 {{ remaining.pending }}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함) · 다음 자동 실행 {{ remaining.next_run }}</div>
+<div style="padding-top:4px;">{{ open_link(remaining.select_url, "상세 분석 열기") }}</div>
+{%- for line in remaining.lines %}
+<div style="padding-top:4px;">· {{ line }}</div>
+{%- endfor %}
+{%- for line in remaining.gaps %}
+<div style="padding-top:4px;color:#92400e;">· {{ line }}</div>
+{%- endfor %}
+</td></tr>
+
+{{ heading("이번 예약 실행의 Claude 사용량") }}
+<tr><td style="padding:0 24px;font-size:13px;">
+{%- if usage.lines %}
+<table role="presentation" width="100%" cellpadding="4" cellspacing="0" border="0" style="font-size:13px;">
+{%- for line in usage.lines %}
+<tr><td style="border-bottom:1px solid #f3f4f6;">{{ line }}</td></tr>
+{%- endfor %}
+</table>
+{%- endif %}
+{%- if usage.empty %}
+<div style="color:#6b7280;">{{ usage.empty }}</div>
+{%- endif %}
+</td></tr>
+
+<tr><td style="padding:22px 24px 20px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
+<div>{{ footer.basis }}</div>
+{%- for line in footer.coverage %}
+<div>{{ line }}</div>
+{%- endfor %}
+<div>{{ footer.until }}</div>
+<div>검증 버전: {{ footer.version }} · 실행 번호: {{ run_id }}</div>
+<div style="padding-top:6px;">{{ open_link(footer.run_url, "점검 기록 열기") }}</div>
+<div style="padding-top:6px;">{{ footer.notice }}</div>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

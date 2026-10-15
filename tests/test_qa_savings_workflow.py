@@ -68,3 +68,56 @@ def test_changed_answer_after_prepare_requires_new_plan(tmp_path):
     out = h.run(DAY2 + timedelta(seconds=1), selection_id=token, rules_state=rules,
                 spec_chunks_loader=lambda: ([], {}, ['new unreadable document']))
     assert h.calls == [] and out['stages']['selection']['status'] == 'failed'
+
+
+# --- 메일 단계 기록과 사용량 (REQ-MAIL-002, REQ-QAINTEL-048) ------------------------------
+
+def _run_with_sender(h, rules, sender):
+    from app.modules.daily_qa.pipeline import run_daily
+    from tests.qa_intel_harness import FakePolarion, FakeRunner
+    h.polarion = FakePolarion(h.srs, h.issues, h.comments, h.fail_comments)
+    return run_daily(h.cfg, today=DAY2, polarion_factory=lambda: h.polarion, inputs=h.inputs, store=h.store,
+                     send_email=sender, runner=FakeRunner(h._produce), rules_state=rules,
+                     spec_chunks_loader=lambda: ([], {}, []), trigger='scheduled')
+
+
+def test_mail_stage_note_masks_recipient_and_records_message_id(tmp_path):
+    import re
+    h, rules = prepared(tmp_path)
+    h.cfg = replace(h.cfg, email_to=('qa.person@example.test',))
+    out = _run_with_sender(h, rules, lambda *args: {'status': 'sent', 'recipients': 1, 'message_id': '<abc123@example.test>',
+                                                    'recipient_masks': ['qa.***@example.test']})
+    note = out['stages']['email']['note']
+    assert out['stages']['email']['status'] == 'ok'
+    assert re.fullmatch(r'발송 \d{4}-\d{2}-\d{2} \d{2}:\d{2} · 수신 qa\.\*\*\*@example\.test · Message-ID <abc123@example\.test>', note), note
+    assert 'qa.person' not in note
+
+
+def test_mail_stage_note_masks_configured_recipients_when_sender_gives_no_masks(tmp_path):
+    h, rules = prepared(tmp_path)
+    h.cfg = replace(h.cfg, email_to=('qa.person@example.test',))
+    out = _run_with_sender(h, rules, lambda *args: {'status': 'sent'})
+    note = out['stages']['email']['note']
+    assert '수신 qa.***@example.test' in note and 'qa.person' not in note
+
+
+def test_run_stores_usage_before_and_mail_shows_this_runs_usage(tmp_path, monkeypatch):
+    import json
+    from app.core import claude_usage
+    state = tmp_path / 'claude_usage.json'
+    state.write_text(json.dumps({'windows': {'five_hour': {'used_percent': 5.0, 'resets_at': '2026-10-15 09:00'},
+                                             'seven_day': {'used_percent': 70.0, 'resets_at': '2026-10-18 01:00'}},
+                                 'measured_at': '2026-10-15 03:58'}), encoding='utf-8')
+    monkeypatch.setattr(claude_usage, 'state_path', lambda settings=None: state)
+    h, rules = prepared(tmp_path)
+    h.usage = {'input_tokens': 1000, 'output_tokens': 134, 'cache_creation_input_tokens': 50, 'cache_read_input_tokens': 50}
+    h.rate_limit = {'unifiedWindows': {'five_hour': {'utilization': 0.07, 'resetsAt': 1792022400},
+                                       'seven_day': {'utilization': 0.76, 'resetsAt': 1792224000}}}
+    out = _run_with_sender(h, rules, lambda *args: h.sent.append(args) or {'status': 'sent'})
+    assert out['summary']['usage_before'] == {'five_hour': 5.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 03:58'}
+    subject, text, html = h.sent[0][:3]
+    assert subject.startswith('[QA Agent] ') and '점검 · 검토 필요' in subject
+    line = next(row for row in text.splitlines() if row.startswith('- 5시간 사용량'))
+    assert '실행 전 5% → 실행 후 7% (+2%p)' in line and '초기화 2026-10-15 09:00' in line
+    assert '1,234' in text and '호출 2회' in text
+    assert isinstance(out['summary']['next_run'], str) and 'spec_results' in out['summary']

@@ -25,7 +25,7 @@ import smtplib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from email.utils import formatdate
+from email.utils import formatdate, make_msgid, parseaddr
 
 from app.core.config import get_settings
 from app.core.security_filter import mask_text
@@ -61,6 +61,29 @@ _QUOTA_HINTS = (
     "billing",
     "rate limit",
 )
+
+
+#: 모든 메일 제목의 머리말. 메일 프로그램의 분류 규칙이 이 머리말과 그 뒤의 제품 이름으로 폴더를 나눈다 (REQ-MAIL-001).
+SUBJECT_PREFIX = "[QA Agent]"
+
+
+def mail_subject(product: str, title: str) -> str:
+    """모든 메일 제목의 단일 생성 지점. `[QA Agent] <제품> <제목>`, 제품이 없으면 `[QA Agent] <제목>`."""
+    return " ".join(part for part in (SUBJECT_PREFIX, (product or "").strip(), (title or "").strip()) if part)
+
+
+def mask_address(address: str) -> str:
+    """메일 주소를 앞 세 글자만 남기고 가린다(`hon***@vieworks.com`). 아이디가 세 글자 이하면 첫 글자만 남긴다."""
+    local, at, domain = str(address or "").strip().rpartition("@")
+    if not at or not local or not domain:
+        return "***"
+    return f"{local[:3] if len(local) > 3 else local[:1]}***@{domain}"
+
+
+def _message_id(sender: str) -> str:
+    """발신 주소의 도메인으로 만든 메일 고유 번호. 발신 도메인을 알 수 없으면 이 서버 이름을 쓴다."""
+    domain = parseaddr(sender or "")[1].rpartition("@")[2]
+    return make_msgid(domain=domain or None)
 
 
 def classify_error(message: str) -> str | None:
@@ -192,10 +215,11 @@ def _build_message(config: EmailSettings, kind: str, detail: str, context: dict 
     ]
 
     message = EmailMessage()
-    message["Subject"] = f"[QA 시스템] {label}"
+    message["Subject"] = mail_subject("", label)
     message["From"] = config.sender
     message["To"] = ", ".join(config.recipients)
     message["Date"] = formatdate(localtime=True)
+    message["Message-ID"] = _message_id(config.sender)
     message.set_content("\n".join(lines))
     return message
 
@@ -229,10 +253,12 @@ def notify(kind: str, detail: str, context: dict | None = None, storage: Storage
         if not storage.claim_notification(kind, cooldown_until):
             result["status"] = "skipped_cooldown"
             return result
-        _send(config, _build_message(config, kind, detail, context))
+        message = _build_message(config, kind, detail, context)
+        _send(config, message)
         storage.mark_notification_sent(kind)
         result["status"] = "sent"
         result["recipients"] = len(config.recipients)
+        result["message_id"] = message["Message-ID"]
         logger.info("notification_sent kind=%s recipients=%d", kind, len(config.recipients))
         return result
     except Exception as exc:
@@ -246,7 +272,8 @@ def notify(kind: str, detail: str, context: dict | None = None, storage: Storage
 def send_report(subject: str, text_body: str, html_body: str = "", recipients: tuple[str, ...] = ()) -> dict:
     """정기 보고 메일 (일일 QA 점검 요약 등). 쿨다운 없이 한 통 보낸다. **예외를 올리지 않는다.**
 
-    수신자를 넘기지 않으면 `NOTIFY_EMAIL_TO` 로 보낸다. 반환값: `sent` / `not_configured` / `failed`.
+    수신자를 넘기지 않으면 `NOTIFY_EMAIL_TO` 로 보낸다. 반환값: `sent`(수신자 수·가린 수신 주소·`message_id`) /
+    `not_configured` / `failed`. 주소 원문은 돌려주지 않는다 (REQ-MAIL-002).
     """
     result: dict = {"status": "not_configured"}
     config = None
@@ -260,11 +287,13 @@ def send_report(subject: str, text_body: str, html_body: str = "", recipients: t
         message["From"] = config.sender
         message["To"] = ", ".join(targets)
         message["Date"] = formatdate(localtime=True)
+        message["Message-ID"] = _message_id(config.sender)
         message.set_content(text_body)
         if html_body:
             message.add_alternative(html_body, subtype="html")
         _send(config, message)
-        result = {"status": "sent", "recipients": len(targets)}
+        result = {"status": "sent", "recipients": len(targets), "recipient_masks": [mask_address(item) for item in targets],
+                  "message_id": message["Message-ID"]}
         logger.info("report_sent recipients=%d", len(targets))
         return result
     except Exception as exc:
@@ -281,6 +310,29 @@ def send_report(subject: str, text_body: str, html_body: str = "", recipients: t
         result = {"status": "failed", "error": error}
         logger.warning("report_failed error=%s", error)
         return result
+
+
+_TEST_NOTICE = "시험 발송입니다. 실제 오류가 아닙니다."
+
+
+def send_test(kind: str, recipients: tuple[str, ...]) -> dict:
+    """설정 화면의 시험 발송 (REQ-MAIL-003). 고른 수신자에게만 보내고 재발송 대기 기록은 건드리지 않는다.
+
+    `kind` 는 알림 종류 값 또는 `report`(예약 점검 요약 예시)다. 예외를 올리지 않는다.
+    """
+    targets = tuple(item.strip() for item in recipients or () if item and item.strip())
+    if kind == "report":
+        label = "예약 점검 요약"
+        body = ["이 메일은 예약 점검 요약 메일이 이 수신자에게 도착하는지 확인하는 시험입니다."]
+    elif kind in KIND_LABELS:
+        label = KIND_LABELS[kind]
+        body = [f"이 메일은 '{label}' 알림이 이 수신자에게 도착하는지 확인하는 시험입니다."]
+    else:
+        return {"status": "failed", "error": "알 수 없는 시험 종류입니다."}
+    if not targets:
+        return {"status": "failed", "error": "시험 수신자가 없습니다."}
+    text = "\n".join([_TEST_NOTICE, "", *body, "", "이 메일은 자동 발송되었습니다."])
+    return send_report(mail_subject("", f"[시험] {label}"), text, "", targets)
 
 
 def notify_for_error(message: str, context: dict | None = None, storage: Storage | None = None) -> dict | None:

@@ -190,3 +190,72 @@ def test_expired_token_is_refreshed_through_cli_at_most_once_per_interval(env):
     claude_usage.reset_cache()
     claude_usage.get_usage(off, now=NOW.replace(hour=3), http_get=http, refresh=refresh)
     assert len(refreshes) == 1
+
+
+# --- 이번 실행의 사용량 읽기 (REQ-QAINTEL-048, Contract: UsageReading) --------------------------------
+
+RESET_5H = 1792022400      # 2026-10-15 09:00 KST
+RESET_7D = 1792224000      # 2026-10-17 17:00 KST
+
+
+def _call(five, seven, tokens, subjects=("VP-1",), kind="FIXED_ISSUE", model="claude-sonnet-5-5"):
+    usage = {"input_tokens": tokens - 100, "output_tokens": 60, "cache_creation_input_tokens": 30, "cache_read_input_tokens": 10}
+    info = {"unifiedWindows": {"five_hour": {"utilization": five, "resetsAt": RESET_5H},
+                               "seven_day": {"utilization": seven, "resetsAt": RESET_7D}}}
+    return {"usage": usage, "rate_limit": info, "model": model, "kind": kind, "targets": list(subjects)}
+
+
+@pytest.fixture
+def reservations(tmp_path):
+    from app.core.storage import Storage
+
+    storage = Storage(db_path=tmp_path / "usage.db")
+
+    def add(run_id, outcome):
+        key = storage.qa_reserve_call(run_id, "vxvue", "2026-10-15", 10, 10)
+        storage.qa_finish_call(key, outcome)
+
+    return storage, add
+
+
+def test_reading_for_run_uses_last_rate_limit_and_sums_tokens(reservations):
+    storage, add = reservations
+    add("R1", _call(0.05, 0.75, 319_574, ("VP-580",)))
+    add("R1", _call(0.07, 0.76, 233_123, ("VP-7257",), kind="COMMENT"))
+    add("OTHER", _call(0.50, 0.90, 1_000))
+    reading = claude_usage.reading_for_run("R1", storage)
+    assert reading["after"]["five_hour"] == 7.0 and reading["after"]["seven_day"] == 76.0
+    assert reading["after"]["five_hour_resets_kst"] == "2026-10-15 09:00"
+    assert reading["after"]["seven_day_resets_kst"] == "2026-10-17 17:00"
+    assert reading["calls"] == 2 and reading["total_tokens"] == 552_697 and reading["model"] == "claude-sonnet-5-5"
+    assert reading["by_target"] == [{"subject": "VP-580", "kind": "FIXED_ISSUE", "tokens": 319_574},
+                                    {"subject": "VP-7257", "kind": "COMMENT", "tokens": 233_123}]
+    assert reading["before"] == {"five_hour": None, "seven_day": None, "measured_at": ""}
+
+
+def test_reading_for_run_accepts_before_value_and_never_invents_missing(reservations):
+    storage, add = reservations
+    before = {"five_hour": 2.0, "seven_day": 70.0, "measured_at": "2026-10-15 03:58"}
+    assert claude_usage.reading_for_run("R2", storage, before=before)["before"] == before
+    empty = claude_usage.reading_for_run("R2", storage)
+    assert empty["after"] == {"five_hour": None, "seven_day": None, "five_hour_resets_kst": "", "seven_day_resets_kst": ""}
+    assert empty["calls"] == 0 and empty["total_tokens"] == 0 and empty["by_target"] == [] and empty["model"] == ""
+
+
+def test_reading_for_run_skips_calls_that_never_started_and_groups_targets(reservations):
+    storage, add = reservations
+    add("R3", {"cli_started": False})
+    add("R3", _call(0.10, 0.20, 1_000, ("VP-1", "VP-2")))
+    add("R3", _call(0.11, 0.21, 500, ("VP-1", "VP-2")))
+    reading = claude_usage.reading_for_run("R3", storage)
+    assert reading["calls"] == 2
+    assert reading["by_target"] == [{"subject": "VP-1 + VP-2", "kind": "FIXED_ISSUE", "tokens": 1_500}]
+    assert reading["after"]["five_hour"] == 11.0
+
+
+def test_saved_reading_reads_the_stored_measurement(env):
+    settings, _, _ = env
+    assert claude_usage.saved_reading(settings) == {"five_hour": None, "seven_day": None, "measured_at": ""}
+    claude_usage.record_rate_limit_event({"unifiedWindows": {"five_hour": {"utilization": 0.07, "resetsAt": RESET_5H},
+                                                              "seven_day": {"utilization": 0.76, "resetsAt": RESET_7D}}}, settings, now=NOW)
+    assert claude_usage.saved_reading(settings) == {"five_hour": 7.0, "seven_day": 76.0, "measured_at": "2026-10-13 09:41"}

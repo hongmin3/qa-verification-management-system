@@ -155,7 +155,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 
 | 알림 | 언제 오나 | 받는 곳 | 담는 것 | 요구사항 |
 |---|---|---|---|---|
-| QA Agent 요약 메일(제목 `[QA Agent]`) | 점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기) | `DAILY_QA_EMAIL_TO` 의 수신자 | 오늘 변경 요약, 새 Finding 수, 실패한 단계와 첫 실패 이유, Claude 사용량 한도와 초기화 시각, 점검 기록 보기 링크 | REQ-DAILY-008, REQ-MAIL-002 |
+| QA Agent 요약 메일(제목 `[QA Agent] <제품> …`) | 점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기) | `DAILY_QA_EMAIL_TO` 의 수신자 | 상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 이슈·사양과 결과 링크, 남은 일, 이번 실행의 Claude 사용량, 점검 기록 보기 링크 | REQ-DAILY-008, REQ-MAIL-001, REQ-MAIL-002, REQ-QAINTEL-048 |
 | QA Agent 대시보드 | 메일 링크를 누르거나 아무 때나 | `/qa-agent` | 마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 TC 초안, 기간별 결과. 승인·거절 입력은 없다 | REQ-QAINTEL-019, REQ-QAINTEL-020 |
 | Gemini 할당량 소진·모델 사용 불가 메일 | 분석 중 사람이 조치해야 하는 Gemini 오류가 날 때. 같은 종류는 재발송 대기 시간 동안 다시 보내지 않는다 | `NOTIFY_EMAIL_TO` 의 수신자 | 발생 시각, 모델, 가린 오류 문구, 조치 방법 | REQ-USAGE-003 |
 | ALM 통합 수집 메일 | 평일 09:00 수집 뒤 | ALM-QA-Automation 설정의 수신자 | 바뀐 사양과 연결된 이슈, 우선순위 | 이 저장소 밖 |
@@ -5849,7 +5849,7 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 5. 메일을 보낸다. 성공하면 발송 시각과 보낸 수를 기록한다(`sent`).
 6. 보내다 실패해도 선점 시각은 이미 기록됐으므로 대기 시간이 걸린다(`failed`).
 
-**결과** 메일 제목은 `[QA 시스템] <제목 이름>` 이다. 본문에는 다음이 들어간다.
+**결과** 메일 제목은 `[QA Agent] <제목 이름>` 이다(REQ-MAIL-001). 본문에는 다음이 들어간다.
 
 - 발생 시각, 모델·프롬프트 이름과 판
 - 가린 오류 문구(1500자까지)
@@ -5895,6 +5895,15 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 1. 켜져 있고 서버·발신자·수신자가 모두 있어야 "보낼 조건이 됨"(`configured`)이다. 계정은 필수가 아니다(인증 없는 사내 SMTP 도 있다).
 2. 접속 제한 시간은 20초다.
 3. 발송 함수는 어떤 경우에도 예외를 올리지 않고 결과 상태만 돌려준다.
+4. 제목은 제목 생성 함수(`mail_subject`) 한 곳에서만 만든다. 모든 메일 제목은 `[QA Agent]`로 시작하고, 제품이 있는 메일은 그 뒤에 제품 이름이 온다.
+
+이유: 메일 프로그램의 분류 규칙이 `[QA Agent] <제품>` 머리말로 폴더를 나누기 때문이다. 머리말이 메일마다 다르면 규칙이 일부 메일을 놓친다.
+
+| 메일 | 제목 |
+|---|---|
+| 운영 알림(한도·인증·할당량) | `[QA Agent] <알림 이름>` |
+| 예약 점검 요약 | `[QA Agent] <제품> <MM/DD> 점검 · 검토 필요 <N>건 · 대기 <N>건` 뒤에 실패일 때만 ` · 일부 실패` 또는 ` · 실패`, Claude 한도에 걸렸으면 ` · <한도 이름>` |
+| 시험 발송(REQ-MAIL-003) | `[QA Agent] [시험] <알림 이름>` |
 
 **결과** 설정 상태를 값은 빼고 알려 준다: `enabled`, `configured`, `host_set`, `sender_set`, `recipient_count`, `credentials_set`, `cooldown_minutes`, `warnings`.
 
@@ -5925,9 +5934,14 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 
 1. 수신자를 넘기면 그 주소로, 아니면 `NOTIFY_EMAIL_TO` 로 보낸다(일일 QA 는 `DAILY_QA_EMAIL_TO` 를 넘긴다).
 2. 글 본문을 넣고, HTML 본문이 있으면 함께 넣는다.
-3. 예외를 올리지 않는다.
+3. 메일마다 `Message-ID`(메일 고유 번호)를 발신 주소의 도메인으로 만들어 직접 넣는다. 나중에 메일 서버 기록과 대조할 수 있게 하기 위해서다.
+4. 예외를 올리지 않는다.
 
-**결과** `sent`(수신자 수), `not_configured`, `failed`(오류 종류·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·토큰은 로그와 결과에서 가린다.
+**결과** `sent`(수신자 수, 가린 수신 주소 `recipient_masks`, 메일 고유 번호 `message_id`), `not_configured`, `failed`(오류 종류·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·토큰은 로그와 결과에서 가린다.
+
+> **예시** 가린 주소는 앞 세 글자만 남긴다: `hon***@vieworks.com`. 아이디가 세 글자 이하이면 첫 글자만 남긴다.
+
+예약 점검 메일을 보내면 점검 기록의 메일 단계 비고에 `발송 <한국 시간> · 수신 <가린 주소> · Message-ID <값>`을 남긴다. 메일을 받지 못했다는 문의가 오면 이 줄로 발송 여부와 메일 서버 기록을 대조한다. 본문의 구성과 링크 규칙은 REQ-QAINTEL-048이 정한다.
 
 정기 점검은 메일 단계가 끝날 때까지 `RUNNING`으로 남긴다. 메일 실패는 점검 기록 보기의 메일 단계에 기록하며, 앞 단계가 성공했어도 실행 결과는 `PARTIAL`이다. 앞 단계의 실패 결과는 그대로 유지한다.
 
@@ -5949,6 +5963,13 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 2. 보낼 조건이 안 되면 넣어야 할 키 이름을 안내하고 종료 코드 1 로 끝난다.
 3. 최근 알림 기록을 찍는다.
 4. `--send` 면 그 종류의 대기 시간 기록을 지우고 "테스트 발송입니다. 실제 오류가 아닙니다." 알림을 보낸다. 실패하면 종료 코드 1 이다.
+
+**설정 탭에서 보내는 시험 발송** 시험 발송 함수(`send_test(kind, recipients)`)가 화면에서 고른 종류의 시험 메일을 고른 수신자에게만 보낸다.
+
+- 종류는 알림 종류 값(`claude_usage_limit` 등) 또는 `report`(예약 점검 요약 예시)다.
+- 재발송 대기 시간을 쓰지도 지우지도 않는다. 실제 알림의 대기 기록에 영향이 없다.
+- 제목은 `[QA Agent] [시험] <알림 이름>`이고 본문 첫 줄에 "시험 발송입니다. 실제 오류가 아닙니다."를 쓴다.
+- 결과는 REQ-MAIL-002와 같다(`status`, `recipients`, `recipient_masks`, `message_id`). 알 수 없는 종류는 보내지 않고 `failed`를 돌려준다.
 
 ### REQ-SCHED-001 앱 안 예약 실행기
 
@@ -9312,9 +9333,11 @@ REQ-USAGE-002 를 `tests/test_persistent_analyses.py` 의 `test_tokens_used_sinc
 
 REQ-USAGE-003, REQ-MAIL-001 을 `tests/test_notifier.py` 로 확인한다: 오류 종류 판정, 대상 아닌 오류는 무시, 할당량 오류에 메일 한 통, 조치 방법·맥락 포함, 오류 문구 가리기, 같은 오류 두 번째는 억제, 종류별 대기 시간 분리, 대기 시간이 지나면 다시 보냄, 발송 실패에도 대기 시간 시작, 수신자 없음·설정 꺼짐이면 안 보냄, 상태에 값 없음, 계정 없음 경고, 실제 호출 경로에서 알림, 알림 기록.
 
+메일 제목과 발송 결과는 같은 파일의 다음 시험이 확인한다: 모든 제목이 `[QA Agent]`로 시작, 발송 결과의 `Message-ID`가 실제 메일 머리글과 같음, 가린 수신 주소, 시험 발송이 대기 기록을 건드리지 않음.
+
 ### TEST-MAIL-001
 
-REQ-MAIL-002, 003 은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 `scripts/test_notification.py` 를 실행해 상태를 보고 `--send` 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 TEST-DAILY-006 이 본문 내용을 본다.
+REQ-MAIL-002의 `Message-ID`·가린 주소와 REQ-MAIL-003의 시험 발송 함수는 `tests/test_notifier.py`가 확인한다. 명령줄 시험 발송(`scripts/test_notification.py`)은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 `scripts/test_notification.py` 를 실행해 상태를 보고 `--send` 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 TEST-DAILY-006 이 본문 내용을 본다.
 
 ### TEST-SCHED-001
 
@@ -9873,9 +9896,9 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-USAGE-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
-| REQ-MAIL-001 | `app/core/notifier.py` | TEST-USAGE-002: `tests/test_notifier.py` | implemented |
-| REQ-MAIL-002 | `app/core/notifier.py` | TEST-MAIL-001 | implemented |
-| REQ-MAIL-003 | `scripts/test_notification.py` | TEST-MAIL-001 | implemented |
+| REQ-MAIL-001 | `app/core/notifier.py`, `app/modules/daily_qa/report.py` | TEST-USAGE-002: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py` | implemented |
+| REQ-MAIL-002 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py` | TEST-MAIL-001: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py` | implemented |
+| REQ-MAIL-003 | `scripts/test_notification.py`, `app/core/notifier.py` | TEST-MAIL-001: `tests/test_notifier.py` | implemented |
 | REQ-SCHED-001 | `app/core/scheduler.py`, `app/main.py` | TEST-SCHED-001 | implemented |
 | REQ-SCHED-002 | `app/modules/knowledge/scheduled_jobs.py`, `app/modules/qa_agent/scheduled_jobs.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-SCHED-001: `tests/test_daily_qa_pipeline.py` | implemented |
 | REQ-WEB-001 | `app/web/router.py`, `app/web/templates/hub.html` | TEST-WEB-001: `tests/test_web.py` | implemented |

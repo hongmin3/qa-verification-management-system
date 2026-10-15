@@ -7,7 +7,13 @@
 from __future__ import annotations
 
 import html
+import re
 from collections import Counter
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader
+
+from app.core.notifier import mail_subject
 
 from app.modules.daily_qa import claude_limits
 from app.modules.daily_qa.change_events import ANALYSIS_LABELS, EVENT_LABELS
@@ -79,11 +85,14 @@ def _audit_line(audit: dict) -> str:
 
 
 def build_email(run_id: str, status_label: str, stages: dict, summary: dict, review_url: str, rules_warning: str,
-                product: str = "") -> tuple[str, str, str]:
+                product: str = "", usage: dict | None = None) -> tuple[str, str, str]:
+    """(제목, 글 본문, HTML 본문). 제목은 `mail_subject` 에서만 만든다 (REQ-MAIL-001).
+
+    `usage` 는 `claude_usage.reading_for_run` 의 값이다. 절약 모드 메일(REQ-QAINTEL-048)에서만 쓴다.
+    """
     if summary.get('savings_enabled'):
-        return _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product)
-    prefix = f"[QA Agent] {product} " if product else "[QA Agent] "
-    subject = f"{prefix}{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건"
+        return _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product, usage)
+    subject = mail_subject(product, f"{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
     limit = summary.get("claude_limit") or {}
     collection_failed = any((stages.get(key) or {}).get("status") in {"failed", "partial"}
                             for key in ("collect_srs", "collect_issues"))
@@ -92,7 +101,7 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
     title = (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else (
         "수집 실패" if collection_failed else "점검 실패" if failures else "")
     if title:
-        subject = f"{prefix}{title} · {run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건"
+        subject = mail_subject(product, f"{title} · {run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
     change = "수집 실패로 변경을 확인하지 못했습니다" if collection_failed else _event_line(summary)
     notices = list(failures[:4])
     if limit:
@@ -153,78 +162,236 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
     return subject, "\n".join(text), body
 
 
-def _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product):
-    from urllib.parse import urlencode, urlsplit
-    version = (summary.get('verification_sheet') or {}).get('sheet') or '버전 미선택'
-    targets = summary.get('scope_targets') or {}
-    pending = summary.get('pending_analysis_events', 0)
-    reused = summary.get('target_reused') or []
-    parsed = urlsplit(review_url)
-    base = f'{parsed.scheme}://{parsed.netloc}' if parsed.netloc else ''
-    def link(category):
-        return base + '/qa-agent/results?' + urlencode({'product': product, 'run_id': run_id, 'category': category})
-    basis = summary.get('basis') or {}
-    period = summary.get('period') or {}
-    lines = [f'{product} · 검증 버전 {version} · {status_label}',
-             f"실제 비교 기준: 사양 {basis.get('srs') or '기준 없음'} / 이슈 {basis.get('issues') or '기준 없음'}",
-             f"요청 종료일: {period.get('until') or run_id[:8]}",
-             f'미분석·대기 변경 {pending}건 · 이번 실행의 미완료 대상을 포함한 제품 전체 대기 건수입니다.',
-             'AI 판정과 QA 처리 완료는 별도입니다.', '',
-             f"[사양 분석] 대상 {targets.get('spec', 0)}항목 · 기존 결과 {sum(r['kind'] == 'SPEC_COVERAGE' for r in reused)}항목", link('spec'),
-             f"[이슈 분석] 대상 {targets.get('issues', 0)}항목 · 기존 결과 {sum(r['kind'] != 'SPEC_COVERAGE' for r in reused)}항목", link('issues'), '']
-    for kind, coverage in (summary.get('coverage') or {}).items():
-        label = '사양' if kind == 'srs' else '이슈'
-        lines += [f"{label} 확인 가능한 자료: {coverage.get('start') or '기준 없음'} ~ {coverage.get('end') or '자료 없음'}"]
-        lines.extend('미확인 기간: ' + warning for warning in coverage.get('warnings', []))
-    from app.modules.qa_agent.dashboard import VERDICT_LEVEL
-    counts = Counter()
-    for verdicts in summary.get('by_verdict', {}).values():
-        for verdict, count in verdicts.items():
-            counts[VERDICT_LEVEL.get(verdict, '검토 필요')] += count
-    lines += ['[이번에 생성된 결과의 AI 판정] ' + (' · '.join(f'{name} {count}건' for name, count in counts.items()) or '새 결과 없음')]
-    lines += _issue_author_lines(summary.get('issue_results') or [], base)
-    if rules_warning:
-        lines.append('지침 확인 필요: ' + rules_warning)
-    for label, status, note in _stage_lines(stages):
-        if status not in ('완료', '건너뜀', '오늘은 대상 아님'):
-            lines.append(f'{label}: {status} {note}')
-    if summary.get('call_budget_exhausted'):
-        lines.append('새 AI 호출 예산을 모두 사용했습니다. 남은 항목은 완료로 처리하지 않았습니다.')
-    lines += ['', f"새 Claude 호출 {summary.get('claude_calls', 0)}회 · 기존 결과 {len(reused)}항목 재사용",
-              '변경과 새 분석 대상이 없으면 AI를 호출하지 않습니다.', '점검 기록: ' + review_url]
-    subject = f'[QA] {product} {version} · 사양 {targets.get("spec", 0)} / 이슈 {targets.get("issues", 0)} · 미분석·대기 {pending}'
-    body = '<div style="font-family:sans-serif;max-width:760px">'
-    for line in lines:
-        if line in (link('spec'), link('issues'), '점검 기록: ' + review_url) or line.startswith(base + '/qa-agent/findings/'):
-            url = review_url if line.startswith('점검 기록: ') else line
-            body += f'<p><a href="{html.escape(url, quote=True)}">결과 열기</a></p>'
-        else:
-            body += '<p>' + html.escape(line) + '</p>'
-    return subject, '\n'.join(lines), body + '</div>'
+NO_LINK = "서버 주소 미설정 · 설정 탭에서 입력"
+TONES = {"ok": {"color": "#1f8a4c"}, "warn": {"color": "#d97706"}, "fail": {"color": "#c62828"}}
+LEVEL_COLORS = {"사양과 다름": "#c62828", "검토 필요": "#d97706", "근거 부족": "#6b7280", "참고": "#2563eb", "문제 없음": "#1f8a4c"}
+#: 메일 본문에 내보내지 않는 내부 표현. 점검 기록 화면에서만 본다 (REQ-QAINTEL-048).
+_INTERNAL_WORDS = re.compile(r"[\w.-]*\.json\b|Gate\s*G\d+|상한 초과로 미룸|묶음|task[-_]\w+", re.IGNORECASE)
+_NOT_PROBLEM_LEVELS = ("문제 없음", "참고")
+_TEMPLATES = Environment(loader=FileSystemLoader(str(Path(__file__).parent / "templates")), autoescape=True)
 
 
-def _issue_author_lines(rows, base):
+def _plain(text: object, limit: int = 160) -> str:
+    """내부 표현을 지운 한 줄. 지우고 남은 말이 없으면 빈 문자열이다."""
+    cleaned = re.sub(r"\s+", " ", _INTERNAL_WORDS.sub("", str(text or ""))).strip(" ·,;")
+    return cleaned[:limit]
+
+
+def _moment(value):
     from datetime import datetime, timezone
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _kst_stamp(value) -> str:
+    moment = _moment(value)
+    return moment.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M") if moment.year > 1 else "미확인"
+
+
+def _percent(value) -> str:
+    return f"{value:g}%"
+
+
+def _tone(status_label: str) -> str:
+    if status_label == "실패":
+        return "fail"
+    if "일부" in status_label or "중단" in status_label:
+        return "warn"
+    return "ok"
+
+
+def _review_counts(summary: dict) -> tuple[int, int]:
+    """(새 결과, 검토 필요). 검토 필요는 결론 단계가 `문제 없음`·`참고`가 아닌 새 결과다."""
     from app.modules.qa_agent.dashboard import VERDICT_LEVEL
-    groups = {}
+    total = review = 0
+    for verdicts in (summary.get("by_verdict") or {}).values():
+        for verdict, count in verdicts.items():
+            total += count
+            if VERDICT_LEVEL.get(verdict, "검토 필요") not in _NOT_PROBLEM_LEVELS:
+                review += count
+    return (total or int(summary.get("findings") or 0)), review
+
+
+def _subject_date(run_id: str, summary: dict) -> str:
+    from datetime import datetime
+    try:
+        return datetime.strptime(run_id[:8], "%Y%m%d").strftime("%m/%d")
+    except ValueError:
+        return ""
+
+
+def _usage_context(usage: dict | None, summary: dict) -> dict:
+    """사용량 구획. `usage` 가 없으면 기록이 없다고만 쓰고 값을 지어내지 않는다."""
+    if not usage:
+        return {"empty": "사용량 기록 없음 (이번 실행의 호출 기록을 읽지 못했습니다)", "lines": []}
+    before, after = usage.get("before") or {}, usage.get("after") or {}
+    model = usage.get("model") or (summary.get("ai_settings") or {}).get("analysis_model") or "확인 못 함"
+    context: dict = {"empty": "", "calls": int(usage.get("calls") or 0), "tokens": f"{int(usage.get('total_tokens') or 0):,}", "model": model}
+    if not context["calls"]:
+        context["empty"] = "이번 실행은 AI를 호출하지 않았습니다."
+    five_before, five_after = before.get("five_hour"), after.get("five_hour")
+    if five_after is None:
+        five = ("실행 전 " + _percent(five_before) + " · " if five_before is not None else "") + "실행 후 값 없음"
+        delta = ""
+    else:
+        five = ("실행 전 " + _percent(five_before) if five_before is not None else "실행 전 값 미확인") + " → 실행 후 " + _percent(five_after)
+        delta = ""
+        if five_before is not None:
+            delta = f"+{five_after - five_before:g}%p" if five_after >= five_before else "그 사이 초기화됨"
+    context["five"] = {"text": five + (f" ({delta})" if delta else ""), "delta": delta,
+                       "resets": after.get("five_hour_resets_kst") or ""}
+    week_after = after.get("seven_day")
+    context["week"] = {"text": "실행 후 " + _percent(week_after) if week_after is not None else "실행 후 값 없음",
+                       "resets": after.get("seven_day_resets_kst") or ""}
+    context["targets"] = [f"{item['subject']} {int(item['tokens']):,}" for item in usage.get("by_target") or []]
+    context["lines"] = [
+        f"호출 {context['calls']}회 · 총 토큰 {context['tokens']} · 모델 {model}",
+        "5시간 사용량: " + context["five"]["text"] + (f" · 초기화 {context['five']['resets']}" if context["five"]["resets"] else ""),
+        "주간 사용량: " + context["week"]["text"] + (f" · 초기화 {context['week']['resets']}" if context["week"]["resets"] else ""),
+    ]
+    if context["targets"]:
+        context["lines"].append("대상별 토큰: " + " · ".join(context["targets"]))
+    return context
+
+
+def _issue_groups(rows, link):
+    """이슈 결과를 최초 작성자별로 묶는다. 작성자는 이름순(이름 없는 쪽이 뒤), 이슈는 업데이트 최신순이다."""
+    from app.modules.qa_agent.dashboard import VERDICT_LEVEL
+    groups: dict = {}
     for row in rows:
-        person = str(row.get('reporter_id') or '')
-        group = groups.setdefault(person, {'name': row.get('reporter_name') or '이름 미확인', 'issues': {}})
-        issue = group['issues'].setdefault(row['subject'], {'updated': row.get('issue_updated_at') or '', 'results': []})
-        issue['results'].append(row)
-    def moment(value):
-        try:
-            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
-            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-        except (ValueError, TypeError):
-            return datetime.min.replace(tzinfo=timezone.utc)
+        person = str(row.get("reporter_id") or "")
+        group = groups.setdefault(person, {"name": row.get("reporter_name") or "이름 미확인", "issues": {}})
+        issue = group["issues"].setdefault(row["subject"], {"updated": row.get("issue_updated_at") or "", "title": "", "rows": []})
+        issue["title"] = issue["title"] or str(row.get("subject_title") or "")
+        level = VERDICT_LEVEL.get(row.get("verdict"), "검토 필요")
+        issue["rows"].append({"kind": ANALYSIS_LABELS.get(row.get("analysis_type"), "이슈 분석"), "level": level,
+                              "color": LEVEL_COLORS[level], "url": link(f"/qa-agent/findings/{row['id']}")})
+    result = []
+    for person, group in sorted(groups.items(), key=lambda pair: (not bool(pair[0]), pair[1]["name"], pair[0])):
+        issues = []
+        for subject, issue in sorted(group["issues"].items(), key=lambda pair: (_moment(pair[1]["updated"]), pair[0]), reverse=True):
+            issues.append({"subject": subject, "title": issue["title"], "updated": _kst_stamp(issue["updated"]), "rows": issue["rows"]})
+        result.append({"name": group["name"], "id": person or "ID 미확인", "issues": issues})
+    return result
+
+
+def _spec_rows(rows, link):
+    from app.modules.qa_agent.dashboard import VERDICT_LEVEL
+    result = []
+    for row in rows:
+        level = VERDICT_LEVEL.get(row.get("verdict"), "검토 필요")
+        result.append({"subject": row.get("subject") or "", "title": str(row.get("subject_title") or ""),
+                       "kind": ANALYSIS_LABELS.get(row.get("analysis_type"), "사양 분석"), "level": level,
+                       "color": LEVEL_COLORS[level], "url": link(f"/qa-agent/findings/{row['id']}")})
+    return result
+
+
+def _remaining_lines(stages, summary, rules_warning, limit) -> list[str]:
     lines = []
-    for person, group in sorted(groups.items(), key=lambda pair: (not bool(pair[0]), pair[1]['name'], pair[0])):
-        lines += ['', f"[이슈 작성자: {group['name']} ({person or 'ID 미확인'})] {len(group['issues'])}건"]
-        for subject, issue in sorted(group['issues'].items(), key=lambda pair: (moment(pair[1]['updated']), pair[0]), reverse=True):
-            date = moment(issue['updated'])
-            stamp = date.astimezone(claude_limits.KST).strftime('%Y-%m-%d %H:%M') if date.year > 1 else '미확인'
-            verdicts = ' · '.join(dict.fromkeys(VERDICT_LEVEL.get(row.get('verdict'), '검토 필요') for row in issue['results']))
-            lines.append(f'{subject} · 이슈 업데이트 {stamp} (한국 시간) · {verdicts}')
-            lines.extend(base + '/qa-agent/findings/' + str(row['id']) for row in issue['results'])
+    if limit:
+        lines.append(_plain(limit.get("description") or limit.get("label") or "Claude 사용량 한도에 닿아 분석을 멈췄습니다."))
+    if rules_warning:
+        lines.append("지침 확인 필요: " + _plain(rules_warning))
+    for label, status, note in _stage_lines(stages):
+        if status not in ("완료", "건너뜀", "오늘은 대상 아님"):
+            plain = _plain(note)
+            lines.append(f"{label}: {status}" + (f" · {plain}" if plain else " · 자세한 이유는 점검 기록에서 확인하세요."))
+    if summary.get("call_budget_exhausted"):
+        lines.append("AI 호출 한도에 닿아 남은 대상은 다음 실행으로 넘겼습니다. 완료로 처리하지 않았습니다.")
     return lines
+
+
+def _workflow_context(run_id, status_label, stages, summary, review_url, rules_warning, product, usage) -> dict:
+    from urllib.parse import urlencode, urlsplit
+    parsed = urlsplit(review_url)
+    base = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else ""
+
+    def link(path: str) -> str:
+        return base + path if base else ""
+
+    def results_link(category: str) -> str:
+        return link("/qa-agent/results?" + urlencode({"product": product, "run_id": run_id, "category": category}))
+
+    targets = summary.get("scope_targets") or {}
+    reused = summary.get("target_reused") or []
+    pending = summary.get("pending_analysis_events", 0)
+    new_results, review_needed = _review_counts(summary)
+    limit = summary.get("claude_limit") or {}
+    tone = _tone(status_label)
+    title = " · ".join(part for part in (
+        f"{_subject_date(run_id, summary)} 점검".strip(), f"검토 필요 {review_needed}건", f"대기 {pending}건",
+        status_label if status_label in ("일부 실패", "실패") else "",
+        (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else "") if part)
+    headline = {
+        "ok": f"점검을 마쳤습니다. 새 결과 {new_results}건 가운데 검토 필요가 {review_needed}건입니다.",
+        "warn": f"점검을 일부만 마쳤습니다. 새 결과 {new_results}건, 검토 필요 {review_needed}건입니다. 아래 내용을 확인하세요.",
+        "fail": "점검을 마치지 못했습니다. 아래 내용을 확인하세요.",
+    }[tone]
+    if limit:
+        headline = "Claude 사용량 한도에 닿아 분석을 멈췄습니다. " + headline
+    coverage, coverage_gaps = [], []
+    for kind, item in (summary.get("coverage") or {}).items():
+        coverage.append(f"{'사양' if kind == 'srs' else '이슈'} 확인 가능한 자료: {item.get('start') or '기준 없음'} ~ {item.get('end') or '자료 없음'}")
+        coverage_gaps.extend("미확인 기간: " + warning for warning in item.get("warnings", []))
+    basis, period = summary.get("basis") or {}, summary.get("period") or {}
+    issue_all = results_link("issues")
+    spec_all = results_link("spec")
+    return {
+        "title": mail_subject(product, title), "product": product, "run_id": run_id, "no_link_notice": NO_LINK, "has_links": bool(base),
+        "band": {"label": "완료" if status_label == "성공" else status_label, "color": TONES[tone]["color"], "headline": headline},
+        "numbers": [("새 결과", new_results), ("검토 필요", review_needed), ("대기", pending), ("AI 호출", summary.get("claude_calls", 0))],
+        "number_note": f"사양 분석 대상 {targets.get('spec', 0)}항목 · 이슈 분석 대상 {targets.get('issues', 0)}항목 · 기존 결과 {len(reused)}항목 재사용",
+        "issue_groups": _issue_groups(summary.get("issue_results") or [], link), "issue_all": issue_all,
+        "spec_rows": _spec_rows(summary.get("spec_results") or [], link), "spec_all": spec_all,
+        "remaining": {"pending": pending, "next_run": summary.get("next_run") or "예정 없음", "select_url": link("/qa-agent/select?" + urlencode({"product": product})),
+                      "lines": _remaining_lines(stages, summary, rules_warning, limit), "gaps": coverage_gaps},
+        "usage": _usage_context(usage, summary),
+        "footer": {"basis": f"비교 기준일: 사양 {basis.get('srs') or '기준 없음'} / 이슈 {basis.get('issues') or '기준 없음'}",
+                   "coverage": coverage, "until": f"요청 종료일: {period.get('until') or run_id[:8]}",
+                   "version": (summary.get("verification_sheet") or {}).get("sheet") or "버전 미선택",
+                   "run_url": review_url if base else "",
+                   "notice": "AI 판정과 QA 처리 완료는 별도입니다. 모든 결과는 AI 초안이며 최종 판정과 반영은 QA가 합니다."},
+    }
+
+
+def _workflow_text(ctx: dict) -> str:
+    def where(url: str, label: str = "결과 열기") -> str:
+        return f"{label}: {url or NO_LINK}"
+
+    lines = [f"상태: {ctx['band']['label']} · {ctx['band']['headline']}",
+             " · ".join(f"{name} {value}" for name, value in ctx["numbers"]), ctx["number_note"], ""]
+    lines += ["[확인할 이슈]", where(ctx["issue_all"], "이번 실행의 이슈 결과 전체")]
+    for group in ctx["issue_groups"]:
+        lines += ["", f"[이슈 작성자: {group['name']} ({group['id']})] {len(group['issues'])}건"]
+        for issue in group["issues"]:
+            for row in issue["rows"]:
+                lines += [f"- {issue['subject']} {issue['title']} · {row['kind']} · {row['level']} · 이슈 업데이트 {issue['updated']} (한국 시간)".replace("  ", " "),
+                          "  " + where(row["url"])]
+    if not ctx["issue_groups"]:
+        lines.append("- 이번 실행에서 확인할 이슈 결과가 없습니다.")
+    lines += ["", "[확인할 사양]", where(ctx["spec_all"], "이번 실행의 사양 결과 전체")]
+    for row in ctx["spec_rows"]:
+        lines += [f"- {row['subject']} {row['title']} · {row['kind']} · {row['level']}".replace("  ", " "), "  " + where(row["url"])]
+    if not ctx["spec_rows"]:
+        lines.append("- 이번 실행에서 확인할 사양 결과가 없습니다.")
+    remaining = ctx["remaining"]
+    lines += ["", "[남은 일]", f"- 대기 {remaining['pending']}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함) · 다음 자동 실행 {remaining['next_run']}",
+              "- " + where(remaining["select_url"], "상세 분석")]
+    lines += [f"- {line}" for line in remaining["lines"] + remaining["gaps"]]
+    usage = ctx["usage"]
+    lines += ["", "[이번 예약 실행의 Claude 사용량]"]
+    lines += [f"- {line}" for line in usage["lines"]] if usage["lines"] else []
+    if usage["empty"]:
+        lines.append(f"- {usage['empty']}")
+    footer = ctx["footer"]
+    lines += ["", "[점검 정보]", footer["basis"], *footer["coverage"], footer["until"], f"검증 버전: {footer['version']}", f"실행 번호: {ctx['run_id']}",
+              where(footer["run_url"], "점검 기록 열기"), footer["notice"]]
+    return "\n".join(lines)
+
+
+def _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product, usage=None):
+    ctx = _workflow_context(run_id, status_label, stages, summary, review_url, rules_warning, product, usage)
+    return ctx["title"], _workflow_text(ctx), _TEMPLATES.get_template("report_email.html").render(**ctx)
