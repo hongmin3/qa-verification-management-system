@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 운영에만 있는 절약 모드 코드를 master에 합치고, 메일·한도 알림을 관리자에게 확실히 보내며, 관리자 설정 탭과 다시 짠 분석 상세·결과 목록을 제공한다.
+**Goal:** 운영에만 있는 절약 모드 코드를 master에 합치고, 읽기 쉬운 `[QA Agent]` 메일과 사용률 기준 호출 제어·한도 알림을 만들며, 관리자 설정 탭과 다시 짠 분석 상세·결과 목록을 제공한다.
 
 **Architecture:** 핵심 앱(FastAPI + Jinja2 + SQLite)만 바꾼다. 화면 재구성·결과 목록·설정은 AI 호출 0회다. 이슈 본문은 이미 서버에 저장된 이슈 스냅샷에서 읽고, 설정 값은 기존 `SettingOverrides`(REQ-AICALL-007)를 넓혀 저장한다.
 
@@ -48,8 +48,14 @@
 | `notifications.admin_email` | 메일 주소 1개 | `NOTIFY_EMAIL_TO`의 첫 주소 | 한도·오류 알림을 받는 관리자 |
 | `daily_qa.report_recipients` | 쉼표로 나눈 주소 목록, 1~10개 | `notifications.admin_email` | 예약 점검 요약 메일 수신자 |
 | `daily_qa.savings.analysis_model` / `review_model` | `choices()` 목록 값 | `claude-sonnet-5-5` / `claude-opus-5-5` | 일반 분석·선택 재검토 모델 |
-| `daily_qa.savings.per_run` / `per_day` | 정수 1~10 / 1~20 | 2 / 4 | 호출 예산 |
-| `admin.password_hash` | `pbkdf2_sha256$<반복>$<salt hex>$<hash hex>` | 없음(없으면 초기 비밀번호 `1`) | 관리자 비밀번호 |
+| `daily_qa.usage_guard.five_hour_percent` / `seven_day_percent` | 정수 50~100 / 50~100 | 80 / 90 | 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(Task 4) |
+| `daily_qa.review_base_url` | `http://` 또는 `https://`로 시작하는 주소 | 빈 값 | 메일 링크의 서버 주소. 배포 때 `http://10.13.0.222:24357`로 저장(Task 3) |
+| `admin.password_hash` | `pbkdf2_sha256$<반복>$<salt hex>$<hash hex>` | 없음(없으면 비밀번호 `1`) | 관리자 비밀번호 |
+
+호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 설정 화면에 두지 않는다. Task 4가 사용률 기준으로 바꾼다(사용자 결정 2026-10-15).
+
+### Contract: UsageReading
+`app/core/claude_usage.py` `reading_for_run(run_id: str, storage) -> dict` → `{"before": {"five_hour": float|None, "seven_day": float|None, "measured_at": str}, "after": {"five_hour": float|None, "seven_day": float|None, "five_hour_resets_kst": str, "seven_day_resets_kst": str}, "calls": int, "total_tokens": int, "model": str, "by_target": [{"subject": str, "kind": str, "tokens": int}]}`. 사용률은 0~100 퍼센트. `after`는 이 실행의 호출들이 돌려준 마지막 `rate_limit` 값(`qa_call_reservations.outcome_json`), `before`는 실행 시작 때 저장한 최신 측정값이다. 값이 없으면 `None`이고 지어내지 않는다. Task 3 메일과 Task 4 호출 제어가 같이 쓴다.
 
 ### Contract: IssueBody
 `app/modules/qa_agent/issue_body.py` `load(product_slug: str, issue_id: str) -> IssueBody | None`. 최신 이슈 스냅샷(`data/daily_qa/snapshots/<slug>/issues/<날짜>.json`의 `items`)에서 읽는다. 필드: `id, title, status, rd_result, created, updated, reporter_id, reporter_name, description, reproduction_step, occurrence_cause, action_details, occurred_versions, target_versions, comments[{id, created, author_id, author_name, text}]`. 파일 수정 시각 기준으로 한 번만 읽어 둔다.
@@ -61,7 +67,7 @@
 
 1. 준비 목록이 만료된 뒤 페이지를 다시 연 경우: 체크박스 없이 "만료됨 · 다시 준비" 안내가 보여야 한다(Task 2).
 2. 이슈 스냅샷에 없는 번호(삭제·다른 제품·SRS)의 상세: 본문 칸이 `원문 스냅샷 없음`으로 표시되고 화면이 깨지지 않아야 한다(Task 6).
-3. 같은 한도에 하루 여러 번 걸린 경우: 관리자 알림은 한도 묶음당 1통이어야 한다(Task 4).
+3. 같은 한도에 하루 여러 번 걸린 경우: 관리자 알림은 한도 묶음당 1통이어야 한다. 사용률을 읽지 못하면 호출을 막지 않고 메일에 `사용률 미확인`으로 적는다(Task 4).
 4. 관리자 쿠키 없이 설정 저장 API를 직접 부른 경우: 403이고 값이 바뀌지 않아야 한다. 기존 서버 직접 접속(SSH 터널) 저장 경로도 계속 동작해야 한다(Task 5).
 5. 분석 종류가 빈 이전 형식 결과 214건: 결과 목록·상세에서 `이전 형식`으로 열리고 오류가 없어야 한다(Task 6·7).
 
@@ -147,51 +153,131 @@ def test_select_page_renders_selection_controls(client, prepared_plan):
 - [ ] **Step 4: 구현** — 체크박스를 행 왼쪽에 두고 행을 `<label>` 전체 클릭 영역으로 만든다(캡처의 오른쪽 끝 체크박스 해소).
 - [ ] **Step 5: 시험 통과 확인 후 커밋**
 
-### Task 3: 메일 발송 기록과 화면 시험 발송 (REQ-MAIL-002·003)
+### Task 3: 메일 제목·본문 재구성과 발송 기록 (REQ-MAIL-001·002·003, REQ-QAINTEL-048 사양 변경)
 
 **Files:**
-- Modify: `SPEC.md` REQ-MAIL-002(결과에 `message_id` 추가)·REQ-MAIL-003(설정 탭 시험 발송 추가), `app/core/notifier.py` `send_report`·`notify`, `app/modules/daily_qa/pipeline.py`(메일 단계 note), `app/modules/daily_qa/report.py`
-- Test: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py`
+- Modify: `SPEC.md` REQ-MAIL-001(제목 규칙)·REQ-MAIL-002(결과에 `message_id`)·REQ-MAIL-003(설정 탭 시험 발송), `specs/qa-intelligence.md` REQ-QAINTEL-048(메일 구성 표), `app/core/notifier.py`(`send_report`·`notify`·제목), `app/modules/daily_qa/report.py`(`_workflow_email`·`build_email`), `app/modules/daily_qa/pipeline.py`(메일 단계 note, 실행 시작 때 사용량 저장), `app/core/claude_usage.py`(`reading_for_run`)
+- Create: `app/modules/daily_qa/templates/report_email.html`(표 기반 HTML, 인라인 스타일)
+- Test: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py`
 
 **Interfaces:**
-- Produces: `send_report(...) -> {"status", "recipients", "message_id"}`; 메일 단계 note `발송 <KST 시각> · 수신 <마스킹 주소> · Message-ID <값>`; `send_test(kind: str, recipients: tuple[str, ...]) -> dict` (Task 5 화면이 사용)
+- Consumes: `Contract: UsageReading`
+- Produces: `send_report(...) -> {"status", "recipients", "message_id"}`; `mail_subject(product: str, title: str) -> str`(모든 메일 제목의 단일 생성 지점); 메일 단계 note `발송 <KST 시각> · 수신 <마스킹 주소> · Message-ID <값>`; `send_test(kind: str, recipients: tuple[str, ...]) -> dict` (Task 5 화면이 사용); `claude_usage.reading_for_run(run_id, storage)`
 
-- [ ] **Step 1: 사양 수정**
-- [ ] **Step 2: 실패 시험** — `test_send_report_returns_message_id`(가짜 SMTP가 받은 메시지의 `Message-ID` 헤더와 결과 값이 같다), `test_mail_stage_note_masks_recipient`(note에 `@vieworks.com` 앞부분 원문이 없다)
-- [ ] **Step 3: 실패 확인 → Step 4: `email.utils.make_msgid(domain=발신 도메인)`로 헤더를 직접 넣고 반환 → Step 5: 통과·커밋**
+사용자 결정(2026-10-15):
 
-사용자 확인(코드 밖): 회사 메일 스팸·격리함에서 발신 Gmail 계정의 `[QA] vxvue` 메일, Gmail 발신 계정 받은편지함의 반송(Mail Delivery Subsystem) 메일을 찾는다. 회사 메일이 외부 Gmail 발신을 막으면 사내 SMTP 사용 여부를 결정한다(13절 확인 필요).
+1. 모든 메일 제목은 `[QA Agent]`로 시작한다. 지금 `[QA 시스템]`(`notifier.py:195`), `[QA]`(`_workflow_email`), `[QA Agent]`(`build_email`)로 섞여 있다. 제품이 있는 메일은 `[QA Agent] <제품> …`이다. 메일 프로그램 규칙이 제품 이름으로 폴더를 나눈다.
+2. 예약 점검 메일 제목: `[QA Agent] <제품> <MM/DD> 점검 · 검토 필요 <N>건 · 대기 <N>건` 뒤에 실패일 때만 ` · 일부 실패` 또는 ` · 실패`. 한도에 걸린 실행은 ` · <한도 이름>`을 더한다.
+3. 본문 순서(HTML은 표 기반·인라인 스타일, 글 본문도 같은 순서):
 
-### Task 4: Claude 세션·주간 한도 알림을 관리자에게 (새 REQ-QAINTEL-049)
+| 순서 | 구획 | 내용 |
+|---|---|---|
+| 1 | 상태 띠 | 완료(초록)·일부 실패(주황)·실패(빨강) + 한 줄 요약 |
+| 2 | 숫자 4칸 | 새 결과 · 검토 필요 · 대기 · AI 호출 |
+| 3 | 확인할 이슈 | 작성자 · 이슈(번호·제목·분석 종류·판정) · 업데이트(KST) · `결과 열기`. 작성자별, 최신 업데이트순(`_issue_author_lines` 순서) |
+| 4 | 확인할 사양 | 번호·제목·분석 종류 · 판정 · `결과 열기` |
+| 5 | 남은 일 | 대기 건수와 다음 자동 실행 시각, `상세 분석` 링크, 실패를 쉬운 말로 한 줄씩 |
+| 6 | 이번 예약 실행의 Claude 사용량 | 호출 수 · 총 토큰 · 모델 · 5시간 사용량 `실행 전 <a>% → 실행 후 <b>% (+<b-a>%p) · 초기화 <시각>` · 주간 `실행 후 <c>% · 초기화 <시각>` · 대상별 토큰 |
+| 7 | 바닥글 | 비교 기준일 · 검증 버전 · 실행 번호 · `점검 기록 열기` · AI 초안 안내 |
 
-**Files:**
-- Modify: `specs/qa-intelligence.md`(REQ-QAINTEL-049 추가, 추적성 행), `app/core/notifier.py`(`notify`에 `recipients` 인자), `app/modules/daily_qa/pipeline.py:314` 부근
-- Create: 없음
-- Test: `tests/test_qa_limit_alert.py`
+4. 본문에 `audit.json`, `Gate G1` 같은 코드, `묶음`·`상한 초과로 미룸` 같은 내부 표현을 쓰지 않는다. 그런 내용은 점검 기록 화면에 둔다.
+5. 링크는 `daily_qa.review_base_url`로 만든 절대 주소다. 값이 비면 링크 대신 `서버 주소 미설정 · 설정 탭에서 입력` 문구를 넣는다. 운영은 지금 빈 값이라 Outlook에서 링크가 열리지 않는다.
+6. 사용량의 실행 전 값이 없으면 `실행 전 값 미확인`이라고 쓰고, 증가량은 두 값이 모두 있을 때만 쓴다. 값을 지어내지 않는다.
 
-**Interfaces:**
-- Consumes: `AdminSettingKeys.notifications.admin_email`, `limit_evidence.episode_key(limit)`
-- Produces: `notifier.notify(kind, detail, context=None, storage=None, recipients=()) -> dict`
-
-절약 모드 메일(`_workflow_email`)도 한도가 있으면 제목 앞에 한도 이름을 넣는다(절약 모드 전 `build_email`과 같은 동작으로 되돌림, 시험 `test_workflow_email_subject_names_limit`). 메일 프로그램 규칙이 `VXvue` 폴더로 옮길 수 있도록 관리자 알림 제목에도 제품 이름을 넣는다.
-
-사양 문장: "한도(세션·주간·불명)를 처음 감지하면 관리자 주소로 `[QA] <제품> Claude <한도 종류> 도달 · 초기화 <KST 시각>` 메일을 보낸다. 본문에는 실행 번호, 남은 대기 건수, 증거 파일 이름을 넣는다. 같은 한도 묶음(`episode_key`)에는 다시 보내지 않는다."
-
-- [ ] **Step 1: 사양 추가**
+- [ ] **Step 1: 사양 수정**(위 제목 규칙과 본문 순서 표를 REQ-MAIL-001·REQ-QAINTEL-048에 넣는다)
 - [ ] **Step 2: 실패 시험**
 
 ```python
+def test_every_subject_starts_with_qa_agent(fake_smtp):
+    notifier.notify(KIND_CLAUDE_USAGE_LIMIT, "x", recipients=("a@example.test",))
+    subject, _, _ = report.build_email(RUN_ID, "일부 실패", STAGES, SAVINGS_SUMMARY, REVIEW, "", product="VXvue")
+    assert fake_smtp.sent[0]["Subject"].startswith("[QA Agent] ") and subject.startswith("[QA Agent] VXvue ")
+
+def test_workflow_subject_counts_review_and_pending():
+    subject, _, _ = report.build_email("20261015-040000-vxvue", "일부 실패", STAGES, SAVINGS_SUMMARY, REVIEW, "", product="VXvue")
+    assert subject == "[QA Agent] VXvue 10/15 점검 · 검토 필요 2건 · 대기 12건 · 일부 실패"
+
+def test_workflow_body_order_and_plain_language():
+    _, text, _ = report.build_email("20261015-040000-vxvue", "일부 실패", STAGES, SAVINGS_SUMMARY, REVIEW, "", product="VXvue")
+    assert text.index("확인할 이슈") < text.index("확인할 사양") < text.index("남은 일") < text.index("Claude 사용량")
+    assert "audit.json" not in text and "Gate G" not in text
+
+def test_links_are_absolute_or_flagged():
+    _, _, html = report.build_email(RUN_ID, "완료", STAGES, SAVINGS_SUMMARY, "http://10.13.0.222:24357/qa-agent/runs/R", "", product="VXvue")
+    assert 'href="/qa-agent' not in html
+    _, text, _ = report.build_email(RUN_ID, "완료", STAGES, SAVINGS_SUMMARY, "/qa-agent/runs/R", "", product="VXvue")
+    assert "서버 주소 미설정" in text
+
+def test_usage_block_without_before_value():
+    usage = {**USAGE_AFTER_ONLY}  # before 값 None, after 5시간 7.0·주간 76.0, 호출 2, 토큰 552697
+    _, text, _ = report.build_email(RUN_ID, "일부 실패", STAGES, SAVINGS_SUMMARY, REVIEW, "", product="VXvue", usage=usage)
+    line = next(l for l in text.splitlines() if l.startswith("- 5시간 사용량"))
+    assert "실행 전 값 미확인 → 실행 후 7%" in line and "%p" not in line
+
+def test_send_report_returns_message_id(fake_smtp):
+    result = notifier.send_report("s", "t", recipients=("a@example.test",))
+    assert result["message_id"] == fake_smtp.sent[0]["Message-ID"]
+
+def test_mail_stage_note_masks_recipient(): ...  # note에 주소 앞부분 원문이 없다
+```
+
+`SAVINGS_SUMMARY`는 운영 실행 `20261015-040000-vxvue`의 `summary_json`에서 개인 이름을 합성 이름으로 바꾼 값으로 만든다(새 결과 2·검토 필요 2·대기 12·호출 2).
+- [ ] **Step 3: 실패 확인**
+- [ ] **Step 4: 구현** — 제목은 `mail_subject` 한 곳에서만 만든다. `Message-ID`는 `email.utils.make_msgid(domain=발신 도메인)`로 직접 넣고 반환한다. 실행 시작 때 `claude_usage`의 최신 측정값을 측정 시각과 함께 실행 요약에 저장한다.
+- [ ] **Step 5: 통과·커밋**
+
+### Task 4: 한도 알림과 사용률 기준 호출 제어 (새 REQ-QAINTEL-049, REQ-QAINTEL-042·043 사양 변경)
+
+**Files:**
+- Modify: `specs/qa-intelligence.md`(REQ-QAINTEL-042·043 수정, REQ-QAINTEL-049 추가, 추적성 행), `app/core/notifier.py`(`notify`에 `recipients` 인자, `admin_recipients`), `app/modules/daily_qa/pipeline.py`(호출 직전 확인, 한도 알림), `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py`, `app/modules/qa_agent/scheduled_jobs.py`(한도 뒤 이어 하기)
+- Test: `tests/test_qa_limit_alert.py`, `tests/test_qa_execution_budget.py`
+
+**Interfaces:**
+- Consumes: `Contract: UsageReading`(Task 3), `limit_evidence.episode_key(limit)`
+- Produces: `notifier.notify(kind, detail, context=None, storage=None, recipients=()) -> dict`; `notifier.admin_recipients(settings) -> tuple[str, ...]`(`notifications.admin_email` 값, 없으면 `NOTIFY_EMAIL_TO` 첫 주소. Task 5는 화면 편집만 더한다); `execution_budget.may_call(reading_now: dict, cfg) -> tuple[bool, str]`
+
+사용자 결정(2026-10-15): "필요한 호출은 다 해야지." 10-15 04:00 실행은 실제 5시간 사용률 7%에서 호출 횟수 상한(실행당 2회) 때문에 멈췄다. 운영 설정은 같은 날 09:52에 `per_run` 30·`per_day` 60으로 임시 상향했다.
+
+1. 예약·수동 실행은 필요한 분석을 모두 호출한다. 호출 횟수 상한(`per_run`·`per_day`)은 사용률 확인으로 바꾼다. 실행당 작업 수 상한 `daily_qa.max_tasks_per_run`(30)은 유지한다.
+2. 호출 직전에 최신 사용률(직전 호출이 돌려준 `rate_limit`, 없으면 `claude_usage` 측정값)을 본다. 5시간 사용률이 `daily_qa.usage_guard.five_hour_percent`(기본 80) 이상이거나 주간이 `seven_day_percent`(기본 90) 이상이면 새 호출을 멈추고 남은 대상을 대기로 둔다. 사용률을 읽지 못하면 호출은 막지 않고 메일에 `사용률 미확인`으로 적는다.
+3. 멈추거나 한도에 걸리면 관리자에게 `[QA Agent] <제품> Claude <한도 종류 또는 '사용률 <N>% 도달'> · 초기화 <KST 시각>` 메일을 보낸다. 본문에는 실행 번호, 남은 대기 건수, 증거 파일 이름, `Contract: UsageReading` 값을 넣는다. 같은 한도 묶음(`episode_key`)에는 다시 보내지 않는다.
+4. 한도가 풀리면 대기분을 자동으로 이어서 분석한다(10분 간격 `qa_agent_limit_catchup`이 절약 모드에서도 동작). 호출당 2턴 단일 응답 방식은 유지한다.
+
+- [ ] **Step 1: 사양 수정·추가**
+- [ ] **Step 2: 실패 시험**
+
+```python
+def test_runs_all_targets_when_usage_is_low(fake_runner, store):
+    run_pipeline(store, targets=8, usage_after_each=[7.0] * 8)
+    assert fake_runner.calls == 8
+
+def test_stops_before_call_at_five_hour_threshold(fake_runner, store):
+    run_pipeline(store, targets=8, usage_after_each=[40.0, 79.0, 80.0])
+    assert fake_runner.calls == 3 and pending_count(store) == 5
+
+def test_weekly_threshold_stops_calls(fake_runner, store):
+    run_pipeline(store, targets=3, usage_before=10.0, weekly=90.0)
+    assert fake_runner.calls == 0
+
+def test_unknown_usage_does_not_block(fake_runner, store):
+    run_pipeline(store, targets=2, usage_after_each=[None, None])
+    assert fake_runner.calls == 2
+
 def test_session_limit_sends_one_admin_mail_per_episode(fake_smtp, store):
     run_pipeline_hitting_limit(store, kind=KIND_SESSION, times=2)
     assert [m["To"] for m in fake_smtp.sent] == ["admin@example.test"]
-    assert "Claude 세션(5시간) 사용량 한도" in fake_smtp.sent[0]["Subject"]
+    assert fake_smtp.sent[0]["Subject"].startswith("[QA Agent] VXvue Claude 세션(5시간)")
 
 def test_limit_alert_skipped_without_admin_email(fake_smtp, store):
     run_pipeline_hitting_limit(store, kind=KIND_WEEKLY, admin_email="")
     assert fake_smtp.sent == []
+
+def test_catchup_resumes_pending_in_savings_mode(store, clock):
+    hit_limit(store, resets_at=clock.now + timedelta(minutes=5)); clock.advance(minutes=10)
+    assert catchup_launches(store) == ["vxvue"]
 ```
 
-- [ ] **Step 3: 실패 확인 → Step 4: 증거 캡처 직후 `notify(KIND_CLAUDE_USAGE_LIMIT, ..., recipients=(admin,))` 호출, 재발송 키는 `claude_usage_limit:<episode_key>` → Step 5: 통과·커밋**
+- [ ] **Step 3: 실패 확인 → Step 4: 구현 → Step 5: 통과·커밋**
 
 ### Task 5: 상단 `설정` 탭과 관리자 로그인 (새 REQ-WEB-008, NFR-SEC-004 수정)
 
@@ -207,7 +293,7 @@ def test_limit_alert_skipped_without_admin_email(fake_smtp, store):
 화면(`/settings`, 메뉴 이름 `설정`, 기존 `AI 분석 설정` 메뉴를 대체하고 `/settings/ai`는 `/settings#ai`로 이동):
 
 1. 로그인 전: 현재 값 읽기 전용 + 비밀번호 입력 한 칸. 비밀번호는 `1`이다(사용자 결정 2026-10-15: 계속 유지).
-2. 로그인 후 구획: `관리자 메일`, `자동 보고 메일 받는 사람`(현재는 관리자 1명, 추가·삭제 가능), `메일 시험 발송`, `AI 모델과 호출 예산`(기존 AI 설정 표 포함), `관리자 비밀번호 변경`(선택 기능), `변경 이력`(기존 `app_setting_changes`).
+2. 로그인 후 구획: `관리자 메일`, `자동 보고 메일 받는 사람`(현재는 관리자 1명, 추가·삭제 가능), `메일 시험 발송`, `AI 모델과 사용률 기준`(기존 AI 설정 표, 5시간·주간 기준 %)과 `메일 링크 서버 주소`(`daily_qa.review_base_url`), `관리자 비밀번호 변경`(선택 기능), `변경 이력`(기존 `app_setting_changes`).
 3. 비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다.
 
 - [ ] **Step 1: 사양 추가·수정**
@@ -380,7 +466,7 @@ def test_card_header_emphasizes_reporter_and_update(client):
 - [ ] **Step 2:** 키트 루트에서 `node tools/cleanup-workspace.js --completed <이 작업 폴더> --apply --auto`
 - [ ] **Step 3:** 전체 `pytest`(Task 1 Step 4와 같은 방법) → 실패 0. `node .project-check/project-readiness.js .` → 오류 0
 - [ ] **Step 4: 이 브랜치를 master에 병합·push** — 다른 세션이 같은 파일을 고치는 중이면 push를 미루고 보고한다.
-- [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로 저장 → 메일 시험 발송 1통(사용자 수신 확인 요청) → 운영 화면 390px·1920px 확인
+- [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로, 메일 링크 서버 주소를 `http://10.13.0.222:24357`로 저장 → 운영 `config.local.yaml`을 다시 읽어 `daily_qa.savings.per_run`·`per_day`(10-15 임시값 30·60)가 새 코드에서 아직 쓰이는지, 사용률 기준(80·90)이 적용됐는지 확인하고 결과를 기록(사용자 요청) → 메일 시험 발송 1통(제목 `[QA Agent]`, 사용자 수신 확인 요청) → 운영 화면 390px·1920px 확인
 - [ ] **Step 6:** 다음 예약 실행(평일 04:00 KST) 뒤 메일 단계 note의 Message-ID와 사용자 수신 여부를 대조해 `progress.md`에 기록
 
 ## 13. 사용자 결정 (2026-10-15)
