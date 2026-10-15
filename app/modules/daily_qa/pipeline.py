@@ -267,7 +267,7 @@ def run_daily(
                                 "result_cache": run.result_cache})
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
-        if on_demand or selection_id or trigger == 'prepare' or (cfg.savings_enabled and trigger.startswith("manual")) or outcome["status"] == "CANCELLED":
+        if on_demand or selection_id or trigger in ('prepare', 'collect') or (cfg.savings_enabled and trigger.startswith("manual")) or outcome["status"] == "CANCELLED":
             # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
             store.set_email_status(run_id, "skipped")
             outcome["status"] = store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
@@ -438,7 +438,11 @@ class _Run:
         self.selection_id = selection_id
         #: 실행을 시작할 때 저장해 둔 가장 최근 사용률. 메일의 "실행 전 값"이다 (REQ-QAINTEL-048). 못 읽으면 값 없음.
         self.usage_before = _saved_usage_reading()
-        self.collection_only = cfg.savings_enabled and trigger == 'prepare' and not on_demand
+        self.collection_only = (cfg.savings_enabled and trigger == 'prepare' and not on_demand) or trigger == 'collect'
+        #: 수집만 하는 실행(REQ-ALMCHG-001)이 AI 분석을 하지 않는 까닭. 분석 실행이면 빈 값.
+        self.collect_reason = ''
+        if trigger == 'collect':
+            self.collect_reason = 'policy_off' if automation_policy.get_policy(store, cfg.slug)['mode'] == 'off' else 'weekly_not_due'
         if analysis_scope not in ('all', 'spec', 'issues'):
             raise ValueError('알 수 없는 분석 범위입니다.')
         self.analysis_scope = analysis_scope
@@ -928,6 +932,10 @@ class _Run:
 
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
         self._progress("prepare_ai", "AI 분석 준비")
+        if self.trigger == 'collect':
+            reason = '자동 분석 꺼짐' if self.collect_reason == 'policy_off' else '주간 모드의 분석일 아님'
+            self.stages["AI"] = _stage("skipped", f"수집만 실행 · AI 분석 없음 ({reason})")
+            return
         if self.collection_only:
             self._prepare_plan(srs_items, issue_items, tc_rows)
             self.stages["AI"] = _stage("skipped", "수집 완료 · AI 미분석. 대상 목록에서 선택하세요.")
@@ -1654,6 +1662,8 @@ class _Run:
                         "token_usage": self.token_usage, "cancelled": cancellation,
                         "result_cache_hits": self.result_cache["hits"], "result_cache": self.result_cache})
         summary["collection_only"] = self.collection_only
+        summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
+        summary["collect_reason"] = self.collect_reason
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary['plan_id'] = self.plan_id
         summary['prepared_targets'] = self.targets_found if self.collection_only else None
@@ -1734,6 +1744,8 @@ class _Run:
             status = "SUCCESS"
         summary = report.summarize(self.all_findings, self.question_count)
         summary["collection_only"] = self.collection_only
+        summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
+        summary["collect_reason"] = self.collect_reason
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary["rules"] = self.rules_state.as_dict()
         summary["product"] = self.cfg.slug

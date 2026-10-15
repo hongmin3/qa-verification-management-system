@@ -76,7 +76,7 @@ def check(cfg) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="QA Agent 점검")
     parser.add_argument("--product", default=None, help="제품 이름 (기본: daily_qa.products 의 첫 제품)")
-    parser.add_argument("--trigger", default="manual_cli", choices=("scheduled", "manual", "manual_cli", "catchup", "prepare"))
+    parser.add_argument("--trigger", default="manual_cli", choices=("scheduled", "manual", "manual_cli", "catchup", "prepare", "collect"))
     parser.add_argument('--selection-id', default='')
     parser.add_argument('--analysis-scope', choices=('all', 'spec', 'issues'), default='all')
     parser.add_argument("--since", type=date.fromisoformat, default=None, help="기간 분석 시작일 YYYY-MM-DD (그날 또는 그 전 스냅샷이 기준)")
