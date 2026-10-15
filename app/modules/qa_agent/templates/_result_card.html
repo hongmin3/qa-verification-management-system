@@ -1,0 +1,20 @@
+{# 분석결과 카드 하나 (REQ-QAINTEL-019·046). 쓰는 값: item, states, level_help, hl(제목 태그), listing(없을 수 있음). #}
+{% set heading = hl|default('h3') %}
+<article class="qa-card qa-result-card">
+  <div class="qa-card-top">
+    {% if item.is_spec %}<span class="qa-spec-label">사양 분석</span><span class="hint">AI 분석 {{ item.created }}</span>
+    {% else %}<span class="qa-reporter">{{ item.reporter }}</span>
+    <span class="qa-updated">이슈 업데이트 {{ item.issue_updated }}{% if item.issue_updated_ago %} · {{ item.issue_updated_ago }}{% endif %}</span>{% endif %}
+  </div>
+  <div class="qa-card-head">
+    <span class="qa-kind{% if item.legacy %} qa-kind-legacy{% endif %}">{{ item.kind }}</span>
+    <span class="level {{ item.level_class }}" title="{{ level_help[item.level] }}">{{ item.level }}</span>
+    <span class="pill">{{ states[item.processing_state] }}</span>
+    {% if item.freshness.state == 'changed_after' %}<span class="qa-changed" title="분석한 뒤에 이슈가 바뀌었습니다. 이 결과가 최신 이슈와 맞는지 상세에서 확인하세요.">분석 이후 변경{% if item.freshness.after_events %} · 재분석 대기 {{ item.freshness.after_events }}건{% endif %}</span>{% endif %}
+  </div>
+  <{{ heading }}><a href="/qa-agent/findings/{{ item.id }}">[{{ item.subject }}] {{ item.title }}</a></{{ heading }}>
+  {% if item.trigger %}<p class="qa-why"><b>왜 분석했나</b> {% for step in item.trigger[:3] %}{{ step.time }} {{ step.label }}{% if not loop.last %} · {% endif %}{% endfor %}{% if item.trigger|length > 3 %} 외 {{ item.trigger|length - 3 }}건{% endif %}</p>{% endif %}
+  <div class="qa-summary">{{ item.summary }}</div>
+  {% if item.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
+  <p class="hint qa-card-foot">{% if not item.is_spec %}AI 분석 {{ item.created }}{% endif %}{% if item.history_url and item.history_count > 1 and listing and listing.view == 'issue' %}{% if not item.is_spec %} · {% endif %}<a href="{{ item.history_url }}">이전 분석 {{ item.history_count - 1 }}건</a>{% endif %}</p>
+</article>

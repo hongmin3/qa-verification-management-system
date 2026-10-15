@@ -1,0 +1,24 @@
+{# 대시보드와 결과 페이지가 같이 쓰는 조회 조건 (REQ-QAINTEL-046). 쓰는 값: listing, selected. #}
+<form method="get" action="{{ listing.path }}" class="qa-filters" role="search">
+  <input type="hidden" name="product" value="{{ selected }}">
+  {% for key in ('run_id', 'subject', 'category', 'quick', 'view', 'group') %}{% if listing.filters[key] %}<input type="hidden" name="{{ key }}" value="{{ listing.filters[key] }}">{% endif %}{% endfor %}
+  <div class="qa-filter-row">
+    <label class="qa-search"><span>검색</span><input type="search" name="q" value="{{ listing.filters.q }}" placeholder="이슈·사양 번호, 제목, 작성자 이름, 요약"></label>
+    <label>정렬 <select name="sort">{% for code, name in listing.sorts.items() %}<option value="{{ code }}" {% if listing.filters.sort == code %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+    <button type="submit">조회</button><a href="{{ listing.reset_url }}">초기화</a>
+  </div>
+  <details class="qa-detail-filters"{% if listing.filters.level or listing.filters.state or listing.filters.start or listing.filters.end or listing.filters.reporter %} open{% endif %}>
+    <summary>자세한 조건</summary>
+    <div class="qa-filter-row">
+      <label>이슈 작성자 <select name="reporter"><option value="">전체</option>{% for person in listing.reporters %}<option value="{{ person.reporter_id }}" {% if person.reporter_id == listing.filters.reporter %}selected{% endif %}>{{ person.reporter_name or '이름 미확인' }} ({{ person.reporter_id }})</option>{% endfor %}</select></label>
+      <label>AI 판정 <select name="level"><option value="">전체</option>{% for value in listing.levels %}<option {% if listing.filters.level == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+      <label>처리 상태 <select name="state"><option value="">전체</option>{% for code, name in listing.states.items() %}<option value="{{ code }}" {% if listing.filters.state == code %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+      <label>분석 시작일 <input type="date" name="start" value="{{ listing.filters.start }}"></label>
+      <label>분석 종료일 <input type="date" name="end" value="{{ listing.filters.end }}"></label>
+    </div>
+  </details>
+</form>
+<nav class="qa-chips" aria-label="빠른 조건">{% for chip in listing.chips %}<a class="qa-chip{% if chip.active %} on{% endif %}" href="{{ chip.url }}"{% if chip.active %} aria-current="true"{% endif %}>{{ chip.label }}</a>{% endfor %}</nav>
+<p class="qa-view-switch">보기
+  {% if listing.view == 'issue' %}<b>이슈별 최신 결과</b> · <a href="{{ listing.view_url }}">모든 결과 보기</a>{% else %}<a href="{{ listing.view_url }}">이슈별 최신 결과</a> · <b>모든 결과</b>{% endif %}
+  · <a href="{{ listing.group_url }}">{% if listing.group == 'author' %}작성자별 묶기 풀기{% else %}작성자별로 묶기{% endif %}</a></p>

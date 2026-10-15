@@ -299,16 +299,40 @@ def badges(finding: dict) -> list[str]:
     return out
 
 
-def card(finding: dict) -> dict:
-    """세 줄 카드: 결론 단계, 한 줄 요약, QA 할 일 (REQ-QAINTEL-033). 세부 표시는 상세 화면의 `자세히` 에 있다."""
+LEGACY_KIND = "이전 형식"
+NO_FRESHNESS = {"state": "unknown", "after_events": 0, "latest_update": ""}
+
+
+def ago(value, now: datetime | None = None) -> str:
+    """`N분 전`·`N시간 전`·`N일 전`. 시각을 읽지 못하면 빈 값이다. 미래 시각은 `방금` 으로 본다."""
+    moment = _moment(value)
+    if moment is None:
+        return ""
+    seconds = int(((now or datetime.now(timezone.utc)) - moment).total_seconds())
+    if seconds < 60:
+        return "방금"
+    if seconds < 3600:
+        return f"{seconds // 60}분 전"
+    if seconds < 86400:
+        return f"{seconds // 3600}시간 전"
+    return f"{seconds // 86400}일 전"
+
+
+def card(finding: dict, freshness: dict | None = None, trigger: list[dict] | None = None, now: datetime | None = None) -> dict:
+    """결과 카드. 결론 단계, 두 줄 요약, QA 할 일 (REQ-QAINTEL-033). 세부 표시는 상세 화면의 `자세히` 에 있다.
+
+    `freshness`·`trigger` 는 목록이 한꺼번에 읽어 넘긴다(REQ-QAINTEL-046). 없으면 `unknown`·빈 목록이다.
+    """
     kind = finding.get("analysis_type", "")
     name = level(finding)
     return {
         "id": finding["id"],
         "subject": finding["subject"],
         "title": finding.get("subject_title", ""),
-        "kind": ANALYSIS_TYPE_LABELS.get(kind, kind or finding.get("skill", "")),
+        "kind": ANALYSIS_TYPE_LABELS.get(kind, kind) if kind else LEGACY_KIND,
         "analysis_type": kind,
+        "legacy": not kind,
+        "is_spec": kind in SRS_SUBJECT_KINDS,
         "verdict": finding["verdict"],
         "verdict_label": label(finding["verdict"]),
         "level": name,
@@ -318,9 +342,15 @@ def card(finding: dict) -> dict:
         "badges": badges(finding),
         "created": kst(finding.get("created_at")),
         "issue_updated": kst(finding.get('issue_updated_at')) if finding.get('issue_updated_at') else '미확인',
+        "issue_updated_ago": ago(finding.get("issue_updated_at"), now),
         "confidence": finding.get("confidence", ""),
         "reporter": finding.get('reporter_name') or (f"이름 미확인 ({finding['reporter_id']})" if finding.get('reporter_id') else '이슈 작성자 정보 없음'),
+        "reporter_id": finding.get("reporter_id", ""),
+        "reporter_name": finding.get("reporter_name", ""),
         "processing_state": finding.get('processing_state', 'open'),
+        "freshness": freshness or dict(NO_FRESHNESS),
+        "trigger": trigger or [],
+        "history_count": int(finding.get("history_count") or 1),
     }
 
 
@@ -696,7 +726,7 @@ def prepared_plan(choice: ProductChoice) -> dict | None:
     return execution_plan.public(plan, reporters=reporters)
 
 
-def dashboard(choice: ProductChoice, sort: str = 'updated') -> dict:
+def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None = None) -> dict:
     from app.modules.daily_qa import automation_policy
     from app.modules.daily_qa import workflow_settings
     cfg, store = choice.cfg, choice.store
@@ -704,15 +734,20 @@ def dashboard(choice: ProductChoice, sort: str = 'updated') -> dict:
     last = runs[0] if runs else None
     events = store.list_events(product=cfg.slug, run_id=last["id"]) if last else []
     findings = store.list_findings(product=cfg.slug, include_legacy=cfg.is_legacy_product, only_analyses=True, limit=30)
+    from app.modules.qa_agent import result_views
+    listing: dict = {}
     if cfg.savings_enabled:
-        findings = store.storage.qa_search_findings(cfg.slug, include_legacy=cfg.is_legacy_product, sort=sort)['items']
+        # 절약 모드의 분석결과 구역은 결과 페이지와 같은 조회다. 맨 위 한 쪽만 보인다 (REQ-QAINTEL-019·046).
+        listing = result_views.search(choice, {**(filters or {}), 'sort': sort, 'page': 1}, path='/qa-agent')
     return {
+        "listing": listing,
+        "states": result_views.STATES, "level_help": result_views.LEVEL_HELP,
         "status": status(choice),
         "result_sort": sort,
         "last_run": last,
         "runs": runs,
         "summary": change_summary(events),
-        "cards": [card(item) for item in findings] if cfg.savings_enabled else sort_cards([card(item) for item in findings]),
+        "cards": listing['cards'] if cfg.savings_enabled else sort_cards([card(item) for item in findings]),
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),

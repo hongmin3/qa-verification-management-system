@@ -70,40 +70,32 @@
   </div>
 </section>
 
-<section class="qa-section">
+<section class="qa-section" id="results">
   <h2>분석결과</h2>
-  {% if workflow.enabled %}<form method="get" action="/qa-agent" class="inline-form">
-    <input type="hidden" name="product" value="{{ selected }}">
-    <label>결과 정렬 <select name="sort">{% for value, label in [('updated','이슈 최신 업데이트순'),('author','이슈 작성자순'),('number','이슈 번호순'),('analyzed','최근 분석순')] %}<option value="{{ value }}"{% if result_sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-    <button type="submit">적용</button>
-  </form>{% endif %}
-  <p><a href="/qa-agent/results?product={{ selected|urlencode }}">전체 결과·검색</a> · <a href="/qa-agent/results?product={{ selected|urlencode }}&category=spec">사양 분석</a> · <a href="/qa-agent/results?product={{ selected|urlencode }}&category=issues">이슈 분석</a></p>
+  {% if listing %}{% include "_result_filters.html" %}{% endif %}
+  <p><a href="/qa-agent/results?product={{ selected|urlencode }}">전체 결과·검색</a>{% if listing %} · 조건에 맞는 {{ listing.total }}건 중 맨 위 {{ cards|length }}건{% endif %}</p>
   <form method="get" action="/qa-agent/period" class="inline-form">
     <input type="hidden" name="product" value="{{ selected }}">
     기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
   <a class="hint" href="/qa-agent/rules?product={{ selected|urlencode }}">자동 점검 범위 보기</a>
-  {% macro result_card(item) %}
-    <div class="qa-card">
-      <div class="qa-card-head"><span class="level {{ item.level_class }}">{{ item.level }}</span>
-        <span class="hint" style="margin:0">{{ item.kind }} · 분석 {{ item.created }}</span></div>
-      <h4>[{{ item.subject }}] {{ item.title }}</h4>
-      {% if item.analysis_type not in ('SPEC_COVERAGE','TC_CHECK','SRS_REMOVED') %}<p class="hint">{{ item.reporter }} · 이슈 업데이트 {{ item.issue_updated }} (한국 시간)</p>{% endif %}
-      <div class="qa-summary">{{ item.summary }}</div>
-      {% if item.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
-      <a href="/qa-agent/findings/{{ item.id }}">상세보기</a>
-    </div>
-  {% endmacro %}
-  {% set open_cards = cards if workflow.enabled else cards | rejectattr("level", "equalto", "문제 없음") | list %}
-  {% set ok_cards = [] if workflow.enabled else cards | selectattr("level", "equalto", "문제 없음") | list %}
+  {% set open_cards = cards if listing else cards | rejectattr("level", "equalto", "문제 없음") | list %}
+  {% set ok_cards = [] if listing else cards | selectattr("level", "equalto", "문제 없음") | list %}
+  {% if listing and listing.groups %}
+  {% for group in listing.groups %}
+  <h3 class="qa-group">{{ group.name }} <span class="hint">{{ group.id }} · {{ group.cards|length }}건</span></h3>
+  <div class="qa-cards">{% for item in group.cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
+  {% endfor %}
+  {% else %}
   <div class="qa-cards">
-  {% for item in open_cards %}{{ result_card(item) }}{% endfor %}
+  {% for item in open_cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}
   </div>
-  {% if not cards %}<p class="hint">아직 분석 결과가 없습니다.</p>
+  {% endif %}
+  {% if not cards %}<p class="hint">{% if listing %}조건에 맞는 분석 결과가 없습니다. 조건을 줄여 보세요.{% else %}아직 분석 결과가 없습니다.{% endif %}</p>
   {% elif not open_cards %}<p class="hint">확인이 필요한 결과가 없습니다.</p>{% endif %}
   {% if ok_cards %}
   <details class="qa-ok-cards"><summary>문제 없음 {{ ok_cards | length }}건</summary>
-    <div class="qa-cards">{% for item in ok_cards %}{{ result_card(item) }}{% endfor %}</div>
+    <div class="qa-cards">{% for item in ok_cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
   </details>
   {% endif %}
 </section>
