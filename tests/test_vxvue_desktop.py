@@ -157,7 +157,7 @@ def test_bundle_carries_no_user_config_and_token_initialization_preserves_existi
     data = bundle_bytes("http://127.0.0.1:24357", ticket, "2026-10-22T00:00:00+00:00")
     assert data == bundle_bytes("http://127.0.0.1:24357", ticket, "2026-10-22T00:00:00+00:00")
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        assert set(archive.namelist()) == {"manifest.json", "server.cjs", "enrollment.json"}
+        assert set(archive.namelist()) == {"manifest.json", "server.cjs", "enrollment.json", "tools.json"}
         manifest = json.loads(archive.read("manifest.json"))
         assert "user_config" not in manifest
         assert manifest["server"]["mcp_config"]["env"] == {"VXVUE_SERVER_URL": "http://127.0.0.1:24357"}

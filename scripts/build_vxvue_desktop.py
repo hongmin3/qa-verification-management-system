@@ -46,9 +46,13 @@ def bundle_bytes(server_url, ticket, expires_at=""):
     manifest = json.loads((SOURCE / "manifest.json").read_text(encoding="utf-8"))
     manifest["server"]["mcp_config"]["env"]["VXVUE_SERVER_URL"] = server
     enrollment = {"server_url": server, "ticket": _ticket(ticket), "expires_at": expires_at}
+    from app.modules.vxvue_chatbot.desktop import INSTRUCTIONS, definitions
+    # Lets the bridge answer the handshake at once and list tools while the server is unreachable.
+    offline = {"instructions": INSTRUCTIONS, "tools": definitions()}
     return _zip((("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")),
                  ("server.cjs", (SOURCE / "server.cjs").read_bytes()),
-                 ("enrollment.json", json.dumps(enrollment, ensure_ascii=False, indent=2).encode("utf-8"))))
+                 ("enrollment.json", json.dumps(enrollment, ensure_ascii=False, indent=2).encode("utf-8")),
+                 ("tools.json", json.dumps(offline, ensure_ascii=False, indent=2).encode("utf-8"))))
 
 
 def skill_text():

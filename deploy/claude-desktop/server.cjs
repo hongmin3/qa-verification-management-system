@@ -7,7 +7,9 @@ const path = require('node:path');
 const readline = require('node:readline');
 const { isIP } = require('node:net');
 
-const BRIDGE_VERSION = '1.1.0';
+const BRIDGE_VERSION = '1.2.0';
+const QUICK_MS = 10000;  // handshake-time calls; Claude Desktop gives up on a silent server after about 60 s
+const LOG_LIMIT = 256 * 1024;
 const MAX_BYTES = 32 * 1024 * 1024;
 const RETRY_CODES = new Set(['device_revoked', 'device_expired', 'unknown_credential', 'missing_credential']);
 
@@ -75,6 +77,8 @@ class Bridge {
     this.home = options.home;
     this.fetch = options.fetchImpl || fetch;
     this.timeoutMs = options.timeoutMs || 180000;
+    this.quickMs = options.quickMs || QUICK_MS;
+    this.bundled = options.bundled || null;  // tools.json from the download: instructions and tool list
     this.ticketRejected = false;  // set only when the server answered; a network failure keeps the ticket usable
     this.authFailure = null;      // the server's own reason, kept for later calls in this process
     try {
@@ -87,6 +91,16 @@ class Bridge {
 
   get store() { return path.join(this.home, 'credentials.json'); }
   get toolCache() { return path.join(this.home, 'tools-cache.json'); }
+  get logFile() { return path.join(this.home, 'bridge.log'); }
+
+  // A short step log for diagnosing a client environment. Never holds keys, tickets or tool payloads.
+  log(text) {
+    try {
+      fs.mkdirSync(this.home, { recursive: true });
+      try { if (fs.statSync(this.logFile).size > LOG_LIMIT) fs.renameSync(this.logFile, this.logFile + '.1'); } catch { /* first write */ }
+      fs.appendFileSync(this.logFile, `${new Date().toISOString()} pid=${process.pid} ${text}\n`, 'utf8');
+    } catch { /* logging is optional */ }
+  }
   get guide() { return (this.base || '') + '/vxvue-desktop'; }
 
   stored() {
@@ -122,12 +136,14 @@ class Bridge {
     try {
       response = await this.fetch(endpoint(this.base, '/vxvue-desktop/enroll'), {
         method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', 'X-VXvue-Bridge': BRIDGE_VERSION },
-        body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
+        body: JSON.stringify(body), signal: AbortSignal.timeout(this.quickMs * 2)
       });
     } catch (error) {
       const [kind, code] = networkKind(error);
+      this.log(`enroll network ${kind} ${code}`);
       throw new BridgeError(kind, '', code);
     }
+    this.log(`enroll http ${response.status}`);
     const reply = await response.json().catch(() => ({}));
     if (!response.ok || typeof reply.token !== 'string') {
       if (reply.code === 'ticket_used') {
@@ -149,7 +165,7 @@ class Bridge {
     return all[this.base];
   }
 
-  async post(message) {
+  async post(message, timeoutMs = this.timeoutMs) {
     let credential = await this.credential();
     for (let attempt = 0; attempt < 2; attempt += 1) {
       let response;
@@ -157,12 +173,14 @@ class Bridge {
         response = await this.fetch(endpoint(this.base), {
           method: 'POST', redirect: 'error',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + credential.token, 'X-VXvue-Bridge': BRIDGE_VERSION },
-          body: JSON.stringify(message), signal: AbortSignal.timeout(this.timeoutMs)
+          body: JSON.stringify(message), signal: AbortSignal.timeout(timeoutMs)
         });
       } catch (error) {
         const [kind, code] = networkKind(error);
+        this.log(`${message.method} network ${kind} ${code}`);
         throw new BridgeError(kind, '', code);
       }
+      this.log(`${message.method} http ${response.status}`);
       if (response.status === 401 && !credential.legacy && attempt === 0) {
         const reply = await response.json().catch(() => ({}));
         if (RETRY_CODES.has(reply.code)) {
@@ -225,6 +243,7 @@ class Bridge {
   fallbackTools() {
     const cached = readJson(this.toolCache);
     if (cached && cached.base === this.base && Array.isArray(cached.tools) && cached.tools.length) return cached.tools;
+    if (this.bundled && Array.isArray(this.bundled.tools) && this.bundled.tools.length) return this.bundled.tools;
     return [{
       name: 'get_status',
       description: 'VXvue 사양·매뉴얼·TC·Polarion 질문의 첫 단계. QA 서버 연결 상태와 실패 원인을 확인한다.',
@@ -233,27 +252,36 @@ class Bridge {
     }];
   }
 
+  initializeReply(message) {
+    const requested = message.params && message.params.protocolVersion;
+    return { jsonrpc: '2.0', id: message.id, result: {
+      protocolVersion: typeof requested === 'string' ? requested : '2025-06-18',
+      capabilities: { tools: {} }, serverInfo: { name: 'vxvue-ai', version: BRIDGE_VERSION },
+      instructions: (this.bundled && this.bundled.instructions) ||
+        'VXvue AI 연결 확장입니다. VXvue 질문을 받으면 get_status를 먼저 호출하고, 연결 실패 안내가 오면 원인과 할 일을 사용자에게 그대로 전하세요.'
+    } };
+  }
+
   async handle(message) {
     const hasId = Object.hasOwn(message, 'id');
+    this.log(`recv ${message.method || 'reply'}${hasId ? '' : ' (notification)'}`);
+    // The handshake never waits on the network: Claude Desktop marks a server failed when initialize is slow.
+    if (message.method === 'initialize') return this.initializeReply(message);
+    if (!hasId) return null;  // notifications carry nothing the QA server needs
+    if (message.method === 'ping') return { jsonrpc: '2.0', id: message.id, result: {} };
     try {
-      const reply = await this.post(message);
+      const reply = await this.post(message, message.method === 'tools/call' ? this.timeoutMs : this.quickMs);
       if (message.method === 'tools/list' && reply && reply.result && Array.isArray(reply.result.tools)) {
         try { writeJson(this.toolCache, { base: this.base, tools: reply.result.tools }); } catch { /* cache is optional */ }
       }
       return reply;
     } catch (error) {
-      if (!(error instanceof BridgeError)) error = new BridgeError('network', '', 'unexpected');
+      if (!(error instanceof BridgeError)) {
+        this.log(`unexpected ${error && error.name}`);
+        error = new BridgeError('network', '', 'unexpected');
+      }
       const diagnosis = this.explain(error);
       process.stderr.write('VXvue AI: ' + diagnosis.split('\n')[0] + '\n');
-      if (!hasId) return null;
-      if (message.method === 'initialize') {
-        const requested = message.params && message.params.protocolVersion;
-        return { jsonrpc: '2.0', id: message.id, result: {
-          protocolVersion: typeof requested === 'string' ? requested : '2025-06-18',
-          capabilities: { tools: {} }, serverInfo: { name: 'vxvue-ai', version: BRIDGE_VERSION },
-          instructions: 'VXvue AI 연결 확장입니다. 지금은 QA 서버에 연결하지 못했습니다. VXvue 질문을 받으면 get_status를 호출해 원인과 할 일을 사용자에게 그대로 안내하세요.\n' + diagnosis
-        } };
-      }
       if (message.method === 'tools/list') return { jsonrpc: '2.0', id: message.id, result: { tools: this.fallbackTools() } };
       if (message.method === 'tools/call') {
         return { jsonrpc: '2.0', id: message.id, result: { content: [{ type: 'text', text: diagnosis }], isError: true } };
@@ -267,6 +295,8 @@ class Bridge {
 function fromEnvironment() {
   const enrollment = readJson(path.join(__dirname, 'enrollment.json'));
   return new Bridge({
+    bundled: readJson(path.join(__dirname, 'tools.json')),
+    quickMs: Number(process.env.VXVUE_QUICK_MS) || undefined,
     serverUrl: process.env.VXVUE_SERVER_URL || (enrollment && enrollment.server_url) || '',
     legacyToken: (process.env.VXVUE_ACCESS_TOKEN || '').length >= 32 ? process.env.VXVUE_ACCESS_TOKEN : '',
     enrollment,
@@ -277,6 +307,9 @@ function fromEnvironment() {
 async function main() {
   const bridge = fromEnvironment();
   process.stderr.write(`VXvue AI bridge ${BRIDGE_VERSION} 시작: ${bridge.base || '(서버 주소 오류)'}\n`);
+  bridge.log(`start ${BRIDGE_VERSION} node=${process.version} base=${bridge.base || 'invalid'} ` +
+    `ticket=${bridge.enrollment && bridge.enrollment.ticket ? 'yes' : 'no'} saved=${bridge.base && bridge.stored() ? 'yes' : 'no'}`);
+  process.stdin.on('end', () => bridge.log('stdin closed'));
   const input = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
   // Serialize to preserve initialize/notification ordering and bound concurrent work.
   for await (const line of input) {

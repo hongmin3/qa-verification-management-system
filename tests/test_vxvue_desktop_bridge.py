@@ -143,10 +143,12 @@ def test_stopped_server_starts_and_explains_cause(setup, tmp_path):
     env = {**env, "VXVUE_SERVER_URL": f"http://127.0.0.1:{closed}"}
     (script.parent / "enrollment.json").write_text(json.dumps({"server_url": env["VXVUE_SERVER_URL"], "ticket": "t" * 43}), encoding="utf-8")
     replies, log = run(script, env, tmp / "home", HANDSHAKE + [{"jsonrpc": "2.0", "id": 3, "method": "tools/list"}])
-    assert "지금은 QA 서버에 연결하지 못했습니다" in replies[0]["result"]["instructions"]
+    assert "get_status" in replies[0]["result"]["instructions"]  # handshake answered from the bundle
     assert replies[1]["result"]["isError"] is True
     assert "[ECONNREFUSED]" in tool_text(replies[1]) and "서버 프로그램" in tool_text(replies[1])
-    assert [t["name"] for t in replies[2]["result"]["tools"]] == ["get_status"]
+    assert {"get_status", "get_workflow", "polarion_query"} <= {t["name"] for t in replies[2]["result"]["tools"]}
+    log = (tmp / "home" / "bridge.log").read_text(encoding="utf-8")
+    assert "enroll network refused ECONNREFUSED" in log and "recv tools/call" in log and "t" * 43 not in log
     assert "t" * 43 not in log + json.dumps(replies)
 
 
@@ -171,3 +173,24 @@ def test_legacy_team_token_bridge_still_connects(setup):
     replies, log = run(BRIDGE, {"VXVUE_SERVER_URL": proxy.url, "VXVUE_ACCESS_TOKEN": wrong}, tmp / "home")
     assert "[unknown_credential]" in tool_text(replies[1])
     assert wrong not in log + json.dumps(replies)
+
+
+def test_silent_server_does_not_stall_the_handshake(setup):
+    """Claude Desktop gives up on a server that does not answer initialize; a black-holed QA server must not cause that."""
+    import time
+    client, proxy, tmp, _ = setup
+    script, env = install(client, proxy, tmp / "ext")
+    silent = socket.socket()
+    silent.bind(("127.0.0.1", 0))
+    silent.listen(8)  # accepts connections, never answers
+    try:
+        env = {**env, "VXVUE_SERVER_URL": f"http://127.0.0.1:{silent.getsockname()[1]}", "VXVUE_QUICK_MS": "1500"}
+        started = time.monotonic()
+        replies, _ = run(script, env, tmp / "home", [HANDSHAKE[0], HANDSHAKE[1], {"jsonrpc": "2.0", "id": 3, "method": "tools/list"}])
+        elapsed = time.monotonic() - started
+    finally:
+        silent.close()
+    assert [r["id"] for r in replies] == [1, 3]
+    assert replies[0]["result"]["serverInfo"]["version"] == "1.2.0"
+    assert len(replies[1]["result"]["tools"]) >= 10
+    assert elapsed < 15

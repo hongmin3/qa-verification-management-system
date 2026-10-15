@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "vxvue-ai",
   "display_name": "VXvue AI",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "QA 서버의 VXvue 사양·매뉴얼·TC·최신 QA 규칙과 Polarion 항목을 읽기 전용으로 조회합니다. 설치하면 자동으로 연결됩니다.",
   "long_description": "설치 안내 화면에서 받은 파일에는 QA 서버 주소와 한 번만 쓰는 등록 번호가 들어 있습니다. 처음 실행할 때 이 PC 전용 연결 키를 받아 사용자 폴더의 .vxvue-ai에 저장합니다. 주소·토큰·Polarion 계정을 입력하지 않습니다.",
   "author": {"name": "QA Team"},

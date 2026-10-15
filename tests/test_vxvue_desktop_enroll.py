@@ -63,7 +63,7 @@ def test_download_has_server_url_and_one_time_ticket_without_user_input(app_root
         response = client.get("/vxvue-desktop/download")
         assert response.status_code == 200
         manifest, enrollment, names = bundle(response.content)
-        assert sorted(names) == ["enrollment.json", "manifest.json", "server.cjs"]
+        assert sorted(names) == ["enrollment.json", "manifest.json", "server.cjs", "tools.json"]
         assert "user_config" not in manifest
         assert manifest["server"]["mcp_config"]["env"]["VXVUE_SERVER_URL"] == "http://qa.test:24357"
         assert "x" * 48 not in response.content.decode("latin1")

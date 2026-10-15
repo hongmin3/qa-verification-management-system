@@ -2,6 +2,7 @@
 from collections import OrderedDict
 import hashlib
 import json
+import logging
 from pathlib import Path
 import threading
 
@@ -17,10 +18,11 @@ from .mcp_server import KnowledgeTools, tools, text_content
 from .desktop_polarion import PolarionLookup, integer
 from . import desktop_enroll as enroll
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 # The newest stdio bridge shipped in deploy/claude-desktop; older bridges get a reinstall notice.
-BRIDGE_VERSION = "1.1.0"
+BRIDGE_VERSION = "1.2.0"
 router = APIRouter()
+logger = logging.getLogger("uvicorn.error")  # the only logger the service writes to its journal
 _lock = threading.Lock()
 _snapshots = OrderedDict()
 _fingerprint = None
@@ -254,6 +256,9 @@ def dispatch(message, context=None):
         except Exception as exc:
             # No tracebacks, URLs with credentials, source contents or tokens go to the client.
             from app.modules.daily_qa.polarion import PolarionError
+            if not isinstance(exc, (ValueError, PolarionError)):
+                # Server log only: the client gets the generic message below.
+                logger.exception("vxvue-desktop tool %s failed", params.get("name"))
             safe = str(exc) if isinstance(exc, (ValueError, PolarionError)) else "서버 자료 조회에 실패했습니다. 서버 상태를 확인하세요."
             return {"content": text_content({"error": type(exc).__name__, "message": safe}), "isError": True}
     raise ValueError("지원하지 않는 MCP 메서드입니다.")
