@@ -21,6 +21,7 @@
 | **QA 점검 사용량을 줄이는 단계별 계획** | [사용량 절감 실행 계획](superpowers/plans/2026-10-14-qa-usage-reduction.md) · Sonnet 기본화, AI 없는 대상 확인, 호출 예산, 품질 비교와 단계별 도입(미구현) |
 | **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·진행·결과](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검토](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
+| **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합, 메일 미수신 원인, 관리자 설정, 상세·목록 재구성(미구현) |
 | **챗봇 미확인 범위·검색 비용 개선** | [실행 계획](superpowers/plans/2026-10-14-chat-evidence-coverage.md) · [운영 검증 기록](verification/2026-10-14-production-integration.md) |
 | **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
 | **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
