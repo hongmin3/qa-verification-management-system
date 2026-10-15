@@ -1,13 +1,12 @@
 """Claude Desktop stdio bridge backend. No AI, browser sessions or writes to sources."""
 from collections import OrderedDict
 import hashlib
-import hmac
 import json
 from pathlib import Path
 import threading
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
@@ -16,14 +15,17 @@ from app.core.product_knowledge import collected_path
 from .knowledge import KINDS, prepare_knowledge
 from .mcp_server import KnowledgeTools, tools, text_content
 from .desktop_polarion import PolarionLookup, integer
+from . import desktop_enroll as enroll
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+# The newest stdio bridge shipped in deploy/claude-desktop; older bridges get a reinstall notice.
+BRIDGE_VERSION = "1.1.0"
 router = APIRouter()
 _lock = threading.Lock()
 _snapshots = OrderedDict()
 _fingerprint = None
 _current = None
-INSTRUCTIONS = """VXvue 공용 지식 연결입니다. VXvue 사양·TC·Issue 검토 전에 get_status로
+INSTRUCTIONS = """VXvue 공용 지식 연결입니다. VXvue 사양·TC·Issue·Polarion 질문에는 먼저 get_status로
 snapshot_id를 받고 get_workflow를 next_offset이 없을 때까지 읽어 최신 Skill·QA 지침을 적용하세요.
 원본 Skill에 적힌 개인 PC 경로·로컬 명령은 이 서버 연결에서 실행하지 마세요.
 이 연결의 문서 조회는 아래 읽기 도구만 사용합니다. 원본의 Redmine 로컬 설정은 제공하지 않습니다.
@@ -41,24 +43,47 @@ def reset_cache():
     global _fingerprint, _current
     _snapshots.clear()
     _fingerprint = _current = None
+    enroll.reset()
 
 
-def _token():
+def _team_token():
+    """The pre-1.1 shared token, kept only so existing 1.0.0 installs stay connected."""
     try:
         token = (get_settings().root / "data/vxvue_desktop/access-token.txt").read_text(encoding="utf-8").strip()
     except OSError:
-        token = ""
-    if len(token) < 32:
-        raise HTTPException(503, "팀 접근 토큰을 서버에서 먼저 설정하세요.")
-    return token
+        return None
+    return token if len(token) >= 32 else None
 
 
 def _authorize(request):
     if request.headers.get("origin") or request.headers.get("sec-fetch-site") == "cross-site":
-        raise HTTPException(403, "브라우저에서 직접 호출할 수 없습니다.")
-    expected = ("Bearer " + _token()).encode()
-    if not hmac.compare_digest(request.headers.get("authorization", "").encode(), expected):
-        raise HTTPException(401, "서버 주소와 팀 접근 토큰을 확인하세요.")
+        raise enroll.AccessError(403, "cross_origin", "브라우저에서 직접 호출할 수 없습니다.")
+    return enroll.authenticate(get_settings(), request, _team_token())
+
+
+def _denied(error):
+    return JSONResponse({"detail": error.message, "code": error.code}, status_code=error.status,
+                        headers={"Cache-Control": "no-store"})
+
+
+def _base_url(request):
+    configured = str(enroll.setting(get_settings(), "vxvue_desktop.public_url", "") or "").strip()
+    return (configured or str(request.base_url)).rstrip("/")
+
+
+def _version_tuple(value):
+    try:
+        return tuple(int(part) for part in str(value).split("."))
+    except ValueError:
+        return ()
+
+
+def connection_info(context):
+    bridge = (context or {}).get("bridge_version") or None
+    outdated = bridge is not None and _version_tuple(bridge) < _version_tuple(BRIDGE_VERSION)
+    return {"bridge_version": bridge, "latest_bridge_version": BRIDGE_VERSION, "update_required": outdated,
+            "guide": (context or {}).get("base_url", "") + "/vxvue-desktop",
+            "note": "새 설치 파일을 안내 화면에서 받아 설치하세요." if outdated else "최신 연결 확장입니다." if bridge else "연결 확장 판 정보 없음"}
 
 
 class ManifestDocuments:
@@ -141,6 +166,9 @@ def definitions():
         if tool["name"] not in allowed:
             continue
         tool = json.loads(json.dumps(tool))
+        if tool["name"] == "get_status":
+            tool["description"] = ("VXvue 사양·매뉴얼·TC·Generator·Polarion(VP) 질문의 첫 단계. 서버 연결 상태와 snapshot_id를 받는다. "
+                                   "이어서 get_workflow로 최신 Skill·QA 규칙을 끝까지 읽고 적용한다.")
         if tool["name"] != "get_status":
             tool["inputSchema"]["properties"]["snapshot_id"] = {"type": "string"}
             tool["inputSchema"].setdefault("required", []).append("snapshot_id")
@@ -196,7 +224,7 @@ def call(name, arguments):
     return session.call(name, args)
 
 
-def dispatch(message):
+def dispatch(message, context=None):
     method, params = message.get("method"), message.get("params") or {}
     if method == "initialize":
         version = params.get("protocolVersion", "2024-11-05")
@@ -210,6 +238,8 @@ def dispatch(message):
     if method == "tools/call":
         try:
             data = call(params["name"], params.get("arguments") or {})
+            if params["name"] == "get_status" and isinstance(data, dict):
+                data = {**data, "connection": connection_info(context)}
             if isinstance(data, list):
                 content = data
             elif params["name"] in ("get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result"):
@@ -229,9 +259,7 @@ def dispatch(message):
     raise ValueError("지원하지 않는 MCP 메서드입니다.")
 
 
-@router.post("/rpc")
-async def rpc(request: Request):
-    _authorize(request)
+async def _read_message(request):
     try:
         size = int(request.headers.get("content-length", "0") or 0)
     except ValueError:
@@ -250,28 +278,93 @@ async def rpc(request: Request):
         if not isinstance(message.get("params", {}), dict):
             raise ValueError()
     except (ValueError, TypeError):
+        return None
+    return message
+
+
+async def _handle(request, notification_status):
+    try:
+        identity = await run_in_threadpool(_authorize, request)
+    except enroll.AccessError as error:
+        return _denied(error)
+    message = await _read_message(request)
+    if message is None:
         return Response(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "올바른 MCP 요청이 필요합니다."}}), media_type="application/json", status_code=400)
     if "id" not in message:
-        return Response(status_code=204)
+        return Response(status_code=notification_status)
+    bridge = request.headers.get("x-vxvue-bridge", "")[:20] or None
+    if bridge is None and identity["kind"] == "team":
+        bridge = "1.0.0"  # the team-token bridge predates the version header
+    context = {"bridge_version": bridge, "base_url": _base_url(request)}
     try:
-        result = await run_in_threadpool(dispatch, message)
+        result = await run_in_threadpool(dispatch, message, context)
         reply = {"jsonrpc": "2.0", "id": message["id"], "result": result}
     except ValueError:
         reply = {"jsonrpc": "2.0", "id": message["id"], "error": {"code": -32601, "message": "지원하지 않는 MCP 메서드입니다."}}
     return Response(json.dumps(reply, ensure_ascii=False), media_type="application/json", headers={"Cache-Control": "no-store"})
 
 
+@router.post("/rpc")
+async def rpc(request: Request):
+    """stdio bridge transport: one JSON-RPC message per POST."""
+    return await _handle(request, 204)
+
+
+@router.post("/mcp")
+async def mcp(request: Request):
+    """MCP Streamable HTTP for Claude Code. JSON responses only; no server-initiated stream."""
+    return await _handle(request, 202)
+
+
+@router.get("/mcp")
+@router.delete("/mcp")
+def mcp_stream_not_offered():
+    return Response(status_code=405, headers={"Allow": "POST"})
+
+
+@router.post("/enroll")
+async def enroll_device(request: Request):
+    if request.headers.get("origin") or request.headers.get("sec-fetch-site") == "cross-site":
+        return _denied(enroll.AccessError(403, "cross_origin", "브라우저에서 직접 호출할 수 없습니다."))
+    raw = await request.body()
+    try:
+        body = json.loads(raw or b"{}") if len(raw) <= 4096 else None
+    except ValueError:
+        body = None
+    try:
+        value = await run_in_threadpool(enroll.redeem, get_settings(), request, body if isinstance(body, dict) else {})
+    except enroll.AccessError as error:
+        return _denied(error)
+    return JSONResponse(value, headers={"Cache-Control": "no-store"})
+
+
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-def guide():
-    return HTMLResponse((Path(__file__).parent / "templates/desktop-guide.html").read_text(encoding="utf-8"))
+def guide(request: Request):
+    page = (Path(__file__).parent / "templates/desktop-guide.html").read_text(encoding="utf-8")
+    return HTMLResponse(page.replace("{{SERVER}}", _base_url(request)), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/download")
-def download():
+def download(request: Request):
     from scripts.build_vxvue_desktop import bundle_bytes
-    return Response(bundle_bytes(), media_type="application/octet-stream",
+    try:
+        ticket, expires = enroll.mint_ticket(get_settings(), request, "desktop")
+    except enroll.AccessError as error:
+        return _denied(error)
+    return Response(bundle_bytes(_base_url(request), ticket, expires.isoformat()), media_type="application/octet-stream",
                     headers={"Content-Disposition": 'attachment; filename="vxvue-ai.mcpb"', "Cache-Control": "no-store"})
+
+
+@router.get("/claude-code/install.ps1")
+def claude_code_installer(request: Request):
+    from scripts.build_vxvue_desktop import installer_text
+    try:
+        ticket, _ = enroll.mint_ticket(get_settings(), request, "claude-code")
+    except enroll.AccessError as error:
+        return _denied(error)
+    return Response(installer_text(_base_url(request), ticket), media_type="text/plain; charset=utf-8",
+                    headers={"Cache-Control": "no-store"})
 
 
 @router.get("/skill.zip")

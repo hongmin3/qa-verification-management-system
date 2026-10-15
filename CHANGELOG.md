@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-10-15 VXvue AI 입력 없는 자동 연결
+
+- REQ-VXVUECHATBOT-013: Desktop 설치 파일에 서버 주소와 한 번만 쓰는 등록 번호를 넣는다. 처음 실행할 때 이 PC 전용 연결 키를 받아 저장하므로 주소·토큰·계정을 입력하지 않는다. 등록·연결은 사내망 주소에서만 되고, 관리자는 `scripts/vxvue_desktop_devices.py`로 PC별 연결을 보고 취소한다. 서버는 키를 해시로만 저장한다.
+- REQ-VXVUECHATBOT-013: 연결 실패를 서버 중지·사내망 끊김·허용 안 된 네트워크·등록 번호 만료·연결 취소로 나눠 할 일과 함께 보인다. 서버에 닿지 않아 등록하지 못했을 때 등록 번호를 버리던 문제와, 연결이 취소됐을 때 원인 대신 재설치 문구만 보이던 문제를 고쳤다.
+- REQ-VXVUECHATBOT-014: Claude Code CLI 사용자는 안내 화면의 PowerShell 한 줄로 이 PC 등록, 사용자 범위 `vxvue-ai` 연결, Skill 설치를 한 번에 한다. 같은 PC의 Desktop 확장과 연결 키를 함께 쓴다.
+- REQ-VXVUECHATBOT-011: 서버 주소·팀 토큰 입력 칸을 없앴다. 이전 판(1.0.0) 팀 토큰 연결은 계속 받고, 상태 조회에서 새 설치 파일을 안내한다.
+
 ## 2026-10-15 Claude Desktop 공용 VXvue 연결
 
 - REQ-VXVUECHATBOT-011: Claude Desktop 확장과 공유용 VXvue AI Skill을 내려받는 화면을 추가했다. 서버의 원본 문서와 최신 Skill·QA 규칙을 읽으며 작업마다 지식 판을 고정한다. 문서·지침 갱신과 PC 확장 교체를 구분한다.

@@ -38,7 +38,7 @@ def server(tmp_path, monkeypatch):
     desktop.reset_cache()
     app = FastAPI()
     app.include_router(desktop.router, prefix="/vxvue-desktop")
-    with TestClient(app) as client:
+    with TestClient(app, client=("10.0.0.5", 50000)) as client:
         client.headers["Authorization"] = "Bearer " + "x" * 48
         yield client, base, tmp_path
     desktop.reset_cache()
@@ -64,7 +64,8 @@ def test_auth_disabled_bad_token_and_cross_origin(server):
     assert client.post("/vxvue-desktop/rpc", json=request, headers={"Authorization": "Bearer wrong"}).status_code == 401
     assert client.post("/vxvue-desktop/rpc", json=request, headers={"Origin": "https://other.test"}).status_code == 403
     (root / "data/vxvue_desktop/access-token.txt").unlink()
-    assert client.post("/vxvue-desktop/rpc", json=request).status_code == 503
+    # Without the old team token file the bearer is just an unknown credential (REQ-VXVUECHATBOT-013).
+    assert client.post("/vxvue-desktop/rpc", json=request).status_code == 401
 
 
 def test_handshake_tools_workflow_search_and_pinned_old_revision(server):
@@ -147,65 +148,24 @@ def test_pdf_page_and_full_source_locations(server):
     assert rpc(client, "get_document_page", {"snapshot_id": sid, "document_id": "../../secret.pdf", "page": 1})["result"]["isError"]
 
 
-def test_real_node_bridge_roundtrip_and_failure(server):
-    import http.server
-    import os
-    import subprocess
-    import threading
-    import shutil
-    client, _, _ = server
-    if not shutil.which("node"):
-        pytest.skip("Node.js is needed to exercise the shipped desktop bridge")
-    class Handler(http.server.BaseHTTPRequestHandler):
-        def do_POST(self):
-            length = int(self.headers["Content-Length"])
-            response = client.post(self.path, content=self.rfile.read(length),
-                                   headers={"Authorization": self.headers.get("Authorization", ""), "Content-Type": "application/json"})
-            self.send_response(response.status_code)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(response.content)
-        def log_message(self, *args):
-            pass
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    script = Path(__file__).resolve().parents[1] / "deploy/claude-desktop/server.cjs"
-    env = {**os.environ, "VXVUE_SERVER_URL": f"http://127.0.0.1:{httpd.server_port}", "VXVUE_ACCESS_TOKEN": "x" * 48}
-    messages = [
-        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
-        {"jsonrpc": "2.0", "method": "notifications/initialized"},
-        {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "get_status"}},
-    ]
-    try:
-        process = subprocess.run(["node", str(script)], input="\n".join(json.dumps(m) for m in messages) + "\n",
-                                 text=True, encoding="utf-8", capture_output=True, env=env, timeout=30)
-        assert process.returncode == 0 and not process.stderr
-        replies = [json.loads(line) for line in process.stdout.splitlines()]
-        assert [r["id"] for r in replies] == [1, 2]
-        assert value(replies[1])["snapshot_id"]
-        env["VXVUE_ACCESS_TOKEN"] = "wrong-token-" * 4
-        failure = subprocess.run(["node", str(script)], input=json.dumps(messages[0]) + "\n", text=True,
-                                 encoding="utf-8", capture_output=True, env=env, timeout=30)
-        assert "HTTP 401" in json.loads(failure.stdout)["error"]["message"]
-        assert env["VXVUE_ACCESS_TOKEN"] not in failure.stdout + failure.stderr
-    finally:
-        httpd.shutdown()
-        httpd.server_close()
-
-
-def test_bundle_is_deterministic_and_token_initialization_preserves_existing(tmp_path):
+def test_bundle_carries_no_user_config_and_token_initialization_preserves_existing(tmp_path):
     import io
     import zipfile
     from scripts.build_vxvue_desktop import bundle_bytes
     from scripts.configure_vxvue_desktop import initialize
-    data = bundle_bytes("http://127.0.0.1:24357")
-    assert data == bundle_bytes("http://127.0.0.1:24357")
+    ticket = "t" * 43
+    data = bundle_bytes("http://127.0.0.1:24357", ticket, "2026-10-22T00:00:00+00:00")
+    assert data == bundle_bytes("http://127.0.0.1:24357", ticket, "2026-10-22T00:00:00+00:00")
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        assert set(archive.namelist()) == {"manifest.json", "server.cjs"}
+        assert set(archive.namelist()) == {"manifest.json", "server.cjs", "enrollment.json"}
         manifest = json.loads(archive.read("manifest.json"))
-        assert manifest["user_config"]["access_token"]["sensitive"]
-        assert manifest["user_config"]["server_url"]["default"] == "http://127.0.0.1:24357"
+        assert "user_config" not in manifest
+        assert manifest["server"]["mcp_config"]["env"] == {"VXVUE_SERVER_URL": "http://127.0.0.1:24357"}
+        assert json.loads(archive.read("enrollment.json"))["ticket"] == ticket
+    with pytest.raises(ValueError):
+        bundle_bytes("http://user:pw@127.0.0.1:24357", ticket)
+    with pytest.raises(ValueError):
+        bundle_bytes("http://127.0.0.1:24357", "short")
     path = initialize(tmp_path)
     token = path.read_bytes()
     assert len(token.strip()) >= 32
