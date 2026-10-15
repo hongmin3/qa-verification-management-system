@@ -62,7 +62,7 @@ def test_dashboard_sorting_in_http_browser(world, monkeypatch):
         with playwright.sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             try:
-                for width in (390, 1920):
+                for width in (1366, 1920):
                     page = browser.new_page(viewport={'width':width, 'height':1080})
                     errors = []; page.on('pageerror', lambda error: errors.append(str(error)))
                     page.goto(f'http://127.0.0.1:{server.server_port}/qa-agent', wait_until='domcontentloaded')

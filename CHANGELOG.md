@@ -1,5 +1,10 @@
 # 변경 이력
 
+## 2026-10-15 화면 확인 폭을 PC 폭으로
+
+- 화면 확인 기준: 휴대폰 폭(390px)을 빼고 PC 폭 1366px(노트북)·1920px(모니터)에서 확인하도록 바꿨다(사용자 결정 2026-10-15). `SPEC.md`, `specs/qa-intelligence.md`, `specs/vxvue-chatbot.md`의 확인 문장과 브라우저 시험 5개의 화면 폭이 바뀐다. 화면 CSS의 반응형 규칙은 그대로다.
+- REQ-WEB-008: 3-1절 알림 표의 QA Agent 요약 메일 받는 곳을 4.1절과 같은 읽는 순서(`daily_qa.report_recipients` → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → `notifications.admin_email`)로 고쳤다.
+
 ## 2026-10-15 설정 탭과 관리자 로그인
 
 - REQ-WEB-008: 상단 메뉴 `AI 분석 설정`을 `설정` 탭(`/settings`)으로 바꿨다. 한 화면에서 관리자 메일, 자동 보고 메일 받는 사람(1~10명), 메일 시험 발송, AI 모델·추론 정도와 5시간·주간 사용률 기준, 메일 링크 서버 주소, 관리자 비밀번호 변경, 변경 이력을 다룬다. `/settings/ai`는 `/settings#ai`로 이동한다. 저장 주소는 `/settings`, `/settings/reset`이며 자바스크립트 없이 양식으로 저장된다.

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="9fb844e269570b362bb031800967cd08185388f3c1edff0d0e292c6760c7b1ff">
+<meta name="spec-source-sha256" content="72e91764e4e556be2fa555c235db9f9456379566cef66ae9dce3ff72364b7e02">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -1205,7 +1205,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>알림</th><th>언제 오나</th><th>받는 곳</th><th>담는 것</th><th>요구사항</th></tr></thead>
 <tbody>
-<tr><td data-label="알림">QA Agent 요약 메일(제목 <code>[QA Agent] &lt;제품&gt; …</code>)</td><td data-label="언제 오나">점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기)</td><td data-label="받는 곳"><code>DAILY_QA_EMAIL_TO</code> 의 수신자</td><td data-label="담는 것">상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·사양과 결과 링크, 남은 일, 이번 실행의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량, 점검 기록 보기 링크</td><td data-label="요구사항"><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td></tr>
+<tr><td data-label="알림">QA Agent 요약 메일(제목 <code>[QA Agent] &lt;제품&gt; …</code>)</td><td data-label="언제 오나">점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기)</td><td data-label="받는 곳">설정 탭의 <code>daily_qa.report_recipients</code> 수신자. 비어 있으면 <code>DAILY_QA_EMAIL_TO</code>, 그것도 비어 있으면 <code>NOTIFY_EMAIL_TO</code>, 그것도 비어 있으면 <code>notifications.admin_email</code></td><td data-label="담는 것">상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·사양과 결과 링크, 남은 일, 이번 실행의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량, 점검 기록 보기 링크</td><td data-label="요구사항"><a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></td></tr>
 <tr><td data-label="알림">QA Agent 대시보드</td><td data-label="언제 오나">메일 링크를 누르거나 아무 때나</td><td data-label="받는 곳"><code>/qa-agent</code></td><td data-label="담는 것">마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안, 기간별 결과. 승인·거절 입력은 없다</td><td data-label="요구사항"><a class="idref" href="#REQ-QAINTEL-019">REQ-QAINTEL-019</a>, <a class="idref" href="#REQ-QAINTEL-020">REQ-QAINTEL-020</a></td></tr>
 <tr><td data-label="알림"><span class="term" title="Google 의 생성형 AI. 설정(ai.provider: gemini)으로 고르면 QA Agent·매뉴얼 개정 검토이 Claude 대신 부른다" tabindex="0">Gemini</span> 할당량 소진·모델 사용 불가 메일</td><td data-label="언제 오나">분석 중 사람이 조치해야 하는 <span class="term" title="Google 의 생성형 AI. 설정(ai.provider: gemini)으로 고르면 QA Agent·매뉴얼 개정 검토이 Claude 대신 부른다" tabindex="0">Gemini</span> 오류가 날 때. 같은 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 <span class="term" title="같은 종류의 알림 메일을 다시 보내지 않는 시간(notifications.email.cooldown_minutes)이다" tabindex="0">재발송 대기 시간</span> 동안 다시 보내지 않는다</td><td data-label="받는 곳"><code>NOTIFY_EMAIL_TO</code> 의 수신자</td><td data-label="담는 것">발생 시각, 모델, 가린 오류 문구, 조치 방법</td><td data-label="요구사항"><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a></td></tr>
 <tr><td data-label="알림">ALM 통합 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 메일</td><td data-label="언제 오나">평일 09:00 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 뒤</td><td data-label="받는 곳">ALM-QA-Automation 설정의 수신자</td><td data-label="담는 것">바뀐 사양과 연결된 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>, 우선순위</td><td data-label="요구사항">이 저장소 밖</td></tr>
@@ -8368,8 +8368,9 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <section class="card kind-req" id="REQ-WEB-008">
 <h3><span class="idtag">REQ-WEB-008</span> 설정 탭과 관리자 로그인</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>, <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-10-15 화면 확인 폭을 PC 폭으로</span> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>: 3-1절 알림 표의 QA Agent 요약 메일 받는 곳을 4.1절과 같은 읽는 순서(<code>daily_qa.report_recipients</code> → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code> → <code>notifications.admin_email</code>)로 고쳤다.</li>
 <li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>: 상단 메뉴 <code>AI 분석 설정</code>을 <code>설정</code> 탭(<code>/settings</code>)으로 바꿨다. 한 화면에서 관리자 메일, 자동 보고 메일 받는 사람(1~10명), 메일 시험 발송, AI 모델·추론 정도와 5시간·주간 사용률 기준, 메일 링크 서버 주소, 관리자 비밀번호 변경, 변경 이력을 다룬다. <code>/settings/ai</code>는 <code>/settings#ai</code>로 이동한다. 저장 주소는 <code>/settings</code>, <code>/settings/reset</code>이며 자바스크립트 없이 양식으로 저장된다.</li>
 <li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>: 예약 점검 요약 메일의 수신자 읽기 순서를 설정 탭 값(<code>daily_qa.report_recipients</code>) → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code> → 관리자 메일로 바꿨다. 화면과 응답에는 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 보이고, 변경 이력의 주소도 가려서 저장한다. 비밀번호 값은 이력에 남기지 않는다.</li>
 </ul>
@@ -8444,7 +8445,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li>화면과 응답에는 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 보인다. 로그인한 관리자 자신의 입력칸에만 원래 주소가 들어간다.</li>
 <li>비밀번호 원문과 암호화 값은 화면·응답·로그·변경 이력 어디에도 내지 않는다(<a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a>). 비밀번호는 PBKDF2-SHA256 600,000회로 저장한다.</li>
 <li>비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다. 처음 비밀번호 <code>1</code> 을 계속 쓰는 것은 사용자가 정한 운영 방식이다.</li>
-<li>자바스크립트가 꺼져도 읽고 저장할 수 있다. 390px·1920px 에서 가로로 넘치지 않는다.</li>
+<li>자바스크립트가 꺼져도 읽고 저장할 수 있다. 1366px·1920px 에서 가로로 넘치지 않는다.</li>
 </ul>
 <aside class="callout callout-warn"><span class="callout-label">주의</span>
 <p>서버는 평문 HTTP 라서 비밀번호가 사내망에서 그대로 전달된다. 사내망 밖에 열기 전에 HTTPS 를 먼저 정한다(<a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>).</p>
@@ -11762,7 +11763,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <li><code>/knowledge/products/vxvue</code> 의 <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 구역에 업로드 버튼이 없고 &quot;ALM 에서 자동으로 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>합니다.&quot; 가 보이는지 본다.</li>
 <li><code>수집 제외 N건 · 자세히</code> 를 펼치면 파일명·분류·이유·대신 쓰는 파일이 보이는지 본다.</li>
 <li><code>고급 정보</code> 의 <code>스캔 결과 JSON</code> 이 JSON 을 여는지, 현황판 <code>고급 정보</code> 의 <code>죽은 등록 정리</code> 가 확인 창과 결과 알림을 띄우는지 본다.</li>
-<li>1920px 와 390px 폭에서 가로 스크롤이 생기지 않는지 본다.</li>
+<li>1366px 와 1920px 폭에서 가로 스크롤이 생기지 않는지 본다.</li>
 </ol>
 </section>
 <section class="card kind-test" id="TEST-KNOW-007">
@@ -11833,7 +11834,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <li><span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span> 기본값·DB 우선 적용·기본값 복구·변경 기록·DB 읽기 실패 시 기본값을 본다.</li>
 <li>로그인 없는 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다. 저장 주소는 <code>/settings</code>, <code>/settings/reset</code> 이다(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>).</li>
 <li>새 프로세스가 DB 값을 읽고 이미 읽은 설정 객체는 바뀌지 않는지 본다.</li>
-<li>390px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.</li>
+<li>1366px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.</li>
 </ol>
 </section>
 <section class="card kind-test" id="TEST-AICALL-005">
@@ -11907,7 +11908,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <li>수신자 읽기 순서(화면 값 → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code>)와 관리자 메일 기본값을 본다.</li>
 <li>화면·응답·변경 이력에 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 있고 비밀번호 암호화 값이 없는지, 로그인한 관리자의 입력칸에만 원래 주소가 있는지 본다.</li>
 <li><code>/settings/ai</code> 가 <code>/settings#ai</code> 로 가는지, 상단 메뉴 이름이 <code>설정</code> 인지 본다.</li>
-<li>390px·1920px 브라우저에서 가로 스크롤이 없는지 확인한다.</li>
+<li>1366px·1920px 브라우저에서 가로 스크롤이 없는지 확인한다.</li>
 </ol>
 </section>
 <section class="card kind-test" id="TEST-WEB-002">
@@ -13813,7 +13814,7 @@ AI가 분석한 것
 <li>실행 잠금이 사라졌는데 시작 후 30초가 지난 기록이 계속 <code>RUNNING</code>이면 상태 조회 때 중단 실패로 기록한다. 이미 끝난 실행의 결과는 바꾸지 않는다. 시작 요청 뒤 정상 상태 조회 10회 동안 새 실행을 확인하지 못해도 진행 원을 멈추고 확인 안내를 보인다.</li>
 <li>[현재 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 전체 점검], [기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토], [검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안]도 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 같은 진행 표시를 쓴다. CLI로 요청한 매뉴얼 점검도 대시보드에서 같은 기록을 읽는다. 실행 중에는 그 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 요청 버튼을 잠근다. <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 요청은 메일을 보내지 않고 결과 저장 뒤 끝난다.</li>
 </ol>
-<p><strong>지킬 것</strong> 진행 기록은 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>과 실행 번호별로 저장한다. 다른 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 진행을 섞지 않으며 결과·이벤트·<span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>을 진행 기록으로 덮어쓰지 않는다. 390px 화면과 데스크톱에서 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span> 문구·시간·링크를 읽을 수 있어야 한다.</p>
+<p><strong>지킬 것</strong> 진행 기록은 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>과 실행 번호별로 저장한다. 다른 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 진행을 섞지 않으며 결과·이벤트·<span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>을 진행 기록으로 덮어쓰지 않는다. 1366px·1920px 화면에서 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span> 문구·시간·링크를 읽을 수 있어야 한다.</p>
 <p><strong>결과</strong> 202 <code>{&quot;status&quot;: &quot;launched&quot;, &quot;pid&quot;: &lt;번호&gt;}</code>.</p>
 <p><strong>안 될 때</strong></p>
 <div class="table-wrap"><table>
@@ -15149,7 +15150,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li><span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>·이벤트·AI 실행·메일 중 기록을 다른 저장소 연결로 읽는다. AI <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>은 재시도를 포함해 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>당 한 번 세고 한도로 남은 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 완료로 세지 않는다.</li>
 <li>메일 발송 중에는 실행이 <code>RUNNING</code>이고 메일 실패 응답 문장이 가려져 저장된다. 구형 실행의 진행 기록 결측도 읽을 수 있다.</li>
 <li>[변경사항 점검하기] 뒤 진행 원과 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>·시간이 보인다. 다른 사용자가 새로 연 화면도 같다. 첫 조회 전에 끝난 실행도 종료 결과를 보인다. 접속 오류 뒤 다시 연결해 완료 결과를 읽는다.</li>
-<li>[현재 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 전체 점검]·[기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토]·[검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 390px·1920px 화면에서 시간·링크를 읽는다.</li>
+<li>[현재 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 전체 점검]·[기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토]·[검증 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 1366px·1920px 화면에서 시간·링크를 읽는다.</li>
 </ol>
 <p><strong>기대 결과</strong> 실행이 끝날 때 진행 원이 멈추고 결과 한 줄과 점검 기록 보기 링크가 남는다. <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>된 운영 결과와 합성 브라우저 경계 시험은 구분해 기록한다.</p>
 </section>
@@ -15227,7 +15228,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li>같은 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>·<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>의 직전 요약만 새 댓글 입력에 들어가는지 확인한다. 이번 실행·다른 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>·다른 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·옛 비분석 결과는 제외한다.</li>
 <li>새 댓글에 나온 정확한 번호를 먼저 찾아 연결 사양을 2건·1,500자까지 넣고, 누락·잘림·상한 제외를 표시한다. 한국어 조사 뒤 번호와 비슷한 번호를 구별한다.</li>
 <li>원본 이벤트에는 작성자 ID가 남고, AI 입력의 새 댓글·이전 댓글·중첩 이벤트에는 없는지 확인한다.</li>
-<li>390px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.</li>
+<li>1366px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.</li>
 </ol>
 </section>
 <section class="card kind-test" id="TEST-QAINTEL-026">
@@ -15551,7 +15552,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <h2>11. 테스트 사양</h2>
 <section class="card kind-test" id="TEST-VXVUECHATBOT-001">
 <h3><span class="idtag">TEST-VXVUECHATBOT-001</span> 화면·첨부·소유 확인</h3>
-<p>격리된 DB와 파일 폴더, 서로 다른 브라우저로 이력 저장·10개 허용·11개 거절·다른 소유자의 모든 조회·다운로드·삭제 거절을 확인한다. 390px와 데스크톱에서 입력·이력·표·중지 동작을 확인한다.</p>
+<p>격리된 DB와 파일 폴더, 서로 다른 브라우저로 이력 저장·10개 허용·11개 거절·다른 소유자의 모든 조회·다운로드·삭제 거절을 확인한다. 1366px·1920px 화면에서 입력·이력·표·중지 동작을 확인한다.</p>
 </section>
 <section class="card kind-test" id="TEST-VXVUECHATBOT-002">
 <h3><span class="idtag">TEST-VXVUECHATBOT-002</span> CLI·규칙·원문 조회</h3>

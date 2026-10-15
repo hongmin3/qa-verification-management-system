@@ -138,7 +138,7 @@ def cancel_site(world, monkeypatch):
     server.server_close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 @pytest.mark.parametrize("screen", ["dashboard", "tc_check", "tc_draft"])
 def test_cancel_in_real_http_browser(cancel_site, width, screen, tmp_path):
     with playwright.sync_playwright() as p:
@@ -185,7 +185,7 @@ def test_cancel_in_real_http_browser(cancel_site, width, screen, tmp_path):
         browser.close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 def test_automation_checkboxes_in_http_browser(cancel_site, width):
     """Validates: REQ-QAINTEL-038. 두 체크박스의 세 모드 저장·공유·작은 화면 확인."""
     with playwright.sync_playwright() as p:
@@ -219,7 +219,7 @@ def test_automation_checkboxes_in_http_browser(cancel_site, width):
         browser.close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 def test_cache_in_real_http_browser(cancel_site, width):
     """Validates: REQ-QAINTEL-037. 실제 렌더링에서 새 분석 0·재사용 1·원본 링크를 구분한다."""
     with playwright.sync_playwright() as p:

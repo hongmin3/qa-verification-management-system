@@ -67,7 +67,7 @@ def select_site(world):
     server.server_close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 def test_select_page_row_is_one_click_area_with_fields(select_site, width):
     _save_plan(select_site["world"], created=datetime.now(timezone.utc))
     with playwright.sync_playwright() as p:
@@ -96,7 +96,7 @@ def test_select_page_row_is_one_click_area_with_fields(select_site, width):
         browser.close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 def test_select_page_expired_plan_has_no_checkbox_and_disabled_run(select_site, width):
     _save_plan(select_site["world"], created=datetime.now(timezone.utc) - timedelta(minutes=31))
     with playwright.sync_playwright() as p:
@@ -112,7 +112,7 @@ def test_select_page_expired_plan_has_no_checkbox_and_disabled_run(select_site, 
         browser.close()
 
 
-@pytest.mark.parametrize("width", [390, 1920])
+@pytest.mark.parametrize("width", [1366, 1920])
 def test_dashboard_shows_only_notice_and_link(select_site, width):
     _save_plan(select_site["world"], created=datetime.now(timezone.utc))
     with playwright.sync_playwright() as p:
