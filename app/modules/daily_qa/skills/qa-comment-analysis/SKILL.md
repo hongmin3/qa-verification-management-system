@@ -10,6 +10,11 @@ description: 이슈에 새로 달린 댓글(어제 없던 것)만 읽어 원인�
 
 ## 입력
 
+`verification_mode=true`이면 연구소 댓글의 사양 주장·문서 수정 주장을 제공된 사양 원문과 대조한다.
+선택한 버전의 `candidates.tcs`도 확인하고 `sections.tc_coverage`에 위치·`covers`·이유를 남긴다.
+QA 대응·TC 보완·실제 동작 확인이 필요하면 `action`에 적는다. 확인 못 한 원문은 `checked.unconfirmed`에
+남기며, 사양이 수정됐다는 댓글만으로 문서 수정 확인을 완료하지 않는다.
+
 `in/CMT-*.json` 의 `items[]`: `target`, `issue`(요약), `new_comments[]`(`id`, `created`, `text` —
 코드가 진행 상태 같은 의미 없는 댓글은 이미 뺐다), `earlier_comments[]`(이전 댓글 최근 5개, 맥락용).
 `previous_analysis`는 같은 제품·이슈의 직전 요약(없으면 null)이다.

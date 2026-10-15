@@ -125,6 +125,7 @@ def _actions(run: dict) -> list[dict]:
             weekly = (summary.get("automation_policy") or {}).get("mode") == "weekly"
             add("limit", "Claude 사용량 한도에 걸려 남은 분석은 대기입니다.",
                 "한도가 풀린 뒤 다시 요청하세요." if "on_demand" in stages else
+                "남은 대상은 다음 예정 점검 또는 수동 선택 분석에서 이어 갑니다. 한도 초기화 직후 자동 재실행하지 않습니다." if summary.get('savings_enabled') else
                 "다음 주 첫 업무일의 예정 점검이나 [변경사항 점검하기]에서 이어 갑니다." if weekly else
                 "사용량 초기화 시각을 확인하세요. 한도가 풀리면 남은 분석을 이어서 합니다.")
 
@@ -234,6 +235,10 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         headline = "이번 실행에서 확인한 변경이 없습니다." if run.get("status") == "NO_CHANGE" else "실행 기록을 확인하세요."
     if run.get("status") == "CANCELLED":
         headline = "사용자 요청으로 이번 점검을 중단했습니다. 이미 저장한 결과를 확인하세요."
+    elif summary.get('collection_only'):
+        count = summary.get('prepared_targets')
+        prepared = f'분석 대상 {count}개를 준비했습니다.' if count is not None else '분석 대상을 준비했습니다.'
+        headline = (headline + ' ' if actions else '') + prepared + ' 아직 AI 분석을 실행하지 않았습니다. 점검 화면에서 대상을 선택하세요.'
     audit = summary.get("issue_audit") or {}
     audit_box = None
     if audit:

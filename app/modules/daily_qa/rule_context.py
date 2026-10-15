@@ -5,16 +5,26 @@ import json
 import re
 
 
-def guide_context(task, run) -> list[tuple[str, str]]:
+def guide_context(task, run, *, strict=False) -> list[tuple[str, str]]:
     mapping = run.root / '.claude' / 'skills' / run.product_skill / 'guide-sections.json'
     guide = run.root / 'rules' / 'qa-guide.md'
     if not run.product_skill or not mapping.is_file() or not guide.is_file():
+        if strict:
+            raise ValueError('제품 규칙의 절 연결 또는 QA 가이드 원문이 없습니다.')
         return []
     try:
-        wanted = json.loads(mapping.read_text(encoding='utf-8')).get(task.skill, [])
+        sections = json.loads(mapping.read_text(encoding='utf-8'))
+        wanted = sections.get(task.skill, [])
         if not isinstance(wanted, list) or not all(isinstance(s, str) for s in wanted):
-            return []
+            raise ValueError('규칙 절 연결 형식 오류')
+        if any(item.get('verification_mode') for item in task.payload.get('items', [])):
+            extra = sections.get('qa-verification-tc-draft', []) if task.skill == 'qa-fixed-issue-analysis' else ['17']
+            if not isinstance(extra, list) or not all(isinstance(s, str) for s in extra):
+                raise ValueError('TC 규칙 절 연결 형식 오류')
+            wanted = list(dict.fromkeys([*wanted, *extra]))
     except (ValueError, AttributeError):
+        if strict:
+            raise ValueError('제품 규칙의 절 연결을 읽지 못했습니다.') from None
         return []  # Product without a usable mapping follows the existing lookup path.
     lines = guide.read_text(encoding='utf-8').splitlines(keepends=True)
     headings, fence = [], ''
@@ -44,5 +54,7 @@ def guide_context(task, run) -> list[tuple[str, str]]:
     selected = sorted({i for start, end in spans for i in range(start, end)})
     excerpt = ''.join(lines[i] for i in selected)
     missing = [number for number in wanted if number not in found]
+    if strict and (not wanted or missing):
+        raise ValueError('필수 QA 규칙 절이 없습니다: ' + ', '.join(missing or [task.skill]))
     notice = ('\n미리 넣지 못한 절: ' + ', '.join(missing) + '. 원문에서 추가 확인한다.\n') if missing else ''
     return [(run.rel(guide) + ' (선택한 절)', excerpt + notice)] if excerpt or notice else []

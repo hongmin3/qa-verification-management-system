@@ -57,11 +57,13 @@ def _dash_context(**values) -> dict:
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-def dashboard_home(request: Request, product: str = ""):
+def dashboard_home(request: Request, product: str = "", sort: str = 'updated'):
     """QA Intelligence 대시보드 (REQ-QAINTEL-019·022)."""
     choice = _choice(product)
+    if sort not in ('updated', 'analyzed', 'author', 'number'):
+        raise HTTPException(status_code=400, detail='정렬 기준을 확인해 주세요.')
     return templates.TemplateResponse(
-        request, "dashboard.html", _dash_context(products=choice.products, selected=choice.cfg.product, **dash.dashboard(choice))
+        request, "dashboard.html", _dash_context(products=choice.products, selected=choice.cfg.product, **dash.dashboard(choice, sort=sort))
     )
 
 
@@ -88,9 +90,16 @@ def automation_policy_status(product: str = ""):
 
 @router.post("/automation-policy")
 def save_automation_policy(request: Request, product: str = Form(""), enabled: bool = Form(False),
-                           validation_period: bool = Form(False)):
+                           validation_period: bool = Form(False), verification_sheet: str = Form("")):
     from app.modules.daily_qa.automation_policy import save_policy
     choice = _choice(product)
+    if verification_sheet:
+        from app.modules.daily_qa import workflow_settings
+        try:
+            workflow_settings.save(choice.store, choice.cfg.slug, verification_sheet,
+                                   workflow_settings.for_choice(choice)['options'])
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     save_policy(choice.store, choice.cfg.slug, enabled=enabled, validation_period=validation_period,
                 changed_by=request.client.host if request.client else "")
     return RedirectResponse(f"/qa-agent?product={quote(choice.cfg.product, safe='')}", status_code=303)
@@ -130,7 +139,9 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
     refusal, period_warning = dash.period_snapshot_check(choice.cfg, until_day)
     if refusal:
         return JSONResponse({"detail": refusal}, status_code=400)
-    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day)
+    result = launch_detached(choice.cfg.product, trigger="prepare" if choice.cfg.savings_enabled else "manual",
+                             since=since_day, until=until_day,
+                             **({'analysis_scope': 'spec'} if choice.cfg.savings_enabled else {}))
     messages = {
         "running": "점검이 이미 실행 중입니다.",
         "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
@@ -164,7 +175,9 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
     if until_day and snapshots.for_settings(choice.cfg).at_or_before(snapshots.KIND_ISSUES, until_day) is None:
         return JSONResponse({"detail": f"{until_day} 이전 이슈 스냅샷이 없어 현재 이슈 전체 점검을 할 수 없습니다. 종료일을 오늘로 고르세요."},
                             status_code=400)
-    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day, issue_audit=True)
+    result = launch_detached(choice.cfg.product, trigger="prepare" if choice.cfg.savings_enabled else "manual",
+                             since=since_day, until=until_day, issue_audit=not choice.cfg.savings_enabled,
+                             **({'analysis_scope': 'issues'} if choice.cfg.savings_enabled else {}))
     messages = {
         "running": "점검이 이미 실행 중입니다.",
         "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
@@ -172,11 +185,43 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
     }
     if result["status"] in messages:
         return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
-    result["warning"] = "이슈 변경 기록이 없는 기간은 현재 이슈 상태 기준으로 점검합니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다."
+    result["warning"] = ("기간의 신규·업데이트 이슈 대상을 준비합니다. 아직 AI를 실행하지 않습니다." if choice.cfg.savings_enabled else
+                         "이슈 변경 기록이 없는 기간은 현재 이슈 상태 기준으로 점검합니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다.")
     limit = dash.limit_info(choice)
     if limit:
         result["warning"] += f" {limit['description']} AI 점검은 대기로 남습니다. 설정한 자동 점검 주기의 예정 실행이나 [변경사항 점검하기]에서 이어 갈 수 있습니다."
     return JSONResponse(result, status_code=202)
+
+
+@router.get('/plans/latest')
+def latest_plan(product: str = ''):
+    from app.modules.daily_qa import execution_plan, execution_budget
+    from datetime import datetime, timezone
+    choice = _choice(product)
+    return JSONResponse({'plan': execution_plan.public(choice.store.storage.qa_get_plan(product=choice.cfg.slug)),
+                         'budget': {**execution_budget.usage(choice.store.storage, datetime.now(timezone.utc)),
+                                    'per_run': choice.cfg.savings_per_run, 'per_day': choice.cfg.savings_per_day}},
+                        headers={'Cache-Control': 'no-store'})
+
+
+@router.post('/plans/{plan_id}/execute')
+def execute_plan(plan_id: str, product: str = Form(''), targets: str = Form('[]'), review: bool = Form(False)):
+    from app.modules.daily_qa import execution_plan, workflow_settings
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+    from app.modules.daily_qa.pipeline import is_running
+    choice = _choice(product)
+    if not choice.cfg.savings_enabled or is_running(choice.cfg):
+        raise HTTPException(409, '절약 모드가 꺼져 있거나 점검이 실행 중입니다.')
+    try:
+        keys = json.loads(targets)
+        if not isinstance(keys, list) or not all(isinstance(key, str) for key in keys):
+            raise ValueError('선택 대상 형식이 잘못되었습니다.')
+        policy = execution_plan.policy(choice.cfg, workflow_settings.for_choice(choice)['selected'])
+        selection = execution_plan.select(choice.store.storage, plan_id, choice.cfg.slug, keys, policy, review=review)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    result = launch_detached(choice.cfg.product, trigger='manual', selection_id=selection)
+    return JSONResponse(result, status_code=202 if result['status'] == 'launched' else 409)
 
 
 #: 버튼 요청 → (원래 분석 종류, 거절 문구). 원래 분석이 맞지 않으면 띄우지 않는다 (REQ-QAINTEL-016·032).
@@ -231,6 +276,15 @@ def run_detail(request: Request, run_id: str):
     out_dir = choice.cfg.output_dir / run_id
     files = sorted(path.name for path in out_dir.glob("*") if path.suffix in DOWNLOADABLE_SUFFIXES) if out_dir.is_dir() else []
     findings = store.list_findings(run_id=run_id, limit=-1)
+    if (run.get('summary') or {}).get('savings_enabled'):
+        findings = []
+        page = 1
+        while True:
+            found = store.storage.qa_search_findings(run.get('product') or '', run_id=run_id, page=page)
+            findings.extend(found['items'])
+            if len(findings) >= found['total']:
+                break
+            page += 1
     events = store.list_events(run_id=run_id)
     cards = [dash.card(item) for item in findings]
     return templates.TemplateResponse(request, "run_detail.html", _dash_context(
@@ -245,6 +299,14 @@ def run_findings(request: Request, run_id: str, page: int = 1):
     run = store.get_run(run_id)
     if not run:
         raise HTTPException(404, "실행 기록이 없습니다.")
+    if (run.get('summary') or {}).get('savings_enabled'):
+        found = store.storage.qa_search_findings(run.get('product') or '', run_id=run_id, page=page)
+        pages = max(1, (found['total'] + 49) // 50)
+        if page < 1 or page > pages:
+            raise HTTPException(404, '결과 페이지가 없습니다.')
+        return templates.TemplateResponse(request, 'run_findings.html', _dash_context(
+            run=run, cards=[dash.card(row) for row in found['items']],
+            total=found['total'], page=page, pages=pages))
     cards = dash.sort_cards([dash.card(item) for item in store.list_findings(run_id=run_id, limit=-1)])
     pages = max(1, (len(cards) + 49) // 50)
     if page < 1 or page > pages:
@@ -276,11 +338,43 @@ def finding_detail(request: Request, finding_id: int):
     events = store.list_events(ids=finding.get("event_ids") or []) if finding.get("event_ids") else []
     questions = store.list_questions(run_id=finding["run_id"], subject=finding["subject"])
     choice = dash.choose(finding.get("product") or "")
+    from app.modules.qa_agent.result_views import STATES, LEVEL_HELP
+    enriched = store.storage.qa_search_findings(finding.get('product') or '', finding_id=finding_id)['items']
+    if enriched:
+        finding = enriched[0]
     return templates.TemplateResponse(request, "finding_detail.html", _dash_context(
         finding=finding, card=dash.card(finding), explanation=dash.finding_explanation(
             finding, events, polarion=choice.cfg.polarion if choice else None),
         events=events, questions=questions, event_labels=dash.EVENT_LABELS,
-        axes=AXIS_LABELS))
+        axes=AXIS_LABELS, processing_states=STATES, level_help=LEVEL_HELP,
+        processing_history=store.storage.qa_processing_history(finding_id), integrated_tc=choice.cfg.savings_enabled))
+
+
+@router.get('/results', response_class=HTMLResponse)
+def results_view(request: Request, product: str = '', category: str = '', subject: str = '', reporter: str = '',
+                 q: str = '', state: str = '', level: str = '', start: str = '', end: str = '', run_id: str = '', page: int = 1, sort: str = 'updated'):
+    from app.modules.qa_agent.result_views import search
+    choice = _choice(product)
+    filters = dict(category=category, subject=subject, reporter=reporter, q=q, state=state, level=level,
+                   start=start, end=end, run_id=run_id, page=page, sort=sort)
+    try:
+        data = search(choice, filters)
+    except (ValueError, dash.PeriodError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return templates.TemplateResponse(request, 'results.html', _dash_context(selected=choice.cfg.product, **data))
+
+
+@router.post('/results/{finding_id}/processing')
+def set_processing(finding_id: int, product: str = Form(''), state: str = Form(''), actor: str = Form(''), note: str = Form('')):
+    choice = _choice(product)
+    finding = choice.store.get_finding(finding_id)
+    if not finding or finding.get('product') not in (choice.cfg.slug, '' if choice.cfg.is_legacy_product else choice.cfg.slug):
+        raise HTTPException(404, '해당 제품의 분석 결과가 없습니다.')
+    try:
+        choice.store.storage.qa_set_processing(finding_id, finding.get('product', ''), state, actor, note)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return RedirectResponse(f'/qa-agent/findings/{finding_id}', status_code=303)
 
 
 @router.get("/period", response_class=HTMLResponse)
@@ -296,11 +390,12 @@ def period_view(request: Request, product: str = "", start: str = "", end: str =
 
 
 @router.get("/guide", response_class=HTMLResponse)
-def guide(request: Request):
+def guide(request: Request, product: str = ''):
+    choice = _choice(product)
     return templates.TemplateResponse(
         request,
         "guide.html",
-        {},
+        {'savings_enabled': choice.cfg.savings_enabled},
     )
 
 

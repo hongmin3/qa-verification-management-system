@@ -19,6 +19,7 @@
 | **매뉴얼 서버까지 같이 올리기** | [배포 가이드 §8](DEPLOYMENT.md#8-하위-서비스qa-manual-hub를-같은-서버-manual-hub에-붙이기) |
 | 점검 입력 크기·실행 전 대기분 안내 | [QA Intelligence 사양 REQ-QAINTEL-040·041](../specs/qa-intelligence.md#req-qaintel-040-분석-입력-크기와-규칙-반복-읽기-줄이기) · [확인 결과](../progress.md) |
 | **QA 점검 사용량을 줄이는 단계별 계획** | [사용량 절감 실행 계획](superpowers/plans/2026-10-14-qa-usage-reduction.md) · Sonnet 기본화, AI 없는 대상 확인, 호출 예산, 품질 비교와 단계별 도입(미구현) |
+| **이미 분석한 이슈 재사용·상세 화면 정리·작성자 검색** | [결과 재사용과 화면 정리 계획](superpowers/plans/2026-10-14-qa-result-reuse-and-reading.md) · 기간 확대 시 기존 결과 연결, 실제 작성자 이름, 번호·작성자 필터(설계안) |
 | **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·진행·결과](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검토](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
 | **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합, 메일 미수신 원인, 관리자 설정, 상세·목록 재구성(미구현) |

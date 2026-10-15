@@ -166,7 +166,7 @@ def _inlined_documents(task: Task, run: RunWorkspace, inline_input: bool) -> lis
         if len(text) <= PROMPT_INLINE_LIMIT:
             documents.append((run.rel(input_path), text))
     skills = run.root / ".claude" / "skills"
-    references = [skills / task.skill / "SKILL.md", skills / "qa-common-rules" / "SKILL.md",
+    references = [run.root / "rules" / "instruction-prompt.txt", skills / task.skill / "SKILL.md", skills / "qa-common-rules" / "SKILL.md",
                   skills / "qa-common-rules" / "references" / "output-contract.md"]
     if run.product_skill:
         references.append(skills / run.product_skill / "SKILL.md")
@@ -198,6 +198,8 @@ def build_prompt(task: Task, run: RunWorkspace, inline_input: bool = True) -> st
         "아래 넣은 Skill·가이드 절은 이미 읽은 것으로 사용한다. Skill/Read 도구로 같은 내용을 다시 부르지 않는다. 조건별로 더 필요한 절이나 누락된 절만 원문에서 추가 확인한다.\n"
         "여러 파일·검색이 필요하면 한 응답에서 함께 부른다. 규칙 원문 읽기와 전체 색인 검색은 두 번 이하의 응답으로 끝낸다.\n"
         "같은 작업에서 이미 읽은 공통 출력 형식은 재사용한다. 결과를 쓰기 전에 필수 필드를 확인한다.\n"
+        "입력 verification_mode=true이면 이슈 분석에도 tc_coverage 배열을 반드시 쓴다. 사양 변경 분석은 checklist_coverage.tcs와 issue_coverage.issues 배열 및 change.changed_requirements를 쓴다. 관련 TC가 없으면 빈 배열과 함께 sections.tc_assessment.summary에 확인 범위·관련 TC 없음의 근거·보완할 검증 방법을 기록한다.\n"
+        "verification_mode=true의 완료 조건: Skill 필수 sections를 모두 작성하고 G1·G2·G7을 판정한다. 수정 이슈는 G4와 모든 회귀 축의 applicable(boolean)·reason도 작성한다. 사양 변경은 G3도 판정한다. 미확인 자료나 근거 부족은 PASS로 바꾸지 않는다.\n"
         "결과 파일 하나만 쓰고 끝낸다. 결과 형식은 qa-common-rules 의 references/output-contract.md 를 따른다."
         + (f"\n\n아래 파일 내용은 이미 넣었다. 이 파일들을 다시 읽지 않는다.\n{inlined}" if documents else "")
     )

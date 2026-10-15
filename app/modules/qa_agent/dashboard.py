@@ -317,7 +317,10 @@ def card(finding: dict) -> dict:
         "todos": todos(finding),
         "badges": badges(finding),
         "created": kst(finding.get("created_at")),
+        "issue_updated": kst(finding.get('issue_updated_at')) if finding.get('issue_updated_at') else '미확인',
         "confidence": finding.get("confidence", ""),
+        "reporter": finding.get('reporter_name') or (f"이름 미확인 ({finding['reporter_id']})" if finding.get('reporter_id') else '이슈 작성자 정보 없음'),
+        "processing_state": finding.get('processing_state', 'open'),
     }
 
 
@@ -470,23 +473,28 @@ def status(choice: ProductChoice) -> dict:
     }
 
 
-def dashboard(choice: ProductChoice) -> dict:
+def dashboard(choice: ProductChoice, sort: str = 'updated') -> dict:
     from app.modules.daily_qa import automation_policy
+    from app.modules.daily_qa import workflow_settings
     cfg, store = choice.cfg, choice.store
     runs = store.list_runs(limit=10, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
     events = store.list_events(product=cfg.slug, run_id=last["id"]) if last else []
     findings = store.list_findings(product=cfg.slug, include_legacy=cfg.is_legacy_product, only_analyses=True, limit=30)
+    if cfg.savings_enabled:
+        findings = store.storage.qa_search_findings(cfg.slug, include_legacy=cfg.is_legacy_product, sort=sort)['items']
     return {
         "status": status(choice),
+        "result_sort": sort,
         "last_run": last,
         "runs": runs,
         "summary": change_summary(events),
-        "cards": sort_cards([card(item) for item in findings]),
+        "cards": [card(item) for item in findings] if cfg.savings_enabled else sort_cards([card(item) for item in findings]),
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
         "automation_policy": automation_policy.get_policy(store, cfg.slug),
+        "workflow": workflow_settings.for_choice(choice) if cfg.savings_enabled else {'enabled': False},
         "automation_history": [{**item, "changed_at": item.get("updated_at", ""),
                                 "label": automation_policy.LABELS["off" if not item.get("enabled", True)
                                                                  else "daily" if item.get("validation_period", True) else "weekly"]}

@@ -9,6 +9,7 @@
   {% for item in cards %}
     <div class="qa-card"><span class="level {{ item.level_class }}">{{ item.level }}</span>
       <h4>[{{ item.subject }}] {{ item.kind }}</h4><div>{{ item.summary }}</div>
+      {% if item.analysis_type not in ('SPEC_COVERAGE','TC_CHECK','SRS_REMOVED') %}<p class="hint">{{ item.reporter }} · 이슈 업데이트 {{ item.issue_updated }} (한국 시간)</p>{% endif %}
       {% if item.todos %}<ul>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ul>{% endif %}
       <a href="/qa-agent/findings/{{ item.id }}">상세보기</a></div>
   {% else %}<p>이번 실행에서 만든 결과가 없습니다.</p>{% endfor %}

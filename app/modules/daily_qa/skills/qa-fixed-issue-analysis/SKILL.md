@@ -1,11 +1,17 @@
 ---
 name: qa-fixed-issue-analysis
-description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 완료 이슈의 원인·조치·중요 댓글이 바뀐 이슈의 원인과 조치를 검토하고, 최신 사양 일치·Regression 범위·QA 가 다시 확인할 것을 짧게 정리한다(QA 규칙 S04 Fix Verification). TC 는 보지 않는다. 입력 파일(runs/<실행ID>/in/FIX-*.json)을 받았을 때 쓴다.
+description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 완료 이슈의 원인·조치·중요 댓글이 바뀐 이슈의 원인과 조치를 검토하고, 최신 사양 일치·Regression 범위·QA 가 다시 확인할 것을 짧게 정리한다(QA 규칙 S04 Fix Verification). 통합 점검은 선택한 버전의 TC도 비교한다. 입력 파일(runs/<실행ID>/in/FIX-*.json)을 받았을 때 쓴다.
 ---
 
 # 수정 완료 이슈 분석 (S04)
 
 **먼저 `qa-common-rules` 와 제품 규칙 Skill 을 읽는다.**
+
+`verification_mode=true`이면 아래의 TC 제외 지시 대신 선택한 `verification_sheet`의 후보 TC를 함께 검토한다.
+원인·조치·최신 사양·모든 Regression 축 검토는 그대로 수행한다. `sections.tc_coverage`에 각 TC의 위치,
+같은 결함을 잡는지(`covers`), 이유를 적는다. 기존 TC가 부족하고 최신 사양 근거가 충분하면 `draft_tcs`에
+수정확인·회귀 체크리스트 초안을 작성한다. Step과 Expected 번호를 일치시킨다. 근거 부족이면 초안을
+확정하지 않고 `sections.tc_hold`와 확인할 질문을 남긴다. 원본 TC나 이슈 상태는 수정하지 않는다.
 
 ## 입력
 
@@ -15,7 +21,7 @@ description: 연구소 결과가 수정 완료(FIXED)로 바뀌었거나 수정 
 - `issue`: 본문, `reproduction`(Precondition·Step·Expected·Actual), `occurrence_cause`(발생 원인),
   `action_details`(조치 내용), `comments[]`(연구소 댓글 최근 20개, 각 `id`).
 - `candidates.srs[]`, `candidates.spec_docs[]`: 최신 사양 후보. `candidates.issues[]`: 비슷한 과거 이슈.
-  TC 후보는 없다. 검증 TC 초안은 사람이 [검증 TC 초안 만들기]를 누를 때 `qa-verification-tc-draft` 가 만든다.
+  `verification_mode=false`일 때 TC 후보는 없다. 별도 검증 TC 초안은 사람이 [검증 TC 초안 만들기]를 누를 때 `qa-verification-tc-draft` 가 만든다.
 - `regression_axes[]`: 코드가 정한 Regression 축. 이 축만 판정한다.
 - `new_comments[]`(있을 때만): 어제 없던 의미 있는 댓글. 같은 이슈의 새 댓글 분석을 이 분석에 합쳤다는 뜻이다.
 
