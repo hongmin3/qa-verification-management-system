@@ -204,6 +204,43 @@ def test_missing_snapshot_and_legacy_kind_render(site):
     assert "재분석 대기" not in html
 
 
+def test_placeholder_snapshot_comments_are_filled_from_stored_originals(site):
+    """수집기가 번호만 남긴 빈 댓글(created·text 빈 값)이 이벤트 원문을 덮어쓰지 않는다."""
+    placeholder = {"created": "", "author": "", "text": ""}
+    write(site["cfg"].issue_snapshot_dir, "2026-10-16", [snapshot_item("VP-7500", comments=[
+        {"id": "pl-no-original", **placeholder},
+        {"id": "pl-from-event", **placeholder},
+        {"id": "dated", "created": "2026-10-13T08:00:00Z", "author": COMMENTER[0], "text": "시각이 있는 댓글"}])])
+    event = put_event(site, "VP-7500", "ISSUE_COMMENT_ADDED", comment_after("pl-from-event", FIRST_COMMENT, "이벤트에 저장된 원문"),
+                      "2026-10-13T08:21:00+00:00", analyses=("COMMENT",))
+    finding_id = put_finding(site, {"subject": "VP-7500", "analysis_type": "COMMENT", "verdict": "SPEC_CLAIM", "summary": "요약",
+                                    "event_ids": [event], "sections": {"comments": [
+                                        {"comment_id": "pl-from-event", "summary": "원문에서 채운 해석", "classification": "SPEC_CLAIM", "impact": "영향"},
+                                        {"comment_id": "only-interpreted", "summary": "해석만 남은 댓글", "classification": "SPEC_CLAIM"}]}})
+    comments = between(page_of(site, finding_id), "comments", "evidence-panel")
+    assert "댓글 4건" in comments
+    # 이벤트 원문으로 채움: 시각·본문·작성자 이름
+    assert "2026-10-13 17:20" in comments and "이벤트에 저장된 원문" in comments and "이예시" in comments
+    # 원문이 없으면 본문 미수집, 해석만 있는 댓글도 줄이 남는다
+    assert comments.count("본문 미수집") == 2 and "해석만 남은 댓글" in comments
+    # 순서: 시각을 아는 댓글(시간순) → 시각을 모르는 댓글(스냅샷 순서 → 해석만 있는 순서)
+    order = [comments.index(text) for text in ("시각이 있는 댓글", "이벤트에 저장된 원문", "해석만 남은 댓글")]
+    assert order[0] < order[1] < order[2]
+    rows = dash.comment_rows({"created_at": ANALYZED_AT}, issue_body.load("vxvue", "VP-7500", snapshot_dir=site["cfg"].issue_snapshot_dir),
+                             {}, set(), {"only-interpreted": {"summary": "x"}})
+    assert [row["id"] for row in rows] == ["dated", "pl-no-original", "pl-from-event", "only-interpreted"]
+    assert [row["body_missing"] for row in rows] == [False, True, True, True]
+
+
+def test_empty_verdict_shows_not_saved_for_every_kind(site):
+    for kind in ("NEW_ISSUE", "FIXED_ISSUE", "COMMENT", "SPEC_DECISION"):
+        finding_id = put_finding(site, {"subject": "VP-7400", "analysis_type": kind, "verdict": "", "summary": "요약"})
+        judgement = between(page_of(site, finding_id), "ai-judgement", "qa-todos")
+        assert "판정 저장 안 됨" in judgement, kind
+        assert "판정 </b>" not in judgement and "qa-review-needed" not in judgement, kind
+    assert dash.verdict_view({"analysis_type": "SPEC_COVERAGE", "verdict": "", "sections": {}}, "COVERAGE")["verdict"] == "판정 저장 안 됨"
+
+
 def test_unknown_comment_author_shows_unconfirmed_name_with_id(site):
     finding_id = put_finding(site, {"subject": "VP-7300", "analysis_type": "FIXED_ISSUE", "verdict": "SPEC_UNDEFINED", "summary": "요약"})
     assert "이름 미확인 (9009999)" in page_of(site, finding_id)

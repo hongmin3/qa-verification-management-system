@@ -1,8 +1,8 @@
 """분석 상세 화면에 보일 이슈 원문 (SPEC REQ-QAINTEL-020 4·7번 구획).
 
 제품의 가장 최근 이슈 스냅샷(`data/daily_qa/snapshots/<제품>/issues/<날짜>.json` 의 `items`)에서 읽는다.
-화면을 여는 일은 Polarion 도 AI 도 부르지 않으므로 저장된 파일만 본다. 파일은 수정 시각이 같으면 다시
-읽지 않는다. 작성자·댓글 작성자의 번호와 이름은 화면에 보이기만 하며 AI 입력에는 넣지 않는다.
+화면을 여는 일은 Polarion 도 AI 도 부르지 않으므로 저장된 파일만 본다. 파일은 경로·수정 시각·크기가 같으면
+다시 읽지 않고, 폴더마다 가장 최근 파일 하나만 기억한다. 작성자·댓글 작성자의 번호와 이름은 화면에 보이기만 하며 AI 입력에는 넣지 않는다.
 """
 
 from __future__ import annotations
@@ -15,7 +15,8 @@ from threading import Lock
 #: 이름을 찾지 못한 작성자 표시 (REQ-QAINTEL-020 1번 구획).
 UNKNOWN_NAME = "이름 미확인 ({id})"
 
-_CACHE: dict[str, tuple[int, int, dict[str, dict]]] = {}
+#: 스냅샷 폴더(제품)마다 가장 최근 파일의 읽은 값 하나만 둔다: 폴더 → (파일 경로, 수정 시각, 크기, 이슈 번호별 값).
+_CACHE: dict[str, tuple[str, int, int, dict[str, dict]]] = {}
 _LOCK = Lock()
 
 
@@ -59,16 +60,16 @@ def _index(path: Path) -> dict[str, dict] | None:
     """파일 수정 시각·크기가 같으면 읽어 둔 값을 쓴다. 읽을 수 없는 파일은 None 이다."""
     try:
         stat = path.stat()
-        key = str(path)
+        key = str(path.parent)
         with _LOCK:
             cached = _CACHE.get(key)
-        if cached and cached[:2] == (stat.st_mtime_ns, stat.st_size):
-            return cached[2]
+        if cached and cached[:3] == (str(path), stat.st_mtime_ns, stat.st_size):
+            return cached[3]
         items = {str(item.get("id")): item for item in _read_items(path) if isinstance(item, dict) and item.get("id")}
     except (OSError, ValueError, AttributeError):
         return None
     with _LOCK:
-        _CACHE[key] = (stat.st_mtime_ns, stat.st_size, items)
+        _CACHE[key] = (str(path), stat.st_mtime_ns, stat.st_size, items)   # 날마다 새 파일이 생겨도 폴더당 한 건만 남는다
     return items
 
 

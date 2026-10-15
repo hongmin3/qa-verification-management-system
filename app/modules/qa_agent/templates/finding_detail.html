@@ -71,7 +71,7 @@
       {% else %}
       {% if vv.question %}<p class="qa-question">{{ vv.question }}</p>{% endif %}
       <div class="qa-card-head"><span class="level {{ card.level_class }}">{{ card.level }}</span>
-        <span class="hint" style="margin:0">판정 <b title="{{ finding.verdict }}">{{ vv.verdict }}</b>{% if vv.needs_review %} <span class="pill qa-review-needed">검토 필요</span>{% endif %}
+        <span class="hint" style="margin:0">{% if finding.verdict %}판정 {% endif %}<b title="{{ finding.verdict }}">{{ vv.verdict }}</b>{% if vv.needs_review %} <span class="pill qa-review-needed">검토 필요</span>{% endif %}
           · 신뢰도 <span title="{{ finding.confidence or '' }}">{{ label(finding.confidence or '-') }}</span></span>
         {% for mark in vv.marks %}<span class="pill">{{ mark }}</span>{% endfor %}</div>
       <div class="qa-summary">{{ finding.summary }}</div>
@@ -112,7 +112,7 @@
     <div class="qa-comment">
       <p><b>{{ loop.index }})</b> {{ c.created or '작성 시각 정보 없음' }} · {{ c.author }}
         {% if c.used %}<span class="pill">분석에 사용</span>{% elif c.after %}<span class="pill qa-after">분석 이후</span>{% endif %}</p>
-      {{ text_block(c.text) }}
+      {% if c.body_missing %}<p class="hint">본문 미수집</p>{% else %}{{ text_block(c.text) }}{% endif %}
       {% if c.used and c.interpreted %}
       <p><b>댓글 해석</b> {{ c.summary }}{% if c.classification %} <span class="pill" title="{{ c.classification }}">{{ label(c.classification) }}</span>{% endif %}</p>
       {% if c.impact %}<p><b>QA 판단에 주는 영향</b> {{ c.impact }}</p>{% endif %}

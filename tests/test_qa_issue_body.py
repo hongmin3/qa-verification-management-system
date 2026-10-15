@@ -109,3 +109,18 @@ def test_comment_without_author_has_empty_name(snapshot_dir):
 def test_comments_missing_in_snapshot_are_an_empty_list(snapshot_dir):
     write(snapshot_dir, "2026-10-15", [snapshot_item(comments=None)])
     assert issue_body.load("vxvue", "VP-7287", snapshot_dir=snapshot_dir).comments == []
+
+
+def test_cache_keeps_one_entry_per_snapshot_directory(snapshot_dir, tmp_path):
+    other = tmp_path / "other-product" / "issues"
+    write(snapshot_dir, "2026-10-15", [snapshot_item(title="첫날")])
+    assert issue_body.load("vxvue", "VP-7287", snapshot_dir=snapshot_dir).title == "첫날"
+    assert len(issue_body._CACHE) == 1
+    write(snapshot_dir, "2026-10-16", [snapshot_item(title="다음 날")])
+    assert issue_body.load("vxvue", "VP-7287", snapshot_dir=snapshot_dir).title == "다음 날"
+    assert len(issue_body._CACHE) == 1                                   # 새 파일이 생겨도 폴더당 한 건
+    (kept,) = issue_body._CACHE.values()
+    assert kept[0].endswith("2026-10-16.json")
+    write(other, "2026-10-16", [snapshot_item(title="다른 제품")])
+    assert issue_body.load("other", "VP-7287", snapshot_dir=other).title == "다른 제품"
+    assert len(issue_body._CACHE) == 2 and set(issue_body._CACHE) == {str(snapshot_dir), str(other)}

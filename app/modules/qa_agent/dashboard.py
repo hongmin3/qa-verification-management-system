@@ -347,6 +347,8 @@ KIND_QUESTIONS = {
     "TC_CHECK": "바뀐 사양을 TC가 덮는가",
 }
 FOLD_LINES = 8
+VERDICT_NOT_SAVED = "판정 저장 안 됨"
+COMMENT_BODY_MISSING = "본문 미수집"
 PENDING_EVENT_STATUSES = ("pending", "failed")
 
 
@@ -460,7 +462,9 @@ def verdict_view(finding: dict, view: str) -> dict:
         out["verdict"] = ""
         return out
     if kind == NEW_ISSUE:
-        if verdict in VALIDITY_LABEL:
+        if not verdict:
+            pass
+        elif verdict in VALIDITY_LABEL:
             out["verdict"] = VALIDITY_LABEL[verdict]
         else:
             out["verdict"], out["needs_review"] = verdict, True
@@ -484,6 +488,9 @@ def verdict_view(finding: dict, view: str) -> dict:
         tcs = (sections.get("checklist_coverage") or {}).get("tcs")
         if tcs:
             out["marks"].append(f"Checklist {len(tcs)}건")
+    if not verdict:
+        # 판정을 지어내지 않는다 (REQ-QAINTEL-020 읽는 규칙).
+        out["verdict"], out["needs_review"] = VERDICT_NOT_SAVED, False
     return out
 
 
@@ -496,7 +503,7 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None, issue=
     sections = finding.get("sections") or {}
     interpretations = {str(entry.get("comment_id")): entry for entry in sections.get("comments") or []
                        if isinstance(entry, dict)}
-    comments, seen = [], set()
+    comments, seen, originals = [], set(), {}
     for event in events:
         after = event.get("after") or {}
         for comment in after.get("comments") or []:
@@ -507,6 +514,8 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None, issue=
             seen.add(comment_id)
             interpretation = interpretations.get(comment_id, {})
             author_id = str(comment.get("author") or "")
+            originals[comment_id] = {"created": str(comment.get("created") or ""), "text": str(comment.get("text") or ""),
+                                     "author": person(names.get(author_id, ""), author_id)}
             comments.append({"id": comment_id, "created": kst(comment.get("created")),
                              "author": person(names.get(author_id, ""), author_id) or "작성자 정보 없음", "text": comment.get("text") or "",
                              "summary": interpretation.get("summary") or "해석이 저장되지 않았습니다.",
@@ -529,7 +538,7 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None, issue=
     links = [{"id": value, "url": url} for value in ids if value != finding["subject"]
              for url in [workitem_url(polarion, value)] if url]
     kind = finding.get("analysis_type", "")
-    rows = comment_rows(finding, issue, comments, seen, interpretations)
+    rows = comment_rows(finding, issue, originals, seen, interpretations)
     return {"issue": sections.get("issue_summary") or finding.get("subject_title") or finding["subject"],
             "comments": comments, "comment_rows": rows, **lists, "has_checked": any(lists.values()),
             "comment_locations": locations, "srs_links": links,
@@ -538,25 +547,36 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None, issue=
             "interprets_comments": kind == COMMENT}
 
 
-def comment_rows(finding: dict, issue, event_comments: list[dict], used_ids: set, interpretations: dict) -> list[dict]:
-    """댓글 구획의 줄 (REQ-QAINTEL-020 7번). 이슈 원문이 있으면 전체 댓글을 시간순으로, 없으면 이벤트에 저장된 댓글만 쓴다."""
+def comment_rows(finding: dict, issue, originals: dict, used_ids: set, interpretations: dict) -> list[dict]:
+    """댓글 구획의 줄 (REQ-QAINTEL-020 7번).
+
+    이슈 스냅샷의 댓글을 바탕으로 하되, 수집기가 번호만 남긴 빈 댓글(`created`·`text`가 비어 있음)은 변경 이벤트에
+    저장된 원문(`originals`, 번호별)으로 시각·본문·작성자를 채운다. 저장된 원문도 없으면 `본문 미수집`이다.
+    스냅샷에 없는 이벤트 댓글과 해석만 저장된 댓글도 줄로 남긴다.
+    줄 순서: 시각을 아는 댓글은 시간순, 시각을 모르는 댓글은 그 뒤에 스냅샷 순서 → 이벤트 순서 → 해석만 있는 순서로 놓는다.
+    """
     analyzed = _moment(finding.get("created_at"))
-    if issue is not None and issue.comments:
-        ordered = sorted(issue.comments, key=lambda entry: (_moment(entry["created"]) is None,
-                                                            _moment(entry["created"]) or datetime.min.replace(tzinfo=timezone.utc)))
-        source = [{"id": entry["id"], "created": kst(entry["created"]), "moment": _moment(entry["created"]),
-                   "author": entry["author_name"] or "작성자 정보 없음", "text": entry["text"]} for entry in ordered]
-    else:
-        source = [{"id": entry["id"], "created": entry["created"], "moment": None, "author": entry["author"], "text": entry["text"]}
-                  for entry in event_comments]
+    merged: dict[str, dict] = {}
+    for entry in (issue.comments if issue is not None else []):
+        merged[entry["id"]] = {"created": entry["created"], "text": entry["text"], "author": entry["author_name"]}
+    for comment_id, original in originals.items():
+        current = merged.setdefault(comment_id, {"created": "", "text": "", "author": ""})
+        for key in ("created", "text", "author"):
+            current[key] = current[key] or original[key]
+    for comment_id in interpretations:
+        merged.setdefault(comment_id, {"created": "", "text": "", "author": ""})
     rows = []
-    for entry in source:
-        interpretation = interpretations.get(entry["id"]) or {}
-        used = entry["id"] in used_ids or entry["id"] in interpretations
-        rows.append({**entry, "used": used, "interpreted": bool(interpretation),
-                     "after": bool(not used and analyzed and entry["moment"] and entry["moment"] > analyzed),
+    for comment_id, entry in merged.items():
+        interpretation = interpretations.get(comment_id) or {}
+        moment = _moment(entry["created"])
+        used = comment_id in used_ids or comment_id in interpretations
+        rows.append({"id": comment_id, "created": kst(entry["created"]), "moment": moment,
+                     "author": entry["author"] or "작성자 정보 없음", "text": entry["text"],
+                     "body_missing": not entry["text"], "used": used, "interpreted": bool(interpretation),
+                     "after": bool(not used and analyzed and moment and moment > analyzed),
                      "summary": interpretation.get("summary") or "", "classification": interpretation.get("classification") or "",
                      "impact": interpretation.get("impact") or "", "follow_up": interpretation.get("follow_up") or ""})
+    rows.sort(key=lambda row: (row["moment"] is None, row["moment"] or datetime.min.replace(tzinfo=timezone.utc)))
     return rows
 
 
