@@ -8,6 +8,7 @@
 - 운영 반영(14:18 KST): 운영 파일이 기준 커밋과 같은 것과 진행 중 점검·분석 0건을 확인한 뒤 11개 파일만 반영했다. 백업은 `/home/ubuntu/qa-deploy-backups/vxvue-autoconnect-20261015T051824Z/`(바뀐 파일·`app.db`·목록)다. sudo 비밀번호가 없어 `systemctl restart`가 거부됐고, 진행 작업이 없음을 다시 확인한 뒤 주 프로세스를 강제 종료해 `Restart=on-failure`로 7초 뒤 다시 떴다. 안내 화면 200, 이전 팀 토큰 연결 정상(`update_required` 표시), 잘못된 키 401을 확인했다.
 - CLI 실제 확인: PowerShell 5.1에서 안내 화면 명령으로 이 PC를 등록하고 사용자 범위 `vxvue-ai` 연결(`✔ Connected`)을 만들었다. 재실행은 저장된 키를 다시 썼다. 이 PC의 사용자 `vxvue-ai` Skill은 덮어쓰지 않고 알렸고, 빈 설정 폴더에서는 관리용 Skill이 설치됐다. `claude -p` 시작 때 `vxvue-ai` connected·도구 13개를 확인했으나 계정 사용량 한도(15:50 재설정)로 도구 호출 전에 멈췄다.
 - Desktop 첫 설치(14:25): 확장 1.1.0이 Claude Desktop 내장 Node로 시작했지만 `initialize`에 60~120초 응답하지 못해 "Couldn't start for Cowork and Code sessions"로 실패했다. 같은 파일을 이 PC에서 직접 실행하면 1.8초에 응답했다. 확장 1.2.0에서 시작 응답을 서버와 무관하게 즉시 하고, 도구 목록은 10초 제한 뒤 설치 파일 목록을 쓰며, `~/.vxvue-ai/bridge.log` 단계 기록을 남기게 고쳐 14:40에 반영했다. 원인이 Desktop 안의 서버 연결 지연인지는 재설치 후 기록으로 확인한다.
+- 15:06 Desktop 재설치(1.2.0)도 initialize 무응답으로 실패했고, 그 채팅에서 Claude는 VP-7282를 Jira 번호로 보고 Atlassian 연결을 권했다. `bridge.log`에 Desktop 실행 기록이 전혀 없어 본문 미실행을 확인했다. 원인은 `require.main === module` 조건이다(Electron 래퍼 실행을 흉내 내 수정 전 판의 무응답을 재현). 1.2.1에서 고쳐 15:18 반영. Desktop 재설치 뒤 확인은 남았다.
 - 14:30 확인 출력에 이 PC의 연결 키가 노출돼 기기 `6fc32b142325`를 취소하고 CLI를 새 키로 다시 등록했다.
 - 안내 화면 개편(15:20 반영): 실제 서버 자료와 Polarion으로 조회한 질문·답 6개. 필터는 실행 시점 4건·1페이지, 4건 모두 본문·댓글·연결 수집. 필터의 `NOT title:\[보류\]`가 VP-6771을 거르지 못하는 것을 확인했다(필터는 바꾸지 않음).
 - 확인한 서버 한계: 4자리 버전 번호(예: `1.1.0.001`)가 보호 처리에서 IP로 오인돼 `[IP_ADDRESS]`로 가려진다. Generator 근거 결과에 서버 파일 경로가 그대로 나온다.

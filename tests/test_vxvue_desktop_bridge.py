@@ -191,6 +191,18 @@ def test_silent_server_does_not_stall_the_handshake(setup):
     finally:
         silent.close()
     assert [r["id"] for r in replies] == [1, 3]
-    assert replies[0]["result"]["serverInfo"]["version"] == "1.2.0"
+    assert replies[0]["result"]["serverInfo"]["version"] == desktop.BRIDGE_VERSION
     assert len(replies[1]["result"]["tools"]) >= 10
     assert elapsed < 15
+
+
+def test_bridge_runs_when_loaded_through_an_electron_wrapper(tmp_path):
+    """Claude Desktop loads the file through a wrapper in an Electron utility process (require.main is not the bridge)."""
+    wrapper = "Object.defineProperty(process.versions, 'electron', {value: '38.0.0'}); require(process.argv[1])"
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("VXVUE_")}
+    process = subprocess.run(["node", "-e", wrapper, str(BRIDGE)], input=json.dumps(HANDSHAKE[0]) + "\n", text=True,
+                             encoding="utf-8", capture_output=True, timeout=30,
+                             env={**clean, "VXVUE_SERVER_URL": "http://127.0.0.1:9", "VXVUE_AI_HOME": str(tmp_path)})
+    reply = json.loads(process.stdout.splitlines()[0])
+    assert reply["id"] == 1 and reply["result"]["serverInfo"]["name"] == "vxvue-ai"
+    assert "start " + desktop.BRIDGE_VERSION in (tmp_path / "bridge.log").read_text(encoding="utf-8")

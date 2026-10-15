@@ -18,16 +18,18 @@ from .mcp_server import KnowledgeTools, tools, text_content
 from .desktop_polarion import PolarionLookup, integer
 from . import desktop_enroll as enroll
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 # The newest stdio bridge shipped in deploy/claude-desktop; older bridges get a reinstall notice.
-BRIDGE_VERSION = "1.2.0"
+BRIDGE_VERSION = "1.2.1"
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")  # the only logger the service writes to its journal
 _lock = threading.Lock()
 _snapshots = OrderedDict()
 _fingerprint = None
 _current = None
-INSTRUCTIONS = """VXvue 공용 지식 연결입니다. VXvue 사양·TC·Issue·Polarion 질문에는 먼저 get_status로
+INSTRUCTIONS = """VXvue 공용 지식 연결입니다. VP-로 시작하는 번호(예: VP-7282)는 Jira가 아니라 Polarion의
+VXvue 항목이므로 이 연결의 get_polarion_item으로 조회하세요. Jira·Atlassian 연결은 필요 없습니다.
+VXvue 사양·TC·Issue·Polarion 질문에는 먼저 get_status로
 snapshot_id를 받고 get_workflow를 next_offset이 없을 때까지 읽어 최신 Skill·QA 지침을 적용하세요.
 원본 Skill에 적힌 개인 PC 경로·로컬 명령은 이 서버 연결에서 실행하지 마세요.
 이 연결의 문서 조회는 아래 읽기 도구만 사용합니다. 원본의 Redmine 로컬 설정은 제공하지 않습니다.
@@ -169,7 +171,7 @@ def definitions():
             continue
         tool = json.loads(json.dumps(tool))
         if tool["name"] == "get_status":
-            tool["description"] = ("VXvue 사양·매뉴얼·TC·Generator·Polarion(VP) 질문의 첫 단계. 서버 연결 상태와 snapshot_id를 받는다. "
+            tool["description"] = ("VXvue AI: VXvue 사양·매뉴얼·TC·Generator·Polarion(VP-번호) 질문의 첫 단계. 서버 연결 상태와 snapshot_id를 받는다. "
                                    "이어서 get_workflow로 최신 Skill·QA 규칙을 끝까지 읽고 적용한다.")
         if tool["name"] != "get_status":
             tool["inputSchema"]["properties"]["snapshot_id"] = {"type": "string"}
@@ -178,9 +180,9 @@ def definitions():
     extra = [
         ("get_workflow", "최신 Skill·QA 규칙 전문. truncated면 next_offset으로 끝까지 읽기.",
          {"snapshot_id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["snapshot_id"]),
-        ("polarion_query", "사용자의 Polarion 필터를 그대로 조회. 전체 요청은 next_page가 없을 때까지 수집. 원문은 read_polarion_result로 이어 읽기.",
+        ("polarion_query", "VXvue AI: 사용자의 Polarion 필터를 그대로 조회(Jira 아님). 전체 요청은 next_page가 없을 때까지 수집. 원문은 read_polarion_result로 이어 읽기.",
          {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1}, "page_size": {"type": "integer", "minimum": 1, "maximum": 50}}, ["query"]),
-        ("get_polarion_item", "VP 번호의 전체 속성·관계 또는 댓글·첨부 목록 수집. 연결 VP는 추가 조회. 첨부 본문은 포함하지 않음.",
+        ("get_polarion_item", "VXvue AI: VP-로 시작하는 Polarion 이슈·사양 번호(예: VP-7282)의 본문·속성·관계 또는 댓글·첨부 목록 수집. VP 번호는 Jira가 아니다. 연결 VP는 추가 조회. 첨부 본문은 포함하지 않음.",
          {"vp_id": {"type": "string"}, "section": {"type": "string", "enum": ["item", "comments", "attachments", "links"]}, "page": {"type": "integer", "minimum": 1}}, ["vp_id"]),
         ("read_polarion_result", "수집한 Polarion 원문 전체를 next_offset으로 이어 읽기.",
          {"result_id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["result_id"]),

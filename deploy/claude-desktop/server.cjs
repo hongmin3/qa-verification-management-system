@@ -7,7 +7,7 @@ const path = require('node:path');
 const readline = require('node:readline');
 const { isIP } = require('node:net');
 
-const BRIDGE_VERSION = '1.2.0';
+const BRIDGE_VERSION = '1.2.1';
 const QUICK_MS = 10000;  // handshake-time calls; Claude Desktop gives up on a silent server after about 60 s
 const LOG_LIMIT = 256 * 1024;
 const MAX_BYTES = 32 * 1024 * 1024;
@@ -328,5 +328,7 @@ async function main() {
   }
 }
 
-if (require.main === module) main();
+// Claude Desktop starts extensions in an Electron utility process, where this file is loaded through
+// a wrapper and require.main is not this module. Run there too; tests and tools load it as a library.
+if (require.main === module || (process.versions.electron && process.env.VXVUE_BRIDGE_LIBRARY !== '1')) main();
 module.exports = { Bridge, BridgeError, baseUrl, endpoint, BRIDGE_VERSION };

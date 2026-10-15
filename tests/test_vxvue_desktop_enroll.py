@@ -175,7 +175,7 @@ def test_claude_code_installer_embeds_fresh_ticket_and_managed_skill(app_root):
         assert "x" * 48 not in script
         assert "$Server = 'http://qa.test:24357'" in script
         assert '"$Server/vxvue-desktop/mcp"' in script and "claude mcp add --transport http --scope user vxvue-ai" in script
-        assert "__" not in script.split("& {", 1)[1].split("function Say", 1)[0]  # every placeholder filled
+        assert not re.search(r"__(SERVER|TICKET|SKILL_BASE64|VERSION)__", script)  # every placeholder filled
         ticket = re.search(r"\$Ticket = '([A-Za-z0-9_-]{40,})'", script).group(1)
         skill = base64.b64decode(re.search(r"\$SkillBase64 = '([A-Za-z0-9+/=]+)'", script).group(1)).decode("utf-8")
         assert skill.startswith("---\nname: vxvue-ai") and "vxvue-ai-managed" in skill
@@ -226,3 +226,9 @@ def test_guide_asks_for_no_address_or_token_and_shows_cli_command(app_root):
     assert "irm http://qa.test:24357/vxvue-desktop/claude-code/install.ps1 | iex" in page
     assert "팀 접근 토큰에는" not in page and "{{" not in page
     assert "/vxvue-desktop/download" in page and "network_not_allowed" in page
+
+
+def test_tool_text_tells_claude_vp_numbers_are_polarion_not_jira():
+    tools = {t["name"]: t["description"] for t in desktop.definitions()}
+    assert "Jira" in tools["get_polarion_item"] and "VP-" in tools["get_polarion_item"]
+    assert "Jira가 아니라" in desktop.INSTRUCTIONS
