@@ -18,8 +18,8 @@
 | 캡처의 14건 목록은 무엇인가 | 오늘 분석이 아니다. 10-14 17:41 KST 운영 확인용 "이슈 변경 분석 준비" 실행 `20261014-174057-vxvue`가 만든 준비 목록이다(수정 완료 7·새 댓글 7, AI 0회). 18:11 KST에 만료됐지만 `/qa-agent/plans/latest`가 만료를 보지 않고 가장 최근 목록을 돌려줘 체크박스가 계속 보인다 | 운영 DB `qa_execution_plans`, `app/modules/qa_agent/router.py` `latest_plan` |
 | 오늘 자동 분석을 했나 | 했다. `20261015-040000-vxvue`, 04:00~04:03 KST, 결과 `PARTIAL`. Claude 2회(Sonnet 5.5)로 VP-580 사양 분석·VP-7257 새 댓글 분석 2건을 만들었고 둘 다 필수 확인이 남아 실패로 표시됐다. 수정 완료 1건과 나머지 묶음은 예산(실행당 2회) 초과로 대기다. 제품 대기 변경 12건 | 운영 DB `daily_qa_runs`, `daily_qa_findings` 290·291 |
 | 메일은 어떻게 오나 | 실행마다 한 통. 제목 `[QA] vxvue <검증 버전> · 사양 N / 이슈 N · 미분석·대기 N`. 본문은 비교 기준일·대기 건수·사양/이슈 결과 링크·판정 건수·이슈 작성자별 묶음(최신 업데이트순)·예산 소진 안내다 | `app/modules/daily_qa/report.py` `_workflow_email` |
-| 왜 메일이 안 왔나 | `DAILY_QA_EMAIL_TO`가 없어 `NOTIFY_EMAIL_TO`(관리자 주소와 일치)로 보냈다. Gmail SMTP가 받아들였고 실행 기록은 `메일 sent`다(10-14 13:35, 10-15 04:03 두 번). 서버 이후 구간(Gmail 반송, 회사 메일 차단·스팸 격리)은 서버에서 확인할 수 없다 | `secrets.txt` 키 이름, `output/logs/daily_qa.out` |
-| 세션 한도 알림은 있나 | 없다. 한도를 감지하면 `limit_evidence.capture`로 화면 증거만 남긴다. `notifier.notify_for_error`는 Gemini 오류에서만 부른다 | `pipeline.py:314`, `gemini_client.py:197` |
+| 왜 메일이 안 왔나 | 정정(2026-10-15 09:40): 메일은 왔다. `DAILY_QA_EMAIL_TO`가 없어 `NOTIFY_EMAIL_TO`(관리자 주소)로 보냈고, 메일 프로그램의 규칙으로 받은편지함이 아닌 `VXvue` 폴더에 들어가 있었다(사용자 화면: 10-15 04:03 `[QA] VXvue V1.1.0 · 사양 3 / 이슈 8 · 미분석·대기 12`). 09:31 KST 시험 메일(`[QA 시스템] Claude 사용량 한도 도달`, 제목에 `VXvue` 없음)은 서버 기록상 09:31:18에 Gmail이 받아들였고 수신 위치는 사용자 확인 중 | `secrets.txt` 키 이름, `output/logs/daily_qa.out`, 운영 `notifications` |
+| 세션 한도 알림은 있나 | 정정: 실행 요약 메일이 한도를 알린다. 절약 모드 전 형식(`build_email`)은 제목에 `[QA Agent] VXvue Claude 세션(5시간) 사용량 한도 · <실행 번호>`를 넣었고 10-14 08:16·13:36에 실제로 도착했다. 10-14 17:33 절약 모드 배포 뒤 형식(`_workflow_email`)은 제목에 한도를 넣지 않는다. 실행과 별개인 관리자 알림(`notify`)은 Gemini 오류에서만 부른다 | `report.py:81-100`, `pipeline.py:314`, `gemini_client.py:197` |
 | VP-7287은 신규 이슈인가 | 아니다. 2026-09-21 16:37 등록, 연구소 결과 `FIXED`, 상태 `reviewed`. 10-13 17:20 QA 재현 댓글 때문에 수정 완료 이슈로 다시 분석됐다. 본문은 `reproduction_step`(설명 칸은 비어 있음)에 있는데 상세 화면은 제목만 보여 줘 재현 댓글이 본문처럼 보였다. 분석(10-14 13:35) 뒤 18:09 "수정완료했습니다" 댓글이 달렸고 그 분석은 대기 중이다 | `data/daily_qa/snapshots/vxvue/issues/2026-10-15.json`, 결과 254·288, 이벤트 186 |
 | 결과 목록 상태 | 결과 291건 중 214건은 분석 종류가 빈 이전 형식이다. 이슈 29개는 결과가 2건 이상이라 같은 이슈 카드가 겹친다 | 운영 DB 집계 |
 
@@ -98,19 +98,25 @@ Expected: 실패 0. 그 브랜치 기록의 이전 전체 결과(1,606 통과·8
 
 Run: `node .project-check/project-readiness.js .` → 오류 0. 키트 루트에서 `node tools/cleanup-workspace.js --completed <master 폴더> --apply --auto`. `git push origin master`. 이어서 이 브랜치에 `git merge master`.
 
-### Task 2: 준비 목록 만료 처리와 목록 행 정보 (REQ-QAINTEL-042)
+### Task 2: 대상 선택을 `상세 분석` 화면으로 분리하고 만료 처리 (REQ-QAINTEL-042)
 
 **Files:**
-- Modify: `specs/qa-intelligence.md`(REQ-QAINTEL-042 결과에 만료 표시·행 정보 추가), `app/modules/qa_agent/router.py` `latest_plan`, `app/modules/daily_qa/execution_plan.py` `public`, `app/web/static/qa-selection.js`, `app/modules/qa_agent/templates/_intel_style.html`
-- Test: `tests/test_qa_execution_plan.py`, `tests/qa_run_progress_ui.cjs`
+- Modify: `specs/qa-intelligence.md`(REQ-QAINTEL-042 결과에 화면 분리·만료 표시·행 정보 추가), `app/modules/qa_agent/router.py`(`latest_plan`, 새 `GET /qa-agent/select`), `app/modules/daily_qa/execution_plan.py` `public`, `app/modules/qa_agent/templates/dashboard.html`(목록 제거, 한 줄 안내), `app/web/static/qa-selection.js`, `app/modules/qa_agent/templates/_intel_style.html`
+- Create: `app/modules/qa_agent/templates/select.html`
+- Test: `tests/test_qa_execution_plan.py`, `tests/test_qa_intel_dashboard.py`, `tests/qa_run_progress_ui.cjs`
 
 **Interfaces:**
 - Consumes: Task 1의 `execution_plan.public(plan)`
-- Produces: `public(plan, now) -> dict`에 `expired: bool`, 대상마다 `kind_label`, `reporter_name`, `issue_updated_kst`, `reason`(변경 이벤트 이름) 추가
+- Produces: `public(plan, now) -> dict`에 `expired: bool`, 대상마다 `kind_label`, `reporter_name`, `issue_updated_kst`, `reason`(변경 이벤트 이름) 추가. 화면 주소 `GET /qa-agent/select?product=<제품>`(제목 `상세 분석`)
 
-판정: 실행은 이미 30분 뒤 거절하므로(사양 충족) 화면 표시만 사양에 더한다.
+사용자 결정(2026-10-15): 점검 첫 화면에 후보 목록(체크박스 14줄)이 바로 펼쳐지는 것이 이상하다. 후보 확인과 선택은 별도 `상세 분석` 화면으로 뺀다.
 
-- [ ] **Step 1: 사양 추가** — "30분이 지난 준비 목록은 체크박스 없이 `준비 목록 만료 (준비 <KST 시각>) · 다시 준비하세요`로 표시한다. 각 행은 체크박스·번호·제목·분석 종류·작성자·이슈 업데이트(KST)·분석 이유를 보인다."
+- 점검 첫 화면(`/qa-agent`)에는 준비 버튼과 한 줄 안내만 남긴다: `준비된 대상 <N>건 · 상세 분석 열기` 또는 `준비 목록 만료 · 다시 준비하세요`. 준비가 끝나면 진행 표시가 `상세 분석 열기` 링크를 보인다.
+- `상세 분석` 화면은 기존 선택 목록·`선택 대상 분석`·`선택 1건 Opus 재검토`·호출 예산 안내를 그대로 옮긴다. 상단 메뉴 활성 항목은 `사양·이슈 변경 점검`이다.
+
+판정: 실행은 이미 30분 뒤 거절하므로(사양 충족) 화면 분리와 표시만 사양에 더한다.
+
+- [ ] **Step 1: 사양 추가** — "대상 선택은 `상세 분석` 화면(`/qa-agent/select`)에서 한다. 점검 화면은 준비 건수와 링크만 보인다. 30분이 지난 준비 목록은 체크박스 없이 `준비 목록 만료 (준비 <KST 시각>) · 다시 준비하세요`로 표시한다. 각 행은 체크박스·번호·제목·분석 종류·작성자·이슈 업데이트(KST)·분석 이유를 보인다."
 - [ ] **Step 2: 실패 시험 작성**
 
 ```python
@@ -125,7 +131,18 @@ def test_public_plan_rows_carry_kind_reporter_and_update():
     assert row["issue_updated_kst"].endswith("(한국 시간)")
 ```
 
-브라우저 시험: 만료 목록이면 `#qa-selection-targets input[type=checkbox]` 개수 0, `선택 대상 분석` 비활성.
+```python
+def test_dashboard_has_no_selection_list_only_link(client, prepared_plan):
+    html = client.get("/qa-agent?product=VXvue").text
+    assert 'id="qa-selection-targets"' not in html
+    assert '/qa-agent/select?product=VXvue' in html
+
+def test_select_page_renders_selection_controls(client, prepared_plan):
+    html = client.get("/qa-agent/select?product=VXvue").text
+    assert "상세 분석" in html and 'id="qa-selected-run"' in html
+```
+
+브라우저 시험(`/qa-agent/select`): 만료 목록이면 `#qa-selection-targets input[type=checkbox]` 개수 0, `선택 대상 분석` 비활성.
 - [ ] **Step 3: 시험 실패 확인** — `pytest tests/test_qa_execution_plan.py -k "expired or rows_carry" -v` → FAIL
 - [ ] **Step 4: 구현** — 체크박스를 행 왼쪽에 두고 행을 `<label>` 전체 클릭 영역으로 만든다(캡처의 오른쪽 끝 체크박스 해소).
 - [ ] **Step 5: 시험 통과 확인 후 커밋**
@@ -156,7 +173,9 @@ def test_public_plan_rows_carry_kind_reporter_and_update():
 - Consumes: `AdminSettingKeys.notifications.admin_email`, `limit_evidence.episode_key(limit)`
 - Produces: `notifier.notify(kind, detail, context=None, storage=None, recipients=()) -> dict`
 
-사양 문장: "한도(세션·주간·불명)를 처음 감지하면 관리자 주소로 `[QA] Claude <한도 종류> 도달 · 초기화 <KST 시각>` 메일을 보낸다. 본문에는 실행 번호, 남은 대기 건수, 증거 파일 이름을 넣는다. 같은 한도 묶음(`episode_key`)에는 다시 보내지 않는다."
+절약 모드 메일(`_workflow_email`)도 한도가 있으면 제목 앞에 한도 이름을 넣는다(절약 모드 전 `build_email`과 같은 동작으로 되돌림, 시험 `test_workflow_email_subject_names_limit`). 메일 프로그램 규칙이 `VXvue` 폴더로 옮길 수 있도록 관리자 알림 제목에도 제품 이름을 넣는다.
+
+사양 문장: "한도(세션·주간·불명)를 처음 감지하면 관리자 주소로 `[QA] <제품> Claude <한도 종류> 도달 · 초기화 <KST 시각>` 메일을 보낸다. 본문에는 실행 번호, 남은 대기 건수, 증거 파일 이름을 넣는다. 같은 한도 묶음(`episode_key`)에는 다시 보내지 않는다."
 
 - [ ] **Step 1: 사양 추가**
 - [ ] **Step 2: 실패 시험**
@@ -187,9 +206,9 @@ def test_limit_alert_skipped_without_admin_email(fake_smtp, store):
 
 화면(`/settings`, 메뉴 이름 `설정`, 기존 `AI 분석 설정` 메뉴를 대체하고 `/settings/ai`는 `/settings#ai`로 이동):
 
-1. 로그인 전: 현재 값 읽기 전용 + 비밀번호 입력 한 칸. 초기 비밀번호는 `1`이다.
-2. 로그인 후 구획: `관리자 메일`, `자동 보고 메일 받는 사람`(현재는 관리자 1명, 추가·삭제 가능), `메일 시험 발송`, `AI 모델과 호출 예산`(기존 AI 설정 표 포함), `관리자 비밀번호 변경`, `변경 이력`(기존 `app_setting_changes`).
-3. 초기 비밀번호를 쓰는 동안 상단에 `초기 비밀번호 사용 중 · 변경하세요` 배너.
+1. 로그인 전: 현재 값 읽기 전용 + 비밀번호 입력 한 칸. 비밀번호는 `1`이다(사용자 결정 2026-10-15: 계속 유지).
+2. 로그인 후 구획: `관리자 메일`, `자동 보고 메일 받는 사람`(현재는 관리자 1명, 추가·삭제 가능), `메일 시험 발송`, `AI 모델과 호출 예산`(기존 AI 설정 표 포함), `관리자 비밀번호 변경`(선택 기능), `변경 이력`(기존 `app_setting_changes`).
+3. 비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다.
 
 - [ ] **Step 1: 사양 추가·수정**
 - [ ] **Step 2: 실패 시험**
@@ -364,10 +383,11 @@ def test_card_header_emphasizes_reporter_and_update(client):
 - [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로 저장 → 메일 시험 발송 1통(사용자 수신 확인 요청) → 운영 화면 390px·1920px 확인
 - [ ] **Step 6:** 다음 예약 실행(평일 04:00 KST) 뒤 메일 단계 note의 Message-ID와 사용자 수신 여부를 대조해 `progress.md`에 기록
 
-## 13. 확인 필요 (구현 전 사용자 결정)
+## 13. 사용자 결정 (2026-10-15)
 
-| 항목 | 기본 제안 |
+| 항목 | 결정 |
 |---|---|
 | `AI 분석 설정` 메뉴를 새 `설정` 탭으로 합칠지 | 합친다. `/settings/ai`는 새 화면으로 이동 |
-| 회사 메일이 Gmail 발신을 막는 경우 사내 SMTP를 쓸지 | 시험 발송 결과를 본 뒤 결정 |
-| 관리자 비밀번호 초기값 `1` 유지 기간 | 배포 당일 관리자가 바꾼다. 바꾸기 전까지 배너 표시 |
+| 회사 메일이 Gmail 발신을 막는 경우 사내 SMTP를 쓸지 | 09:31 KST 시험 메일(`[QA 시스템] Claude 사용량 한도 도달`)의 수신 여부를 본 뒤 결정. 서버 결과는 `sent` |
+| 관리자 비밀번호 `1` | 계속 유지. 변경 요구 배너 없음 |
+| 점검 화면의 후보 목록 | 별도 `상세 분석` 화면으로 분리(Task 2) |
