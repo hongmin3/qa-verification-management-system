@@ -3730,7 +3730,7 @@ Finding 하나의 필드:
 
 | 값 | 어디서 |
 |---|---|
-| 수신자 | 설정 탭의 `daily_qa.report_recipients`(REQ-WEB-008). 비어 있으면 비밀 설정 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`. 쉼표나 세미콜론으로 여러 명을 적는다 |
+| 수신자 | 설정 탭의 `daily_qa.report_recipients`(REQ-WEB-008). 비어 있으면 비밀 설정 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`, 그것도 비어 있으면 설정 탭의 관리자 메일(`notifications.admin_email`). 쉼표나 세미콜론으로 여러 명을 적는다 |
 | 메일 서버 | 기존 알림 메일 설정 |
 | 점검 기록 보기 링크 앞부분 | `daily_qa.review_base_url`(설정 탭에서 바꾼다, REQ-WEB-008). 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
 
@@ -6210,7 +6210,7 @@ AI 제공자 상태(`ai_provider`) 항목:
 | 키 | 형식 | 기본 | 뜻 |
 |---|---|---|---|
 | `notifications.admin_email` | 메일 주소 1개 | `NOTIFY_EMAIL_TO` 의 첫 주소 | 한도·오류 알림을 받는 관리자(REQ-QAINTEL-049) |
-| `daily_qa.report_recipients` | 쉼표로 나눈 주소 1~10개 | 비어 있음 | 예약 점검 요약 메일 받는 사람. 비어 있으면 `DAILY_QA_EMAIL_TO`, 그다음 `NOTIFY_EMAIL_TO`, 그다음 관리자 메일 순서로 쓴다 |
+| `daily_qa.report_recipients` | 쉼표로 나눈 주소 1~10개 | 비어 있음 | 예약 점검 요약 메일 받는 사람. 읽는 순서는 `daily_qa.report_recipients` → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → `notifications.admin_email` 이다. 앞의 값이 비어 있을 때만 다음 값을 쓴다 |
 | `daily_qa.savings.analysis_model` / `review_model` | 허용 모델 | `claude-sonnet-5-5` / `claude-opus-5-5` | 일반 분석·선택 재검토 모델 |
 | `daily_qa.usage_guard.five_hour_percent` / `seven_day_percent` | 정수 50~100 | 80 / 90 | 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(REQ-QAINTEL-043) |
 | `daily_qa.review_base_url` | `http://` 또는 `https://` 로 시작하는 주소 | 빈 값 | 메일 링크의 서버 주소 |

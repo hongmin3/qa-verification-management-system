@@ -114,3 +114,16 @@ def test_stored_password_text_is_not_logged(settings, caplog):
     admin_auth.attempt_login("log-me-never", build_settings(settings.root), NOW)
     admin_auth.attempt_login("also-secret", build_settings(settings.root), NOW)
     assert "log-me-never" not in caplog.text and "also-secret" not in caplog.text and "pbkdf2" not in caplog.text
+
+
+def test_session_key_file_is_git_ignored():
+    """저장소에 올라가면 누구나 관리자 쿠키를 만들 수 있으므로 `.gitignore` 가 막아야 한다 (REQ-WEB-008)."""
+    import shutil
+    import subprocess
+    if shutil.which("git") is None:
+        pytest.skip("git 이 없습니다")
+    probe = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=ROOT, capture_output=True, text=True)
+    if probe.returncode != 0:
+        pytest.skip("git 저장소가 아닙니다")
+    result = subprocess.run(["git", "check-ignore", "-q", "data/admin_session.key"], cwd=ROOT)
+    assert result.returncode == 0

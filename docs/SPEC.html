@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="8f206bd1452b379a5ec4a015470dc9f26a7205d1d2f214fcc230f173bb46d603">
+<meta name="spec-source-sha256" content="9fb844e269570b362bb031800967cd08185388f3c1edff0d0e292c6760c7b1ff">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -5451,7 +5451,7 @@ python scripts/rule_capability_report.py --markdown
 <div class="table-wrap"><table>
 <thead><tr><th>값</th><th>어디서</th></tr></thead>
 <tbody>
-<tr><td>수신자</td><td>설정 탭의 <code>daily_qa.report_recipients</code>(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 비어 있으면 비밀 설정 <code>DAILY_QA_EMAIL_TO</code>, 그것도 비어 있으면 <code>NOTIFY_EMAIL_TO</code>. 쉼표나 세미콜론으로 여러 명을 적는다</td></tr>
+<tr><td>수신자</td><td>설정 탭의 <code>daily_qa.report_recipients</code>(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 비어 있으면 비밀 설정 <code>DAILY_QA_EMAIL_TO</code>, 그것도 비어 있으면 <code>NOTIFY_EMAIL_TO</code>, 그것도 비어 있으면 설정 탭의 관리자 메일(<code>notifications.admin_email</code>). 쉼표나 세미콜론으로 여러 명을 적는다</td></tr>
 <tr><td>메일 서버</td><td>기존 알림 메일 설정</td></tr>
 <tr><td>점검 기록 보기 링크 앞부분</td><td><code>daily_qa.review_base_url</code>(설정 탭에서 바꾼다, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 비어 있으면 경로(<code>/qa-agent/runs/&lt;실행 ID&gt;</code>)만 쓴다</td></tr>
 </tbody>
@@ -8419,7 +8419,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <thead><tr><th>키</th><th>형식</th><th>기본</th><th>뜻</th></tr></thead>
 <tbody>
 <tr><td data-label="키"><code>notifications.admin_email</code></td><td data-label="형식">메일 주소 1개</td><td data-label="기본"><code>NOTIFY_EMAIL_TO</code> 의 첫 주소</td><td data-label="뜻">한도·오류 알림을 받는 관리자(<a class="idref" href="#REQ-QAINTEL-049">REQ-QAINTEL-049</a>)</td></tr>
-<tr><td data-label="키"><code>daily_qa.report_recipients</code></td><td data-label="형식">쉼표로 나눈 주소 1~10개</td><td data-label="기본">비어 있음</td><td data-label="뜻">예약 점검 요약 메일 받는 사람. 비어 있으면 <code>DAILY_QA_EMAIL_TO</code>, 그다음 <code>NOTIFY_EMAIL_TO</code>, 그다음 관리자 메일 순서로 쓴다</td></tr>
+<tr><td data-label="키"><code>daily_qa.report_recipients</code></td><td data-label="형식">쉼표로 나눈 주소 1~10개</td><td data-label="기본">비어 있음</td><td data-label="뜻">예약 점검 요약 메일 받는 사람. 읽는 순서는 <code>daily_qa.report_recipients</code> → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code> → <code>notifications.admin_email</code> 이다. 앞의 값이 비어 있을 때만 다음 값을 쓴다</td></tr>
 <tr><td data-label="키"><code>daily_qa.savings.analysis_model</code> / <code>review_model</code></td><td data-label="형식">허용 모델</td><td data-label="기본"><code>claude-sonnet-5-5</code> / <code>claude-opus-5-5</code></td><td data-label="뜻">일반 분석·선택 재검토 모델</td></tr>
 <tr><td data-label="키"><code>daily_qa.usage_guard.five_hour_percent</code> / <code>seven_day_percent</code></td><td data-label="형식">정수 50~100</td><td data-label="기본">80 / 90</td><td data-label="뜻">호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(<a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>)</td></tr>
 <tr><td data-label="키"><code>daily_qa.review_base_url</code></td><td data-label="형식"><code>http://</code> 또는 <code>https://</code> 로 시작하는 주소</td><td data-label="기본">빈 값</td><td data-label="뜻">메일 링크의 서버 주소</td></tr>

@@ -32,7 +32,7 @@
 - 이슈 작성자·댓글 작성자 ID와 이름은 화면 표시용이다. AI 입력에 넣지 않는다(2026-10-14 결정).
 - 메일 주소·SMTP 계정·관리자 비밀번호는 저장소·로그·화면 응답에 쓰지 않는다. 화면은 마스킹(`hon***@vieworks.com`)만 보인다(REQ-MAIL-001, NFR-SEC-002).
 - 사양에 근거가 없는 Expected·판정을 화면이 만들어 내지 않는다(규칙 §55, `REF-qa-agent-architecture#automation-prohibitions`).
-- 390px·1920px에서 가로 넘침이 없어야 한다. 자바스크립트가 실패해도 본문을 읽을 수 있어야 한다.
+- 1366px·1920px(PC 폭)에서 가로 넘침이 없어야 한다. 휴대폰 폭은 확인하지 않는다(사용자 결정 2026-10-15). 자바스크립트가 실패해도 본문을 읽을 수 있어야 한다.
 - 운영 배포 전 DB·코드를 `/home/ubuntu/qa-deploy-backups/<작업>-<UTC시각>/`에 백업하고, 배포 뒤 파일 해시를 비교한다.
 
 ## Shared Interfaces
@@ -405,7 +405,7 @@ def test_missing_snapshot_and_legacy_kind_render(client, legacy_finding):
 
 - [ ] **Step 3: 실패 확인**
 - [ ] **Step 4: 구현** — 기존 종류별 블록(`view == ...`)은 8번 근거 자료 구획으로 옮겨 재사용한다.
-- [ ] **Step 5: 브라우저 확인** — 운영 결과 사본으로 390px·1920px, 결과 288·290·291과 이전 형식 1건. 가로 넘침·JavaScript 오류 없음.
+- [ ] **Step 5: 브라우저 확인** — 운영 결과 사본으로 1366px·1920px, 결과 288·290·291과 이전 형식 1건. 가로 넘침·JavaScript 오류 없음.
 - [ ] **Step 6: 통과·커밋**
 
 ### Task 7: 분석결과 목록 다시 짜기 (REQ-QAINTEL-019·046 사양 변경)
@@ -455,7 +455,7 @@ def test_card_header_emphasizes_reporter_and_update(client):
     assert 'class="qa-reporter"' in html and 'class="qa-updated"' in html
 ```
 
-- [ ] **Step 3: 실패 확인 → Step 4: 구현 → Step 5: 390px·1920px 브라우저 확인 → Step 6: 통과·커밋**
+- [ ] **Step 3: 실패 확인 → Step 4: 구현 → Step 5: 1366px·1920px 브라우저 확인 → Step 6: 통과·커밋**
 
 ### Task 8: 문서·전체 검증·배포·master 병합
 
@@ -466,7 +466,7 @@ def test_card_header_emphasizes_reporter_and_update(client):
 - [ ] **Step 2:** 키트 루트에서 `node tools/cleanup-workspace.js --completed <이 작업 폴더> --apply --auto`
 - [ ] **Step 3:** 전체 `pytest`(Task 1 Step 4와 같은 방법) → 실패 0. `node .project-check/project-readiness.js .` → 오류 0
 - [ ] **Step 4: 이 브랜치를 master에 병합·push** — 다른 세션이 같은 파일을 고치는 중이면 push를 미루고 보고한다.
-- [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로, 메일 링크 서버 주소를 `http://10.13.0.222:24357`로 저장 → 운영 `config.local.yaml`을 다시 읽어 `daily_qa.savings.per_run`·`per_day`(10-15 임시값 30·60)가 새 코드에서 아직 쓰이는지, 사용률 기준(80·90)이 적용됐는지 확인하고 결과를 기록(사용자 요청) → 메일 시험 발송 1통(제목 `[QA Agent]`, 사용자 수신 확인 요청) → 운영 화면 390px·1920px 확인
+- [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로, 메일 링크 서버 주소를 `http://10.13.0.222:24357`로 저장 → 운영 `config.local.yaml`을 다시 읽어 `daily_qa.savings.per_run`·`per_day`(10-15 임시값 30·60)가 새 코드에서 아직 쓰이는지, 사용률 기준(80·90)이 적용됐는지 확인하고 결과를 기록(사용자 요청) → 메일 시험 발송 1통(제목 `[QA Agent]`, 사용자 수신 확인 요청) → 운영 화면 1366px·1920px 확인
 - [ ] **Step 6:** 다음 예약 실행(평일 04:00 KST) 뒤 메일 단계 note의 Message-ID와 사용자 수신 여부를 대조해 `progress.md`에 기록
 
 ## 13. 사용자 결정 (2026-10-15)
@@ -477,3 +477,4 @@ def test_card_header_emphasizes_reporter_and_update(client):
 | 회사 메일이 Gmail 발신을 막는 경우 사내 SMTP를 쓸지 | 09:31 KST 시험 메일(`[QA 시스템] Claude 사용량 한도 도달`)의 수신 여부를 본 뒤 결정. 서버 결과는 `sent` |
 | 관리자 비밀번호 `1` | 계속 유지. 변경 요구 배너 없음 |
 | 점검 화면의 후보 목록 | 별도 `상세 분석` 화면으로 분리(Task 2) |
+| 화면 확인 폭 | 휴대폰에서 볼 일이 없다. 390px 확인을 빼고 PC 폭 1366px·1920px로 확인한다(Task 5 뒤 사양·시험 일괄 변경) |

@@ -22,6 +22,8 @@ data/manual_hub_cache/
 data/*.db
 data/spec_sync_state.json
 data/spec_sync.lock
+# 관리자 로그인 쿠키 서명 키(REQ-WEB-008). 저장소에 올라가면 누구나 관리자 쿠키를 만들 수 있다.
+data/admin_session.key
 output/reports/
 output/exports/
 output/generated_tc/
