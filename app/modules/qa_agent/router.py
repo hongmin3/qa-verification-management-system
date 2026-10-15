@@ -60,13 +60,13 @@ def _dash_context(**values) -> dict:
 @router.get("/", response_class=HTMLResponse)
 def dashboard_home(request: Request, product: str = "", category: str = '', subject: str = '', reporter: str = '', q: str = '',
                    state: str = '', level: str = '', start: str = '', end: str = '', sort: str = 'updated', view: str = '',
-                   quick: str = '', group: str = ''):
+                   quick: str = '', group: str = '', subject_id: str = ''):
     """QA Intelligence 대시보드 (REQ-QAINTEL-019·022). 분석결과 구역은 결과 페이지와 같은 조건을 받는다 (REQ-QAINTEL-046)."""
     choice = _choice(product)
     if sort not in ('updated', 'analyzed', 'author', 'number'):
         raise HTTPException(status_code=400, detail='정렬 기준을 확인해 주세요.')
     filters = dict(category=category, subject=subject, reporter=reporter, q=q, state=state, level=level, start=start, end=end,
-                   sort=sort, view=view, quick=quick, group=group)
+                   sort=sort, view=view, quick=quick, group=group, subject_id=subject_id)
     try:
         data = dash.dashboard(choice, sort=sort, filters=filters)
     except (ValueError, dash.PeriodError) as exc:
@@ -394,11 +394,11 @@ def finding_detail(request: Request, finding_id: int):
 @router.get('/results', response_class=HTMLResponse)
 def results_view(request: Request, product: str = '', category: str = '', subject: str = '', reporter: str = '',
                  q: str = '', state: str = '', level: str = '', start: str = '', end: str = '', run_id: str = '', page: int = 1, sort: str = 'updated',
-                 view: str = '', quick: str = '', group: str = ''):
+                 view: str = '', quick: str = '', group: str = '', subject_id: str = ''):
     from app.modules.qa_agent.result_views import search
     choice = _choice(product)
     filters = dict(category=category, subject=subject, reporter=reporter, q=q, state=state, level=level,
-                   start=start, end=end, run_id=run_id, page=page, sort=sort, view=view, quick=quick, group=group)
+                   start=start, end=end, run_id=run_id, page=page, sort=sort, view=view, quick=quick, group=group, subject_id=subject_id)
     try:
         data = search(choice, filters)
     except (ValueError, dash.PeriodError) as exc:

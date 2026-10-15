@@ -72,32 +72,24 @@
 
 <section class="qa-section" id="results">
   <h2>분석결과</h2>
-  {% if listing %}{% include "_result_filters.html" %}{% endif %}
-  <p><a href="/qa-agent/results?product={{ selected|urlencode }}">전체 결과·검색</a>{% if listing %} · 조건에 맞는 {{ listing.total }}건 중 맨 위 {{ cards|length }}건{% endif %}</p>
+  {% include "_result_filters.html" %}
+  <p><a href="/qa-agent/results?product={{ selected|urlencode }}">전체 결과·검색</a> · 조건에 맞는 {{ listing.total }}건 중 맨 위 {{ cards|length }}건</p>
   <form method="get" action="/qa-agent/period" class="inline-form">
     <input type="hidden" name="product" value="{{ selected }}">
     기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
   <a class="hint" href="/qa-agent/rules?product={{ selected|urlencode }}">자동 점검 범위 보기</a>
-  {% set open_cards = cards if listing else cards | rejectattr("level", "equalto", "문제 없음") | list %}
-  {% set ok_cards = [] if listing else cards | selectattr("level", "equalto", "문제 없음") | list %}
-  {% if listing and listing.groups %}
+  {% if listing.groups %}
   {% for group in listing.groups %}
   <h3 class="qa-group">{{ group.name }} <span class="hint">{{ group.id }} · {{ group.cards|length }}건</span></h3>
   <div class="qa-cards">{% for item in group.cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
   {% endfor %}
   {% else %}
   <div class="qa-cards">
-  {% for item in open_cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}
+  {% for item in cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}
   </div>
   {% endif %}
-  {% if not cards %}<p class="hint">{% if listing %}조건에 맞는 분석 결과가 없습니다. 조건을 줄여 보세요.{% else %}아직 분석 결과가 없습니다.{% endif %}</p>
-  {% elif not open_cards %}<p class="hint">확인이 필요한 결과가 없습니다.</p>{% endif %}
-  {% if ok_cards %}
-  <details class="qa-ok-cards"><summary>문제 없음 {{ ok_cards | length }}건</summary>
-    <div class="qa-cards">{% for item in ok_cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
-  </details>
-  {% endif %}
+  {% if not cards %}<p class="hint">조건에 맞는 분석 결과가 없습니다. 조건을 줄여 보세요.</p>{% endif %}
 </section>
 
 <section class="qa-section">

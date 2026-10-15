@@ -733,12 +733,9 @@ def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None
     runs = store.list_runs(limit=10, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
     events = store.list_events(product=cfg.slug, run_id=last["id"]) if last else []
-    findings = store.list_findings(product=cfg.slug, include_legacy=cfg.is_legacy_product, only_analyses=True, limit=30)
     from app.modules.qa_agent import result_views
-    listing: dict = {}
-    if cfg.savings_enabled:
-        # 절약 모드의 분석결과 구역은 결과 페이지와 같은 조회다. 맨 위 한 쪽만 보인다 (REQ-QAINTEL-019·046).
-        listing = result_views.search(choice, {**(filters or {}), 'sort': sort, 'page': 1}, path='/qa-agent')
+    # 분석결과 구역은 모든 제품에서 결과 페이지와 같은 조회다. 맨 위 한 쪽만 보인다 (REQ-QAINTEL-019·046).
+    listing = result_views.search(choice, {**(filters or {}), 'sort': sort, 'page': 1}, path='/qa-agent')
     return {
         "listing": listing,
         "states": result_views.STATES, "level_help": result_views.LEVEL_HELP,
@@ -747,7 +744,7 @@ def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None
         "last_run": last,
         "runs": runs,
         "summary": change_summary(events),
-        "cards": listing['cards'] if cfg.savings_enabled else sort_cards([card(item) for item in findings]),
+        "cards": listing['cards'],
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),

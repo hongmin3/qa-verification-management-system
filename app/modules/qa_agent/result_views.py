@@ -17,7 +17,7 @@ LEVEL_HELP = {
     '참고': '원인·조치·재현 등 대응에 참고할 정보입니다. 별도 조치가 필요할 수도 있습니다.',
     '문제 없음': 'AI가 사양 일치·검증 범위 충족·QA 영향 없음으로 판단했습니다. 실제 검증 PASS를 뜻하지 않습니다.'}
 #: 목록 필터 중 주소에 실리는 값. 쓰지 않는 값은 빈 문자열이다.
-FILTER_KEYS = ('category', 'subject', 'reporter', 'q', 'state', 'level', 'start', 'end', 'run_id', 'sort', 'view', 'quick', 'group')
+FILTER_KEYS = ('category', 'subject', 'subject_id', 'reporter', 'q', 'state', 'level', 'start', 'end', 'run_id', 'sort', 'view', 'quick', 'group')
 
 
 def _freshness_inputs(choice, items):
@@ -78,7 +78,7 @@ def search(choice, filters, path='/qa-agent/results'):
         verdicts = [v for v, label in dash.VERDICT_LEVEL.items() if label != level]
     sort = 'author' if group == 'author' else filters.get('sort') or 'updated'
     storage = choice.store.storage
-    query = dict(category=category, subject=filters.get('subject', '').strip().upper(), reporter=filters.get('reporter', ''),
+    query = dict(category=category, subject=filters.get('subject', '').strip().upper(), subject_exact=filters.get('subject_id', '').strip(), reporter=filters.get('reporter', ''),
                  query=filters.get('q', '').strip(), state=state, verdicts=verdicts, exclude_verdicts=level == '검토 필요',
                  since=since, until=until, run_id=filters.get('run_id', ''), include_legacy=choice.cfg.is_legacy_product,
                  sort=sort, latest_only=view == 'issue')
@@ -107,7 +107,7 @@ def search(choice, filters, path='/qa-agent/results'):
                                                               state='' if code == 'open' else params.get('state', ''))} for code, name in QUICKS.items()]
     chips += [{'label': name, 'active': category == code, 'url': link(category='' if category == code else code)} for code, name in CATEGORIES.items()]
     for card_ in cards:
-        card_['history_url'] = link(subject=card_['subject'], view='all', quick='', category='', q='', level='', state='', start='', end='', reporter='')
+        card_['history_url'] = link(subject_id=card_['subject'], view='all', quick='', category='', q='', level='', state='', start='', end='', reporter='', subject='', run_id='')
     return {**found, 'cards': cards, 'sorts': SORTS, 'states': STATES, 'level_help': LEVEL_HELP, 'levels': dash.LEVEL_ORDER,
             'quicks': QUICKS, 'categories': CATEGORIES, 'filters': {**filters, 'view': view},
             'groups': author_groups(cards) if group == 'author' else [], 'path': path, 'chips': chips,

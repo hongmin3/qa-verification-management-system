@@ -84,6 +84,7 @@ def test_dashboard_sorting_in_http_browser(world, monkeypatch):
 # -- 분석결과 목록: 이슈당 카드 한 장, 작성자·업데이트 강조, 필터 (TEST-QAINTEL-029) ----------------------------
 # Validates: REQ-QAINTEL-019, REQ-QAINTEL-046
 # 합성 이름·번호만 쓴다. 운영에서 본 모양(이전 형식 결과, 같은 이슈의 여러 분석, 번호만 남은 빈 댓글)을 모두 넣는다.
+import re
 import threading
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -101,6 +102,7 @@ from tests.test_qa_issue_body import snapshot_item, write
 
 MARK = "목록시험"
 PLACEHOLDER = {"created": "", "author": "", "text": ""}
+LONG_SUMMARY = "여러 줄로 길게 이어지는 요약 문장입니다. " * 30            # 두 줄 제한이 없으면 열 줄이 넘는다
 OLD, NEW = "2026-10-14T04:35:47+00:00", "2026-10-14T23:05:19+00:00"
 
 
@@ -139,7 +141,7 @@ def listing(site):  # noqa: F811
     put_event(site, "VP-7287", "ISSUE_COMMENT_ADDED", comment_after("c9", "2026-10-15T00:30:00Z"), "2026-10-15T00:31:00+00:00",
               status="pending", key="later")                                    # 최신 분석 뒤에 생긴 대기 이벤트
     seed(site, "VP-7300", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-14T05:00:00+00:00")
-    seed(site, "VP-7400", kind="COMMENT", verdict="ROOT_CAUSE_INFORMATION", created="2026-10-14T06:00:00+00:00")
+    seed(site, "VP-7400", kind="COMMENT", verdict="ROOT_CAUSE_INFORMATION", created="2026-10-14T06:00:00+00:00", summary=LONG_SUMMARY)
     seed(site, "VP-7500", kind="", verdict="TC 없음", created="2026-10-13T06:00:00+00:00")   # 종류가 빈 이전 형식
     seed(site, "VP-7600", kind="NEW_ISSUE", verdict="CONSISTENT_WITH_SPEC", created="2026-10-12T06:00:00+00:00")  # 작성자 정보 없음
     seed(site, "VP-9910", kind="SPEC_COVERAGE", verdict="PARTIALLY_COVERED", created="2026-10-14T07:00:00+00:00")
@@ -243,26 +245,93 @@ def test_author_grouping_follows_mail_order(listing):
     assert next(g for g in data["groups"] if g["id"] == "9001003")["name"] == "이름 미확인"
 
 
+def cards_by_subject(html):
+    return {re.search(r"\[(VP-\d+)\]", card).group(1): card for card in re.findall(r"<article.*?</article>", html, re.S)}
+
+
 def test_results_page_card_header_filters_and_zero_claude_calls(listing):
     calls = len(listing["calls"])
     html = listing["client"].get("/qa-agent/results", params={"product": "VXvue", "q": MARK}).text
-    assert 'class="qa-reporter"' in html and 'class="qa-updated"' in html
-    assert "분석 이후 변경" in html and "이전 형식" in html and "이전 분석 1건" in html and "왜 분석했나" in html
+    cards = cards_by_subject(html)
+    assert len(cards) == 6 and all('class="qa-updated"' in card for key, card in cards.items() if key != "VP-9910")
+    assert 'class="qa-reporter"' in cards["VP-7287"] and 'class="qa-reporter"' not in cards["VP-9910"]      # 사양 결과에는 작성자가 없다
+    assert [key for key, card in cards.items() if 'class="qa-changed"' in card] == ["VP-7300", "VP-7287"] or \
+        sorted(key for key, card in cards.items() if 'class="qa-changed"' in card) == ["VP-7287", "VP-7300"]
+    assert [key for key, card in cards.items() if "qa-kind-legacy" in card] == ["VP-7500"]
+    assert [key for key, card in cards.items() if "이전 분석 1건" in card] == ["VP-7287"]
+    assert [key for key, card in cards.items() if "왜 분석했나" in card] == ["VP-7287"]
     assert 'name="q"' in html and "자세한 조건" in html and "작성자별로 묶기" in html and "모든 결과 보기" in html
-    assert 'class="qa-chip' in html and "검토 필요" in html and "미처리" in html
+    assert html.count('class="qa-chip"') + html.count('class="qa-chip on"') == 6
     grouped = listing["client"].get("/qa-agent/results", params={"product": "VXvue", "q": MARK, "group": "author"}).text
     assert 'class="qa-group"' in grouped and "테스트작성자" in grouped and "이름 미확인" in grouped
     assert listing["client"].get("/qa-agent/results?quick=zzz").status_code == 400
     assert len(listing["calls"]) == calls
 
 
-def test_dashboard_uses_same_cards_and_filters(listing, monkeypatch):
-    choice = dash.ProductChoice(replace(listing["cfg"], savings_enabled=True), listing["store"], ["VXvue"])
+def test_history_link_matches_exact_subject_only(listing):
+    """`VP-728` 의 이전 분석 링크에 `VP-7287` 같은 앞부분이 같은 번호가 섞이지 않는다."""
+    seed(listing, "VP-728", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-06T03:00:00+00:00")
+    seed(listing, "VP-728", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-07T03:00:00+00:00")
+    data = result_views.search(listing["choice"], {"q": MARK})
+    card = next(card for card in data["cards"] if card["subject"] == "VP-728")
+    assert card["history_count"] == 2 and "subject_id=VP-728" in card["history_url"]
+    html = listing["client"].get(card["history_url"]).text
+    opened = cards_by_subject(html)
+    assert list(opened) == ["VP-728", "VP-728"] or sorted(re.findall(r"\[(VP-\d+)\]", html)) == ["VP-728", "VP-728"]
+    assert html.count('href="/qa-agent/findings/') == card["history_count"] == 2 and "[VP-7287]" not in html
+    exact = result_views.search(listing["choice"], {"subject_id": "VP-728", "view": "all"})
+    assert exact["total"] == 2 and {item["subject"] for item in exact["items"]} == {"VP-728"}
+    assert result_views.search(listing["choice"], {"subject": "VP-728", "view": "all"})["total"] == 4        # 번호 칸은 일부만 맞아도 찾는다
+
+
+def test_period_and_text_filters_apply_before_picking_latest(listing):
+    """분석 기간·검색어·종류는 최근 한 건을 고르기 전에 적용한다."""
+    old = seed(listing, "VP-7800", created="2026-10-05T03:00:00+00:00", summary="지난주 분석 고유문구")
+    new = seed(listing, "VP-7800", created="2026-10-13T03:00:00+00:00")
+    in_week = result_views.search(listing["choice"], {"q": MARK, "start": "2026-10-04", "end": "2026-10-06"})
+    card = next(card for card in in_week["cards"] if card["subject"] == "VP-7800")
+    assert card["id"] == old and card["history_count"] == 2 and in_week["total"] == 1
+    assert next(card for card in result_views.search(listing["choice"], {"q": MARK})["cards"] if card["subject"] == "VP-7800")["id"] == new
+    only_old = result_views.search(listing["choice"], {"q": "고유문구"})
+    assert [card["id"] for card in only_old["cards"]] == [old]
+    older_legacy = seed(listing, "VP-7801", kind="", verdict="TC 없음", created="2026-10-02T03:00:00+00:00")
+    seed(listing, "VP-7801", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-12T03:00:00+00:00")
+    legacy = result_views.search(listing["choice"], {"q": MARK, "category": "legacy"})
+    assert "VP-7801" in subjects(legacy) and next(card for card in legacy["cards"] if card["subject"] == "VP-7801")["id"] == older_legacy
+
+
+def test_status_filters_apply_to_the_latest_result_only(listing):
+    """AI 판정·처리 상태·`검토 필요`·`미처리` 는 고른 최근 결과에 적용한다. 덮인 옛 결과는 되살아나지 않는다."""
+    seed(listing, "VP-7810", verdict="SPEC_UNDEFINED", created="2026-10-05T03:00:00+00:00")             # 옛 결과는 검토 필요
+    newest = seed(listing, "VP-7810", verdict="CONSISTENT_WITH_SPEC", created="2026-10-13T03:00:00+00:00")  # 최근 결과는 문제 없음
+    for filters in ({"quick": "review"}, {"level": "검토 필요"}):
+        assert "VP-7810" not in subjects(result_views.search(listing["choice"], {"q": MARK, **filters}))
+    ok = result_views.search(listing["choice"], {"q": MARK, "level": "문제 없음"})
+    assert next(card for card in ok["cards"] if card["subject"] == "VP-7810")["id"] == newest
+    stale_open = seed(listing, "VP-7811", created="2026-10-05T03:00:00+00:00")                           # 옛 결과만 미처리
+    done_latest = seed(listing, "VP-7811", created="2026-10-13T03:00:00+00:00")
+    listing["store"].storage.qa_set_processing(done_latest, "vxvue", "done", "QA 담당", "확인")
+    open_latest = seed(listing, "VP-7812", created="2026-10-13T03:00:00+00:00")                          # 최근 결과가 미처리
+    old_done = seed(listing, "VP-7812", created="2026-10-05T03:00:00+00:00")
+    listing["store"].storage.qa_set_processing(old_done, "vxvue", "done", "QA 담당", "확인")
+    opened = result_views.search(listing["choice"], {"q": MARK, "quick": "open"})
+    assert "VP-7811" not in subjects(opened) and stale_open
+    assert next(card for card in opened["cards"] if card["subject"] == "VP-7812")["id"] == open_latest
+    assert "VP-7811" in subjects(result_views.search(listing["choice"], {"q": MARK, "state": "done"}))
+
+
+@pytest.mark.parametrize("savings", [False, True])
+def test_dashboard_uses_same_cards_and_filters_in_both_modes(listing, monkeypatch, savings):
+    choice = dash.ProductChoice(replace(listing["cfg"], savings_enabled=savings), listing["store"], ["VXvue"])
     monkeypatch.setattr(dash, "choose", lambda product="": choice if product in ("", "VXvue", "vxvue") else None)
     html = listing["client"].get("/qa-agent", params={"q": "테스트작성자"}).text
-    assert html.count('class="qa-reporter"') >= 2 and 'class="qa-updated"' in html and "[VP-7287]" in html and "[VP-7300]" not in html
-    assert 'name="q"' in html and "자세한 조건" in html and 'class="qa-chip' in html
+    assert html.count('class="qa-reporter"') == 2 and 'class="qa-updated"' in html and "[VP-7287]" in html and "[VP-7300]" not in html
+    assert 'name="q"' in html and "자세한 조건" in html and 'class="qa-chip' in html and 'class="qa-view-switch"' in html
+    everything = listing["client"].get("/qa-agent", params={"q": MARK}).text
+    assert everything.count("[VP-7287]") == 1 and "이전 분석 1건" in everything          # 이슈마다 최신 결과 한 장
+    assert 'class="qa-ok-cards"' not in everything and "[VP-7600]" in everything                   # `문제 없음` 카드도 접지 않는다
     assert listing["client"].get("/qa-agent?quick=zzz").status_code == 400
+    assert listing["client"].get("/qa-agent?view=zzz").status_code == 400
 
 
 def serve(client):
@@ -316,9 +385,14 @@ def test_result_list_has_no_horizontal_overflow_and_reads_without_script(listing
                             first = page.locator(".qa-card").first
                             assert first.locator(".qa-reporter").is_visible() and first.locator(".qa-updated").is_visible()
                             assert first.locator("h3, h4").first.is_visible()
-                            assert page.get_by_text("분석 이후 변경").first.is_visible()
-                            summary = first.locator(".qa-summary").first.bounding_box()
-                            assert summary and summary["height"] < 80          # 요약은 두 줄에서 끊긴다
+                            assert page.locator(".qa-changed").count() == 2 and page.locator(".qa-changed").first.is_visible()      # VP-7287, VP-7300
+                            assert page.locator(".qa-card", has_text="[VP-7400]").locator(".qa-changed").count() == 0
+                            assert page.locator(".qa-card", has_text="[VP-7500]").locator(".qa-kind-legacy").is_visible()
+                            assert page.locator(".qa-kind-legacy").count() == 1
+                            clamp = page.locator(".qa-card", has_text="[VP-7400]").locator(".qa-summary").evaluate(
+                                "el => { const s = getComputedStyle(el); return {line: parseFloat(s.lineHeight), clamp: s.webkitLineClamp, shown: el.clientHeight, full: el.scrollHeight}; }")
+                            # 두 줄 제한: 보이는 높이가 두 줄(글자 모양에 따른 여유 반 줄 포함) 이하이고 실제 글은 그보다 길다(제한 CSS 를 빼면 실패한다)
+                            assert clamp["clamp"] == "2" and clamp["shown"] <= 2.5 * clamp["line"] and clamp["full"] > clamp["shown"], clamp
                         assert not errors
                         context.close()
             finally:

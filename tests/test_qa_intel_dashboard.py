@@ -577,13 +577,15 @@ def test_card_has_at_most_three_todos_and_no_badge_row(world):
     assert 'class="level ' in cards
 
 
-def test_dashboard_orders_by_level_and_folds_no_problem(world):
-    cards = dash.dashboard(dash.choose(""))["cards"]
-    order = [dash.LEVEL_ORDER.index(item["level"]) for item in cards]
-    assert order == sorted(order)
+def test_dashboard_lists_latest_result_per_issue_without_folding(world):
+    """REQ-QAINTEL-019·046: 결과 구역은 결과 페이지와 같은 목록이다. 이슈마다 최신 결과 한 장이고 판정별 정렬·`문제 없음` 접기는 없다."""
+    data = dash.dashboard(dash.choose(""))
+    subjects = [item["subject"] for item in data["cards"]]
+    assert subjects and len(subjects) == len(set(subjects)) and data["listing"]["view"] == "issue"
     page = world["client"].get("/qa-agent").text
-    if any(item["level"] == "문제 없음" for item in cards):
-        assert '<details class="qa-ok-cards"><summary>문제 없음' in page
+    assert '<details class="qa-ok-cards"' not in page and 'name="q"' in page
+    for item in data["cards"]:
+        assert f"/qa-agent/findings/{item['id']}" in page
 
 
 def test_old_coverage_finding_renders_key_block_and_details(world):
