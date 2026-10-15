@@ -280,18 +280,22 @@ def run_daily(
             outcome["summary"]["automation_policy"] = automation_policy.get_policy(store, cfg.slug)
             outcome["summary"]["automatic_resume_enabled"] = bool(not cfg.savings_enabled and cfg.enabled and schedule_settings()["enabled"])
             outcome["summary"]["pending_analysis_events"] = len(store.list_events(product=cfg.slug, statuses=("pending", "failed")))
+            usage = None
             if cfg.savings_enabled:
-                next_run = automation_policy.next_run(cfg, store, schedule_settings(), today)
-                outcome["summary"]["next_run"] = next_run.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M") if next_run else ""
-            usage = claude_usage.reading_for_run(run_id, store.storage, before=outcome["summary"].get("usage_before")) if cfg.savings_enabled else None
+                # 보조 정보(다음 실행 시각·사용량)를 못 읽어도 요약 메일은 나간다. 그 줄만 빠진다.
+                try:
+                    next_run = automation_policy.next_run(cfg, store, schedule_settings(), today)
+                    outcome["summary"]["next_run"] = next_run.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M") if next_run else ""
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("daily_qa_mail_next_run_failed run=%s error_type=%s", run_id, type(exc).__name__)
+                try:
+                    usage = claude_usage.reading_for_run(run_id, store.storage, before=outcome["summary"].get("usage_before"))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("daily_qa_mail_usage_failed run=%s error_type=%s", run_id, type(exc).__name__)
             subject, text, body = report.build_email(
                 run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
                 product=cfg.product, usage=usage,
             )
-            if outcome["summary"].get("collection_only"):
-                subject = "[변경 목록, AI 미분석] " + subject
-                text = "AI 분석을 실행하지 않았습니다. 대상 목록에서 필요한 항목을 선택하세요.\n" + text
-                body = "<p><b>AI 미분석</b> · 대상 목록에서 필요한 항목을 선택하세요.</p>" + body
             # 진행 중인 분석은 끝내고, 발송 직전에 현재 제품 설정을 다시 읽는다 (REQ-QAINTEL-038).
             if automation_policy.get_policy(store, cfg.slug)["mode"] == "off":
                 email = {"status": "skipped", "reason": "자동 점검이 중지되어 메일을 보내지 않았습니다."}

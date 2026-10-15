@@ -202,11 +202,14 @@ def windows_from_rate_limit(info: dict) -> dict:
 def saved_reading(settings=None) -> dict:
     """마지막으로 저장한 사용률(`data/claude_usage.json`). 점검이 시작될 때 "실행 전 값"으로 남긴다.
 
-    값이 없으면 `None` 과 빈 시각이다. 지어내지 않는다.
+    값이 없으면 `None` 과 빈 시각이다. 지어내지 않는다. 초기화 시각(`*_resets_kst`)은 메일이 같은 창인지 가리는 데 쓴다.
     """
     state = _load_state(_settings(settings))
     windows = state.get("windows") or {}
-    return {name: (windows.get(name) or {}).get("used_percent") for name in WINDOWS} | {"measured_at": str(state.get("measured_at") or "")}
+    return {name: (windows.get(name) or {}).get("used_percent") for name in WINDOWS} | {
+        "measured_at": str(state.get("measured_at") or ""),
+        "five_hour_resets_kst": str((windows.get("five_hour") or {}).get("resets_at") or ""),
+        "seven_day_resets_kst": str((windows.get("seven_day") or {}).get("resets_at") or "")}
 
 
 def _call_tokens(usage: Any) -> int:

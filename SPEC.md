@@ -5903,6 +5903,7 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 |---|---|
 | 운영 알림(한도·인증·할당량) | `[QA Agent] <알림 이름>` |
 | 예약 점검 요약 | `[QA Agent] <제품> <MM/DD> 점검 · 검토 필요 <N>건 · 대기 <N>건` 뒤에 실패일 때만 ` · 일부 실패` 또는 ` · 실패`, Claude 한도에 걸렸으면 ` · <한도 이름>` |
+| 변경 목록만 만든 실행(AI 미분석) | `[QA Agent] <제품> 변경 목록 · AI 미분석 · …` |
 | 시험 발송(REQ-MAIL-003) | `[QA Agent] [시험] <알림 이름>` |
 
 **결과** 설정 상태를 값은 빼고 알려 준다: `enabled`, `configured`, `host_set`, `sender_set`, `recipient_count`, `credentials_set`, `cooldown_minutes`, `warnings`.

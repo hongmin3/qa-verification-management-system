@@ -27,6 +27,9 @@
 <div style="font-size:14px;">{{ band.headline }}</div>
 </td></tr>
 
+{%- if notice %}
+<tr><td bgcolor="#fef3c7" style="background-color:#fef3c7;padding:10px 24px;font-size:13px;color:#92400e;"><b>AI 미분석</b> · {{ notice }}</td></tr>
+{%- endif %}
 <tr><td style="padding:16px 24px 4px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 {%- for name, value in numbers %}
@@ -92,7 +95,7 @@
 
 {{ heading("남은 일") }}
 <tr><td style="padding:0 24px;font-size:13px;">
-<div>대기 {{ remaining.pending }}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함) · 다음 자동 실행 {{ remaining.next_run }}</div>
+<div>대기 {{ remaining.pending }}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함){% if remaining.next_run %} · 다음 자동 실행 {{ remaining.next_run }}{% endif %}</div>
 <div style="padding-top:4px;">{{ open_link(remaining.select_url, "상세 분석 열기") }}</div>
 {%- for line in remaining.lines %}
 <div style="padding-top:4px;">· {{ line }}</div>

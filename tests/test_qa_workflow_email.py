@@ -185,7 +185,7 @@ def test_usage_block_with_before_value_shows_increase():
     usage = {**USAGE_AFTER_ONLY, 'before': {'five_hour': 2.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 03:58'}}
     _, text, html = _mail(usage=usage)
     line = next(row for row in text.splitlines() if row.startswith('- 5시간 사용량'))
-    assert '실행 전 2% → 실행 후 7% (+5%p)' in line
+    assert '실행 전 2% (2026-10-15 03:58 측정) → 실행 후 7% (+5%p)' in line
     week = next(row for row in text.splitlines() if row.startswith('- 주간 사용량'))
     assert '실행 후 76%' in week and '초기화 2026-10-18 01:00' in week
     assert '+5%p' in html
@@ -201,3 +201,48 @@ def test_usage_block_when_nothing_was_recorded():
     _, text, _ = _mail(usage=None)
     usage_part = text.split('Claude 사용량')[1].split('비교 기준일')[0]
     assert '사용량 기록 없음' in usage_part and '실행 전' not in usage_part
+
+
+# --- 검토 보완: 실행 전 값의 나이, 변경 목록 전용 메일 ----------------------------------
+
+def _five_line(before):
+    _, text, html = _mail(usage={**USAGE_AFTER_ONLY, 'before': before})
+    return next(row for row in text.splitlines() if row.startswith('- 5시간 사용량')), html
+
+
+def test_stale_before_value_shows_its_time_and_no_increase():
+    line, html = _five_line({'five_hour': 2.0, 'seven_day': 70.0, 'measured_at': '2026-10-14 22:00'})   # 실행 6시간 전
+    assert '실행 전 2% (2026-10-14 22:00 측정) → 실행 후 7%' in line and '%p' not in line
+    assert '%p' not in html and '2026-10-14 22:00 측정' in html
+
+
+def test_increase_is_not_shown_when_the_window_was_reset_in_between():
+    line, _ = _five_line({'five_hour': 60.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 03:58',
+                          'five_hour_resets_kst': '2026-10-15 03:59'})            # 실행 직전에 이미 끝난 창
+    assert '(그 사이 초기화됨)' in line and '%p' not in line
+    line, _ = _five_line({'five_hour': 2.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 03:58',
+                          'five_hour_resets_kst': '2026-10-15 08:00'})            # 창이 다르다(끝나는 시각이 다름)
+    assert '(그 사이 초기화됨)' in line and '%p' not in line
+
+
+def test_increase_is_shown_for_a_fresh_reading_of_the_same_window():
+    line, _ = _five_line({'five_hour': 2.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 01:00',
+                          'five_hour_resets_kst': '2026-10-15 09:00'})
+    assert '실행 전 2% (2026-10-15 01:00 측정) → 실행 후 7% (+5%p)' in line
+
+
+def test_collection_only_mail_keeps_prefix_and_valid_document():
+    summary = {**SAVINGS_SUMMARY, 'collection_only': True}
+    subject, text, html = _mail('완료', summary)
+    assert subject.startswith('[QA Agent] VXvue ') and 'AI 미분석' in subject
+    assert html.lstrip().startswith('<!DOCTYPE html>') and 'AI 미분석' in html
+    assert text.startswith('AI 분석을 실행하지 않았습니다.')
+    plain, plain_text, plain_html = build_email(RUN_ID, '완료', {}, {'collection_only': True, 'findings': 0}, REVIEW, '', product='VXvue')
+    assert plain.startswith('[QA Agent] VXvue ') and 'AI 미분석' in plain
+    assert plain_text.startswith('AI 분석을 실행하지 않았습니다.') and 'AI 미분석' in plain_html
+
+
+def test_missing_next_run_drops_only_that_part():
+    summary = {k: v for k, v in SAVINGS_SUMMARY.items() if k != 'next_run'}
+    _, text, html = _mail('완료', summary)
+    assert '다음 자동 실행' not in text and '다음 자동 실행' not in html and '대기 12건' in text

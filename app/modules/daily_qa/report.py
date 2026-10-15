@@ -92,7 +92,9 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
     """
     if summary.get('savings_enabled'):
         return _workflow_email(run_id, status_label, stages, summary, review_url, rules_warning, product, usage)
-    subject = mail_subject(product, f"{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
+    collection_only = bool(summary.get("collection_only"))
+    lead = "변경 목록 · AI 미분석 · " if collection_only else ""
+    subject = mail_subject(product, f"{lead}{run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
     limit = summary.get("claude_limit") or {}
     collection_failed = any((stages.get(key) or {}).get("status") in {"failed", "partial"}
                             for key in ("collect_srs", "collect_issues"))
@@ -101,7 +103,7 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
     title = (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else (
         "수집 실패" if collection_failed else "점검 실패" if failures else "")
     if title:
-        subject = mail_subject(product, f"{title} · {run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
+        subject = mail_subject(product, f"{lead}{title} · {run_id} {status_label} · Finding {summary.get('findings', 0)}건 · 질문 {summary.get('questions', 0)}건")
     change = "수집 실패로 변경을 확인하지 못했습니다" if collection_failed else _event_line(summary)
     notices = list(failures[:4])
     if limit:
@@ -159,10 +161,15 @@ def build_email(run_id: str, status_label: str, stages: dict, summary: dict, rev
         f"<p><a href='{html.escape(review_url)}'>검토 화면 열기</a></p>"
         "<p style='color:#666'>모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다.</p></div>"
     )
+    if collection_only:
+        text.insert(0, COLLECTION_ONLY_NOTICE)
+        body = f"<p><b>AI 미분석</b> · {html.escape(COLLECTION_ONLY_HINT)}</p>" + body
     return subject, "\n".join(text), body
 
 
 NO_LINK = "서버 주소 미설정 · 설정 탭에서 입력"
+COLLECTION_ONLY_HINT = "대상 목록에서 필요한 항목을 선택하세요."
+COLLECTION_ONLY_NOTICE = "AI 분석을 실행하지 않았습니다. " + COLLECTION_ONLY_HINT
 TONES = {"ok": {"color": "#1f8a4c"}, "warn": {"color": "#d97706"}, "fail": {"color": "#c62828"}}
 LEVEL_COLORS = {"사양과 다름": "#c62828", "검토 필요": "#d97706", "근거 부족": "#6b7280", "참고": "#2563eb", "문제 없음": "#1f8a4c"}
 #: 메일 본문에 내보내지 않는 내부 표현. 점검 기록 화면에서만 본다 (REQ-QAINTEL-048).
@@ -223,7 +230,44 @@ def _subject_date(run_id: str, summary: dict) -> str:
         return ""
 
 
-def _usage_context(usage: dict | None, summary: dict) -> dict:
+def _kst_time(value: str):
+    """`2026-10-15 04:00` 또는 실행 번호 머리(`20261015-040000`)를 한국 시간으로 읽는다. 못 읽으면 None."""
+    from datetime import datetime
+    text = str(value or "").strip()
+    for pattern, size in (("%Y-%m-%d %H:%M", 16), ("%Y%m%d-%H%M%S", 15)):
+        try:
+            return datetime.strptime(text[:size], pattern).replace(tzinfo=claude_limits.KST)
+        except ValueError:
+            continue
+    return None
+
+
+def _five_hour_text(before: dict, after: dict, run_id: str) -> tuple[str, str]:
+    """(5시간 사용량 문장, 증가량). 증가량은 실행 전 값이 실행 시작 5시간 안에 측정됐고 같은 창일 때만 쓴다.
+
+    이유: 5시간 창이 그 사이 초기화됐으면 두 값을 빼도 이번 실행이 쓴 양이 아니다. 값을 지어내지 않는다.
+    """
+    from datetime import timedelta
+    old, new = before.get("five_hour"), after.get("five_hour")
+    measured = str(before.get("measured_at") or "")
+    head = ("실행 전 " + _percent(old) + (f" ({measured} 측정)" if measured else "")) if old is not None else "실행 전 값 미확인"
+    if new is None:
+        return (head + " → 실행 후 값 없음") if old is not None else "실행 후 값 없음", ""
+    text = head + " → 실행 후 " + _percent(new)
+    if old is None:
+        return text, ""
+    started, taken = _kst_time(run_id), _kst_time(measured)
+    reset_before = _kst_time(before.get("five_hour_resets_kst"))
+    reset_after = _kst_time(after.get("five_hour_resets_kst"))
+    if new < old or (reset_before and started and reset_before <= started) or (reset_before and reset_after and reset_before != reset_after):
+        return text + " (그 사이 초기화됨)", ""
+    if started and taken and timedelta(minutes=-5) <= started - taken <= timedelta(hours=5):
+        delta = f"+{new - old:g}%p"
+        return f"{text} ({delta})", delta
+    return text, ""
+
+
+def _usage_context(usage: dict | None, summary: dict, run_id: str = "") -> dict:
     """사용량 구획. `usage` 가 없으면 기록이 없다고만 쓰고 값을 지어내지 않는다."""
     if not usage:
         return {"empty": "사용량 기록 없음 (이번 실행의 호출 기록을 읽지 못했습니다)", "lines": []}
@@ -232,17 +276,8 @@ def _usage_context(usage: dict | None, summary: dict) -> dict:
     context: dict = {"empty": "", "calls": int(usage.get("calls") or 0), "tokens": f"{int(usage.get('total_tokens') or 0):,}", "model": model}
     if not context["calls"]:
         context["empty"] = "이번 실행은 AI를 호출하지 않았습니다."
-    five_before, five_after = before.get("five_hour"), after.get("five_hour")
-    if five_after is None:
-        five = ("실행 전 " + _percent(five_before) + " · " if five_before is not None else "") + "실행 후 값 없음"
-        delta = ""
-    else:
-        five = ("실행 전 " + _percent(five_before) if five_before is not None else "실행 전 값 미확인") + " → 실행 후 " + _percent(five_after)
-        delta = ""
-        if five_before is not None:
-            delta = f"+{five_after - five_before:g}%p" if five_after >= five_before else "그 사이 초기화됨"
-    context["five"] = {"text": five + (f" ({delta})" if delta else ""), "delta": delta,
-                       "resets": after.get("five_hour_resets_kst") or ""}
+    five, delta = _five_hour_text(before, after, run_id)
+    context["five"] = {"text": five, "delta": delta, "resets": after.get("five_hour_resets_kst") or ""}
     week_after = after.get("seven_day")
     context["week"] = {"text": "실행 후 " + _percent(week_after) if week_after is not None else "실행 후 값 없음",
                        "resets": after.get("seven_day_resets_kst") or ""}
@@ -321,7 +356,9 @@ def _workflow_context(run_id, status_label, stages, summary, review_url, rules_w
     new_results, review_needed = _review_counts(summary)
     limit = summary.get("claude_limit") or {}
     tone = _tone(status_label)
+    collection_only = bool(summary.get("collection_only"))
     title = " · ".join(part for part in (
+        "변경 목록 · AI 미분석" if collection_only else "",
         f"{_subject_date(run_id, summary)} 점검".strip(), f"검토 필요 {review_needed}건", f"대기 {pending}건",
         status_label if status_label in ("일부 실패", "실패") else "",
         (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else "") if part)
@@ -346,9 +383,10 @@ def _workflow_context(run_id, status_label, stages, summary, review_url, rules_w
         "number_note": f"사양 분석 대상 {targets.get('spec', 0)}항목 · 이슈 분석 대상 {targets.get('issues', 0)}항목 · 기존 결과 {len(reused)}항목 재사용",
         "issue_groups": _issue_groups(summary.get("issue_results") or [], link), "issue_all": issue_all,
         "spec_rows": _spec_rows(summary.get("spec_results") or [], link), "spec_all": spec_all,
-        "remaining": {"pending": pending, "next_run": summary.get("next_run") or "예정 없음", "select_url": link("/qa-agent/select?" + urlencode({"product": product})),
+        "notice": COLLECTION_ONLY_NOTICE if collection_only else "",
+        "remaining": {"pending": pending, "next_run": "" if summary.get("next_run") is None else (summary.get("next_run") or "예정 없음"), "select_url": link("/qa-agent/select?" + urlencode({"product": product})),
                       "lines": _remaining_lines(stages, summary, rules_warning, limit), "gaps": coverage_gaps},
-        "usage": _usage_context(usage, summary),
+        "usage": _usage_context(usage, summary, run_id),
         "footer": {"basis": f"비교 기준일: 사양 {basis.get('srs') or '기준 없음'} / 이슈 {basis.get('issues') or '기준 없음'}",
                    "coverage": coverage, "until": f"요청 종료일: {period.get('until') or run_id[:8]}",
                    "version": (summary.get("verification_sheet") or {}).get("sheet") or "버전 미선택",
@@ -361,7 +399,7 @@ def _workflow_text(ctx: dict) -> str:
     def where(url: str, label: str = "결과 열기") -> str:
         return f"{label}: {url or NO_LINK}"
 
-    lines = [f"상태: {ctx['band']['label']} · {ctx['band']['headline']}",
+    lines = ([ctx["notice"]] if ctx["notice"] else []) + [f"상태: {ctx['band']['label']} · {ctx['band']['headline']}",
              " · ".join(f"{name} {value}" for name, value in ctx["numbers"]), ctx["number_note"], ""]
     lines += ["[확인할 이슈]", where(ctx["issue_all"], "이번 실행의 이슈 결과 전체")]
     for group in ctx["issue_groups"]:
@@ -378,7 +416,8 @@ def _workflow_text(ctx: dict) -> str:
     if not ctx["spec_rows"]:
         lines.append("- 이번 실행에서 확인할 사양 결과가 없습니다.")
     remaining = ctx["remaining"]
-    lines += ["", "[남은 일]", f"- 대기 {remaining['pending']}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함) · 다음 자동 실행 {remaining['next_run']}",
+    lines += ["", "[남은 일]", f"- 대기 {remaining['pending']}건 (제품 전체에서 아직 분석하지 않은 변경, 이번 실행의 미완료 대상 포함)"
+              + (f" · 다음 자동 실행 {remaining['next_run']}" if remaining["next_run"] else ""),
               "- " + where(remaining["select_url"], "상세 분석")]
     lines += [f"- {line}" for line in remaining["lines"] + remaining["gaps"]]
     usage = ctx["usage"]

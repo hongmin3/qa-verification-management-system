@@ -107,17 +107,34 @@ def test_run_stores_usage_before_and_mail_shows_this_runs_usage(tmp_path, monkey
     state = tmp_path / 'claude_usage.json'
     state.write_text(json.dumps({'windows': {'five_hour': {'used_percent': 5.0, 'resets_at': '2026-10-15 09:00'},
                                              'seven_day': {'used_percent': 70.0, 'resets_at': '2026-10-18 01:00'}},
-                                 'measured_at': '2026-10-15 03:58'}), encoding='utf-8')
+                                 'measured_at': '2026-09-30 07:00'}), encoding='utf-8')
     monkeypatch.setattr(claude_usage, 'state_path', lambda settings=None: state)
     h, rules = prepared(tmp_path)
     h.usage = {'input_tokens': 1000, 'output_tokens': 134, 'cache_creation_input_tokens': 50, 'cache_read_input_tokens': 50}
     h.rate_limit = {'unifiedWindows': {'five_hour': {'utilization': 0.07, 'resetsAt': 1792022400},
                                        'seven_day': {'utilization': 0.76, 'resetsAt': 1792224000}}}
     out = _run_with_sender(h, rules, lambda *args: h.sent.append(args) or {'status': 'sent'})
-    assert out['summary']['usage_before'] == {'five_hour': 5.0, 'seven_day': 70.0, 'measured_at': '2026-10-15 03:58'}
+    assert out['summary']['usage_before'] == {'five_hour': 5.0, 'seven_day': 70.0, 'measured_at': '2026-09-30 07:00',
+                                             'five_hour_resets_kst': '2026-10-15 09:00', 'seven_day_resets_kst': '2026-10-18 01:00'}
     subject, text, html = h.sent[0][:3]
     assert subject.startswith('[QA Agent] ') and '점검 · 검토 필요' in subject
     line = next(row for row in text.splitlines() if row.startswith('- 5시간 사용량'))
-    assert '실행 전 5% → 실행 후 7% (+2%p)' in line and '초기화 2026-10-15 09:00' in line
+    assert '실행 전 5% (2026-09-30 07:00 측정) → 실행 후 7% (+2%p)' in line and '초기화 2026-10-15 09:00' in line
     assert '1,234' in text and '호출 2회' in text
     assert isinstance(out['summary']['next_run'], str) and 'spec_results' in out['summary']
+
+
+def test_mail_is_sent_even_when_usage_and_next_run_cannot_be_read(tmp_path, monkeypatch):
+    from app.core import claude_usage
+    from app.modules.daily_qa import automation_policy
+
+    def boom(*args, **kwargs):
+        raise RuntimeError('읽을 수 없음')
+    monkeypatch.setattr(claude_usage, 'reading_for_run', boom)
+    monkeypatch.setattr(automation_policy, 'next_run', boom)
+    h, rules = prepared(tmp_path)
+    out = _run_with_sender(h, rules, lambda *args: h.sent.append(args) or {'status': 'sent'})
+    assert out['email']['status'] == 'sent' and len(h.sent) == 1 and out['stages']['email']['status'] == 'ok'
+    subject, text, html = h.sent[0][:3]
+    assert subject.startswith('[QA Agent] ')
+    assert '사용량 기록 없음 (이번 실행의 호출 기록을 읽지 못했습니다)' in text and '다음 자동 실행' not in text

@@ -255,7 +255,9 @@ def test_reading_for_run_skips_calls_that_never_started_and_groups_targets(reser
 
 def test_saved_reading_reads_the_stored_measurement(env):
     settings, _, _ = env
-    assert claude_usage.saved_reading(settings) == {"five_hour": None, "seven_day": None, "measured_at": ""}
+    empty = {"five_hour": None, "seven_day": None, "measured_at": "", "five_hour_resets_kst": "", "seven_day_resets_kst": ""}
+    assert claude_usage.saved_reading(settings) == empty
     claude_usage.record_rate_limit_event({"unifiedWindows": {"five_hour": {"utilization": 0.07, "resetsAt": RESET_5H},
                                                               "seven_day": {"utilization": 0.76, "resetsAt": RESET_7D}}}, settings, now=NOW)
-    assert claude_usage.saved_reading(settings) == {"five_hour": 7.0, "seven_day": 76.0, "measured_at": "2026-10-13 09:41"}
+    assert claude_usage.saved_reading(settings) == {"five_hour": 7.0, "seven_day": 76.0, "measured_at": "2026-10-13 09:41",
+                                                    "five_hour_resets_kst": "2026-10-15 09:00", "seven_day_resets_kst": "2026-10-17 17:00"}
