@@ -187,7 +187,7 @@ def test_cancel_in_real_http_browser(cancel_site, width, screen, tmp_path):
 
 @pytest.mark.parametrize("width", [1366, 1920])
 def test_automation_checkboxes_in_http_browser(cancel_site, width):
-    """Validates: REQ-QAINTEL-038. 두 체크박스의 세 모드 저장·공유·작은 화면 확인."""
+    """Validates: REQ-QAINTEL-038. 두 체크박스의 세 모드 저장·공유·PC 폭(1366px·1920px) 확인."""
     with playwright.sync_playwright() as p:
         browser = p.chromium.launch(headless=browser_headless())
         context = browser.new_context(viewport={"width": width, "height": 1000})
