@@ -763,17 +763,77 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 
 ### REQ-QAINTEL-020 분석 상세 화면과 점검 기록 보기 화면
 
-**하는 일** Finding 하나의 결론과 할 일을 맨 위에 보이고, 분석 종류별 구획은 `자세히` 를 펼쳐야 보인다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
+**하는 일** 분석 결과 하나를 위에서 아래로 한 번에 읽는다. 이슈 원문과 분석 뒤에 바뀐 점을 먼저 보고, 그다음에 AI 판단과 QA 할 일을 본다. 탭은 없다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
 
-**화면 구성**
+> **예시** 수정 완료 이슈(VP-1000)의 화면은 이 순서로 읽힌다. 이름과 시각은 모두 지어낸 값이다.
 
-1. 맨 위 핵심 덩어리: 결론 단계, 판정 이름·신뢰도, 한두 문장 요약, 바뀐 사양(요구사항 5개까지), 근거 3개까지, QA 할 일 3줄까지.
-2. 같은 덩어리의 버튼: 사양 변경 분석이면 [기존 TC 검토], 수정 완료 이슈 분석이면 [검증 TC 초안 만들기]. 다른 분석에는 버튼이 없다.
-3. 맨 위의 `이 분석이 한 일`: 이슈 내용, 새로 생긴 일, 댓글별 해석, 확인한 자료·확인하지 못한 자료, 판단과 이유를 보인다. 댓글 원문·작성 시각·작성자 ID는 저장된 변경 이벤트에서 읽는다. 작성자가 없으면 `작성자 정보 없음`으로 보인다.
-4. 기존 결과에 확인 자료 구분이 없으면 그 사실과 분석 메모를 맨 위에 보인다. 옛 결과를 다시 분석하거나 저장 내용을 바꾸지 않는다.
-5. `자세히`: 아래 표의 구획, 칩, 근거 전체, 추가 확인사항, 근거 검증 기록, 변경 이벤트.
+```text
+[VP-1000] 동물용 Sequence 값이 그대로 전송됨                          원문 열기
+김예시 · 등록 2026-09-21 16:37 · 최근 업데이트 2026-10-14 18:09 · reviewed · 연구소 FIXED
+분석(2026-10-14 13:35) 이후 변경 1건 · 재분석 대기
+왜 분석했나: 2026-10-13 17:20 새 댓글
+이슈 본문: 재현 절차 ... / 발생 원인 ... / 조치 내용 ...
+AI 판단 (원인 설명과 수정이 사양에 맞는가): 요약 한 줄 · 판정 사양 미정의 · 신뢰도 확인 필요
+QA 할 일: 3개 이내
+댓글: 1) 2026-10-13 17:20 · 이예시 · 분석에 사용   2) 2026-10-14 18:09 · 이예시 · 분석 이후
+```
 
-| 분석 종류 | `자세히` 의 구획 |
+**화면 순서**
+
+| 순서 | 구획 | 내용 | 자료가 없을 때 |
+|---|---|---|---|
+| 1 | 머리 | `[번호] 제목`과 [원문 열기]. 둘째 줄을 크게 해서 작성자 이름, 등록일, 최근 업데이트, 상태, 연구소 결과를 보인다 | 이름이 없으면 `이름 미확인 (ID)`, ID도 없으면 `이슈 작성자 정보 없음` |
+| 2 | 최신성 | 분석 뒤에 바뀐 것이 있으면 `분석(<시각>) 이후 변경 <N>건 · 재분석 대기` 배너를 보인다. 화면에 표시만 하고 AI를 부르지 않는다 | 이슈 원문과 이벤트를 모두 알 수 없으면 배너를 보이지 않는다 |
+| 3 | 분석 이유 | `왜 분석했나: <한국 시각> 새 댓글`처럼 분석을 만든 이벤트를 같은 시각·같은 이름은 한 번만 적어 한 줄로 보인다 | 저장된 이벤트가 없으면 `변경 이벤트가 저장되지 않았습니다.` |
+| 4 | 이슈 본문 | 설명, 재현 절차, 발생 원인, 조치 내용, 발생 버전, 목표 버전. 8줄을 넘는 글은 8줄까지만 보이고 나머지는 [펼치기]에 둔다 | `원문 스냅샷 없음` |
+| 5 | AI 판단 | 분석 종류별 질문, 그 답을 담은 결론 한 줄, 판정, 신뢰도, 근거 3개까지 | 이전 형식 결과는 `이전 형식 결과`와 저장된 요약·상세만 보인다 |
+| 6 | QA 할 일 | 3개까지, 그 아래에 `확인하지 못한 자료` | 없으면 해당 줄을 두지 않는다 |
+| 7 | 댓글 | 이슈의 댓글 전체를 시간순으로 보인다. 분석에 쓴 댓글에는 `분석에 사용`과 해석·QA 영향을, 분석 뒤에 달린 댓글에는 `분석 이후`를 붙인다 | 이슈 원문이 없으면 변경 이벤트에 저장된 댓글만 보인다 |
+| 8 | 근거 자료 | 판단 근거 전체, 관련 과거 이슈, 선택 버전 TC 비교, 회귀 축 표. 분석 종류별 구획은 아래 표와 같다 | 근거가 없으면 `근거 없음` |
+| 9 | 분석 기록 | 접혀 있다. 모델, 추론 정도, 실행 번호, 분석 메모 원문, 확인한 자료 구분, 근거 검증 기록(뺀 항목과 이유), 이 분석을 만든 변경 이벤트 | 확인 자료 구분이 없는 결과는 그 사실을 이 구획에 알린다 |
+| 10 | 처리 상태 | 상태·처리자·메모 저장과 처리 이력. 넓은 화면에서는 오른쪽에 붙어 있다 | |
+
+**분석 종류별 AI 판단**
+
+5번 구획의 질문과 보이는 값은 분석 종류마다 다르다. 판정 값은 이름만 바꿔 보이고, AI가 내놓는 결과 형식은 바꾸지 않는다.
+
+| 분석 종류 | 화면 질문 | 보이는 값 |
+|---|---|---|
+| 신규 이슈 | 사양으로 보면 이슈가 맞는가 | 아래 판정 이름 표. 중복 후보가 있으면 `중복 의심`을 덧붙인다 |
+| 수정 완료 이슈 | 원인 설명과 수정이 사양에 맞는가 | 원인 검토와 수정 검토 요약, 판정, 회귀 위험 축 중 `해당`인 축의 개수 |
+| 새 댓글 | 새 댓글이 QA 판단을 바꾸는가 | 댓글 분류와 QA 영향 |
+| Spec 판정 이슈 | 연구소 설명이 사양으로 뒷받침되는가 | 저장된 판정 |
+| 사양 변경 | 바뀐 사양을 TC가 덮는가 | 저장된 Checklist 범위 판정. TC 비교를 하지 않은 분석이면 그 사실 |
+| 종류가 비어 있는 이전 형식 | (질문 없음) | `이전 형식 결과`, 저장된 요약과 상세 |
+
+신규 이슈의 판정 이름은 다음과 같다. 왼쪽이 저장된 판정 값(`verdict`), 오른쪽이 화면에 보이는 이름이다.
+
+```text
+SPEC_VIOLATION        이슈로 보임
+CONSISTENT_WITH_SPEC  사양상 정상, 이슈 아닐 수 있음
+SPEC_UNDEFINED        사양 미정의, 기획 확인 필요
+SPEC_AMBIGUOUS        사양이 모호함, 기획 확인 필요
+INSUFFICIENT_EVIDENCE 근거 부족, 판단 보류
+위에 없는 값           저장된 값 그대로 + 검토 필요 표시
+```
+
+`중복 의심`은 중복 검토 판정이 `STRONG_DUPLICATE`·`POSSIBLE_DUPLICATE`이거나 과거 이슈 표시가 `HISTORICAL_SPEC_DUPLICATE`·`HISTORICAL_DUPLICATE_REREGISTERED`일 때 붙는다.
+
+**읽는 규칙**
+
+- 화면을 여는 일은 AI를 부르지 않는다.
+- 이슈 본문과 댓글은 제품의 가장 최근 이슈 스냅샷(`data/daily_qa/snapshots/<제품>/issues/<날짜>.json`)에서 읽는다. 파일 수정 시각이 같으면 다시 읽지 않는다.
+- 분석 뒤 변경은 같은 이슈의 대기 이벤트가 분석 시각 뒤에 생겼거나, 이슈의 최근 업데이트 시각이 분석 시각보다 늦을 때다.
+- 댓글 작성자 이름은 제품·이슈별 작성자 표(`qa_issue_reporters`)에서 같은 작성자 번호의 이름을 찾아 보인다. 표에 없으면 `이름 미확인 (ID)`다.
+- 이슈 작성자와 댓글 작성자의 번호·이름은 화면에 보이기만 한다. AI에 보내는 입력에는 넣지 않는다.
+- 분석 결과의 원문, 최초 분석 시각, 모델, QA 처리 이력은 바꾸지 않는다. 이 화면이 바꾸는 것은 배치뿐이다.
+- 사양에 근거가 없는 Expected나 판정을 화면이 만들어 내지 않는다. 판정이 아직 저장되지 않았으면 그렇다고 보인다.
+- 1366px와 1920px 폭에서 가로 넘침이 없어야 한다. 자바스크립트가 실패해도 이슈 본문과 AI 판단을 읽을 수 있어야 한다.
+- 이슈 번호가 아닌 사양 번호가 대상인 분석(사양 변경, 기존 TC 검토, 삭제된 SRS)은 4번 구획 이름이 `사양 내용`이고 이슈 원문과 댓글 구획을 두지 않는다.
+
+**근거 자료(8번)의 분석 종류별 구획**
+
+| 분석 종류 | 구획 |
 |---|---|
 | 신규 이슈 | Summary, Duplicate Analysis, Specification Analysis, Historical Analysis, QA Recommendation, Evidence |
 | 수정 완료 이슈 | Root Cause Review, Resolution Review, Specification Consistency, Regression Risk(초안이 있을 때만 Verification TC) |
@@ -783,8 +843,7 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 | 사양 변경 | 관련 과거 이슈 |
 | 기존 TC 검토(요청)·개편 전 Coverage | Specification Change, Historical Issue Coverage, Checklist Coverage, Coverage Gap, Recommended TC Changes |
 
-- 모든 상세 화면 아래에 이 Finding 을 만든 이벤트와 근거 검증 기록(뺀 항목과 이유)이 있다.
-- 개편 전 Finding 은 판정·요약·근거·초안만 보인다.
+- 개편 전 Finding 은 판정·요약·근거·초안만 보인다. 옛 결과를 다시 분석하거나 저장 내용을 바꾸지 않는다.
 - 점검 기록 보기(`/qa-agent/runs/<실행 ID>`)는 처음 보는 사람이 위에서부터 읽으면 무슨 일이 있었는지 알 수 있게 아래 순서로 보인다.
 
   1. **결과 한 문장**: 상태 색과 결과 배지를 보인다. 실패가 있으면 실패한 일을 먼저 쓰고, 수집 실패를 변경 0건이나 성공으로 설명하지 않는다.
@@ -1301,7 +1360,7 @@ AI가 분석한 것
 
 **지킬 것**
 
-- 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 `자세히` 에 있다.
+- 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 근거 자료와 분석 기록에 있다.
 - 판정·신뢰도·댓글 분류는 한국어로 보이고 원래 코드는 도움말에 남긴다. 새 댓글 요약의 작성 기준은 REQ-QAINTEL-015를 따른다. 다른 분석 종류의 요약 규칙은 이번 변경에서 바꾸지 않는다.
 - 조치 문장(`action`)은 Finding 표에 칸이 없어 `sections.action` 에 함께 저장한다. 저장하지 않으면 카드의 할 일이 비어 보인다.
 
@@ -1597,7 +1656,7 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 - 처리 상태는 `미처리`, `진행 중`, `확인 완료`, `보류`다. 사람이 변경하며 변경 시각·담당자·메모를 이력으로 남긴다. 참고하거나 조치할 것이 없는 결과도 확인 후 완료로 둘 수 있다.
 - 완료는 해당 분석의 QA 처리 완료다. 이슈 종료·실제 장비 검증 PASS·사양 적합성을 대신하지 않는다. AI 판정과 과거 처리 이력은 바꾸지 않는다.
 - 새로운 근거로 분석 결과가 생기면 새 결과는 미처리이며 과거 결과의 완료 상태를 자동 복사하지 않는다. 유효 결과 재사용은 원본의 처리 상태를 보여준다.
-- 상세는 판단과 할 일·근거 자료·분석 기록으로 나눈다. 미확인·필수 확인사항은 상단에 보이고 필수 검토 항목과 회귀 축은 보존한다.
+- 상세는 REQ-QAINTEL-020의 순서(이슈 본문 → AI 판단 → QA 할 일 → 댓글 → 근거 자료 → 분석 기록 → 처리 상태)로 위에서 아래로 읽는다. 미확인 자료는 QA 할 일 아래에 보이고 필수 검토 항목과 회귀 축은 보존한다.
 
 ### REQ-QAINTEL-048 두 분석의 예약 실행과 요약 메일
 
@@ -2004,6 +2063,14 @@ REQ-QAINTEL-039
 
 **기대 결과** 실제 대기 선택과 같은 건수가 보이고, 조회로 실행·이벤트가 생기지 않는다. 새 변경은 미확정으로 표시하며 오래된 응답과 조회 오류를 0건으로 표시하지 않는다.
 
+### TEST-QAINTEL-028 분석 상세 화면의 순서와 이슈 본문
+
+**대상** REQ-QAINTEL-020
+
+**절차** 이슈 스냅샷(설명이 빈 수정 완료 이슈, 새 댓글 이슈, 사양 변경)과 작성자 표를 합성해 둔다. 분석 뒤에 댓글이 달린 결과, 같은 댓글 이벤트가 둘인 결과, 이슈가 스냅샷에 없는 이전 형식 결과를 각각 연다. 1366px·1920px 브라우저에서 같은 화면을 연다.
+
+**기대 결과** 이슈 본문이 AI 판단보다 위에 있고 설명이 비면 재현 절차를 보인다. 분석 뒤 변경 배너, `분석 이후` 댓글, 작성자 이름이 보인다. 분석 이유 한 줄에 같은 이벤트 이름이 반복되지 않는다. 신규 이슈에는 `사양으로 보면 이슈가 맞는가`와 판정 이름이 보인다. 스냅샷이 없으면 `원문 스냅샷 없음`, 종류가 빈 결과는 `이전 형식 결과`로 보인다. 가로 넘침과 자바스크립트 오류가 없다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -2029,7 +2096,7 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
 | REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-020 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-025: `tests/test_qa_finding_explanation.py` | verified |
+| REQ-QAINTEL-020 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/issue_body.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-025: `tests/test_qa_finding_explanation.py`, TEST-QAINTEL-028: `tests/test_qa_finding_detail_layout.py`, `tests/test_qa_issue_body.py` | verified |
 | REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py`, TEST-QAINTEL-020: `tests/test_qa_run_progress.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
@@ -2056,7 +2123,7 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-044 | `app/modules/daily_qa/agent_runner.py`, `scripts/measure_qa_usage.py` | `tests/test_qa_usage_measurement.py`, `tests/test_qa_input_budget.py`, `tests/test_qa_savings_review.py` | implemented |
 | REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |
 | REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, `tests/test_qa_results_reader.py` | implemented |
-| REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/web/static/qa-reading.js` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
+| REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
 | REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/modules/daily_qa/templates/report_email.html`, `app/core/claude_usage.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py` | implemented |
 | REQ-QAINTEL-049 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py` | `tests/test_qa_limit_alert.py`, `tests/test_notifier.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |

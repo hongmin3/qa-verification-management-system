@@ -111,13 +111,16 @@ def test_old_comment_explanation_shows_original_and_limit_before_details(world):
     assert response.status_code == 200
     page = response.text
     top = page.split('id="evidence-panel"')[0]
-    assert '판단과 할 일' in top
+    record = page[page.index('id="analysis-record"'):]
+    assert '이슈 본문' in top and 'AI 판단' in top
     assert '원인은 캐시 초기화 누락으로 확인되었습니다.' in top
-    assert 'VP-580 본문은 입력에 없어 대조하지 못했습니다.' in top
     assert '작성자 정보 없음' in top
     assert '신뢰도' in top and '>확인 필요</span>' in top
-    assert '확인 자료 구분이 저장되지 않은 결과' in top
     assert '사양이라는 댓글 주장' in top
+    # 분석 메모와 확인 자료 구분 누락 안내는 접힌 분석 기록에 있다 (REQ-QAINTEL-020 9번).
+    assert 'VP-580 본문은 입력에 없어 대조하지 못했습니다.' in record
+    assert '확인 자료 구분이 저장되지 않은 결과' in record
+    assert '확인 자료 구분이 저장되지 않은 결과' not in top and 'VP-580 본문은 입력에 없어' not in top
     assert 'Classification' not in page and '>SPEC_CLAIM<' not in page
     assert store.get_finding(fid)['detail'] == 'VP-580 본문은 입력에 없어 대조하지 못했습니다.'
 
@@ -144,7 +147,7 @@ def test_comment_evidence_label_and_spec_link_use_saved_ids(world):
 
 
 def test_comment_explanation_in_http_browser(world):
-    """상세 경로의 실제 템플릿·정적 JS·원문 펼치기. 외부 서비스·AI 호출 없음."""
+    """상세 경로의 실제 템플릿·정적 JS·분석 기록 펼치기. 외부 서비스·AI 호출 없음."""
     import threading
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     from pathlib import Path
@@ -185,20 +188,12 @@ def test_comment_explanation_in_http_browser(world):
                     page.on('pageerror', lambda error: errors.append(str(error)))
                     page.goto(f'http://127.0.0.1:{server.server_port}/qa-agent/findings/{finding["id"]}',
                               wait_until='domcontentloaded', timeout=120000)
-                    explanation = page.locator('#analysis-explanation')
-                    assert '판단과 할 일' in explanation.inner_text()
-                    explanation.locator('details > summary').first.click()
-                    original = explanation.locator('.comment-original').first
-                    original.locator('summary').click()
-                    assert original.get_attribute('open') is not None
-                    assert '원인은 캐시 초기화 누락' in original.inner_text()
-                    page.get_by_role('tab', name='근거 자료', exact=True).click()
-                    assert page.locator('#evidence-panel').is_visible()
-                    assert not explanation.is_visible()
-                    page.get_by_role('tab', name='근거 자료', exact=True).press('ArrowRight')
-                    assert page.locator('#processing').is_visible()
-                    page.get_by_role('tab', name='분석 기록·처리 상태', exact=True).press('Home')
-                    assert explanation.is_visible()
+                    comments = page.locator('#comments')
+                    assert comments.is_visible()
+                    assert '원인은 캐시 초기화 누락' in comments.inner_text()
+                    assert '분석에 사용' in comments.inner_text()
+                    page.locator('#analysis-record > summary').click()
+                    assert '분석 메모' in page.locator('#analysis-record').inner_text()
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
                     assert not errors
                     page.close()

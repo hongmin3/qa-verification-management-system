@@ -117,6 +117,16 @@ class QaExecutionStorageMixin:
                               f"WHERE product=? AND subject IN ({','.join('?' * len(subjects))})", (product, *subjects))
             return {row[0]: {'reporter_id': row[1], 'reporter_name': row[2], 'issue_updated_at': row[3]} for row in rows}
 
+    def qa_reporter_names(self, product, reporter_ids):
+        """작성자 번호 → 저장된 이름. 이름이 없는 번호는 넣지 않는다. 화면 표시용이며 AI 입력에는 쓰지 않는다."""
+        ids = sorted({value for value in reporter_ids if value})
+        if not ids:
+            return {}
+        with self.connect() as db:
+            rows = db.execute('SELECT reporter_id,reporter_name FROM qa_issue_reporters '
+                              f"WHERE product=? AND reporter_name!='' AND reporter_id IN ({','.join('?' * len(ids))}) ORDER BY rowid", (product, *ids))
+            return {row[0]: row[1] for row in rows}
+
     def qa_set_processing(self, finding_id, product, state, actor, note):
         from app.core.daily_qa_storage import now_iso
         if state not in ('open', 'in_progress', 'done', 'hold') or not actor.strip() or len(actor) > 80 or len(note) > 2000:

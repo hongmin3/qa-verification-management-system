@@ -21,6 +21,7 @@ from app.core.config import get_settings
 from app.core.qa_rules import SKILL_TITLES, load_rule_set, rule_coverage
 from app.core.storage import Storage
 from app.modules.qa_agent import dashboard as dash
+from app.modules.qa_agent import issue_body
 from app.modules.qa_agent import run_view
 from app.modules.qa_agent.schemas import AXIS_LABELS
 from app.modules.qa_agent.rule_capability import (
@@ -338,7 +339,10 @@ def run_file(run_id: str, name: str):
 
 @router.get("/findings/{finding_id}", response_class=HTMLResponse)
 def finding_detail(request: Request, finding_id: int):
-    """분석 상세. 분석 종류에 맞는 구획을 보인다 (REQ-QAINTEL-020)."""
+    """분석 상세. 이슈 본문 → AI 판단 → QA 할 일 → 댓글 → 근거 자료 순으로 한 흐름이다 (REQ-QAINTEL-020).
+
+    저장된 기록과 최신 이슈 스냅샷만 읽는다. AI 도 Polarion 도 부르지 않는다.
+    """
     store = dash.choose("").store
     finding = store.get_finding(finding_id)
     if not finding:
@@ -350,9 +354,30 @@ def finding_detail(request: Request, finding_id: int):
     enriched = store.storage.qa_search_findings(finding.get('product') or '', finding_id=finding_id)['items']
     if enriched:
         finding = enriched[0]
+    polarion = choice.cfg.polarion if choice else None
+    kind = finding.get("analysis_type", "")
+    slug = choice.cfg.slug if choice else (finding.get("product") or "")
+    issue, later_events = None, []
+    if kind not in dash.SRS_SUBJECT_KINDS:
+        issue = issue_body.load(slug, finding["subject"], storage=store.storage,
+                                snapshot_dir=choice.cfg.issue_snapshot_dir if choice else None)
+        later_events = store.list_events(product=slug, entity_id=finding["subject"])
+    card = dash.card(finding)
+    authors = {str(comment.get("author") or "") for event in events for comment in (event.get("after") or {}).get("comments") or []}
+    explanation = dash.finding_explanation(finding, events, polarion=polarion, issue=issue,
+                                           names=store.storage.qa_reporter_names(slug, authors))
+    if kind == "TC_CHECK" or (kind == "SPEC_COVERAGE" and finding.get("skill") == "qa-spec-coverage-analysis"):
+        view = "COVERAGE"
+    elif kind == "SPEC_COVERAGE":
+        view = "SPEC_SUMMARY"
+    elif kind == "TC_DRAFT":
+        view = "FIXED_ISSUE"
+    else:
+        view = kind
     return templates.TemplateResponse(request, "finding_detail.html", _dash_context(
-        finding=finding, card=dash.card(finding), explanation=dash.finding_explanation(
-            finding, events, polarion=choice.cfg.polarion if choice else None),
+        finding=finding, card=card, explanation=explanation, view=view,
+        issue=issue, issue_view=dash.issue_view(issue, finding, card, explanation, polarion), freshness=dash.freshness(finding, issue, later_events),
+        trigger=dash.trigger_line(events), verdict_view=dash.verdict_view(finding, view),
         events=events, questions=questions, event_labels=dash.EVENT_LABELS,
         axes=AXIS_LABELS, processing_states=STATES, level_help=LEVEL_HELP,
         processing_history=store.storage.qa_processing_history(finding_id), integrated_tc=choice.cfg.savings_enabled))

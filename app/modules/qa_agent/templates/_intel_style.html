@@ -1,9 +1,18 @@
 <style>
-.qa-reading-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0;border-bottom:1px solid #d0d7de;padding-bottom:10px}
-.qa-reading-tabs a{padding:10px;border-radius:6px;text-decoration:none}
-.qa-reading-tabs a[aria-selected=true]{background:#176c87;color:white}
-[data-qa-panel][hidden]{display:none}
-#processing .qa-actions{display:flex;flex-wrap:wrap;gap:12px}#processing label{max-width:100%}
+/* 분석 상세: 한 흐름(왼쪽)과 처리 상태(넓은 화면에서는 오른쪽에 붙음) (REQ-QAINTEL-020) */
+.qa-detail-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+.qa-flow{min-width:0;display:grid;gap:14px}.qa-flow>*{min-width:0}
+.qa-flow .qa-section{margin-top:4px}.qa-flow h4{margin:12px 0 4px;color:#375272}
+.qa-flow h2{margin:0 0 8px}.qa-open{font-size:14px;font-weight:700;margin-left:8px;color:#075985}
+.qa-meta-line{margin:0 0 6px;font-size:18px;line-height:1.5;overflow-wrap:anywhere}
+.qa-trigger{margin:0}.qa-question{margin:0;font-weight:700;color:#173b67}
+.qa-after{background:#fef3c7;color:#92400e}.qa-review-needed{background:#fef3c7;color:#92400e}
+.qa-comment{border-top:1px solid #e2e8f0;padding-top:8px}.qa-comment p{margin:6px 0}
+.qa-record{border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;background:#f8fafc}.qa-record>summary{font-weight:700}
+.qa-process{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;min-width:0}
+.qa-process h3{margin:0 0 8px}.qa-process-form{display:grid;gap:10px}.qa-process-form label{max-width:100%}
+@media(min-width:1200px){.qa-detail-layout{grid-template-columns:minmax(0,1fr) 320px}
+.qa-process{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
 .qa-selection-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere;cursor:pointer}
 .qa-selection-row input{width:auto;flex:0 0 auto;margin-top:4px}.qa-selection-body{flex:1 1 auto;min-width:0}
 .qa-selection-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:2px;color:#5b6b82;font-size:.92em}
