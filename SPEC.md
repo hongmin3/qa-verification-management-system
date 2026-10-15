@@ -34,6 +34,7 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 QA 담당자 화면 요청 -> 개정 매뉴얼 -> 사양서·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
 평일 04:00 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
+QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> ALM 변경 리포트(specs/alm-change-report.md, AI 없음) -> 변경 리포트 메일·/qa-agent/changes 화면
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
@@ -49,6 +50,7 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 | 매뉴얼 개정 검토 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정한 결과 화면, Word Comment 파일. Claude 대화로 돌리면 결과 Excel | 5.3 |
 | AI 사용량 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
 | QA Intelligence Agent 일일 점검 | 서버가 평일 04:00 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [변경사항 점검하기]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
+| ALM 변경 리포트 | 서버가 매 업무일 수집 뒤 스스로. QA 담당자가 `/qa-agent/changes` 에서 기간을 골라 아무 때나 | 없음(저장된 날짜별 기록을 읽는다) | 이슈·SRS 의 날짜순 변경 목록 화면, 매 업무일 변경 리포트 메일 | [기능 사양](specs/alm-change-report.md) |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
 | QA Manual Hub | 사내 사용자가 매뉴얼을 찾거나 올릴 때 | 매뉴얼 파일 | 제품·문서·버전별로 정리된 매뉴얼과 최신본(Current) | 5.6 |
 
@@ -125,7 +127,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
-| 04:00 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
+| 04:00 (수집은 매 업무일. AI 분석은 검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교한다. AI 분석일이면 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `/qa-agent/changes`, `output/daily_qa/<실행 ID>/` | 변경 리포트 메일 한 통, AI 분석을 했으면 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002, REQ-ALMCHG-001, REQ-ALMCHG-004 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
 | 08:00 (매일), 미완료 시 15분마다 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
@@ -156,6 +158,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 알림 | 언제 오나 | 받는 곳 | 담는 것 | 요구사항 |
 |---|---|---|---|---|
 | QA Agent 요약 메일(제목 `[QA Agent] <제품> …`) | 점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기) | 설정 탭의 `daily_qa.report_recipients` 수신자. 비어 있으면 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`, 그것도 비어 있으면 `notifications.admin_email` | 상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 이슈·사양과 결과 링크, 남은 일, 이번 실행의 Claude 사용량, 점검 기록 보기 링크 | REQ-DAILY-008, REQ-MAIL-001, REQ-MAIL-002, REQ-QAINTEL-048 |
+| QA Agent 변경 리포트 메일(제목 `[QA Agent] <제품> 변경 리포트 …`) | 매 업무일 수집이 끝날 때마다 한 통. AI 분석 설정과 상관없다. 화면에서 기간을 골라 보낼 수도 있다 | 요약 메일과 같은 수신자 | 직전 기록부터 오늘까지 이슈·SRS 의 날짜순 변경(번호·제목·바뀐 값·댓글 작성자와 시각), 확인 범위, 화면 링크. 댓글·본문 문장과 AI 판단은 넣지 않는다 | REQ-ALMCHG-004, REQ-MAIL-001 |
 | QA Agent 대시보드 | 메일 링크를 누르거나 아무 때나 | `/qa-agent` | 마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 TC 초안, 기간별 결과. 승인·거절 입력은 없다 | REQ-QAINTEL-019, REQ-QAINTEL-020 |
 | Gemini 할당량 소진·모델 사용 불가 메일 | 분석 중 사람이 조치해야 하는 Gemini 오류가 날 때. 같은 종류는 재발송 대기 시간 동안 다시 보내지 않는다 | `NOTIFY_EMAIL_TO` 의 수신자 | 발생 시각, 모델, 가린 오류 문구, 조치 방법 | REQ-USAGE-003 |
 | ALM 통합 수집 메일 | 평일 09:00 수집 뒤 | ALM-QA-Automation 설정의 수신자 | 바뀐 사양과 연결된 이슈, 우선순위 | 이 저장소 밖 |
@@ -8390,6 +8393,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 |---|---|---|
 | QA Intelligence Agent | [specs/qa-intelligence.md](specs/qa-intelligence.md) | draft |
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
+| ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
 
 <!-- spec-index: end -->
 

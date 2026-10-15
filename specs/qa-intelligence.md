@@ -7,7 +7,7 @@
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `qa-intelligence` |
 | Document Version | 0.1.0 |
-| Last Updated | 2026-09-30 |
+| Last Updated | 2026-10-16 |
 | Status | draft |
 
 이 문서는 `qa-verification-management-system`의 **QA Intelligence Agent** 기능이 어떻게 동작해야 하는가를 정의한다.
@@ -106,10 +106,11 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 - 사람이 요청할 때만: REQ-QAINTEL-016(기존 TC 검토), REQ-QAINTEL-032(검증 TC 초안), REQ-QAINTEL-034(매뉴얼 점검)
 - 결과 믿기: REQ-QAINTEL-017(근거 검증), REQ-QAINTEL-018(초안 Excel), REQ-QAINTEL-026(토큰 사용량 기록)
 - 결과 보기: REQ-QAINTEL-019(대시보드), REQ-QAINTEL-020(상세 화면), REQ-QAINTEL-033(결론 단계와 짧은 카드), REQ-QAINTEL-022(지식 문서 목록), REQ-QAINTEL-024(기간별 결과)
+- 변경 기록 받아 보기: AI 와 나눈 매일 수집, 기간 변경 목록, 변경 리포트 화면·메일, 밀린 변경 분석은 [ALM 변경 리포트 기능 사양](alm-change-report.md)(REQ-ALMCHG-001 ~ REQ-ALMCHG-005)에 있다
 
 ### REQ-QAINTEL-001 예약 실행과 공휴일 건너뛰기
 
-**하는 일** 제품별 자동 점검 모드(REQ-QAINTEL-038)에 맞춰 아침에 점검 프로세스를 띄운다. 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
+**하는 일** 매 업무일 아침 제품마다 점검 프로세스를 띄운다. 프로세스는 항상 수집까지 하고, AI 분석까지 할지는 자동 점검 모드(REQ-QAINTEL-038)가 정한다(REQ-ALMCHG-001). 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
 
 **언제** 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 요일·시각(기본 `mon-fri`, `04:00`, 한국 시간)에 깨어난다.
 
@@ -157,7 +158,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 **순서**
 
 1. 제품 설정을 읽어 제품 프로필을 만든다. `alm` 절이 없으면 `config.yaml` 의 `daily_qa.polarion.project_id`·`srs_query`·`issue_query` 를 쓴다(예전 설정과 호환).
-2. 필드 이름을 적지 않은 항목은 Polarion 표준 필드 이름(`id`, `title`, `status`, `severity`, `description`, `created`, `updated`, `linkedWorkItems`, `comments`)을 쓴다. 제품 고유 필드(Legacy 번호, 연구소 결과, 재현 절차, 발생 원인, 조치 내용, 발생·목표 버전)는 제품 설정에 적은 것만 읽는다.
+2. 필드 이름을 적지 않은 항목은 Polarion 표준 필드 이름(`id`, `title`, `status`, `severity`, `description`, `created`, `updated`, `linkedWorkItems`, `comments`, `assignee`)을 쓴다. 제품 고유 필드(Legacy 번호, 연구소 결과, 재현 절차, 발생 원인, 조치 내용, 발생·목표 버전)는 제품 설정에 적은 것만 읽는다.
 3. 한 항목에 이름을 여러 개 적으면 앞에서부터 값이 있는 첫 필드를 쓴다.
 
    > **예시** VXvue 는 SRS 본문을 `[descriptionKR, description]` 으로 적는다. 한국어 본문이 없으면 `description` 을 쓴다.
@@ -178,8 +179,8 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 | 기록 | 필드 |
 |---|---|
 | SRS | `id`, `old_id`(Legacy 번호), `title`, `status`, `updated`, `is_category`, `text` |
-| 이슈 | `id`, `title`, `status`, `severity`, `rd_result`(공통 값), `rd_result_raw`, `description`, `reproduction_step`, `occurrence_cause`, `action_details`, `occurred_versions`, `target_versions`, `linked_ids`, `comment_ids`, `comments`, `created`, `updated` |
-| 댓글 | `id`, `created`, `text`(2000자까지) |
+| 이슈 | `id`, `title`, `status`, `severity`, `assignees`(담당자 사용자 번호 목록), `rd_result`(공통 값), `rd_result_raw`, `description`, `reproduction_step`, `occurrence_cause`, `action_details`, `occurred_versions`, `target_versions`, `linked_ids`, `comment_ids`, `comments`, `created`, `updated` |
+| 댓글 | `id`, `created`, `author`(작성자 사용자 번호), `text`(2000자까지) |
 
 > **참고** SRS 기록의 필드 이름은 이전 스냅샷 파일과 같다. 그래서 개편 전에 저장한 스냅샷도 그대로 비교 기준으로 쓸 수 있다.
 
@@ -264,7 +265,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 | `ISSUE_ACTION_DETAILS_CHANGED` | 조치 내용이 바뀜 | 공통 값에 따라 다름 |
 | `ISSUE_COMMENT_ADDED` | 어제 없던 댓글이 생김 | 의미 있는 댓글이 있을 때만 |
 | `ISSUE_STATUS_ONLY_CHANGED` | 상태만 바뀌고 위 항목은 그대로 | 필요 없음 |
-| `ISSUE_METADATA_CHANGED` | 심각도·발생 버전·목표 버전·연결 항목이 바뀜 | 필요 없음 |
+| `ISSUE_METADATA_CHANGED` | 심각도·담당자·발생 버전·목표 버전·연결 항목이 바뀜 | 필요 없음 |
 | `ISSUE_REMOVED` | 어제 있었는데 오늘 조회되지 않음 | 필요 없음 |
 | `SRS_CREATED` | 새 SRS | 필요 |
 | `SRS_UPDATED` | SRS 비교 필드가 바뀜 | 필요 |
@@ -1124,6 +1125,9 @@ AI가 분석한 것
    - 신규: 같은 대상의 신규 이벤트가 있으면 이미 안다. 그 뒤 상태가 바뀌었어도 같다.
    - 삭제: 그 대상의 마지막 신규·삭제 이벤트가 삭제면 이미 안다.
 5. 나머지는 예약 실행과 같다(같은 CLI, 같은 파이프라인, 같은 잠금).
+6. 실행 상세에는 이 기간의 변경 목록을 함께 보인다. 변경 목록은 기간 안의 기록을 하루씩 비교해 만든다(REQ-ALMCHG-002). 그래서 중간에 바뀌었다가 돌아온 변경도 날짜와 함께 보인다.
+
+   이유: AI 분석 대상은 위 1~4번처럼 끝 상태 비교로 골라 사용량을 아낀다. 사람이 읽는 목록은 중간 변경까지 보여야 한다.
 
 **안 될 때**
 
@@ -1387,10 +1391,10 @@ AI가 분석한 것
 
 **순서**
 
-1. 활성 제품마다 오늘(한국 시간)이 제품별 모드의 실행일(REQ-QAINTEL-038)인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다. 자동 점검 중지 또는 서버 예약 비활성화 상태에서도 실행하지 않는다.
+1. 활성 제품마다 오늘(한국 시간)이 업무일인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다. 서버 예약 비활성화 상태에서도 실행하지 않는다. 자동 점검 중지나 주간 모드의 분석일이 아닌 날에는 수집만 만회한다(REQ-ALMCHG-001).
 2. 오늘 예약을 이미 처리했는지 제품별 상태 기록(`<slug>:scheduled_date`, 한국 시간 날짜)으로 본다. 오늘 날짜가 적혀 있으면 아무것도 하지 않는다.
 3. 처리하지 않았으면 REQ-QAINTEL-001 의 예약 실행과 같은 함수를 부른다. 공휴일 건너뛰기, 실행 잠금, Polarion 설정 확인이 그대로 적용된다. 앱 로그에 `qa_agent_missed_schedule product=<slug> date=<날짜> time=<예약 시각>` 을 남긴다.
-4. 실행을 띄웠거나 휴일·기존 필수 설정 확인으로 오늘 몫을 처리했으면 상태 기록에 오늘 날짜를 적는다. 다른 실행이 진행 중이거나 자동 점검 중지·선택한 모드의 실행일 아님·서버 예약 비활성화면 적지 않는다. 같은 날 다시 켰을 때 오늘 만회를 확인할 수 있다.
+4. 실행을 띄웠거나 휴일·기존 필수 설정 확인으로 오늘 몫을 처리했으면 상태 기록에 오늘 날짜를 적는다. 다른 실행이 진행 중이거나 서버 예약 비활성화면 적지 않는다. 같은 날 다시 켰을 때 오늘 만회를 확인할 수 있다.
 
 **지킬 것**
 
@@ -1467,11 +1471,13 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 **하는 일** 관리자가 QA Agent 화면의 [자동 분석·메일 사용]과 [현재 검증 진행 중]을 저장해 제품별 자동 분석과 요약 메일 주기를 정한다. 사내 웹 화면에서 변경할 수 있다.
 
+이 설정은 AI 분석과 요약 메일만 정한다. 이슈·SRS 수집과 변경 리포트 메일은 어느 설정에서도 매 업무일 돈다(REQ-ALMCHG-001, REQ-ALMCHG-004).
+
 | 자동 분석·메일 사용 | 현재 검증 진행 중 | 자동 분석과 메일 |
 |---|---|---|
 | 켜짐 | 켜짐 | 매 업무일 예약 시각에 실행한다 |
 | 켜짐 | 꺼짐 | 매주 첫 업무일 예약 시각에 한 번 실행한다 |
-| 꺼짐 | 어느 값이든 | 자동 분석과 메일 전송을 중지한다 |
+| 꺼짐 | 어느 값이든 | 자동 분석과 요약 메일 전송을 중지한다. 이때 찾은 변경은 밀린 변경으로 남는다(REQ-ALMCHG-005) |
 
 **입력** 제품과 두 참·거짓 값(`enabled`, `validation_period`)을 받는다. 처음 저장하기 전에는 둘 다 참으로 간주해 기존 일일 동작을 유지한다. 화면의 두 체크박스와 [저장]으로 적용한다.
 
@@ -1482,8 +1488,9 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 3. 업무일은 한국 시간의 월~금에서 등록된 공휴일과 추가 휴일을 뺀 날짜다. 주간 모드는 월요일이 쉬는 날이면 같은 주의 다음 업무일에 실행한다. 그 주에 업무일이 없으면 실행하지 않는다.
 4. 다음 실행 시각·놓친 예약 만회·정시 실행이 같은 정책을 사용한다. 주간 만회는 그 주 첫 업무일의 놓친 예약만 당일에 한 번 처리한다. 지난 실행일의 예약은 만회하지 않는다(REQ-QAINTEL-035).
 5. 한도(세션·주간) 뒤 자동 재개는 일일 모드에서만 가능하다(REQ-QAINTEL-025·049). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.
-6. 서버의 `daily_qa.schedule.enabled: false`는 모든 자동 실행 경로에서 우선 적용한다. 제품 설정을 켜도 담당자 PC의 `config.local.yaml`에 저장된 예약 비활성화를 바꾸지 않는다.
+6. 서버의 `daily_qa.schedule.enabled: false`는 수집을 포함한 모든 자동 실행 경로에서 우선 적용한다. 제품 설정을 켜도 담당자 PC의 `config.local.yaml`에 저장된 예약 비활성화를 바꾸지 않는다.
 7. [변경사항 점검하기]은 자동 점검 중지 중에도 분석할 수 있다. 메일을 보내기 직전에 현재 설정을 다시 읽으며 중지 중에는 메일을 생략하고 이유를 실행 기록에 남긴다.
+8. 꺼짐에서 켜짐으로 바꾸면, 자동 분석은 켠 시각 뒤에 찾은 변경과 끄기 전부터 대기 중이던 변경만 다룬다. 꺼져 있던 동안의 변경은 [밀린 변경 분석]으로만 분석한다(REQ-ALMCHG-005).
 
 **결과** 화면에 저장한 두 값, 현재 모드, 다음 자동 실행 시각 또는 중지 이유를 표시한다. 주간 한도 대기는 다음 주 예약 또는 수동 실행에서 이어 간다는 안내를 표시한다.
 
