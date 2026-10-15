@@ -127,3 +127,12 @@ def test_session_key_file_is_git_ignored():
         pytest.skip("git 저장소가 아닙니다")
     result = subprocess.run(["git", "check-ignore", "-q", "data/admin_session.key"], cwd=ROOT)
     assert result.returncode == 0
+
+
+def test_abnormal_rounds_hash_is_refused_without_running_pbkdf2(settings, monkeypatch):
+    forged = "pbkdf2_sha256$999999999$" + "ab" * 16 + "$" + "cd" * 32
+    monkeypatch.setattr(type(settings), "get", lambda self, key, default=None: forged if key == "admin.password_hash" else default)
+    calls = []
+    monkeypatch.setattr(admin_auth.hashlib, "pbkdf2_hmac", lambda *a, **k: calls.append(a) or b"")
+    assert admin_auth.check_password("1", settings) is False
+    assert calls == []

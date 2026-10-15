@@ -126,3 +126,9 @@ def test_test_mail_result_is_shown_without_raw_addresses(monkeypatch, client_adm
     monkeypatch.setattr(notifier, "send_test", lambda kind, recipients: {"status": "not_configured"})
     assert "메일 설정이 없어 보내지 않았습니다" in client_admin.post(
         "/settings/test-mail", data={"kind": "report", "target": "admin"}).text
+
+
+def test_form_post_refuses_the_password_hash_key(client_admin, settings_app):
+    response = client_admin.post("/settings", data={"admin.password_hash": "pbkdf2_sha256$999999999$" + "ab" * 16 + "$" + "cd" * 32,
+                                                    "_section": "ai"})
+    assert response.status_code == 422

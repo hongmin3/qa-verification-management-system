@@ -63,3 +63,18 @@ def test_guard_settings_are_clamped(monkeypatch, tmp_path):
     assert qa_settings.usage_guard_percent(lambda key, default=None: values.get(key, default), 'seven_day') == 90
     values['daily_qa.usage_guard.five_hour_percent'] = 100
     assert qa_settings.usage_guard_percent(lambda key, default=None: values.get(key, default), 'five_hour') == 100
+
+
+def test_old_reading_without_reset_time_is_ignored():
+    # NOW 는 한국 시간 2026-10-14 14:00. 5시간보다 오래된 측정값은 초기화 시각이 없어도 없는 것으로 본다.
+    stale = {'five_hour': 95.0, 'five_hour_resets_kst': '', 'five_hour_measured_at': '2026-10-14 08:00',
+             'seven_day': 95.0, 'seven_day_resets_kst': '', 'seven_day_measured_at': '2026-10-06 08:00'}
+    assert may_call(stale, CFG, now=NOW) == (True, '')
+
+
+def test_fresh_reading_without_reset_time_still_stops():
+    fresh = {'five_hour': 85.0, 'five_hour_resets_kst': '', 'five_hour_measured_at': '2026-10-14 12:00', 'seven_day': 10.0}
+    assert may_call(fresh, CFG, now=NOW) == (False, '사용률 85% 도달')
+    weekly = {'five_hour': 10.0, 'seven_day': 95.0, 'seven_day_resets_kst': '', 'seven_day_measured_at': '2026-10-10 12:00'}
+    assert may_call(weekly, CFG, now=NOW) == (False, '주간 사용률 95% 도달')
+    assert may_call({'five_hour': 85.0}, CFG, now=NOW) == (False, '사용률 85% 도달')  # 측정 시각이 없으면 이번 실행의 값이다

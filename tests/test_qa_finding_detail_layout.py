@@ -398,3 +398,26 @@ def test_flow_in_pc_widths_without_overflow_errors_or_script(site, all_findings)
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_detail_renders_snapshot_comments_shaped_like_real_data(site):
+    """실제 스냅샷 댓글은 번호만 있고 author 키가 아예 없으며 글·시각이 비어 있다."""
+    write(site["cfg"].issue_snapshot_dir, "2026-10-15", [
+        snapshot_item("VP-7900", comments=[{"id": "p1", "created": "", "text": ""}, {"id": "p2"}])])
+    finding_id = put_finding(site, {"subject": "VP-7900", "analysis_type": "FIXED_ISSUE", "verdict": "SPEC_UNDEFINED",
+                                    "event_ids": [], "summary": "요약"})
+    response = site["client"].get(f"/qa-agent/findings/{finding_id}")
+    assert response.status_code == 200
+    assert "작성자 정보 없음" in response.text
+
+
+def test_detail_escapes_script_in_issue_body_and_comment(site):
+    payload = "<script>alert(1)</script>"
+    write(site["cfg"].issue_snapshot_dir, "2026-10-15", [
+        snapshot_item("VP-7901", description=payload, comments=[
+            {"id": "x1", "created": FIRST_COMMENT, "author": COMMENTER[0], "text": payload}])])
+    finding_id = put_finding(site, {"subject": "VP-7901", "analysis_type": "FIXED_ISSUE", "verdict": "SPEC_UNDEFINED",
+                                    "event_ids": [], "summary": "요약"})
+    page = site["client"].get(f"/qa-agent/findings/{finding_id}").text
+    assert "&lt;script&gt;alert(1)" in page
+    assert "<script>alert" not in page

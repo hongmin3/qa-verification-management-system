@@ -117,6 +117,8 @@ def check_password(plain: str, settings: Settings | None = None) -> bool:
         scheme, rounds, salt, digest = stored.split("$")
         if scheme != "pbkdf2_sha256":
             return False
+        if rounds != str(PBKDF2_ROUNDS):
+            return False  # 비정상 반복 횟수로 계산을 오래 돌리지 않는다
         actual = hashlib.pbkdf2_hmac("sha256", plain.encode("utf-8"), bytes.fromhex(salt), int(rounds))
         return hmac.compare_digest(actual.hex(), digest)
     except ValueError:

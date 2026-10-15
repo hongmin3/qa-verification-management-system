@@ -272,6 +272,8 @@ async def save(request: Request, actor: str = Depends(require_admin)):
         if not isinstance(data, dict):
             raise ValueError("바꿀 설정을 선택해 주세요.")
         submitted = {key: value for key, value in data.items() if not key.startswith("_")} if is_form else data
+        if PASSWORD_KEY in submitted:
+            raise ValueError("비밀번호는 `관리자 비밀번호 변경`에서만 바꿀 수 있습니다.")
         submitted = normalize(submitted)
         if is_form:
             # 양식은 칸 전체를 보내므로 값이 그대로인 칸은 저장하지 않는다(처음 값이 비어 있는 칸이 오류가 되지 않게).

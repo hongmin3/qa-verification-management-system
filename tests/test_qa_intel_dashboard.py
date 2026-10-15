@@ -711,3 +711,20 @@ def test_latest_plan_api_fills_missing_reporter_from_saved_reporters(world):
         {"id": "VP-100", "reporter_id": "u9", "reporter_name": "김철수", "updated": "2026-09-30T00:00:00Z"}])
     row = world["client"].get("/qa-agent/plans/latest?product=VXvue").json()["plan"]["targets"][0]
     assert (row["reporter_name"], row["issue_updated_kst"]) == ("김철수", "2026-09-30 09:00 (한국 시간)")
+
+
+def test_dashboard_with_malformed_prepared_plan_still_renders(world, monkeypatch):
+    """깨진 준비 목록 한 줄이 첫 화면을 500 으로 만들지 않는다(목록 없이 화면이 열린다)."""
+    from dataclasses import replace
+    cfg = replace(world["cfg"], savings_enabled=True)
+    choice = dash.ProductChoice(cfg, world["store"], [cfg.product])
+    monkeypatch.setattr(dash, "choose", lambda product="": choice)
+    documents = world["documents"]
+    with documents.connect() as db:
+        db.execute("INSERT INTO qa_execution_plans VALUES(?,?,?,?)", ("bad", cfg.slug, "2099-01-01T00:00:00+00:00", "{not json"))
+    assert dash.prepared_plan(choice) is None
+    assert world["client"].get("/qa-agent").status_code == 200
+    with documents.connect() as db:
+        db.execute("UPDATE qa_execution_plans SET payload_json=? WHERE id='bad'", ('{"id": "bad"}',))
+    assert dash.prepared_plan(choice) is None
+    assert world["client"].get("/qa-agent").status_code == 200

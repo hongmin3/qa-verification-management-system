@@ -101,7 +101,7 @@ from tests.test_qa_finding_detail_layout import comment_after, put_event, put_fi
 from tests.test_qa_issue_body import snapshot_item, write
 
 MARK = "목록시험"
-PLACEHOLDER = {"created": "", "author": "", "text": ""}
+PLACEHOLDER = {"created": "", "text": ""}      # 실제 스냅샷 댓글에는 author 키가 아예 없다
 LONG_SUMMARY = "여러 줄로 길게 이어지는 요약 문장입니다. " * 30            # 두 줄 제한이 없으면 열 줄이 넘는다
 OLD, NEW = "2026-10-14T04:35:47+00:00", "2026-10-14T23:05:19+00:00"
 

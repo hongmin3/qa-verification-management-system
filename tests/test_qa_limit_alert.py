@@ -22,6 +22,18 @@ FAR_EPOCH = 4102444800          # 2100-01-01 (사용률 창이 아직 초기화�
 FAR_KST = '2100-01-01 09:00'
 
 
+def freeze_clock(monkeypatch, moment):
+    """파이프라인이 보는 "지금"을 `moment`로 고정한다(실행 날짜는 하네스가 따로 넘긴다)."""
+    from datetime import datetime as real_datetime
+    from app.modules.daily_qa import pipeline
+
+    class FrozenClock(real_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment.astimezone(tz) if tz else moment.replace(tzinfo=None)
+    monkeypatch.setattr(pipeline, 'datetime', FrozenClock)
+
+
 @pytest.fixture
 def usage_file(tmp_path, monkeypatch):
     path = tmp_path / 'claude_usage.json'
@@ -238,6 +250,7 @@ def test_catchup_resumes_pending_in_savings_mode(tmp_path, usage_file, fake_smtp
 
 
 def test_usage_guard_stop_also_schedules_catchup(tmp_path, usage_file, fake_smtp, monkeypatch):
+    freeze_clock(monkeypatch, DAY2)
     h = make_world(tmp_path, 4)
     # 실행 시각(DAY2)은 한국 시간 16:30 이다. 5시간 창이 17:00 에 초기화된다.
     usage_file.write_text(json.dumps({'windows': {'five_hour': {'used_percent': 85.0, 'resets_at': '2026-09-30 17:00'}}}), encoding='utf-8')
@@ -320,7 +333,8 @@ def test_weekly_hard_limit_records_catchup_at_reset_plus_five_minutes(tmp_path, 
     assert h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER)) == (reset + timedelta(minutes=5)).isoformat(timespec='seconds')
 
 
-def test_weekly_utilization_stop_with_reset_three_days_away_records_catchup(tmp_path, usage_file, fake_smtp):
+def test_weekly_utilization_stop_with_reset_three_days_away_records_catchup(tmp_path, usage_file, fake_smtp, monkeypatch):
+    freeze_clock(monkeypatch, DAY2)
     h = make_world(tmp_path, 2)
     reset_kst = (DAY2 + timedelta(days=3)).astimezone(claude_usage.KST).strftime('%Y-%m-%d %H:%M')
     usage_file.write_text(json.dumps({'windows': {'seven_day': {'used_percent': 90.0, 'resets_at': reset_kst}}}), encoding='utf-8')
@@ -328,3 +342,23 @@ def test_weekly_utilization_stop_with_reset_three_days_away_records_catchup(tmp_
     assert len(h.calls) == 0
     expected = (DAY2 + timedelta(days=3, minutes=5)).replace(second=0, microsecond=0).isoformat(timespec='seconds')
     assert h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER)) == expected
+
+
+def test_window_reset_is_judged_at_the_current_time_not_the_run_start(tmp_path, usage_file, fake_smtp, monkeypatch):
+    """실행을 시작한 뒤(16:30 KST)에 저장값의 초기화 시각(17:00 KST)이 지나면 그 창은 새로 시작된 것으로 본다."""
+    freeze_clock(monkeypatch, DAY2 + timedelta(hours=1))
+    usage_file.write_text(json.dumps({'windows': {'five_hour': {'used_percent': 10.0, 'resets_at': FAR_KST},
+                                                  'seven_day': {'used_percent': 90.0, 'resets_at': '2026-09-30 17:00'}},
+                                      'measured_at': '2026-09-30 10:00'}), encoding='utf-8')
+    h = make_world(tmp_path, 3)
+    out = run_pipeline(h, usage_after_each=[5.0])
+    assert len(h.calls) == 3 and 'usage_guard' not in out['summary']
+
+
+def test_old_stored_reading_without_reset_time_does_not_block_forever(tmp_path, usage_file, fake_smtp, monkeypatch):
+    freeze_clock(monkeypatch, DAY2)
+    usage_file.write_text(json.dumps({'windows': {'seven_day': {'used_percent': 95.0, 'resets_at': None}},
+                                      'measured_at': '2026-09-20 09:00'}), encoding='utf-8')       # 7일보다 오래됐다
+    h = make_world(tmp_path, 2)
+    out = run_pipeline(h, usage_after_each=[5.0])
+    assert len(h.calls) == 2 and 'usage_guard' not in out['summary']

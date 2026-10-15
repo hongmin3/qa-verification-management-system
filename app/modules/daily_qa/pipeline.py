@@ -1254,7 +1254,7 @@ class _Run:
             ticket = None
             if self.cfg.savings_enabled and not self.dry_run:
                 reading_now = self._usage_now()
-                allowed, reason = execution_budget.may_call(reading_now, self.cfg, self.today)
+                allowed, reason = execution_budget.may_call(reading_now, self.cfg, datetime.now(timezone.utc))
                 if not allowed:
                     self._stop_for_usage(reason, reading_now)
                     raise execution_budget.BudgetExhausted()
@@ -1432,6 +1432,8 @@ class _Run:
             source = reading["after"] if reading["after"].get(window) is not None else reading["before"]
             now[window] = source.get(window)
             now[f"{window}_resets_kst"] = source.get(f"{window}_resets_kst") or ""
+            # 이번 실행이 돌려받은 값(after)에는 측정 시각이 없다. 저장값(before)만 나이를 판단한다.
+            now[f"{window}_measured_at"] = source.get("measured_at") or "" if source is reading["before"] else ""
         return now
 
     def _alert_stop(self) -> None:

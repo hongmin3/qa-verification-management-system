@@ -322,3 +322,16 @@ def test_rows_show_code_defaults_for_keys_missing_from_config_file(client):
     assert rows["daily_qa.usage_guard.five_hour_percent"]["value"] == "80"
     assert rows["daily_qa.usage_guard.seven_day_percent"]["default"] == "90"
     assert "daily_qa.savings.per_run" not in rows and "admin.password_hash" not in rows
+
+
+FORGED_HASH = "pbkdf2_sha256$999999999$" + "ab" * 16 + "$" + "cd" * 32
+
+
+def test_general_save_refuses_the_password_hash_key(settings_app):
+    """비밀번호 암호화 값은 일반 저장으로 넣을 수 없다(비정상 반복 횟수로 앱이 멈추는 것을 막는다)."""
+    app, root = settings_app
+    client = TestClient(app, client=("127.0.0.1", 50123))
+    assert client.post("/settings", json={"admin.password_hash": FORGED_HASH}).status_code == 422
+    assert client.post("/settings", json={"admin.password_hash": FORGED_HASH, "ai.claude.effort": "high"}).status_code == 422
+    assert build_settings(root).get("ai.claude.effort") == "medium"
+    assert "admin.password_hash" not in build_settings(root).overrides

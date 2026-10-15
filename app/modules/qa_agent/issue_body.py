@@ -66,7 +66,7 @@ def _index(path: Path) -> dict[str, dict] | None:
         if cached and cached[:3] == (str(path), stat.st_mtime_ns, stat.st_size):
             return cached[3]
         items = {str(item.get("id")): item for item in _read_items(path) if isinstance(item, dict) and item.get("id")}
-    except (OSError, ValueError, AttributeError):
+    except (OSError, ValueError, AttributeError, TypeError):
         return None
     with _LOCK:
         _CACHE[key] = (str(path), stat.st_mtime_ns, stat.st_size, items)   # 날마다 새 파일이 생겨도 폴더당 한 건만 남는다

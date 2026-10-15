@@ -124,3 +124,10 @@ def test_cache_keeps_one_entry_per_snapshot_directory(snapshot_dir, tmp_path):
     write(other, "2026-10-16", [snapshot_item(title="다른 제품")])
     assert issue_body.load("other", "VP-7287", snapshot_dir=other).title == "다른 제품"
     assert len(issue_body._CACHE) == 2 and set(issue_body._CACHE) == {str(snapshot_dir), str(other)}
+
+
+@pytest.mark.parametrize("items", [123, {"id": "VP-7287"}, [["not", "a", "dict"], None]])
+def test_corrupt_snapshot_items_read_as_missing_not_crash(snapshot_dir, items):
+    snapshot_dir.mkdir(parents=True)
+    (snapshot_dir / "2026-10-14.json").write_text(json.dumps({"run_date": "2026-10-14", "items": items}), encoding="utf-8")
+    assert issue_body.load("vxvue", "VP-7287", snapshot_dir=snapshot_dir) is None

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+import logging
 import re
 from urllib.parse import quote, urlparse
 
@@ -28,6 +29,8 @@ from app.modules.daily_qa.product_adapter import RD_FIXED, RD_LABELS, RD_SPEC_LI
 from app.modules.daily_qa.scheduled_jobs import schedule_settings
 from app.modules.daily_qa.settings import DailyQaSettings, configured_products, load
 from app.modules.daily_qa.store import DailyQaStore
+
+logger = logging.getLogger(__name__)
 
 KST = holidays.KST
 MAX_PERIOD_DAYS = 366
@@ -719,11 +722,15 @@ def prepared_plan(choice: ProductChoice) -> dict | None:
     """가장 최근에 준비한 대상 목록(화면용). 없으면 None. AI·외부 서비스를 부르지 않는다 (REQ-QAINTEL-042)."""
     from app.modules.daily_qa import execution_plan
     storage = choice.store.storage
-    plan = storage.qa_get_plan(product=choice.cfg.slug)
-    if not plan:
+    try:
+        plan = storage.qa_get_plan(product=choice.cfg.slug)
+        if not plan:
+            return None
+        reporters = storage.qa_get_reporters(choice.cfg.slug, [target.get('subject') for target in plan['targets']])
+        return execution_plan.public(plan, reporters=reporters)
+    except (ValueError, KeyError, TypeError, AttributeError):   # 깨진 목록 한 줄이 첫 화면을 막지 않는다
+        logger.warning("qa_prepared_plan_unreadable product=%s", choice.cfg.slug)
         return None
-    reporters = storage.qa_get_reporters(choice.cfg.slug, [target.get('subject') for target in plan['targets']])
-    return execution_plan.public(plan, reporters=reporters)
 
 
 def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None = None) -> dict:
