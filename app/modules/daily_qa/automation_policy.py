@@ -56,7 +56,7 @@ def is_schedule_day(cfg, store, schedule: dict, day: date) -> bool:
 
 
 def catchup_allowed(cfg, store, schedule: dict) -> bool:
-    return bool(not cfg.savings_enabled and cfg.enabled and schedule.get("enabled", True) and get_policy(store, cfg.slug)["mode"] == "daily")
+    return bool(cfg.enabled and schedule.get("enabled", True) and get_policy(store, cfg.slug)["mode"] == "daily")
 
 
 def next_run(cfg, store, schedule: dict, moment: datetime) -> datetime | None:

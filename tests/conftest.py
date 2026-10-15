@@ -44,6 +44,17 @@ def _no_real_limit_evidence(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_real_mail(monkeypatch):
+    """한도 알림 등을 시험하는 테스트가 이 PC 의 SMTP 설정으로 진짜 메일을 보내지 않게 한다 (REQ-QAINTEL-049).
+
+    메일 내용을 확인하는 테스트는 `notifier._send` 를 다시 바꿔 끼운다.
+    """
+    from app.core import notifier
+
+    monkeypatch.setattr(notifier, "_send", lambda config, message: None)
+
+
+@pytest.fixture(autouse=True)
 def _no_writes_to_the_real_database():
     """테스트가 개발용 `data/app.db` 의 `documents` 를 건드리면 그 자리에서 실패시킨다.
 

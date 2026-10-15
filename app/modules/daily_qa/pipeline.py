@@ -179,6 +179,19 @@ def default_spec_chunks(product: str, cfg: DailyQaSettings) -> tuple[list, dict,
     return chunks, labels, [str(item.get("name") or item.get("id") or "") for item in failures]
 
 
+def _usage_lines(reading: dict) -> dict:
+    """`Contract: UsageReading` 값을 메일 본문 줄로 바꾼다. 값을 모르면 `사용률 미확인`이다."""
+    def percent(value) -> str:
+        return "사용률 미확인" if value is None else f"{value:g}%"
+    before, after = reading.get("before") or {}, reading.get("after") or {}
+    return {
+        "5시간 사용률": f"실행 전 {percent(before.get('five_hour'))} → 실행 후 {percent(after.get('five_hour'))}"
+                      + (f" · 초기화 {after.get('five_hour_resets_kst') or before.get('five_hour_resets_kst')}" if (after.get('five_hour_resets_kst') or before.get('five_hour_resets_kst')) else ""),
+        "주간 사용률": f"실행 전 {percent(before.get('seven_day'))} → 실행 후 {percent(after.get('seven_day'))}"
+                      + (f" · 초기화 {after.get('seven_day_resets_kst') or before.get('seven_day_resets_kst')}" if (after.get('seven_day_resets_kst') or before.get('seven_day_resets_kst')) else ""),
+    }
+
+
 def _saved_usage_reading() -> dict:
     try:
         return claude_usage.saved_reading()
@@ -335,9 +348,10 @@ def _load_json_state(store: DailyQaStore, key: str, default):
     return value if isinstance(value, type(default)) else default
 
 
-def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> None:
-    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다."""
-    limit_evidence.capture(limit, claude_command=cfg.claude_command, claude_token=cfg.claude_token)
+def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> list[str]:
+    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다. 저장한 파일 이름을 돌려준다."""
+    result = limit_evidence.capture(limit, claude_command=cfg.claude_command, claude_token=cfg.claude_token)
+    return list(getattr(result, "files", None) or [])
 
 
 def active_limit(store: DailyQaStore, cfg: DailyQaSettings, now: datetime | None = None) -> claude_limits.LimitInfo | None:
@@ -436,6 +450,8 @@ class _Run:
         self.scope_targets = {'spec': 0, 'issues': 0}
         self.selected_keys = None
         self.call_budget_exhausted = False
+        self.guard_stop: dict | None = None      # 호출 직전 사용률 확인에서 멈춘 기록 (REQ-QAINTEL-043)
+        self.evidence_files: list[str] = []      # 한도 증거 파일 이름 (REQ-QAINTEL-039·049)
         self.cfg: DailyQaSettings = cfg
         self.store: DailyQaStore = store
         self.run_id = run_id
@@ -1012,7 +1028,7 @@ class _Run:
                 tasks = build_tasks(kind, items, self.cfg.batch_size, answers[kind], corpus.unreadable_documents,
                                     skill=self._skill(kind))
             tasks = split_tasks(tasks, self.cfg.intelligence.max_input_chars)
-            selected = tasks[:min(max(self.budget, 0), 1)] if self.cfg.savings_enabled and not self.on_demand else tasks[:max(self.budget, 0)]
+            selected = tasks[:max(self.budget, 0)]
             self.budget -= len(selected)
             overflow = len(tasks) - len(selected)
             planned.append((kind, selected, item_events, overflow))
@@ -1237,10 +1253,12 @@ class _Run:
             result_path.unlink(missing_ok=True)
             ticket = None
             if self.cfg.savings_enabled and not self.dry_run:
-                ticket = execution_budget.reserve_call(self.store.storage, self.run_id, self.cfg.slug,
-                    datetime.now(claude_limits.KST), self.cfg.savings_per_run, self.cfg.savings_per_day)
-                if ticket is None:
+                reading_now = self._usage_now()
+                allowed, reason = execution_budget.may_call(reading_now, self.cfg, self.today)
+                if not allowed:
+                    self._stop_for_usage(reason, reading_now)
                     raise execution_budget.BudgetExhausted()
+                ticket = execution_budget.reserve_call(self.store.storage, self.run_id, self.cfg.slug, datetime.now(claude_limits.KST))
             try:
                 outcome = runner.run(task, workspace)
             except BaseException:
@@ -1388,13 +1406,86 @@ class _Run:
         self.store.set_state(self.cfg.state_key(STATE_CLAUDE_LIMIT), claude_limits.dump(limit))
         logger.warning("qa_agent_claude_limit product=%s kind=%s reset=%s", self.cfg.slug, limit.kind, limit.reset_at or "-")
         if not self.dry_run:
-            capture_limit_evidence(limit, self.cfg)
+            self.evidence_files = list(capture_limit_evidence(limit, self.cfg) or [])
+        if limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
+            self._schedule_catchup(datetime.fromisoformat(limit.reset_at))
+
+    def _schedule_catchup(self, reset: datetime) -> None:
+        """한도가 풀린 뒤 대기분을 이어 하도록 시각을 적는다(절약 모드도 같다, REQ-QAINTEL-049). 너무 먼 초기화는 적지 않는다."""
         intel = self.cfg.intelligence
-        if not self.cfg.savings_enabled and limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
-            reset = datetime.fromisoformat(limit.reset_at)
-            if reset - self.today.astimezone(timezone.utc) <= timedelta(hours=intel.catchup_max_hours):
-                after = reset + timedelta(minutes=intel.catchup_delay_minutes)
-                self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
+        if reset.tzinfo is None:
+            reset = reset.replace(tzinfo=timezone.utc)
+        if reset - self.today.astimezone(timezone.utc) <= timedelta(hours=intel.catchup_max_hours):
+            after = reset + timedelta(minutes=intel.catchup_delay_minutes)
+            self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
+
+    def _usage_now(self) -> dict:
+        """호출 직전의 최신 사용률. 이번 실행의 마지막 호출이 돌려준 값을 먼저 쓰고, 없으면 실행 전 저장값을 쓴다."""
+        try:
+            reading = claude_usage.reading_for_run(self.run_id, self.store.storage, before=self.usage_before)
+        except Exception as exc:  # noqa: BLE001 - 사용률을 못 읽어도 호출은 막지 않는다
+            logger.warning("daily_qa_usage_unreadable run=%s error_type=%s", self.run_id, type(exc).__name__)
+            return {}
+        now: dict = {}
+        for window in claude_usage.WINDOWS:
+            source = reading["after"] if reading["after"].get(window) is not None else reading["before"]
+            now[window] = source.get(window)
+            now[f"{window}_resets_kst"] = source.get(f"{window}_resets_kst") or ""
+        return now
+
+    def _alert_stop(self) -> None:
+        """한도나 사용률 기준으로 멈췄으면 관리자에게 한 통 알린다. 같은 한도 묶음에는 다시 보내지 않는다 (REQ-QAINTEL-049).
+
+        메일 설정이 없거나 발송이 실패해도 점검은 그대로 끝난다.
+        """
+        if self.dry_run:
+            return
+        limit, guard = self.limit, self.guard_stop
+        if limit is not None and limit.kind in (claude_limits.KIND_AUTH, claude_limits.KIND_CLI_MISSING):
+            limit = None
+        if limit is None and guard is None:
+            return
+        try:
+            from app.core import notifier
+            from app.core.config import get_settings
+
+            recipients = notifier.admin_recipients(get_settings())
+            if not recipients:
+                logger.info("daily_qa_limit_alert_skipped run=%s reason=관리자_주소_없음", self.run_id)
+                return
+            day = self.today.astimezone(claude_limits.KST).strftime("%Y%m%d")
+            if limit is not None:
+                title, reset = limit.label, limit.reset_kst()
+                episode = limit_evidence.episode_key(limit) + ("" if limit.reset_at else f":{day}")
+                detail = limit.describe()
+            else:
+                title, reset = f"Claude {guard['reason']}", guard["reset_kst"]
+                episode = f"USAGE:{guard['window']}:{reset or '-'}" + ("" if reset else f":{day}")
+                detail = f"{guard['reason']}로 새 호출을 멈췄습니다. 남은 대상은 대기로 남고 한도가 풀리면 자동으로 이어서 분석합니다."
+            reading = claude_usage.reading_for_run(self.run_id, self.store.storage, before=self.usage_before)
+            pending = len(self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed", "limit")))
+            context = {"제품": self.cfg.product, "실행 번호": self.run_id, "남은 대기 건수": f"{pending}건",
+                       "증거 파일": ", ".join(self.evidence_files) or "없음",
+                       "이번 실행 호출": f"{reading['calls']}회", **_usage_lines(reading)}
+            notifier.notify(notifier.KIND_CLAUDE_USAGE_LIMIT, detail, context=context, storage=self.store.storage,
+                            recipients=recipients,
+                            subject=notifier.mail_subject(self.cfg.product, f"{title} · 초기화 {reset or '시각 미확인'}"),
+                            dedupe_key=episode)
+        except Exception as exc:  # noqa: BLE001 - 알림 실패가 점검을 멈추면 안 된다
+            logger.warning("daily_qa_limit_alert_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+
+    def _stop_for_usage(self, reason: str, reading_now: dict) -> None:
+        """사용률 기준에 닿아 새 호출을 멈춘다. 남은 대상은 대기로 남고, 초기화 뒤 이어 한다 (REQ-QAINTEL-043·049)."""
+        if self.guard_stop is not None:
+            return
+        window = "seven_day" if reason.startswith("주간") else "five_hour"
+        reset_kst = str(reading_now.get(f"{window}_resets_kst") or "")
+        self.guard_stop = {"reason": reason, "window": window, "five_hour": reading_now.get("five_hour"),
+                           "seven_day": reading_now.get("seven_day"), "reset_kst": reset_kst}
+        logger.warning("qa_agent_usage_guard product=%s reason=%s reset=%s", self.cfg.slug, reason, reset_kst or "-")
+        moment = report._kst_time(reset_kst)
+        if moment is not None:
+            self._schedule_catchup(moment.astimezone(timezone.utc))
 
     def _record_events(self, kind: str, outcomes: list[_TaskOutcome], item_events: dict[str, list[int]]) -> None:
         """분석 하나의 결과를 이벤트에 적는다. 한 이벤트의 분석이 여럿이면 분석마다 따로 끝난다 (REQ-QAINTEL-006).
@@ -1666,6 +1757,9 @@ class _Run:
         summary["trigger"] = self.trigger
         if self.limit is not None:
             summary["claude_limit"] = self.limit.as_dict()
+        if self.guard_stop is not None:
+            summary["usage_guard"] = dict(self.guard_stop)
+        self._alert_stop()
         if self.audit_summary is not None:
             summary["issue_audit"] = self.audit_summary
         remaining = self._remaining_audit(refresh=True)

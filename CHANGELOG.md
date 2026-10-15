@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-10-15 한도 알림과 사용률 기준 호출 제어
+
+- REQ-QAINTEL-043: 호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)을 없애고, 호출 직전 실제 사용률로 멈춘다. 5시간 사용률이 `daily_qa.usage_guard.five_hour_percent`(기본 80) 이상이거나 주간 사용률이 `daily_qa.usage_guard.seven_day_percent`(기본 90) 이상이면 새 호출을 멈추고 남은 대상을 대기로 둔다. 사용률을 읽지 못하면 막지 않고 메일에 `사용률 미확인`이라고 쓴다. 이미 초기화된 창의 저장값은 없는 것으로 본다. 한 실행의 작업 수 상한 `daily_qa.max_tasks_per_run`(30)은 그대로다.
+- REQ-QAINTEL-042: 절약 모드의 예약 실행이 종류마다 작업 1개만 하던 제한을 없앴다. 필요한 분석을 모두 호출하고, 한도가 풀리면 대기분을 자동으로 이어서 분석한다. 상세 분석 화면의 안내는 호출 횟수 대신 멈춤 기준 사용률을 보인다.
+- REQ-QAINTEL-049: 한도(세션·주간)에 걸리거나 사용률 기준으로 멈추면 관리자(`notifications.admin_email`, 없으면 `NOTIFY_EMAIL_TO`의 첫 주소)에게 `[QA Agent] <제품> Claude <한도 종류 또는 사용률 N% 도달> · 초기화 <KST 시각>` 메일을 한 통 보낸다. 같은 한도 묶음(`episode_key`)에는 다시 보내지 않고, 보낸 묶음은 `notifications` 표에 남긴다. 한도가 풀리면 10분마다 도는 `qa_agent_limit_catchup`이 절약 모드에서도 대기분을 이어서 분석한다.
+- REQ-QAINTEL-048: 사용률 기준으로 멈춘 실행의 요약 메일 제목과 본문에 멈춘 이유(`사용률 80% 도달`)를 쓴다.
+- REQ-QAINTEL-049: `notifier.notify`가 수신자(`recipients`)와 한 번만 보내기(`dedupe_key`)를 받고, `notifier.admin_recipients`를 추가했다.
+
 ## 2026-10-15 메일 제목·본문 재구성
 
 - REQ-MAIL-001: 모든 메일 제목이 `[QA Agent]`로 시작한다. 예약 점검 요약은 `[QA Agent] <제품> <MM/DD> 점검 · 검토 필요 N건 · 대기 N건`(실패·한도는 뒤에 덧붙임)이고, 운영 알림은 `[QA Agent] <알림 이름>`이다. 제목은 `mail_subject` 한 곳에서 만든다. 기존 `[QA 시스템]`·`[QA]` 머리말은 없어진다.

@@ -48,11 +48,15 @@ def test_prepare_saves_target_count_and_preparation_label(tmp_path):
     assert h.store.get_run(out['run_id'])['status_label'] == '분석 준비 완료'
 
 
-def test_single_call_budget_leaves_other_scope_pending(tmp_path):
+def test_usage_threshold_after_first_call_leaves_other_scope_pending(tmp_path, monkeypatch):
+    """호출 횟수 상한 대신 호출 직전 사용률로 멈춘다 (REQ-QAINTEL-043)."""
+    from app.core import claude_usage
+    monkeypatch.setattr(claude_usage, 'state_path', lambda settings=None: tmp_path / 'no_usage.json')
     h, rules = prepared(tmp_path)
-    h.cfg = replace(h.cfg, savings_per_run=1)
+    h.rate_limit = {'unifiedWindows': {'five_hour': {'utilization': 0.82, 'resetsAt': 4102444800}}}
     out = h.run(DAY2, trigger='scheduled', rules_state=rules)
     assert len(h.calls) == 1 and out['summary']['call_budget_exhausted']
+    assert out['summary']['usage_guard']['reason'] == '사용률 82% 도달'
     assert len(h.sent) == 1 and out['status'] != 'SUCCESS'
 
 

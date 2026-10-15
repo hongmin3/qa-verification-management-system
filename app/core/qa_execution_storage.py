@@ -34,12 +34,10 @@ class QaExecutionStorageMixin:
             if 'issue_updated_at' not in columns:
                 db.execute("ALTER TABLE qa_issue_reporters ADD COLUMN issue_updated_at TEXT NOT NULL DEFAULT ''")
 
-    def qa_reserve_call(self, run_id, product, day, per_run, per_day):
+    def qa_reserve_call(self, run_id, product, day):
+        """호출 기록 한 줄을 만든다. 횟수 상한은 없다(호출 여부는 사용률로 정한다, REQ-QAINTEL-043)."""
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            daily=db.execute("SELECT count(*) FROM qa_call_reservations WHERE day=? AND state!='not_started'",(day,)).fetchone()[0]
-            run=db.execute("SELECT count(*) FROM qa_call_reservations WHERE run_id=? AND state!='not_started'",(run_id,)).fetchone()[0]
-            if daily >= per_day or run >= per_run: return None
             key=uuid.uuid4().hex
             db.execute("INSERT INTO qa_call_reservations(id,run_id,product,day,state) VALUES(?,?,?,?,'reserved')",(key,run_id,product,day))
             return key

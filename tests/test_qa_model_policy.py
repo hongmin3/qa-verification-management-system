@@ -14,7 +14,9 @@ def test_collect_only_blocks_ai_and_preserves_events(tmp_path):
     assert out['summary']['collection_only'] is True
     assert any(e['analysis_status']=='pending' for e in h.events())
 
-def test_savings_catchup_is_disabled(tmp_path):
+def test_savings_catchup_is_allowed_after_limit(tmp_path):
+    """한도가 풀린 뒤 대기분을 이어 하는 것은 절약 모드에서도 켜져 있다 (REQ-QAINTEL-049)."""
     from app.modules.daily_qa.automation_policy import catchup_allowed
     h=Harness(tmp_path);h.cfg=replace(h.cfg,savings_enabled=True)
-    assert catchup_allowed(h.cfg,h.store,{'enabled':True}) is False
+    assert catchup_allowed(h.cfg,h.store,{'enabled':True}) is True
+    assert catchup_allowed(h.cfg,h.store,{'enabled':False}) is False

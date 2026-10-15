@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid, parseaddr
@@ -138,6 +138,20 @@ def load_email_settings() -> EmailSettings:
     )
 
 
+def admin_recipients(settings=None) -> tuple[str, ...]:
+    """한도·오류 알림을 받는 관리자 주소 (REQ-QAINTEL-049). 없으면 빈 튜플.
+
+    설정 `notifications.admin_email`이 있으면 그 주소, 없으면 `NOTIFY_EMAIL_TO`의 첫 주소다.
+    """
+    settings = settings or get_settings()
+    configured = str(settings.get("notifications.admin_email", "") or "").strip()
+    if configured:
+        return (configured,)
+    raw = str(getattr(getattr(settings, "secrets", None), "notify_email_to", "") or "")
+    first = next((part.strip() for part in raw.replace(";", ",").split(",") if part.strip()), "")
+    return (first,) if first else ()
+
+
 def status() -> dict:
     """설정 상태. **값 자체는 노출하지 않는다** — 수신자 수와 설정 여부만.
 
@@ -167,7 +181,8 @@ def status() -> dict:
     }
 
 
-def _build_message(config: EmailSettings, kind: str, detail: str, context: dict | None) -> EmailMessage:
+def _build_message(config: EmailSettings, kind: str, detail: str, context: dict | None,
+                   subject: str = "", once: bool = False) -> EmailMessage:
     label = KIND_LABELS.get(kind, kind)
     # 오류 메시지에 경로·계정이 섞여 나오는 경우가 있어 마스킹을 한 번 더 통과시킨다.
     safe_detail, _ = mask_text(detail or "")
@@ -210,12 +225,12 @@ def _build_message(config: EmailSettings, kind: str, detail: str, context: dict 
         ]
     lines += [
         "",
-        f"쿨다운: 같은 문제로 {config.cooldown_minutes}분 안에는 다시 보내지 않습니다.",
+        "같은 한도에는 다시 보내지 않습니다." if once else f"쿨다운: 같은 문제로 {config.cooldown_minutes}분 안에는 다시 보내지 않습니다.",
         "이 메일은 자동 발송되었습니다.",
     ]
 
     message = EmailMessage()
-    message["Subject"] = mail_subject("", label)
+    message["Subject"] = subject or mail_subject("", label)
     message["From"] = config.sender
     message["To"] = ", ".join(config.recipients)
     message["Date"] = formatdate(localtime=True)
@@ -238,24 +253,31 @@ def _send(config: EmailSettings, message: EmailMessage) -> None:
         server.send_message(message)
 
 
-def notify(kind: str, detail: str, context: dict | None = None, storage: Storage | None = None) -> dict:
+def notify(kind: str, detail: str, context: dict | None = None, storage: Storage | None = None,
+           recipients: tuple[str, ...] = (), subject: str = "", dedupe_key: str = "") -> dict:
     """알림을 보낸다. **어떤 경우에도 예외를 올리지 않는다.**
 
+    `recipients` 를 주면 `NOTIFY_EMAIL_TO` 대신 그 주소로만 보낸다(주소가 없으면 `not_configured`).
+    `dedupe_key` 를 주면 쿨다운 대신 "같은 키에는 한 번만"이다(한도 묶음 알림, REQ-QAINTEL-049).
     반환값은 무엇을 했는지 기록용이다: `sent` / `skipped_cooldown` / `not_configured` / `failed`.
     """
     result = {"kind": kind, "status": "not_configured"}
     try:
         config = load_email_settings()
+        targets = tuple(item.strip() for item in recipients or () if item and item.strip())
+        if targets:
+            config = replace(config, recipients=targets)
         if not config.configured:
             return result
         storage = storage or Storage()
-        cooldown_until = (datetime.now(timezone.utc) - timedelta(minutes=config.cooldown_minutes)).isoformat()
-        if not storage.claim_notification(kind, cooldown_until):
+        claim = f"{kind}:{dedupe_key}" if dedupe_key else kind
+        cooldown_until = "" if dedupe_key else (datetime.now(timezone.utc) - timedelta(minutes=config.cooldown_minutes)).isoformat()
+        if not storage.claim_notification(claim, cooldown_until):
             result["status"] = "skipped_cooldown"
             return result
-        message = _build_message(config, kind, detail, context)
+        message = _build_message(config, kind, detail, context, subject, once=bool(dedupe_key))
         _send(config, message)
-        storage.mark_notification_sent(kind)
+        storage.mark_notification_sent(claim)
         result["status"] = "sent"
         result["recipients"] = len(config.recipients)
         result["message_id"] = message["Message-ID"]

@@ -60,7 +60,7 @@ def for_choice(choice):
     options, errors = versions(paths)
     return {'options': options, 'selected': selected(choice.store, choice.cfg.slug, options),
             'errors': errors, 'enabled': choice.cfg.savings_enabled,
-            'per_run': choice.cfg.savings_per_run, 'per_day': choice.cfg.savings_per_day}
+            'five_hour_percent': choice.cfg.usage_guard_five_hour_percent, 'seven_day_percent': choice.cfg.usage_guard_seven_day_percent}
 
 
 def checklist_paths(inputs, profile):

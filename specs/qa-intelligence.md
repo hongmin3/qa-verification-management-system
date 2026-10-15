@@ -1519,27 +1519,41 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 **하는 일** 기간을 고르면 AI 없이 대상부터 준비하고, 사용자가 선택한 대상만 분석한다.
 
-- `daily_qa.savings.enabled`가 true이면 수동 준비는 AI 없이 수집·대상 확인만 한다. 예약 실행은 REQ-QAINTEL-048에 따라 두 분석을 예산 안에서 수행한다. 기본은 false로 기존 설치를 보존한다.
+- `daily_qa.savings.enabled`가 true이면 수동 준비는 AI 없이 수집·대상 확인만 한다. 예약 실행은 REQ-QAINTEL-048에 따라 두 분석을 모두 수행하고, 호출 직전 사용률이 기준에 닿으면 REQ-QAINTEL-043에 따라 멈춘다. 기본은 false로 기존 설치를 보존한다.
 - 목적은 `spec`(사양 변경과 검증 범위), `issues`(신규·업데이트 이슈와 QA 대응), `all`(둘 다)이다. 수동 준비 화면은 자동 전체 선택을 하지 않는다.
 - 준비한 대상은 제품·기간·자료/규칙/설정 지문과 함께 저장한다. 생성 30분 경과, 제품 불일치, 자료 변경, 선택 밖 대상은 실행 전에 거절한다.
 - 대상 선택은 `상세 분석` 화면(`/qa-agent/select?product=<제품>`)에서 한다. 점검 화면(`/qa-agent`)에는 준비 버튼과 한 줄 안내만 둔다. 안내는 `준비된 대상 <N>건 · 상세 분석 열기` 또는 `준비 목록 만료 · 다시 준비하세요`이고, 자바스크립트 없이도 보인다. 준비가 끝나면 진행 표시에 `상세 분석 열기` 링크가 나온다. 상단 메뉴에서는 `사양·이슈 변경 점검`이 켜진 채로 둔다.
-- `상세 분석` 화면은 선택 목록, `선택 대상 분석`, `선택 1건 Opus 재검토`, 호출 예산 안내를 보인다. 목록의 각 행은 체크박스(행 왼쪽)·번호·제목·분석 종류·작성자·이슈 업데이트(한국 시간)·분석 이유를 담고, 행 어디를 눌러도 선택된다. 분석 이유는 그 대상을 고른 변경 이벤트 이름(예: `신규 이슈`, `SRS 변경`)이다.
+- `상세 분석` 화면은 선택 목록, `선택 대상 분석`, `선택 1건 Opus 재검토`, 오늘 호출 횟수와 호출을 멈추는 사용률 기준 안내를 보인다. 목록의 각 행은 체크박스(행 왼쪽)·번호·제목·분석 종류·작성자·이슈 업데이트(한국 시간)·분석 이유를 담고, 행 어디를 눌러도 선택된다. 분석 이유는 그 대상을 고른 변경 이벤트 이름(예: `신규 이슈`, `SRS 변경`)이다.
 
 > **예시** 이슈 VP-200 행은 `[ ] VP-200 · 검색 오류 · 수정 완료 이슈 · 홍길동 · 2026-10-14 17:42 (한국 시간) · 연구소 결과 변경`처럼 보인다. 사양 변경 대상은 작성자가 없으므로 작성자 칸을 비운다.
 
 - 준비 후 30분이 지난 목록은 체크박스 없이 `준비 목록 만료 (준비 2026-10-14 17:41 한국 시간) · 다시 준비하세요`로 보이고, 분석 버튼은 누를 수 없다. 서버는 30분이 지난 선택을 지금처럼 거절한다.
-- 선택하지 않은 대상과 예산 때문에 실행하지 못한 대상은 미분석으로 남긴다. 사양·이슈별 저장 자료의 실제 비교 시작일과 종료일, 요청 기간 중 확인하지 못한 범위를 준비 화면·실행 기록·메일에 표시한다. 자료가 부족하면 전체 기간 완료로 표시하지 않는다.
-- 절약 모드에서는 한도 초기화 후 자동 AI 재개와 형식 실패의 자동 AI 재시도를 하지 않는다. 메일은 기존 수신자·주기를 쓰며 미분석·대기를 완료와 구분한다.
+- 선택하지 않은 대상과 사용률 기준 때문에 실행하지 못한 대상은 미분석으로 남긴다. 사양·이슈별 저장 자료의 실제 비교 시작일과 종료일, 요청 기간 중 확인하지 못한 범위를 준비 화면·실행 기록·메일에 표시한다. 자료가 부족하면 전체 기간 완료로 표시하지 않는다.
+- 절약 모드에서도 한도가 풀리면 대기 중인 분석을 자동으로 이어서 한다(REQ-QAINTEL-049). 형식 실패의 자동 AI 재시도는 하지 않는다. 메일은 기존 수신자·주기를 쓰며 미분석·대기를 완료와 구분한다.
+- 화면 조회·검색·필터·설정·준비 목록은 Claude를 호출하지 않는다(호출 0회).
 
-### REQ-QAINTEL-043 공통 호출 예산과 모델
+### REQ-QAINTEL-043 사용률 기준 호출 제어와 모델
 
-**하는 일** 이 점검 기능의 제품 전체에 호출 횟수 상한을 적용한다.
+**하는 일** 호출 횟수 대신 Claude 계정의 실제 사용률을 보고 새 호출을 할지 정한다. 사용률이 낮으면 필요한 분석을 끝까지 호출한다.
 
-- 절약 모드의 기본 상한은 실행당 2회, KST 하루 전체 제품 합산 4회다. 호출 직전에 SQLite 트랜잭션으로 예약한다.
-- 캐시 재사용은 0회다. 시작한 CLI의 실패·취소·사용량 불명은 호출에 포함하고, 미시작이 확인된 경우만 반환한다.
+**언제** 절약 모드의 분석 호출 직전마다 확인한다.
+
+**순서**
+
+1. 직전 호출이 돌려준 사용률(이번 실행의 마지막 `rate_limit` 값)을 본다. 이번 실행에 호출이 아직 없으면 마지막으로 저장한 측정값(REQ-AICALL-006)을 쓴다.
+2. 5시간 사용률이 `daily_qa.usage_guard.five_hour_percent`(기본 80) 이상이거나 주간 사용률이 `daily_qa.usage_guard.seven_day_percent`(기본 90) 이상이면 새 호출을 하지 않는다. 남은 대상은 대기로 둔다.
+3. 멈추면 REQ-QAINTEL-049의 알림과 이어 하기가 이어진다.
+
+**설정** 두 기준은 모두 50~100의 정수다. 범위 밖이거나 숫자가 아니면 기본값을 쓴다. 한 실행에서 다루는 작업 수는 `daily_qa.max_tasks_per_run`(기본 30)이 계속 정한다. 호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 읽지 않는다.
+
+**안 될 때** 사용률을 읽지 못하거나, 저장값의 초기화 시각이 이미 지났으면(그 창은 새로 시작됐다) 그 값은 없는 것으로 본다. 사용률을 모르는 것만으로 호출을 막지 않고, 요약 메일에는 `사용률 미확인`이라고 쓴다.
+
+> **예시** 5시간 사용률이 7%, 7%, 7%로 돌려받으면 대상 8건을 모두 호출한다. 40%, 79%, 80%로 돌려받으면 세 번째 호출 뒤에 멈추고 나머지 5건은 대기로 남는다.
+
+- 캐시 재사용은 호출 0회다. 시작한 CLI의 실패·취소·사용량 불명은 호출 기록에 남기고, 시작하지 않은 것이 확인된 호출만 기록에서 뺀다. 호출 기록은 메일의 사용량(REQ-QAINTEL-048)이 읽는다.
+- 호출당 두 턴의 단일 응답 방식은 그대로다.
 - 일반 분석은 이 기능 전용 Sonnet 5.5·medium 설정을 사용한다. 댓글·이슈 점검 모델 배정은 유지한다. Opus 상세 재검토는 사용자가 선택한 대상만 실행한다.
 - 이 정책은 챗봇·매뉴얼·TC 별도 요청의 모델 설정을 바꾸지 않는다. 사용량 조회에서는 인증 갱신용 AI 호출을 하지 않는다.
-- 횟수 상한은 계정 5시간 사용률의 상한이 아니다. 확인할 수 없는 사용량은 추정 불가로 표시한다.
 
 ### REQ-QAINTEL-044 사용자 지침과 분석 품질 보존
 
@@ -1590,8 +1604,8 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 **하는 일** 예약 주기에 수집한 사양 변경과 이슈 변경을 한 번씩 검토하고 한 통으로 알린다.
 
-- 수집·비교를 한 번 수행하고 사양 분석과 이슈 분석이 자료를 공유한다. 매일 전체 이슈를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 REQ-QAINTEL-043의 공통 예산에 포함한다.
-- 일일 모드는 직전 정상 수집 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·버전·완료·재사용·미분석·실패를 구분한다. 예산 때문에 끝내지 못한 대상은 대기로 보존한다.
+- 수집·비교를 한 번 수행하고 사양 분석과 이슈 분석이 자료를 공유한다. 매일 전체 이슈를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 REQ-QAINTEL-043의 사용률 확인을 거친다.
+- 일일 모드는 직전 정상 수집 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·버전·완료·재사용·미분석·실패를 구분한다. 사용률 기준 때문에 끝내지 못한 대상은 대기로 보존한다.
 - 메일은 아래 표의 순서로 구성한다. 기존 수신자와 주기를 유지한다. 제목은 REQ-MAIL-001이 정한다.
 
 | 순서 | 구획 | 내용 |
@@ -1614,7 +1628,7 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 - HTML 본문은 표 기반 배치와 인라인 스타일만 쓴다(Outlook이 스타일 시트와 새 배치 방식을 무시하기 때문이다). 글 본문도 같은 순서로 쓴다.
 - Claude 사용량 구획은 아래 "사용량 표시 규칙"을 따른다.
 - 사내 원문과 상세 AI 판단 문장은 메일에 넣지 않는 REQ-DAILY-008의 원칙을 유지한다. 전체 결과는 제품·실행·종류 조건이 있는 웹 링크에서 확인한다.
-- 변경 없음·기존 결과만 재사용·예산 소진을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 하고 한도 초기화만으로 자동 AI 재실행하지 않는다.
+- 변경 없음·기존 결과만 재사용·사용률 기준으로 멈춤을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 한다. 한도가 풀리면 대기분은 REQ-QAINTEL-049에 따라 자동으로 이어서 분석한다.
 - 이슈 분석은 최초 작성자 ID별로 묶고 이름을 섹션 제목에 표시한다. 같은 이름의 서로 다른 사람은 ID로 구분한다. 각 작성자 안에서는 이슈 업데이트가 최신인 순서로 번호·업데이트 일시·판정·결과 링크를 보여준다. 이름이 없으면 이름 미확인과 ID를 표시한다.
 
 **사용량 표시 규칙** 이번 실행의 호출 기록과 REQ-AICALL-006의 저장 값에서 읽는다(`reading_for_run`).
@@ -1624,6 +1638,26 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 3. 증가량(`+<b-a>%p`)은 실행 전 값이 실행 시작 5시간 안에 측정됐고 같은 5시간 창일 때만 쓴다. 측정이 5시간보다 오래됐으면 측정 시각만 쓰고 증가량은 쓰지 않는다. 그 사이 창이 초기화됐으면 `(그 사이 초기화됨)`만 쓴다.
 4. 주간 사용량 줄: `실행 후 <c>% · 초기화 <시각>`.
 5. 이번 실행이 AI를 호출하지 않았으면 `이번 실행은 AI를 호출하지 않았습니다.`를 함께 쓴다. 호출 기록 자체를 읽지 못했으면 `사용량 기록 없음`이라고 쓴다.
+
+### REQ-QAINTEL-049 한도 알림과 풀린 뒤 이어 하기
+
+**하는 일** Claude 한도에 걸리거나 사용률 기준에 닿아 분석이 멈추면 관리자에게 메일 한 통을 보내고, 한도가 풀리면 대기 중인 분석을 자동으로 이어서 한다.
+
+**언제** 분석 중 Claude 한도(세션·주간)에 걸렸을 때, 또는 호출 직전 확인(REQ-QAINTEL-043)에서 사용률 기준에 닿아 멈췄을 때.
+
+**받는 사람** 설정 `notifications.admin_email`의 주소 1개다. 비어 있으면 `NOTIFY_EMAIL_TO`의 첫 주소를 쓴다. 둘 다 없으면 메일을 보내지 않고 점검은 그대로 이어진다.
+
+**메일**
+
+- 제목: `[QA Agent] <제품> Claude <한도 종류 또는 '사용률 <N>% 도달'> · 초기화 <KST 시각>`. 예: `[QA Agent] VXvue Claude 세션(5시간) 사용량 한도 · 초기화 2026-10-15 15:00`.
+- 본문: 실행 번호, 남은 대기 건수, 증거 파일 이름(있을 때), 이번 실행의 사용량(실행 전·후 5시간·주간 사용률, 호출 수, 초기화 시각). 값을 읽지 못한 칸은 `사용률 미확인`으로 쓴다.
+- 같은 한도 묶음(`limit_evidence.episode_key`가 같은 한도, 즉 종류와 초기화 시각이 같은 한도)에는 다시 보내지 않는다. 보낸 묶음은 `notifications` 표에 남겨 프로세스가 달라도 지켜진다.
+- 사용률 기준으로 멈춘 경우의 묶음은 `USAGE:<창>:<초기화 시각>`이다. 같은 창이 초기화되기 전에는 한 번만 보낸다.
+- 메일을 못 보내도 점검은 멈추지 않는다.
+
+**이어 하기** 한도가 풀릴 초기화 시각 5분 뒤(`daily_qa.intelligence.catchup_delay_minutes`)에 이어 하도록 기록하고, 10분마다 도는 `qa_agent_limit_catchup`이 그 시각이 지난 제품의 점검을 다시 띄운다. 절약 모드에서도 동작한다. 자동 점검이 꺼졌거나(`off`), 주간 모드이거나, 예약 자체를 끈 서버에서는 이어 하지 않는다. 초기화 시각을 모르는 한도는 이어 하기 기록을 남기지 않는다.
+
+> **주의** 이어 하기도 호출 직전 사용률 확인을 똑같이 거친다. 초기화 뒤에도 사용률이 기준 이상이면 다시 멈추고, 같은 묶음이라 메일은 다시 가지 않는다.
 
 
 ## 11. 테스트 사양
@@ -2019,12 +2053,13 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-040 | `app/modules/daily_qa/input_budget.py`, `app/modules/daily_qa/rule_context.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-QAINTEL-026: `tests/test_qa_input_budget.py` | implemented |
 | REQ-QAINTEL-041 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/web/static/qa-run-preview.js` | TEST-QAINTEL-027: `tests/test_qa_run_preview.py` | implemented |
 | REQ-QAINTEL-042 | `app/modules/daily_qa/execution_plan.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/select.html`, `app/web/static/qa-selection.js`, `app/web/static/qa-run-progress.js` | `tests/test_qa_execution_plan.py`, `tests/test_qa_savings_review.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_select_page_browser.py`, `tests/qa_run_progress_ui.cjs` | implemented |
-| REQ-QAINTEL-043 | `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py` | `tests/test_qa_execution_budget.py`, `tests/test_qa_model_policy.py` | implemented |
+| REQ-QAINTEL-043 | `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py`, `app/modules/daily_qa/pipeline.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_execution_budget.py`, `tests/test_qa_limit_alert.py`, `tests/test_qa_model_policy.py` | implemented |
 | REQ-QAINTEL-044 | `app/modules/daily_qa/agent_runner.py`, `scripts/measure_qa_usage.py` | `tests/test_qa_usage_measurement.py`, `tests/test_qa_input_budget.py`, `tests/test_qa_savings_review.py` | implemented |
 | REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |
 | REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, `tests/test_qa_results_reader.py` | implemented |
 | REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/web/static/qa-reading.js` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
 | REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/modules/daily_qa/templates/report_email.html`, `app/core/claude_usage.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py` | implemented |
+| REQ-QAINTEL-049 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py` | `tests/test_qa_limit_alert.py`, `tests/test_notifier.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

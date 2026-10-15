@@ -112,5 +112,5 @@ def public(plan, now=None, reporters=None):
 
 def policy(cfg, selection=None):
     return {'model': cfg.analysis_model, 'review_model': cfg.review_model, 'effort': 'medium',
-            'version': selection, 'per_run': cfg.savings_per_run, 'per_day': cfg.savings_per_day,
+            'version': selection, 'five_hour_percent': cfg.usage_guard_five_hour_percent, 'seven_day_percent': cfg.usage_guard_seven_day_percent,
             'input_chars': cfg.intelligence.max_input_chars, 'savings': cfg.savings_enabled}

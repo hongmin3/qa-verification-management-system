@@ -243,6 +243,10 @@ daily_qa:
   task_timeout_seconds: 900
   # 한 실행에서 AI 에 보낼 작업 묶음 수 상한 (비용·시간 보호).
   max_tasks_per_run: 30
+  # 절약 모드에서 호출 직전 실제 사용률이 이 값(%) 이상이면 새 호출을 멈추고 대기로 둔다 (50~100, REQ-QAINTEL-043).
+  usage_guard:
+    five_hour_percent: 80
+    seven_day_percent: 90
   # 묶음 하나에 넣을 항목 수 (SRS 변경 / 이슈).
   batch_size: 5
   # B 에서 SRS 하나당 AI 에 보낼 TC 후보 상한.

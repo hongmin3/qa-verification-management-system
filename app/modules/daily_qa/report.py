@@ -252,7 +252,7 @@ def _five_hour_text(before: dict, after: dict, run_id: str) -> tuple[str, str]:
     measured = str(before.get("measured_at") or "")
     head = ("실행 전 " + _percent(old) + (f" ({measured} 측정)" if measured else "")) if old is not None else "실행 전 값 미확인"
     if new is None:
-        return (head + " → 실행 후 값 없음") if old is not None else "실행 후 값 없음", ""
+        return (head + " → 실행 후 값 없음") if old is not None else "사용률 미확인", ""
     text = head + " → 실행 후 " + _percent(new)
     if old is None:
         return text, ""
@@ -279,7 +279,7 @@ def _usage_context(usage: dict | None, summary: dict, run_id: str = "") -> dict:
     five, delta = _five_hour_text(before, after, run_id)
     context["five"] = {"text": five, "delta": delta, "resets": after.get("five_hour_resets_kst") or ""}
     week_after = after.get("seven_day")
-    context["week"] = {"text": "실행 후 " + _percent(week_after) if week_after is not None else "실행 후 값 없음",
+    context["week"] = {"text": "실행 후 " + _percent(week_after) if week_after is not None else "사용률 미확인",
                        "resets": after.get("seven_day_resets_kst") or ""}
     context["targets"] = [f"{item['subject']} {int(item['tokens']):,}" for item in usage.get("by_target") or []]
     context["lines"] = [
@@ -334,8 +334,12 @@ def _remaining_lines(stages, summary, rules_warning, limit) -> list[str]:
         if status not in ("완료", "건너뜀", "오늘은 대상 아님"):
             plain = _plain(note)
             lines.append(f"{label}: {status}" + (f" · {plain}" if plain else " · 자세한 이유는 점검 기록에서 확인하세요."))
-    if summary.get("call_budget_exhausted"):
-        lines.append("AI 호출 한도에 닿아 남은 대상은 다음 실행으로 넘겼습니다. 완료로 처리하지 않았습니다.")
+    guard = summary.get("usage_guard") or {}
+    if guard:
+        resets = f" 초기화 {guard['reset_kst']} 뒤" if guard.get("reset_kst") else " 한도가 풀린 뒤"
+        lines.append(f"{guard.get('reason')}로 새 호출을 멈췄습니다. 남은 대상은 대기로 두었고{resets} 자동으로 이어서 분석합니다. 완료로 처리하지 않았습니다.")
+    elif summary.get("call_budget_exhausted"):
+        lines.append("사용률 기준에 닿아 남은 대상은 대기로 두었습니다. 완료로 처리하지 않았습니다.")
     return lines
 
 
@@ -355,13 +359,14 @@ def _workflow_context(run_id, status_label, stages, summary, review_url, rules_w
     pending = summary.get("pending_analysis_events", 0)
     new_results, review_needed = _review_counts(summary)
     limit = summary.get("claude_limit") or {}
+    guard = summary.get("usage_guard") or {}
     tone = _tone(status_label)
     collection_only = bool(summary.get("collection_only"))
     title = " · ".join(part for part in (
         "변경 목록 · AI 미분석" if collection_only else "",
         f"{_subject_date(run_id, summary)} 점검".strip(), f"검토 필요 {review_needed}건", f"대기 {pending}건",
         status_label if status_label in ("일부 실패", "실패") else "",
-        (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else "") if part)
+        (limit.get("label") or claude_limits.KIND_LABELS.get(limit.get("kind"), "AI 분석 중단")) if limit else str(guard.get("reason") or "")) if part)
     headline = {
         "ok": f"점검을 마쳤습니다. 새 결과 {new_results}건 가운데 검토 필요가 {review_needed}건입니다.",
         "warn": f"점검을 일부만 마쳤습니다. 새 결과 {new_results}건, 검토 필요 {review_needed}건입니다. 아래 내용을 확인하세요.",
@@ -369,6 +374,8 @@ def _workflow_context(run_id, status_label, stages, summary, review_url, rules_w
     }[tone]
     if limit:
         headline = "Claude 사용량 한도에 닿아 분석을 멈췄습니다. " + headline
+    elif guard:
+        headline = f"{guard.get('reason')}로 분석을 멈췄습니다. " + headline
     coverage, coverage_gaps = [], []
     for kind, item in (summary.get("coverage") or {}).items():
         coverage.append(f"{'사양' if kind == 'srs' else '이슈'} 확인 가능한 자료: {item.get('start') or '기준 없음'} ~ {item.get('end') or '자료 없음'}")

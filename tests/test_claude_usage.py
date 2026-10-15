@@ -212,7 +212,7 @@ def reservations(tmp_path):
     storage = Storage(db_path=tmp_path / "usage.db")
 
     def add(run_id, outcome):
-        key = storage.qa_reserve_call(run_id, "vxvue", "2026-10-15", 10, 10)
+        key = storage.qa_reserve_call(run_id, "vxvue", "2026-10-15")
         storage.qa_finish_call(key, outcome)
 
     return storage, add

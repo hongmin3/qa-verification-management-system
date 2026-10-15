@@ -200,7 +200,7 @@ def latest_plan(product: str = ''):
     choice = _choice(product)
     return JSONResponse({'plan': dash.prepared_plan(choice),
                          'budget': {**execution_budget.usage(choice.store.storage, datetime.now(timezone.utc)),
-                                    'per_run': choice.cfg.savings_per_run, 'per_day': choice.cfg.savings_per_day}},
+                                    'five_hour_percent': choice.cfg.usage_guard_five_hour_percent, 'seven_day_percent': choice.cfg.usage_guard_seven_day_percent}},
                         headers={'Cache-Control': 'no-store'})
 
 

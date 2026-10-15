@@ -90,8 +90,9 @@ class DailyQaSettings:
     #: 같은 성공 작업 묶음의 결과를 재사용한다 (REQ-QAINTEL-037).
     result_cache_enabled: bool = True
     savings_enabled: bool = False
-    savings_per_run: int = 2
-    savings_per_day: int = 4
+    #: 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다 (REQ-QAINTEL-043). 50~100.
+    usage_guard_five_hour_percent: int = 80
+    usage_guard_seven_day_percent: int = 90
     analysis_model: str = "claude-sonnet-5-5"
     review_model: str = "claude-opus-5-5"
     structured_enabled: bool = False
@@ -172,6 +173,20 @@ def configured_products(settings: Settings | None = None) -> list[str]:
     return products or [str(settings.get("daily_qa.product", "VXvue") or "VXvue")]
 
 
+USAGE_GUARD_DEFAULTS = {"five_hour": 80, "seven_day": 90}
+
+
+def usage_guard_percent(get, window: str) -> int:
+    """호출을 멈추는 사용률 기준(%). 50~100 의 정수만 받고, 아니면 기본값(5시간 80·주간 90)을 쓴다 (REQ-QAINTEL-043)."""
+    default = USAGE_GUARD_DEFAULTS[window]
+    raw = get(f"daily_qa.usage_guard.{window}_percent", default)
+    try:
+        value = int(raw) if not isinstance(raw, bool) and float(raw) == int(float(raw)) else default
+    except (TypeError, ValueError):
+        return default
+    return value if 50 <= value <= 100 else default
+
+
 def _intelligence(get) -> IntelligenceSettings:
     defaults = IntelligenceSettings()
     values = {}
@@ -217,8 +232,8 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         claude_effort=str(get("ai.claude.effort", "") or ""),
         result_cache_enabled=bool(get("daily_qa.result_cache.enabled", True)),
         savings_enabled=bool(get("daily_qa.savings.enabled", False)),
-        savings_per_run=max(0, int(get("daily_qa.savings.per_run", 2))),
-        savings_per_day=max(0, int(get("daily_qa.savings.per_day", 4))),
+        usage_guard_five_hour_percent=usage_guard_percent(get, "five_hour"),
+        usage_guard_seven_day_percent=usage_guard_percent(get, "seven_day"),
         analysis_model=str(get("daily_qa.savings.analysis_model", "claude-sonnet-5-5")),
         review_model=str(get("daily_qa.savings.review_model", "claude-opus-5-5")),
         structured_enabled=bool(get("daily_qa.savings.structured_enabled", False)),

@@ -76,7 +76,7 @@ window.QASelection = function (progress) {
       const data = await readPlan(root.dataset.product); plan = data.plan;
       list.replaceChildren();
       const budget = data.budget;
-      status.textContent = `오늘 새 호출 ${budget.used}/${budget.per_day}회 · 실행당 최대 ${budget.per_run}회. `;
+      status.textContent = `오늘 새 호출 ${budget.used}회 · 5시간 사용률 ${budget.five_hour_percent}%·주간 ${budget.seven_day_percent}% 이상이면 호출을 멈춥니다. `;
       if (!plan) { status.textContent += '점검 화면에서 대상을 먼저 준비하세요.'; return; }
       if (plan.expired) {
         // 만료된 목록은 고를 수 없다. 서버도 30분이 지난 선택을 거절한다.
