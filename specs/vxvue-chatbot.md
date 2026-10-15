@@ -6,8 +6,8 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `vxvue-chatbot` |
-| Document Version | 0.1.1 |
-| Last Updated | 2026-10-14 |
+| Document Version | 0.2.0 |
+| Last Updated | 2026-10-15 |
 | Status | implemented |
 
 ## 1. 목적
@@ -169,6 +169,41 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 **지킬 것** 검색 결과 없음은 미지원이 아니다. 문서 간 조건 차이, 이미지 해상도 부족, 암호화·손상·누락, 페이지 범위 오류와 사용량 차단을 구분한다. 반복 실패나 사용량 차단에 같은 호출을 되풀이하지 않는다. 전체 검색 확인은 실제 제품의 모든 기능을 증명하지 않는다.
 
+### REQ-VXVUECHATBOT-011 Claude Desktop 공용 지식 연결
+
+**하는 일** 파트원이 Claude Desktop 일반 채팅과 Cowork에서 같은 서버의 VXvue 자료와 최신 작업 지침을 조회한다. AI 답변은 각 사용자의 Claude에서 작성한다.
+
+**순서**
+
+1. 사용자는 설치 안내 화면에서 `.mcpb` 확장을 받아 설치하고 서버 주소와 팀 접근 토큰을 입력한다. 연결용 `vxvue-ai` Skill ZIP은 Customize의 Skills에 등록한다. Team·Enterprise 공유 Skill의 수정은 다음 사용 때 반영되며 PC 확장 교체와 구분한다.
+2. 확장은 PC의 내장 Node.js로 실행하며 서버의 읽기 전용 도구를 연결한다. Python·SSH·문서 전체 복사는 필요 없다.
+3. 서버는 `data/product_knowledge/vxvue/manifest.json`이 가리키는 `original/` 아래 원본만 조회한다. 해시 불일치·경로 이탈은 거절한다. 추출본은 중복 색인하지 않는다.
+4. 상태 조회에서 현재 지식 판을 받는다. 작업 지침·QA 규칙·검색·원문·PDF 페이지 조회는 그 판 번호를 사용한다. 오래된 판을 찾을 수 없으면 새 상태 조회를 요청한다.
+5. 작업 지침은 서버에 동기화된 Skill·최신 지침 프롬프트·QA 규칙 전문을 이어 읽는다. 문서나 지침 변경은 다음 상태 조회에 반영한다.
+
+**설정** 팀 토큰은 서버 `data/vxvue_desktop/access-token.txt`에서 읽는다. 없으면 연결을 닫는다. 확장의 토큰 입력은 민감정보로 표시하고 배포 파일에 넣지 않는다.
+
+**안 될 때** 서버 단절·인증 실패·자료 읽기 실패를 표시한다. 기존 PC의 자료로 바꾸거나 원본을 수정하지 않는다.
+
+**지킬 것** 임의 명령 실행·사용자 대화·첨부·다른 제품은 제공하지 않는다. 브라우저의 교차 출처 호출을 거절한다. 질의는 서버 검색에만 쓰고 서버 AI를 호출하지 않는다. 일반 자료는 지시로 실행하지 않는다.
+
+> **참고** 사내 배포 확장 파일의 자동 교체는 제공하지 않는다. 문서·QA 규칙·서버 작업 지침은 다음 상태 조회에서 갱신된다. 확장 코드 변경은 새 파일을 설치하고 앱 연결을 다시 시작한다. Claude Desktop·Cowork의 최종 사용 가능 여부는 설치된 앱과 조직 정책에서 별도 확인한다.
+
+### REQ-VXVUECHATBOT-012 Polarion 번호·필터로 현재 자료 수집
+
+**하는 일** VP 번호 또는 사용자가 준 Polarion 필터로 사양·이슈를 읽어 Claude의 분석 근거로 사용한다. 기존 서버의 제품 설정·인증과 GET 전용 API 클라이언트를 쓴다.
+
+**순서**
+
+1. VP 번호는 해당 제품 프로젝트의 항목을 조회한다. 필터는 고치지 않고 프로젝트별 workitems 조회에 전달한다.
+2. 필터 결과는 페이지 번호와 다음 페이지 표시로 이어 읽는다. 한 번에 1~50개, 기본 10개다. 전체 수집 요청은 다음 페이지가 없을 때까지 이어 읽고 누락·실패한 페이지를 알린다.
+3. 항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 수집 범위에 포함하지 않는다.
+4. API 응답은 수집 시각·조회 조건과 함께 서버 임시 결과로 저장하고 12,000자씩 이어 읽는다. 링크된 VP 번호를 추가 조회해 관련 사양과 기존 TC를 대조한다.
+
+**지킬 것** 수집과 AI 분석을 구분한다. 서버에서 AI를 호출하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. 토큰은 서버에 두고 PC로 보내지 않는다.
+
+**안 될 때** 인증·권한·필터·경로·네트워크 실패를 오류로 표시한다. 실패를 0건으로 처리하지 않는다. 조회 결과는 24시간 보관하며 오래된 결과는 재수집한다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -197,6 +232,8 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
+| REQ-VXVUECHATBOT-011 | `app/modules/vxvue_chatbot/desktop.py`, `deploy/claude-desktop/server.cjs`, `scripts/build_vxvue_desktop.py`, `scripts/configure_vxvue_desktop.py` | `tests/test_vxvue_desktop.py` | implemented |
+| REQ-VXVUECHATBOT-012 | `app/modules/vxvue_chatbot/desktop_polarion.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
 | REQ-VXVUECHATBOT-001 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/router.py`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/prompts/vxvue_chatbot.yaml`, `app/web/static/vxvue-chatbot.js` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-003 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/mcp_server.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |

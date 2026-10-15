@@ -60,5 +60,7 @@ scratch/
 # 그 컴퓨터에만 쓰는 설정 (SPEC REQ-CONF-001 순서 2). 배포하지 않는다.
 config.local.yaml
 data/vxvue_chatbot/
+data/vxvue_desktop/
+output/vxvue_desktop/
 data/knowledge_retry/
 .superpowers/sdd/vxvue-ai-chatbot/

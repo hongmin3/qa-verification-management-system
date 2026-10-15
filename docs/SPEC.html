@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="12f4706e5ba7a68d56db7486ed25d1dd61ebad4158a1335a8bcc03dd9671e00a">
+<meta name="spec-source-sha256" content="a0ef73ec2945257cbc3cc46218c75af3228aed2f3549b204b195bc92385f8af4">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>293</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>182</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>213</b><span>implemented</span></div><div class="stat st-verified"><b>61</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>295</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>182</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>215</b><span>implemented</span></div><div class="stat st-verified"><b>61</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -619,6 +619,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-007">REQ-VXVUECHATBOT-007 <span>Opus medium 사용량 절감</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-008">REQ-VXVUECHATBOT-008 <span>로컬 Skill 지침 자동 반영</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-010">REQ-VXVUECHATBOT-010 <span>누락 범위 확인과 필요한 근거 조회</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011 <span>Claude Desktop 공용 지식 연결</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012 <span>Polarion 번호·필터로 현재 자료 수집</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -992,6 +994,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-007">REQ-VXVUECHATBOT-007</a></td><td data-label="이름">Opus medium 사용량 절감</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/core/vxchat_storage.py</code>, <code>config.yaml</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-004">TEST-VXVUECHATBOT-004</a>: <code>tests/test_vxvue_chat_cost.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-008">REQ-VXVUECHATBOT-008</a></td><td data-label="이름">로컬 Skill 지침 자동 반영</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/skill_knowledge.py</code>, <code>app/modules/vxvue_chatbot/knowledge.py</code>, <code>app/core/knowledge_push.py</code>, <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/web/static/vxvue-chatbot.js</code>, <code>app/web/static/vxvue-chatbot.css</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-005">TEST-VXVUECHATBOT-005</a>: <code>tests/test_skill_knowledge.py</code>, <code>tests/test_vxvue_chat_knowledge.py</code>, <code>tests/test_vxvue_chat_router.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-010">REQ-VXVUECHATBOT-010</a></td><td data-label="이름">누락 범위 확인과 필요한 근거 조회</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/prompts/vxvue_chatbot.yaml</code></td><td data-label="테스트"><code>tests/test_vxvue_chat_retrieval.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a></td><td data-label="이름">Claude Desktop 공용 지식 연결</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/build_vxvue_desktop.py</code>, <code>scripts/configure_vxvue_desktop.py</code></td><td data-label="테스트"><code>tests/test_vxvue_desktop.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></td><td data-label="이름">Polarion 번호·필터로 현재 자료 수집</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop_polarion.py</code></td><td data-label="테스트"><code>tests/test_vxvue_desktop_polarion.py</code></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -15085,8 +15089,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tbody>
 <tr><td>상위 사양</td><td><a href="../SPEC.md">../SPEC.md</a></td></tr>
 <tr><td>기능 ID</td><td><code>vxvue-chatbot</code></td></tr>
-<tr><td><span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">Document</span> Version</td><td>0.1.1</td></tr>
-<tr><td>Last Updated</td><td>2026-10-14</td></tr>
+<tr><td><span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">Document</span> Version</td><td>0.2.0</td></tr>
+<tr><td>Last Updated</td><td>2026-10-15</td></tr>
 <tr><td>Status</td><td><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
@@ -15308,6 +15312,49 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 </ol>
 <p><strong>지킬 것</strong> 검색 결과 없음은 미지원이 아니다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 간 조건 차이, 이미지 해상도 부족, 암호화·손상·누락, 페이지 범위 오류와 사용량 차단을 구분한다. 반복 실패나 사용량 차단에 같은 호출을 되풀이하지 않는다. 전체 검색 확인은 실제 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 모든 기능을 증명하지 않는다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-011">
+<h3><span class="idtag">REQ-VXVUECHATBOT-011</span> Claude Desktop 공용 지식 연결</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/build_vxvue_desktop.py</code>, <code>scripts/configure_vxvue_desktop.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_desktop.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 Claude Desktop 공용 VXvue 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a>: <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop 확장과 공유용 VXvue AI <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>을 내려받는 화면을 추가했다. 서버의 원본 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>와 최신 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>·<span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span>을 읽으며 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>마다 지식 판을 고정한다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>·지침 갱신과 PC 확장 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>를 구분한다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 파트원이 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop 일반 채팅과 Cowork에서 같은 서버의 VXvue 자료와 최신 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 지침을 조회한다. AI 답변은 각 사용자의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>에서 작성한다.</p>
+<p><strong>순서</strong></p>
+<ol>
+<li>사용자는 설치 안내 화면에서 <code>.mcpb</code> 확장을 받아 설치하고 서버 주소와 팀 접근 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>을 입력한다. 연결용 <code>vxvue-ai</code> <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> ZIP은 Customize의 Skills에 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한다. Team·Enterprise 공유 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>의 수정은 다음 사용 때 반영되며 PC 확장 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>와 구분한다.</li>
+<li>확장은 PC의 내장 Node.js로 실행하며 서버의 읽기 전용 도구를 연결한다. Python·SSH·<span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 전체 복사는 필요 없다.</li>
+<li>서버는 <code>data/product_knowledge/vxvue/manifest.json</code>이 가리키는 <code>original/</code> 아래 원본만 조회한다. 해시 불일치·경로 이탈은 거절한다. 추출본은 중복 색인하지 않는다.</li>
+<li>상태 조회에서 현재 지식 판을 받는다. <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 지침·<span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span>·검색·원문·PDF 페이지 조회는 그 판 번호를 사용한다. 오래된 판을 찾을 수 없으면 새 상태 조회를 요청한다.</li>
+<li><span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 지침은 서버에 동기화된 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>·최신 지침 프롬프트·<span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span> 전문을 이어 읽는다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>나 지침 변경은 다음 상태 조회에 반영한다.</li>
+</ol>
+<p><strong>설정</strong> 팀 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 서버 <code>data/vxvue_desktop/access-token.txt</code>에서 읽는다. 없으면 연결을 닫는다. 확장의 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 입력은 민감정보로 표시하고 배포 파일에 넣지 않는다.</p>
+<p><strong>안 될 때</strong> 서버 단절·인증 실패·자료 읽기 실패를 표시한다. 기존 PC의 자료로 바꾸거나 원본을 수정하지 않는다.</p>
+<p><strong>지킬 것</strong> 임의 명령 실행·사용자 대화·첨부·다른 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>은 제공하지 않는다. 브라우저의 교차 <span class="term" title="한 제품의 한 자료 종류가 들어오는 길이다. alm_crawler(ALM 자동 수집), manual(사람이 화면에서 등록), knowledge_folder(지식 폴더 수집), external_sync(다른 자동화가 보냄) 네 가지다" tabindex="0">출처</span> 호출을 거절한다. 질의는 서버 검색에만 쓰고 서버 AI를 호출하지 않는다. 일반 자료는 지시로 실행하지 않는다.</p>
+<aside class="callout callout-info"><span class="callout-label">참고</span>
+<p>사내 배포 확장 파일의 자동 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>는 제공하지 않는다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>·<span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span>·서버 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 지침은 다음 상태 조회에서 갱신된다. 확장 코드 변경은 새 파일을 설치하고 앱 연결을 다시 시작한다. <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop·Cowork의 최종 사용 가능 여부는 설치된 앱과 조직 정책에서 별도 확인한다.</p>
+</aside>
+</section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-012">
+<h3><span class="idtag">REQ-VXVUECHATBOT-012</span> Polarion 번호·필터로 현재 자료 수집</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/desktop_polarion.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_desktop_polarion.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 Claude Desktop 공용 VXvue 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a>: VP 번호와 사용자 <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 필터로 현재 사양·<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 읽는다. 전체 속성·관계·댓글·첨부 목록을 페이지별로 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>하며 긴 결과를 이어 읽는다. 민감값 보호·<span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 시각·실패·남은 페이지를 표시한다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> VP 번호 또는 사용자가 준 <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 필터로 사양·<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 읽어 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>의 분석 <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>로 사용한다. 기존 서버의 <span class="term" title="config/products/&lt;slug&gt;.yaml. 제품마다 다른 Polarion 프로젝트·조회식·필드 이름·연구소 결과 값·Checklist 형식을 적는다" tabindex="0">제품 설정</span>·인증과 GET 전용 API 클라이언트를 쓴다.</p>
+<p><strong>순서</strong></p>
+<ol>
+<li>VP 번호는 해당 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 프로젝트의 항목을 조회한다. 필터는 고치지 않고 프로젝트별 workitems 조회에 전달한다.</li>
+<li>필터 결과는 페이지 번호와 다음 페이지 표시로 이어 읽는다. 한 번에 1~50개, 기본 10개다. 전체 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청은 다음 페이지가 없을 때까지 이어 읽고 누락·실패한 페이지를 알린다.</li>
+<li>항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 범위에 포함하지 않는다.</li>
+<li>API 응답은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 시각·조회 조건과 함께 서버 임시 결과로 저장하고 12,000자씩 이어 읽는다. 링크된 VP 번호를 추가 조회해 관련 사양과 기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>를 대조한다.</li>
+</ol>
+<p><strong>지킬 것</strong> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>과 AI 분석을 구분한다. 서버에서 AI를 호출하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 서버에 두고 PC로 보내지 않는다.</p>
+<p><strong>안 될 때</strong> 인증·권한·필터·경로·네트워크 실패를 오류로 표시한다. 실패를 0건으로 처리하지 않는다. 조회 결과는 24시간 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>하며 오래된 결과는 재<span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -15337,6 +15384,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>Requirement</th><th>Implementation</th><th>Test</th><th>Status</th></tr></thead>
 <tbody>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/build_vxvue_desktop.py</code>, <code>scripts/configure_vxvue_desktop.py</code></td><td data-label="Test"><code>tests/test_vxvue_desktop.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop_polarion.py</code></td><td data-label="Test"><code>tests/test_vxvue_desktop_polarion.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/router.py</code>, <code>app/web/static/vxvue-chatbot.js</code>, <code>app/web/static/vxvue-chatbot.css</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a></td><td data-label="Implementation"><code>app/core/vxchat_storage.py</code>, <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/prompts/vxvue_chatbot.yaml</code>, <code>app/web/static/vxvue-chatbot.js</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_storage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-003">REQ-VXVUECHATBOT-003</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>

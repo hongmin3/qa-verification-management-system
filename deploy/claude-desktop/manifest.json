@@ -1,0 +1,37 @@
+{
+  "manifest_version": "0.3",
+  "name": "vxvue-ai",
+  "display_name": "VXvue AI",
+  "version": "1.0.0",
+  "description": "서버의 VXvue 사양·매뉴얼·TC·최신 QA 규칙과 Polarion 항목을 조회합니다.",
+  "author": {"name": "QA Team"},
+  "server": {
+    "type": "node",
+    "entry_point": "server.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server.cjs"],
+      "env": {
+        "VXVUE_SERVER_URL": "${user_config.server_url}",
+        "VXVUE_ACCESS_TOKEN": "${user_config.access_token}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "compatibility": {"platforms": ["win32", "darwin"], "runtimes": {"node": ">=18"}},
+  "user_config": {
+    "server_url": {
+      "type": "string",
+      "title": "QA 서버 주소",
+      "description": "사내 QA 서버 주소를 입력하세요. 예: https://qa.example.internal",
+      "required": true
+    },
+    "access_token": {
+      "type": "string",
+      "title": "팀 접근 토큰",
+      "description": "QA 관리자가 전달한 토큰을 입력하세요. Polarion 토큰을 입력하지 마세요.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}
