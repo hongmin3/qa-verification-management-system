@@ -1359,7 +1359,7 @@ AI가 분석한 것
    | 문제 없음 | `CONSISTENT_WITH_SPEC`, `SUPPORTED_BY_SPEC`, `FULLY_COVERED`, `NO_QA_IMPACT`, `NOT_SIGNIFICANT` |
 
 2. QA 할 일은 권고(`sections.recommendation.actions`·`checks`) → 확인할 점(`sections.qa_analysis.checks`) → 조치 문장(`action`, 줄마다 하나) 순서로 찾아 3줄까지 보인다.
-3. 점검 기록 보기 화면의 목록은 결론 단계 순서(사양과 다름 → 검토 필요 → 근거 부족 → 참고 → 문제 없음)로, 같은 단계는 최신이 먼저다. `문제 없음` 은 접어 둔다. 대시보드와 결과 페이지의 목록은 이 순서와 접기를 쓰지 않고 REQ-QAINTEL-046의 정렬을 따른다.
+3. 절약 모드가 꺼진 실행의 점검 기록 보기 결과 목록은 결론 단계 순서(사양과 다름 → 검토 필요 → 근거 부족 → 참고 → 문제 없음)로, 같은 단계는 최신이 먼저다. 접지는 않는다. 대시보드와 결과 페이지의 목록, 절약 모드 실행의 결과 목록은 이 순서를 쓰지 않고 REQ-QAINTEL-046의 정렬을 따른다.
 
 **지킬 것**
 

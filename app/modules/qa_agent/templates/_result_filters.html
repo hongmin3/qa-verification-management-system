@@ -1,7 +1,7 @@
 {# 대시보드와 결과 페이지가 같이 쓰는 조회 조건 (REQ-QAINTEL-046). 쓰는 값: listing, selected. #}
 <form method="get" action="{{ listing.path }}" class="qa-filters" role="search">
   <input type="hidden" name="product" value="{{ selected }}">
-  {% for key in ('run_id', 'subject', 'category', 'quick', 'view', 'group') %}{% if listing.filters[key] %}<input type="hidden" name="{{ key }}" value="{{ listing.filters[key] }}">{% endif %}{% endfor %}
+  {% for key in ('run_id', 'subject', 'subject_id', 'category', 'quick', 'view', 'group') %}{% if listing.filters[key] %}<input type="hidden" name="{{ key }}" value="{{ listing.filters[key] }}">{% endif %}{% endfor %}
   <div class="qa-filter-row">
     <label class="qa-search"><span>검색</span><input type="search" name="q" value="{{ listing.filters.q }}" placeholder="이슈·사양 번호, 제목, 작성자 이름, 요약"></label>
     <label>정렬 <select name="sort">{% for code, name in listing.sorts.items() %}<option value="{{ code }}" {% if listing.filters.sort == code %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>

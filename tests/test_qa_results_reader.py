@@ -284,6 +284,25 @@ def test_history_link_matches_exact_subject_only(listing):
     assert result_views.search(listing["choice"], {"subject": "VP-728", "view": "all"})["total"] == 4        # 번호 칸은 일부만 맞아도 찾는다
 
 
+@pytest.mark.parametrize("path", ["/qa-agent/results", "/qa-agent"])
+def test_history_list_keeps_exact_subject_when_the_form_is_submitted(listing, path, monkeypatch):
+    """`이전 분석 N건` 으로 연 목록에서 조회·정렬·검색을 눌러도 그 번호만 남는다(폼이 `subject_id` 를 그대로 싣는다)."""
+    import html as htmllib
+    choice = dash.ProductChoice(listing["cfg"], listing["store"], ["VXvue"])
+    monkeypatch.setattr(dash, "choose", lambda product="": choice if product in ("", "VXvue", "vxvue") else None)
+    seed(listing, "VP-728", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-06T03:00:00+00:00")
+    seed(listing, "VP-728", kind="NEW_ISSUE", verdict="SPEC_VIOLATION", created="2026-10-07T03:00:00+00:00")
+    card = next(card for card in result_views.search(choice, {"q": MARK}, path=path)["cards"] if card["subject"] == "VP-728")
+    opened = listing["client"].get(card["history_url"]).text
+    form = re.search(r'<form method="get" action="([^"]*)" class="qa-filters".*?</form>', opened, re.S)
+    assert form and htmllib.unescape(form.group(1)) == path
+    hidden = {htmllib.unescape(name): htmllib.unescape(value) for name, value in re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)"', form.group(0))}
+    assert hidden.get("subject_id") == "VP-728" and hidden.get("view") == "all"
+    for changes in ({}, {"sort": "analyzed"}, {"q": "요약"}):
+        submitted = listing["client"].get(path, params={**hidden, **changes}).text
+        assert sorted(re.findall(r"\[(VP-\d+)\]", submitted)) == ["VP-728", "VP-728"], changes
+
+
 def test_period_and_text_filters_apply_before_picking_latest(listing):
     """분석 기간·검색어·종류는 최근 한 건을 고르기 전에 적용한다."""
     old = seed(listing, "VP-7800", created="2026-10-05T03:00:00+00:00", summary="지난주 분석 고유문구")
