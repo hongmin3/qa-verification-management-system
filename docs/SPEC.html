@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="4f8aa086ec428e72e474acc19dec8d6d23b524eb5ff790caa0d21715e03185ef">
+<meta name="spec-source-sha256" content="26ba7751b03189a6687ae0618f22997389061f01b21ffed6a67476c5c962e492">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -15349,11 +15349,12 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-req" id="REQ-VXVUECHATBOT-013">
 <h3><span class="idtag">REQ-VXVUECHATBOT-013</span> 사용자 입력 없는 자동 연결</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/desktop_enroll.py</code>, <code>app/core/vxdesk_storage.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/vxvue_desktop_devices.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code>, <code>tests/test_vxvue_desktop_bridge.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a>, <a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 4</summary>
 <ul>
 <li><span class="hist">2026-10-15 VXvue AI 입력 없는 자동 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>: Desktop 설치 파일에 서버 주소와 한 번만 쓰는 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 번호를 넣는다. 처음 실행할 때 이 PC 전용 연결 키를 받아 저장하므로 주소·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>·계정을 입력하지 않는다. <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·연결은 사내망 주소에서만 되고, 관리자는 <code>scripts/vxvue_desktop_devices.py</code>로 PC별 연결을 보고 취소한다. 서버는 키를 해시로만 저장한다.</li>
 <li><span class="hist">2026-10-15 VXvue AI 입력 없는 자동 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>: 연결 실패를 서버 중지·사내망 끊김·허용 안 된 네트워크·<span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 번호 만료·연결 취소로 나눠 할 일과 함께 보인다. 서버에 닿지 않아 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>하지 못했을 때 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 번호를 버리던 문제와, 연결이 취소됐을 때 원인 대신 재설치 문구만 보이던 문제를 고쳤다.</li>
 <li><span class="hist">2026-10-15 VXvue AI 입력 없는 자동 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>: <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop이 확장 시작을 60초 기다리다 실패 처리하던 문제를 고쳤다(확장 1.2.0). 시작 응답은 서버를 기다리지 않고, 도구 목록은 10초 안에 서버 답이 없으면 설치 파일의 목록을 쓴다. <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>별 진단 기록을 남긴다. 안내 화면에서 더블클릭 안내와 QA 홈 링크를 없애고 메뉴 이름을 한국어(영어)로 적었다.</li>
+<li><span class="hist">2026-10-15 VXvue AI 입력 없는 자동 연결</span> <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>: 확장 1.2.1. <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop이 확장을 Electron 유틸리티 프로세스로 실행할 때 전달기 본문이 시작되지 않아 응답하지 못하던 문제를 고쳤다. 도구 설명과 연결 지침에 &quot;VP-번호는 Jira가 아니라 <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 항목&quot;임을 적어, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>가 Jira 연결을 권하지 않게 했다.</li>
 </ul>
 </details>
 <p><strong>하는 일</strong> 파트원이 설치 파일을 받아 설치하면 확장이 처음 실행될 때 이 PC 전용 연결 키를 받아 QA 서버에 연결한다. 사용자는 주소·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>·계정을 입력하지 않는다.</p>
