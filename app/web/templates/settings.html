@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block page_title %}설정{% endblock %}
+{% block header_title %}설정{% endblock %}
+{% block header_subtitle %}메일 받는 사람, AI 모델, 사용률 기준, 메일 링크 서버 주소를 바꿉니다. 저장은 관리자 로그인 뒤에 할 수 있습니다.{% endblock %}
+{% block header_nav %}{% from "_nav.html" import top_nav %}{{ top_nav("settings") }}{% endblock %}
+{% block content %}
+{%- set ai_keys = ['ai.claude.models.light', 'ai.claude.models.standard', 'ai.claude.models.complex', 'ai.claude.effort',
+                   'daily_qa.intelligence.audit_model', 'daily_qa.intelligence.comment_model',
+                   'daily_qa.savings.analysis_model', 'daily_qa.savings.review_model'] -%}
+{%- set percent_keys = ['daily_qa.usage_guard.five_hour_percent', 'daily_qa.usage_guard.seven_day_percent'] -%}
+<style>
+  .st {max-width:1100px;min-width:0}
+  .st-card {margin:0 0 18px;padding:16px 18px;border:1px solid #dde4ee;border-radius:8px;background:#fff;min-width:0}
+  .st-card h2 {margin:0 0 8px;font-size:18px}
+  .st-card h3 {margin:16px 0 6px;font-size:15px}
+  .st p {overflow-wrap:anywhere}
+  .st code,.st pre {white-space:pre-wrap;overflow-wrap:anywhere}
+  .st-field {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 16px;padding:12px 0;border-top:1px solid #e8edf4;align-items:start}
+  .st-field:first-of-type {border-top:0}
+  .st-field label {font-weight:bold}
+  .st-field .st-key {display:block;font-size:12px;font-weight:normal;margin-top:4px;color:#64748b}
+  .st-field input[type=text],.st-field input[type=email],.st-field input[type=url],.st-field input[type=number],.st-field input[type=password],.st-field select {width:100%;min-width:0;box-sizing:border-box}
+  .st-now {margin:4px 0 0;overflow-wrap:anywhere}
+  .st-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .st-login {display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .st-login input {flex:1 1 200px;min-width:0}
+  .st-notice {padding:10px 14px;border-radius:6px;margin:0 0 16px;background:#eef6ff;border:1px solid #bcd7f5}
+  .st-notice.error {background:#fef2f2;border-color:#f3b5b5}
+  .st-notice.ok {background:#effaf1;border-color:#b6e0be}
+  .st-who {display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 16px}
+  .st-who form {margin:0}
+  .st table {width:100%;border-collapse:collapse;table-layout:fixed}
+  .st th,.st td {padding:10px 8px;text-align:left;vertical-align:top;border-bottom:1px solid #dde4ee;overflow-wrap:anywhere}
+  .st ul {margin:6px 0;padding-left:20px}
+  .st details {margin-top:10px}
+  @media(max-width:700px) {
+    .st-field {grid-template-columns:minmax(0,1fr)}
+    .st-card {padding:14px 12px}
+    .st table,.st tbody,.st tr,.st td {display:block;width:100%}
+    .st thead {display:none}
+    .st tr {padding:8px 0;border-bottom:1px solid #cbd5e1}
+    .st td {border:0;padding:4px 0}
+    .st td[data-label]:before {content:attr(data-label) " · ";font-weight:bold}
+  }
+</style>
+<div class="st">
+{% if notice %}<p class="st-notice {{ notice_kind }}" role="status">{{ notice }}{% if status_section %} <a href="#{{ status_section }}">해당 구획으로 가기</a>{% endif %}</p>{% endif %}
+{% if error %}<p class="st-notice error" role="alert">{{ error }}</p>{% endif %}
+<section class="st-card" id="apply">
+  <h2>다음 실행부터 적용</h2>
+  <p>다음 화면 AI 호출과 다음 일일 QA 실행부터 새 설정을 씁니다. 설정을 보거나 바꾸는 일은 Claude 를 호출하지 않습니다.</p>
+  {% for run in running_runs %}<p>진행 중인 실행 <code>{{ run }}</code> 는 이전 값으로 끝까지 돕니다.</p>{% endfor %}
+  {% if actor %}
+  <div class="st-who">
+    <span>{% if via == "cookie" %}관리자로 로그인했습니다. 8시간 동안 저장할 수 있습니다.{% else %}서버에 직접 접속해 로그인 없이 저장할 수 있습니다.{% endif %}</span>
+    {% if via == "cookie" %}<form method="post" action="/settings/logout"><button type="submit">로그아웃</button></form>{% endif %}
+  </div>
+  {% endif %}
+  <p class="hint">메일 주소는 가려서 보입니다. 모델 사용 가능 여부는 Claude 계정과 CLI 에서 결정합니다.</p>
+</section>
+{% if not actor %}{% include "admin_login.html" %}{% endif %}
+
+<section class="st-card" id="admin-mail">
+  <h2>관리자 메일</h2>
+  <p>한도에 닿거나 오류가 났을 때 알림을 받는 관리자입니다. 주소 1개를 적습니다.</p>
+  {% set row = by_key['notifications.admin_email'] %}
+  <p class="st-now">지금 값: <b>{{ row.value or '없음' }}</b> <span class="hint">· 출처 {{ row.source }}</span></p>
+  {% if actor %}
+  <form method="post" action="/settings">
+    <input type="hidden" name="_section" value="admin-mail">
+    <input type="hidden" name="_keys" value="notifications.admin_email">
+    <div class="st-field">
+      <label for="f-admin-email">관리자 메일 주소<code class="st-key">notifications.admin_email</code></label>
+      <input id="f-admin-email" type="email" name="notifications.admin_email" value="{{ edit['notifications.admin_email'] }}" autocomplete="off">
+    </div>
+    <div class="st-actions"><button type="submit">저장</button><button type="submit" formaction="/settings/reset">기본값으로 되돌리기</button></div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="st-card" id="recipients">
+  <h2>자동 보고 메일 받는 사람</h2>
+  <p>예약 점검이 끝날 때 보내는 요약 메일을 받는 사람입니다. 주소를 쉼표로 나눠 1명에서 10명까지 적습니다. 지우려면 그 주소를 목록에서 빼고 저장하세요.</p>
+  {% set row = by_key['daily_qa.report_recipients'] %}
+  <p class="st-now">지금 받는 사람 {{ recipient_masks|length }}명: <b>{{ row.value or '없음' }}</b> <span class="hint">· 출처 {{ row.source }}</span></p>
+  {% if actor %}
+  <form method="post" action="/settings">
+    <input type="hidden" name="_section" value="recipients">
+    <input type="hidden" name="_keys" value="daily_qa.report_recipients">
+    <div class="st-field">
+      <label for="f-recipients">받는 사람 주소<code class="st-key">daily_qa.report_recipients</code></label>
+      <input id="f-recipients" type="text" name="daily_qa.report_recipients" value="{{ edit['daily_qa.report_recipients'] }}" autocomplete="off">
+    </div>
+    <p class="hint">처음에는 관리자 1명입니다. 값을 비우고 저장할 수는 없고, 처음 설정으로 돌아가려면 [기본값으로 되돌리기]를 누릅니다.</p>
+    <div class="st-actions"><button type="submit">저장</button><button type="submit" formaction="/settings/reset">기본값으로 되돌리기</button></div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="st-card" id="test-mail">
+  <h2>메일 시험 발송</h2>
+  <p>제목이 <code>[QA Agent] [시험]</code> 으로 시작하는 시험 메일을 고른 곳에만 보냅니다. 실제 알림의 재발송 대기 기록에는 영향이 없습니다.</p>
+  {% if mail_result %}<p class="st-notice {{ 'ok' if mail_result.status == 'sent' else 'error' }}" role="status">{{ mail_result.message }}{% if mail_result.masks %} 받은 곳: {{ mail_result.masks|join(', ') }}{% endif %}{% if mail_result.error %} ({{ mail_result.error }}){% endif %}</p>{% endif %}
+  {% if actor %}
+  <form method="post" action="/settings/test-mail">
+    <input type="hidden" name="_section" value="test-mail">
+    <div class="st-field">
+      <label for="f-mail-kind">시험 종류</label>
+      <select id="f-mail-kind" name="kind">{% for value, label in mail_kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    </div>
+    <div class="st-field">
+      <label for="f-mail-target">받을 곳</label>
+      <select id="f-mail-target" name="target">
+        <option value="admin">관리자 메일 ({{ admin_masks|join(', ') or '없음' }})</option>
+        <option value="report">자동 보고 메일 받는 사람 ({{ recipient_masks|length }}명)</option>
+      </select>
+    </div>
+    <div class="st-actions"><button type="submit">시험 메일 보내기</button></div>
+  </form>
+  {% else %}<p class="hint">로그인한 뒤 보낼 수 있습니다.</p>{% endif %}
+</section>
+
+<section class="st-card" id="ai">
+  <h2>AI 모델과 사용률 기준</h2>
+  <p>작업별 모델과 추론 정도를 고르고, 호출 직전 실제 사용률이 기준 이상이면 새 호출을 멈추게 합니다. 현재 이슈 전체 점검·새 댓글 분석 모델의 빈 값은 가벼운 작업 모델을 따릅니다. 추론 정도의 빈 값은 CLI 기본값을 씁니다.</p>
+  {% if actor %}<form method="post" action="/settings">
+    <input type="hidden" name="_section" value="ai">
+    {% for key in ai_keys + percent_keys %}<input type="hidden" name="_keys" value="{{ key }}">{% endfor %}{% endif %}
+  {% for key in ai_keys %}{% set row = by_key[key] %}
+    <div class="st-field">
+      <div><label for="f-{{ loop.index }}">{{ row.label }}</label><code class="st-key">{{ key }}</code>
+        <p class="st-now">지금 값: <b>{{ row.value or '빈 값' }}</b> <span class="hint">· {{ row.source }} · 기본값 {{ row.default or '빈 값' }}</span></p></div>
+      <select id="f-{{ loop.index }}" name="{{ key }}" data-key="{{ key }}" {% if not actor %}disabled{% endif %}>
+        {% if row.value not in row.choices %}<option value="{{ row.value }}" selected disabled>{{ row.value }} (허용 목록 밖)</option>{% endif %}
+        {% for choice in row.choices %}<option value="{{ choice }}" {% if choice == row.value %}selected{% endif %}>{{ choice or ('가벼운 작업 모델 따름' if key.startswith('daily_qa.intelligence.') else 'CLI 기본') }}</option>{% endfor %}
+      </select>
+    </div>
+  {% endfor %}
+  <h3>사용률 기준</h3>
+  {% for key in percent_keys %}{% set row = by_key[key] %}
+    <div class="st-field">
+      <div><label for="f-p{{ loop.index }}">{{ row.label }}</label><code class="st-key">{{ key }}</code>
+        <p class="st-now">지금 값: <b>{{ row.value }}%</b> <span class="hint">· {{ row.source }} · 기본값 {{ row.default }}%</span></p></div>
+      <input id="f-p{{ loop.index }}" type="number" name="{{ key }}" min="50" max="100" step="1" inputmode="numeric" value="{{ row.value }}" data-key="{{ key }}" {% if not actor %}disabled{% endif %}>
+    </div>
+  {% endfor %}
+  <p class="hint">50에서 100 사이의 정수입니다. 사용률을 읽지 못하면 막지 않고 메일에 <code>사용률 미확인</code> 이라고 씁니다.</p>
+  {% if actor %}
+    <div class="st-actions"><button type="submit" id="save-settings">저장</button><button type="submit" id="reset-settings" formaction="/settings/reset">기본값으로 되돌리기</button></div>
+  </form>{% else %}<p class="hint">로그인한 뒤 바꿀 수 있습니다.</p>{% endif %}
+</section>
+
+<section class="st-card" id="base-url">
+  <h2>메일 링크 서버 주소</h2>
+  <p>메일 속 링크 앞에 붙는 서버 주소입니다. <code>http://</code> 또는 <code>https://</code> 로 시작해야 합니다. 비어 있으면 메일에 <code>서버 주소 미설정</code> 이라고 쓰고 링크를 만들지 않습니다.</p>
+  {% set row = by_key['daily_qa.review_base_url'] %}
+  <p class="st-now">지금 값: <b>{{ row.value or '미설정' }}</b> <span class="hint">· 출처 {{ row.source }}</span></p>
+  {% if actor %}
+  <form method="post" action="/settings">
+    <input type="hidden" name="_section" value="base-url">
+    <input type="hidden" name="_keys" value="daily_qa.review_base_url">
+    <div class="st-field">
+      <label for="f-base-url">서버 주소<code class="st-key">daily_qa.review_base_url</code></label>
+      <input id="f-base-url" type="text" name="daily_qa.review_base_url" value="{{ edit['daily_qa.review_base_url'] }}" placeholder="http://서버주소:포트" autocomplete="off">
+    </div>
+    <div class="st-actions"><button type="submit">저장</button><button type="submit" formaction="/settings/reset">기본값으로 되돌리기</button></div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="st-card" id="password">
+  <h2>관리자 비밀번호 변경</h2>
+  <p>선택 기능입니다. 바꾸지 않아도 계속 쓸 수 있습니다. 4자 이상 128자 이하로 정합니다. 비밀번호는 서버에 암호화해 저장하고 화면에는 보이지 않습니다.</p>
+  {% if actor %}
+  <form method="post" action="/settings/password">
+    <input type="hidden" name="_section" value="password">
+    <div class="st-field">
+      <label for="f-new-password">새 비밀번호</label>
+      <input id="f-new-password" type="password" name="password" autocomplete="new-password" minlength="4" maxlength="128" required>
+    </div>
+    <div class="st-field">
+      <label for="f-confirm-password">새 비밀번호 확인</label>
+      <input id="f-confirm-password" type="password" name="confirm" autocomplete="new-password" minlength="4" maxlength="128" required>
+    </div>
+    <div class="st-actions"><button type="submit">비밀번호 바꾸기</button></div>
+  </form>
+  {% else %}<p class="hint">로그인한 뒤 바꿀 수 있습니다.</p>{% endif %}
+</section>
+
+<section class="st-card" id="history">
+  <h2>변경 이력</h2>
+  <p class="hint">최근 10건입니다. 메일 주소는 가려서, 비밀번호는 값 없이 보입니다.</p>
+  <table aria-label="설정 변경 이력"><thead><tr><th>시각</th><th>설정</th><th>이전 값 → 새 값</th><th>접속</th></tr></thead><tbody>
+    {% for item in history %}<tr><td data-label="시각">{{ item.changed_at }}</td><td data-label="설정">{{ labels.get(item.key, item.key) }}</td><td data-label="변경">{{ item.old_value or '빈 값' }} → {{ item.new_value or '빈 값' }}</td><td data-label="접속">{{ item.client }}</td></tr>{% else %}<tr><td colspan="4">변경 이력이 없습니다.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+</div>
+{% endblock %}

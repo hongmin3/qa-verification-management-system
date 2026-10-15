@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import smtplib
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -344,6 +345,40 @@ def send_report(subject: str, text_body: str, html_body: str = "", recipients: t
 
 
 _TEST_NOTICE = "시험 발송입니다. 실제 오류가 아닙니다."
+_SAMPLE_NOTICE = "아래 이슈·사양·숫자는 모두 예시 값입니다. 실제 점검 결과가 아닙니다."
+
+
+def _sample_report() -> tuple[str, str, str]:
+    """예약 점검 요약 시험 메일. 실제 요약 메일과 같은 구성(`report.build_email`)에 예시 값을 넣는다 (REQ-MAIL-003)."""
+    from app.modules.daily_qa import report  # report 가 이 모듈의 mail_subject 를 쓰므로 부를 때 읽는다
+
+    base = str(get_settings().get("daily_qa.review_base_url", "") or "").strip().rstrip("/")
+    run_id = datetime.now(timezone.utc).astimezone().strftime("%Y%m%d-040000")
+    review_url = f"{base}/qa-agent/runs/{run_id}" if base else f"/qa-agent/runs/{run_id}"
+    summary = {
+        "savings_enabled": True, "findings": 2, "questions": 0, "claude_calls": 2, "pending_analysis_events": 3,
+        "scope_targets": {"spec": 1, "issues": 1}, "next_run": "", "by_skill": {"qa-issue-analysis": 2},
+        "by_verdict": {"qa-issue-analysis": {"PARTIALLY_COVERED": 1, "REQUIREMENT_INFORMATION": 1}},
+        "issue_results": [
+            {"id": 0, "subject": "예시-이슈", "subject_title": "예시 이슈 제목", "reporter_id": "sample-writer",
+             "reporter_name": "예시 작성자", "issue_updated_at": "", "verdict": "PARTIALLY_COVERED", "analysis_type": "NEW_ISSUE"}],
+        "spec_results": [
+            {"id": 0, "subject": "예시-사양", "subject_title": "예시 사양 제목", "verdict": "REQUIREMENT_INFORMATION",
+             "analysis_type": "SPEC_COVERAGE"}],
+    }
+    usage = {"before": {"five_hour": None, "seven_day": None, "measured_at": ""},
+             "after": {"five_hour": 10.0, "seven_day": 40.0, "five_hour_resets_kst": "", "seven_day_resets_kst": ""},
+             "calls": 2, "total_tokens": 12345, "model": "예시", "by_target": []}
+    stages = {"collect_srs": {"status": "ok", "note": ""}, "collect_issues": {"status": "ok", "note": ""},
+              "email": {"status": "ok", "note": ""}}
+    subject, text, html_body = report.build_email(run_id, "성공", stages, summary, review_url, "", product="예시", usage=usage)
+    subject = mail_subject("", f"[시험] {subject.removeprefix(SUBJECT_PREFIX).strip()}")
+    notice_html = (f"<div style='padding:10px 24px;background:#fef3c7;color:#92400e;font:14px sans-serif'>"
+                   f"<b>{_TEST_NOTICE}</b> {_SAMPLE_NOTICE}</div>")
+    html_body, inserted = re.subn(r"(<body[^>]*>)", lambda match: match.group(1) + notice_html, html_body, count=1)
+    if not inserted:
+        html_body = notice_html + html_body
+    return subject, "\n".join([_TEST_NOTICE, _SAMPLE_NOTICE, "", text, "", "이 메일은 자동 발송되었습니다."]), html_body
 
 
 def send_test(kind: str, recipients: tuple[str, ...]) -> dict:
@@ -353,9 +388,15 @@ def send_test(kind: str, recipients: tuple[str, ...]) -> dict:
     """
     targets = tuple(item.strip() for item in recipients or () if item and item.strip())
     if kind == "report":
-        label = "예약 점검 요약"
-        body = ["이 메일은 예약 점검 요약 메일이 이 수신자에게 도착하는지 확인하는 시험입니다."]
-    elif kind in KIND_LABELS:
+        if not targets:
+            return {"status": "failed", "error": "시험 수신자가 없습니다."}
+        try:
+            subject, text, html_body = _sample_report()
+        except Exception as exc:  # noqa: BLE001 - 시험 발송은 예외를 올리지 않는다
+            logger.warning("send_test_report_build_failed error_type=%s", type(exc).__name__)
+            return {"status": "failed", "error": f"시험 메일을 만들지 못했습니다: {type(exc).__name__}"}
+        return send_report(subject, text, html_body, targets)
+    if kind in KIND_LABELS:
         label = KIND_LABELS[kind]
         body = [f"이 메일은 '{label}' 알림이 이 수신자에게 도착하는지 확인하는 시험입니다."]
     else:

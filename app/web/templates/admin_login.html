@@ -1,0 +1,15 @@
+<section id="login" class="st-card">
+  <h2>관리자 로그인</h2>
+  <p>지금은 <strong>읽기 전용</strong>입니다. 저장하려면 관리자 비밀번호를 입력하세요. 로그인하면 8시간 동안 저장할 수 있습니다.</p>
+  <form method="post" action="/settings/login" class="st-login">
+    <label for="admin-password">비밀번호</label>
+    <input id="admin-password" type="password" name="password" autocomplete="current-password" required>
+    <button type="submit">로그인</button>
+  </form>
+  <details>
+    <summary>서버에 직접 접속하는 방법</summary>
+    <p>서버에 직접 접속하면 로그인 없이 저장할 수 있습니다. nginx 를 거친 접속은 로그인해야 저장할 수 있습니다. SSH 터널을 연 뒤 <code>http://127.0.0.1:12000/settings</code> 를 여세요.</p>
+    <pre><code>ssh -N -L 12000:127.0.0.1:{{ port }} 계정@서버
+# 다른 로컬 포트를 골랐다면 주소의 12000 도 바꿉니다.</code></pre>
+  </details>
+</section>

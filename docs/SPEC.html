@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="eefd69530cb7c27c22d44ee10d48121c426b72eb75aef0e5c7760cc76dceba83">
+<meta name="spec-source-sha256" content="8f206bd1452b379a5ec4a015470dc9f26a7205d1d2f214fcc230f173bb46d603">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>294</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>182</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>214</b><span>implemented</span></div><div class="stat st-verified"><b>61</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>295</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>183</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>214</b><span>implemented</span></div><div class="stat st-verified"><b>62</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -281,6 +281,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-WEB-005">REQ-WEB-005 <span>운영 상태 주소</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-WEB-006">REQ-WEB-006 <span>공용 화면 골격과 사용법 화면</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-WEB-007">REQ-WEB-007 <span>공통 상단 메뉴</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-WEB-008">REQ-WEB-008 <span>설정 탭과 관리자 로그인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-001">REQ-OPS-001 <span>운영 상태 점검</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-002">REQ-OPS-002 <span>백업 만들기와 확인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-003">REQ-OPS-003 <span>앱 로그</span></a></li>
@@ -481,6 +482,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-MAIL-001">TEST-MAIL-001</a></li>
 <li class="toc-id kind-test"><a href="#TEST-SCHED-001">TEST-SCHED-001</a></li>
 <li class="toc-id kind-test"><a href="#TEST-WEB-001">TEST-WEB-001</a></li>
+<li class="toc-id kind-test"><a href="#TEST-WEB-003">TEST-WEB-003</a></li>
 <li class="toc-id kind-test"><a href="#TEST-WEB-002">TEST-WEB-002</a></li>
 <li class="toc-id kind-test"><a href="#TEST-OPS-001">TEST-OPS-001</a></li>
 <li class="toc-id kind-test"><a href="#TEST-OPS-002">TEST-OPS-002</a></li>
@@ -776,7 +778,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#NFR-SEC-001">NFR-SEC-001</a></td><td data-label="이름">AI 실행 격리</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a></td><td data-label="이름">비밀값을 밖으로 내지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/config.py</code>, <code>app/core/secrets_loader.py</code>, <code>app/core/notifier.py</code>, <code>scripts/deploy.ps1</code></td><td data-label="테스트"><a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a>: <code>tests/test_secrets_file.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-SEC-003">NFR-SEC-003</a></td><td data-label="이름">올라온 파일 이름을 경로로 믿지 않기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/knowledge_upload.py</code>, <code>app/core/uploads.py</code>, <code>app/modules/knowledge/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-SEC-003">TEST-SEC-003</a>: <code>tests/test_knowledge_upload.py</code></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></td><td data-label="이름">접속 범위</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>deploy/nginx/qa-platform.conf</code></td><td data-label="테스트"><a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></td><td data-label="이름">접속 범위</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>deploy/nginx/qa-platform.conf</code>, <code>app/core/admin_auth.py</code>, <code>app/web/settings_router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR DAILY</span> QA Intelligence Agent 일일 점검의 공통 부분 (예약·수집·잠금, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검, 결과 검사·저장, 초안 Excel, 요약 메일, Skill). 변경 감지와 다섯 가지 분석은 기능 사양의 QAINTEL</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-DAILY-001">NFR-DAILY-001</a></td><td data-label="이름">실행 비용·시간 상한</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a></td><td data-label="이름">산출물 보관 위치</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
@@ -815,7 +817,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-003">REQ-AICALL-003</a></td><td data-label="이름">재시도와 오류 처리</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/gemini_client.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-003">TEST-AICALL-003</a>, <code>tests/test_gemini_client_core.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-004">REQ-AICALL-004</a></td><td data-label="이름">모델 등급 고르기</td><td data-label="상태"><span class="badge st-deprecated">deprecated</span></td><td data-label="구현"><code>app/core/model_router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-QAAGENT-011">TEST-QAAGENT-011</a>: <code>tests/test_qa_agent_retired.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a></td><td data-label="이름">Claude CLI 로 AI 판정 받기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/claude_cli.py</code>, <code>app/core/gemini_client.py</code>, <code>app/core/model_router.py</code>, <code>config.yaml</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a></td><td data-label="이름">화면에서 AI 모델·추론 정도 바꾸기</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings_ai.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a></td><td data-label="이름">화면에서 AI 모델·추론 정도 바꾸기</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-AICALL-006">REQ-AICALL-006</a></td><td data-label="이름">Claude 사용량 남은 양 보기</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/claude_usage.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/main.py</code>, <code>app/web/templates/_claude_usage.html</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/static/vxvue-chatbot.js</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a>: <code>tests/test_claude_usage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code>, <code>tests/test_vxvue_chat_router.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">USAGE</span> 토큰 사용량·하루 한도·할당량 소진 알림</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-USAGE-001">REQ-USAGE-001</a></td><td data-label="이름">토큰 사용량 기록</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/gemini_client.py</code>, <code>app/core/storage.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-AICALL-001">TEST-AICALL-001</a>: <code>tests/test_gemini_client.py</code>, <code>tests/test_cost_dashboard.py</code></td></tr>
@@ -837,6 +839,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-005">REQ-WEB-005</a></td><td data-label="이름">운영 상태 주소</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/main.py</code>, <code>app/core/storage.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-002">TEST-WEB-002</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a></td><td data-label="이름">공용 화면 골격과 사용법 화면</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/web/templates/base.html</code>, <code>app/web/static/app.css</code>, <code>app/web/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a></td><td data-label="이름">공통 상단 메뉴</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code>, <code>app/modules/qa_agent/templates/dashboard.html</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></td><td data-label="이름">설정 탭과 관리자 로그인</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">OPS</span> 운영 점검·백업·로그</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="이름">운영 상태 점검</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="이름">백업 만들기와 확인</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
@@ -5448,9 +5451,9 @@ python scripts/rule_capability_report.py --markdown
 <div class="table-wrap"><table>
 <thead><tr><th>값</th><th>어디서</th></tr></thead>
 <tbody>
-<tr><td>수신자</td><td>비밀 설정 <code>DAILY_QA_EMAIL_TO</code>. 비어 있으면 <code>NOTIFY_EMAIL_TO</code>. 쉼표나 세미콜론으로 여러 명을 적는다</td></tr>
+<tr><td>수신자</td><td>설정 탭의 <code>daily_qa.report_recipients</code>(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 비어 있으면 비밀 설정 <code>DAILY_QA_EMAIL_TO</code>, 그것도 비어 있으면 <code>NOTIFY_EMAIL_TO</code>. 쉼표나 세미콜론으로 여러 명을 적는다</td></tr>
 <tr><td>메일 서버</td><td>기존 알림 메일 설정</td></tr>
-<tr><td>점검 기록 보기 링크 앞부분</td><td><code>daily_qa.review_base_url</code>. 비어 있으면 경로(<code>/qa-agent/runs/&lt;실행 ID&gt;</code>)만 쓴다</td></tr>
+<tr><td>점검 기록 보기 링크 앞부분</td><td><code>daily_qa.review_base_url</code>(설정 탭에서 바꾼다, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 비어 있으면 경로(<code>/qa-agent/runs/&lt;실행 ID&gt;</code>)만 쓴다</td></tr>
 </tbody>
 </table></div>
 <p><strong>결과</strong></p>
@@ -6330,7 +6333,7 @@ python scripts/rule_capability_report.py --markdown
 </li>
 <li>동기화: <span class="term" title="동기화 한 번의 시작·끝·상태를 적는 DB 표(sync_log)다" tabindex="0">동기화 기록</span>, <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 동기화, <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 업로드. <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></li>
 <li>예약: 앱 안 <span class="term" title="앱 프로세스 안에서 정해진 시각에 작업을 부르는 부품(app/core/scheduler.py, APScheduler)이다" tabindex="0">예약 실행기</span>와 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>. <a class="idref" href="#REQ-SCHED-001">REQ-SCHED-001</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a></li>
-<li>화면 공통: <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>, <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 접속 범위. <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a> ~ <a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a>, <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></li>
+<li>화면 공통: <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>, <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 설정 탭과 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span>, 접속 범위. <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a> ~ <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></li>
 <li>운영
 <ul>
 <li><span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>, 백업, 로그, <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 마운트 설정: <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a> ~ <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a></li>
@@ -7771,15 +7774,16 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-AICALL-007">
 <h3><span class="idtag">REQ-AICALL-007</span> 화면에서 AI 모델·추론 정도 바꾸기</h3>
-<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings_ai.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-AICALL-004">REQ-AICALL-004</a>, <a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a>, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-AICALL-004">REQ-AICALL-004</a>, <a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a>, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a></span></div>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>: 화면에서 바꿀 수 있는 키에 <code>daily_qa.savings.analysis_model</code>·<code>review_model</code>, <code>daily_qa.usage_guard.*_percent</code>, <code>daily_qa.review_base_url</code>, <code>notifications.admin_email</code>, <code>daily_qa.report_recipients</code>를 더했다. 호출 횟수 상한(<code>per_run</code>·<code>per_day</code>)은 화면에 두지 않는다. 저장 주소가 <code>/settings/ai</code>에서 <code>/settings</code>로 바뀌었다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>: 새 댓글 분석 모델(<code>daily_qa.intelligence.comment_model</code>)을 더하고 화면 AI 설정에서 바꿀 수 있게 했다. 운영 설정은 새 댓글 분석과 현재 상태 점검을 <code>claude-sonnet-5-5</code> 로 부른다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>: <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드와 비용 화면에서 AI 모델·추론 정도 설정으로 이동한다. 화면에서 바꾼 값과 변경 기록을 DB에 남기고 다음 실행부터 적용한다. 서버 안의 직접 접속만 저장할 수 있으며 프록시를 거친 화면은 읽기 전용이다.</li>
 </ul>
 </details>
-<p><strong>하는 일</strong> 운영 담당자가 <code>/settings/ai</code> 에서 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> <span class="term" title="light(경량), standard(기본 QA 판단), complex(복잡한 교차검증) 세 가지로, 등급마다 쓸 모델 이름을 설정에 둔다" tabindex="0">모델 등급</span>과 추론 정도를 확인하고 바꾼다. 홈과 AI 사용량에서 연결한다.</p>
-<p><strong>언제</strong> 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 일반 접속에서는 버튼을 끄고 SSH 터널 사용법을 안내한다.</p>
+<p><strong>하는 일</strong> 운영 담당자가 설정 탭(<code>/settings</code>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>)의 <code>AI 모델과 사용률 기준</code> 구획에서 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> <span class="term" title="light(경량), standard(기본 QA 판단), complex(복잡한 교차검증) 세 가지로, 등급마다 쓸 모델 이름을 설정에 둔다" tabindex="0">모델 등급</span>과 추론 정도를 확인하고 바꾼다. 옛 주소 <code>/settings/ai</code> 는 <code>/settings#ai</code> 로 보낸다.</p>
+<p><strong>언제</strong> 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span> 또는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 둘 다 아니면 읽기 전용이고 로그인 칸과 SSH 터널 사용법을 안내한다(<a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>).</p>
 <p><strong>순서</strong></p>
 <ol>
 <li>각 설정의 현재 값·기본값·<span class="term" title="한 제품의 한 자료 종류가 들어오는 길이다. alm_crawler(ALM 자동 수집), manual(사람이 화면에서 등록), knowledge_folder(지식 폴더 수집), external_sync(다른 자동화가 보냄) 네 가지다" tabindex="0">출처</span>·고를 수 있는 값을 보여 준다.</li>
@@ -7796,11 +7800,13 @@ python scripts/rule_capability_report.py --markdown
 <tr><td><code>ai.claude.effort</code></td><td>빈 값(CLI 기본), <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code></td></tr>
 <tr><td><code>daily_qa.intelligence.audit_model</code></td><td>허용 모델 또는 빈 값(가벼운 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 모델 따름)</td></tr>
 <tr><td><code>daily_qa.intelligence.comment_model</code></td><td>허용 모델 또는 빈 값(가벼운 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 모델 따름)</td></tr>
+<tr><td><code>daily_qa.savings.analysis_model</code> / <code>review_model</code></td><td>허용 모델</td></tr>
 </tbody>
 </table></div>
+<p>설정 탭이 함께 바꾸는 메일·사용률·서버 주소 키는 <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a> 에 있다.</p>
 <p>허용 모델의 기본 목록은 <code>claude-opus-5-5</code>, <code>claude-sonnet-5-5</code>, <code>claude-haiku-5-5</code>, <code>claude-fable-5-1</code> 이다. DB 에 저장한 값이 <span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span>보다 먼저 적용된다(<a class="idref" href="#REQ-AICALL-004">REQ-AICALL-004</a>·005, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>).</p>
 <p><strong>안 될 때</strong> DB 읽기에 실패하면 경고를 남기고 <span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span> 값을 쓴다. 저장 실패는 화면에 알린다. 외부 또는 프록시 접속의 저장·복구는 403 으로 거절한다.</p>
-<p><strong>지킬 것</strong> TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청도 저장할 수 없다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. <span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span>은 수정하지 않는다.</p>
+<p><strong>지킬 것</strong> 로그인 없이 저장하려면 TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청은 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span>을 해야 저장할 수 있다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. <span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span>은 수정하지 않는다.</p>
 </section>
 <section class="card kind-req" id="REQ-AICALL-006">
 <h3><span class="idtag">REQ-AICALL-006</span> Claude 사용량 남은 양 보기</h3>
@@ -8093,16 +8099,17 @@ python scripts/rule_capability_report.py --markdown
 </ol>
 <p><strong>결과</strong> <code>sent</code>(수신자 수, 가린 수신 주소 <code>recipient_masks</code>, 메일 고유 번호 <code>message_id</code>), <code>not_configured</code>, <code>failed</code>(오류 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 로그와 결과에서 가린다.</p>
 <aside class="callout callout-example"><span class="callout-label">예시</span>
-<p>가린 주소는 앞 세 글자만 남긴다: <code>hon***@vieworks.com</code>. 아이디가 세 글자 이하이면 첫 글자만 남긴다.</p>
+<p><span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>는 앞 세 글자만 남긴다: <code>hon***@vieworks.com</code>. 아이디가 세 글자 이하이면 첫 글자만 남긴다.</p>
 </aside>
 <p>예약 점검 메일을 보내면 점검 기록의 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span> 비고에 <code>발송 &lt;한국 시간&gt; · 수신 &lt;가린 주소&gt; · Message-ID &lt;값&gt;</code>을 남긴다. 메일을 받지 못했다는 문의가 오면 이 줄로 발송 여부와 메일 서버 기록을 대조한다. 본문의 구성과 링크 규칙은 <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>이 정한다.</p>
 <p>정기 점검은 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>가 끝날 때까지 <code>RUNNING</code>으로 남긴다. 메일 실패는 점검 기록 보기의 메일 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>에 기록하며, 앞 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>가 성공했어도 실행 결과는 <code>PARTIAL</code>이다. 앞 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>의 실패 결과는 그대로 유지한다.</p>
 </section>
 <section class="card kind-req" id="REQ-MAIL-003">
 <h3><span class="idtag">REQ-MAIL-003</span> 메일 설정 확인·시험 발송</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/test_notification.py</code>, <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>scripts/test_notification.py</code>, <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a>: <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MAIL-001">REQ-MAIL-001</a>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#TEST-MAIL-001">TEST-MAIL-001</a></span></div>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>: 설정 탭의 <code>report</code> 시험 발송이 실제 예약 점검 요약 메일과 같은 구성(상태 띠, 숫자, 확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·사양, 남은 일, 사용량, 점검 정보)으로 나간다. 값은 예시임을 본문에 밝히고 제목은 <code>[QA Agent] [시험] …</code>으로 시작한다.</li>
 <li><span class="hist">2026-10-15 메일 제목·본문 재구성</span> <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>: 설정 화면이 쓸 시험 발송 함수 <code>send_test</code>를 추가했다. 재발송 대기 기록을 건드리지 않는다.</li>
 </ul>
 </details>
@@ -8124,6 +8131,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li><span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 알림 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span> 값(<code>claude_usage_limit</code> 등) 또는 <code>report</code>(예약 점검 요약 예시)다.</li>
 <li><span class="term" title="같은 종류의 알림 메일을 다시 보내지 않는 시간(notifications.email.cooldown_minutes)이다" tabindex="0">재발송 대기 시간</span>을 쓰지도 지우지도 않는다. 실제 알림의 대기 기록에 영향이 없다.</li>
 <li>제목은 <code>[QA Agent] [시험] &lt;알림 이름&gt;</code>이고 본문 첫 줄에 &quot;시험 발송입니다. 실제 오류가 아닙니다.&quot;를 쓴다.</li>
+<li><code>report</code> 는 실제 예약 점검 요약 메일과 같은 구성(상태 띠, 숫자, 확인할 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·사양, 남은 일, 사용량, 점검 정보)으로 만들고 값은 <code>예시</code> 임을 밝힌 가짜 값이다. 제목은 <code>[QA Agent] [시험] …</code>으로 시작한다.</li>
 <li>결과는 <a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>와 같다(<code>status</code>, <code>recipients</code>, <code>recipient_masks</code>, <code>message_id</code>). 알 수 없는 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 보내지 않고 <code>failed</code>를 돌려준다.</li>
 </ul>
 </section>
@@ -8198,7 +8206,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <tr><td><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</span></td><td><code>/manual-review</code></td></tr>
 <tr><td>검증 자료 관리</td><td><code>/knowledge</code></td></tr>
 <tr><td>AI 사용량</td><td><code>/cost-dashboard</code></td></tr>
-<tr><td>AI 분석 설정</td><td><code>/settings/ai</code> (<a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>)</td></tr>
+<tr><td>설정</td><td><code>/settings</code> (<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>)</td></tr>
 <tr><td><span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드</td><td><a class="idref" href="#REQ-WEB-002">REQ-WEB-002</a></td></tr>
 </tbody>
 </table></div>
@@ -8328,7 +8336,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 </details>
 <p><strong>하는 일</strong> 어느 화면에 있든 머리 오른쪽에 같은 메뉴가 같은 순서로 보인다. 지금 보고 있는 기능은 강조해서 보인다.</p>
 <aside class="callout callout-example"><span class="callout-label">예시</span>
-<p><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</span> 화면에서는 <code>QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · AI 분석 설정 · 사용법</code> 이 보이고 <code class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</code> 가 강조된다. <code>사용법</code> 은 <code>/manual-review/guide</code> 로 간다.</p>
+<p><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</span> 화면에서는 <code>QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · 설정 · 사용법</code> 이 보이고 <code class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</code> 가 강조된다. <code>사용법</code> 은 <code>/manual-review/guide</code> 로 간다.</p>
 </aside>
 <p><strong>결과</strong></p>
 <div class="table-wrap"><table class="responsive">
@@ -8340,14 +8348,14 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <tr><td data-label="순서">4</td><td data-label="메뉴"><span class="term" title="연구소가 고친 매뉴얼이 최신 사양서를 제대로 반영했는지 AI 가 먼저 검토하고 QA 가 확정하는 기능이다(/manual-review)" tabindex="0">매뉴얼 개정 검토</span></td><td data-label="주소"><code>/manual-review</code></td><td data-label="허브에서">보인다</td></tr>
 <tr><td data-label="순서">5</td><td data-label="메뉴">검증 자료 관리</td><td data-label="주소"><code>/knowledge</code></td><td data-label="허브에서">보인다</td></tr>
 <tr><td data-label="순서">6</td><td data-label="메뉴">AI 사용량</td><td data-label="주소"><code>/cost-dashboard</code></td><td data-label="허브에서">보인다</td></tr>
-<tr><td data-label="순서">7</td><td data-label="메뉴">AI 분석 설정</td><td data-label="주소"><code>/settings/ai</code></td><td data-label="허브에서">보인다</td></tr>
-<tr><td data-label="순서">8</td><td data-label="메뉴">사용법</td><td data-label="주소">그 기능의 <code>/&lt;기능&gt;/guide</code>. 사용법이 없는 화면(AI 분석 설정)은 빠진다</td><td data-label="허브에서">빠진다</td></tr>
+<tr><td data-label="순서">7</td><td data-label="메뉴">설정</td><td data-label="주소"><code>/settings</code></td><td data-label="허브에서">보인다</td></tr>
+<tr><td data-label="순서">8</td><td data-label="메뉴">사용법</td><td data-label="주소">그 기능의 <code>/&lt;기능&gt;/guide</code>. 사용법이 없는 화면(설정)은 빠진다</td><td data-label="허브에서">빠진다</td></tr>
 </tbody>
 </table></div>
 <p><strong>순서</strong></p>
 <ol>
 <li>메뉴 목록은 <code>app/web/templates/_nav.html</code> 의 <code>top_nav</code> 하나에만 적는다. 메뉴 이름은 <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드 이름과 같다.</li>
-<li>각 화면은 자기 기능 이름(<code>vxvue_chatbot</code>·<code>qa_agent</code>·<code>manual_review</code>·<code>knowledge</code>·<code>cost_dashboard</code>·<code>settings_ai</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>는 <code>home</code>)과 사용법 주소를 넘겨 부른다.</li>
+<li>각 화면은 자기 기능 이름(<code>vxvue_chatbot</code>·<code>qa_agent</code>·<code>manual_review</code>·<code>knowledge</code>·<code>cost_dashboard</code>·<code>settings</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>는 <code>home</code>)과 사용법 주소를 넘겨 부른다.</li>
 <li>넘겨받은 기능의 메뉴에 강조 표시(<code>class=&quot;active&quot;</code>, <code>aria-current=&quot;page&quot;</code>)를 붙인다. 강조는 한 화면에 하나다.</li>
 </ol>
 <p><strong>지킬 것</strong></p>
@@ -8356,6 +8364,91 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li>VXvue AI 챗봇의 대화 화면은 머리 영역을 숨기는 전체 화면이라 상단 메뉴가 없다. 챗봇 사용법 화면에는 있다.</li>
 </ul>
 <p class="why"><span class="why-label">이유</span> 같은 곳으로 가는 버튼(<code>점검 현황</code>과 <code>사양·이슈 변경 점검</code>)과 하위 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.</p>
+</section>
+<section class="card kind-req" id="REQ-WEB-008">
+<h3><span class="idtag">REQ-WEB-008</span> 설정 탭과 관리자 로그인</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>, <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, <a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a></span></div>
+<details class="history"><summary>변경 이력 2</summary>
+<ul>
+<li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>: 상단 메뉴 <code>AI 분석 설정</code>을 <code>설정</code> 탭(<code>/settings</code>)으로 바꿨다. 한 화면에서 관리자 메일, 자동 보고 메일 받는 사람(1~10명), 메일 시험 발송, AI 모델·추론 정도와 5시간·주간 사용률 기준, 메일 링크 서버 주소, 관리자 비밀번호 변경, 변경 이력을 다룬다. <code>/settings/ai</code>는 <code>/settings#ai</code>로 이동한다. 저장 주소는 <code>/settings</code>, <code>/settings/reset</code>이며 자바스크립트 없이 양식으로 저장된다.</li>
+<li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>: 예약 점검 요약 메일의 수신자 읽기 순서를 설정 탭 값(<code>daily_qa.report_recipients</code>) → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code> → 관리자 메일로 바꿨다. 화면과 응답에는 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 보이고, 변경 이력의 주소도 가려서 저장한다. 비밀번호 값은 이력에 남기지 않는다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 운영 담당자가 <code>설정</code> 탭 한 곳에서 메일 수신자, AI 모델, 사용률 기준, 메일 링크의 서버 주소를 화면에서 바꾼다. <span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span>을 고치거나 서버에 들어가지 않아도 된다. 기존 <code>AI 분석 설정</code> 메뉴는 이 탭 안의 <code>AI 모델과 사용률 기준</code> 구획으로 합쳤다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>담당자가 설정 탭에서 비밀번호를 넣고 로그인한 뒤 <code>자동 보고 메일 받는 사람</code>에 동료 주소를 더해 저장한다. 다음 예약 점검 요약 메일부터 동료도 받는다.</p>
+</aside>
+<p><strong>언제</strong> <code>GET /settings</code>. 옛 주소 <code>GET /settings/ai</code> 는 <code>/settings#ai</code> 로 보낸다(303).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td>관리자 로그인</td><td>비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다</td></tr>
+<tr><td>로그인 쿠키(<code>qa_admin</code>)</td><td>로그인했다는 표시. 브라우저가 8시간 들고 있다</td></tr>
+<tr><td>가린 주소</td><td>앞 세 글자만 남긴 메일 주소(<code>hon***@vieworks.com</code>)</td></tr>
+</tbody>
+</table></div>
+<p><strong>입력</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>값</th><th>어디서</th></tr></thead>
+<tbody>
+<tr><td>비밀번호</td><td>로그인 칸. 따로 정한 적이 없으면 <code>1</code> 이다</td></tr>
+<tr><td>설정 값</td><td>각 구획의 입력칸</td></tr>
+<tr><td>시험 발송 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·받을 곳</td><td><code>메일 시험 발송</code> 구획의 고르는 칸</td></tr>
+</tbody>
+</table></div>
+<p><strong>순서</strong></p>
+<ol>
+<li>로그인 전에는 지금 값을 읽기 전용으로 보여 준다. 메일 주소는 가려서 보이고, 비밀번호 한 칸이 있다.</li>
+<li>비밀번호가 맞으면 <span class="term" title="로그인했다는 표시. 브라우저가 8시간 들고 있다" tabindex="0">로그인 쿠키</span>를 주고 <code>/settings</code> 로 돌아간다. 쿠키는 이 사이트 안에서만 보내고 자바스크립트가 읽을 수 없으며 다른 사이트에서 온 요청에는 붙지 않는다(<code>HttpOnly</code>, <code>SameSite=Strict</code>).</li>
+<li>로그인한 뒤에는 아래 구획이 열린다.</li>
+<li>저장하면 값을 검사하고, 하나라도 틀리면 전체를 거절한다. 맞으면 DB 에 저장하고 변경 이력에 남긴 뒤 설정을 다시 읽는다. 다음 AI 호출과 다음 점검 실행부터 새 값을 쓴다.</li>
+</ol>
+<div class="table-wrap"><table>
+<thead><tr><th>구획</th><th>하는 일</th></tr></thead>
+<tbody>
+<tr><td><code>관리자 메일</code></td><td>한도·오류 알림을 받는 관리자 주소 1개</td></tr>
+<tr><td><code>자동 보고 메일 받는 사람</code></td><td>예약 점검 요약 메일을 받는 사람. 쉼표로 나눠 1~10명, 더하거나 지울 수 있다</td></tr>
+<tr><td><code>메일 시험 발송</code></td><td>알림 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>나 예약 점검 요약 예시를 고른 곳에만 시험으로 보낸다(<a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>)</td></tr>
+<tr><td><code>AI 모델과 사용률 기준</code></td><td><span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>별 모델, 추론 정도, 5시간·주간 사용률 기준(%), <code>메일 링크 서버 주소</code></td></tr>
+<tr><td><code>관리자 비밀번호 변경</code></td><td>선택 기능. 바꾸지 않아도 된다</td></tr>
+<tr><td><code>변경 이력</code></td><td>최근 변경 10건. 주소는 가려서, 비밀번호는 값 없이 <code>변경됨</code> 으로 보인다</td></tr>
+</tbody>
+</table></div>
+<p><strong>설정</strong></p>
+<div class="table-wrap"><table class="responsive">
+<thead><tr><th>키</th><th>형식</th><th>기본</th><th>뜻</th></tr></thead>
+<tbody>
+<tr><td data-label="키"><code>notifications.admin_email</code></td><td data-label="형식">메일 주소 1개</td><td data-label="기본"><code>NOTIFY_EMAIL_TO</code> 의 첫 주소</td><td data-label="뜻">한도·오류 알림을 받는 관리자(<a class="idref" href="#REQ-QAINTEL-049">REQ-QAINTEL-049</a>)</td></tr>
+<tr><td data-label="키"><code>daily_qa.report_recipients</code></td><td data-label="형식">쉼표로 나눈 주소 1~10개</td><td data-label="기본">비어 있음</td><td data-label="뜻">예약 점검 요약 메일 받는 사람. 비어 있으면 <code>DAILY_QA_EMAIL_TO</code>, 그다음 <code>NOTIFY_EMAIL_TO</code>, 그다음 관리자 메일 순서로 쓴다</td></tr>
+<tr><td data-label="키"><code>daily_qa.savings.analysis_model</code> / <code>review_model</code></td><td data-label="형식">허용 모델</td><td data-label="기본"><code>claude-sonnet-5-5</code> / <code>claude-opus-5-5</code></td><td data-label="뜻">일반 분석·선택 재검토 모델</td></tr>
+<tr><td data-label="키"><code>daily_qa.usage_guard.five_hour_percent</code> / <code>seven_day_percent</code></td><td data-label="형식">정수 50~100</td><td data-label="기본">80 / 90</td><td data-label="뜻">호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(<a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>)</td></tr>
+<tr><td data-label="키"><code>daily_qa.review_base_url</code></td><td data-label="형식"><code>http://</code> 또는 <code>https://</code> 로 시작하는 주소</td><td data-label="기본">빈 값</td><td data-label="뜻">메일 링크의 서버 주소</td></tr>
+<tr><td data-label="키"><code>admin.password_hash</code></td><td data-label="형식">화면에서 만든 암호화 값</td><td data-label="기본">없음(없으면 비밀번호 <code>1</code>)</td><td data-label="뜻">관리자 비밀번호. 화면과 응답에 보이지 않는다</td></tr>
+</tbody>
+</table></div>
+<p>호출 횟수 상한(<code>daily_qa.savings.per_run</code>·<code>per_day</code>)은 더 이상 읽지 않으므로 설정 탭에 두지 않는다.</p>
+<p><strong>안 될 때</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>경우</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td>비밀번호를 연달아 5번 틀림</td><td>10분 동안 로그인을 받지 않는다. 안내 문구만 보인다</td></tr>
+<tr><td>로그인 없이 저장·시험 발송</td><td>403. 서버에서 직접 접속(SSH 터널 포함)한 경우는 로그인 없이 저장할 수 있다(<a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>)</td></tr>
+<tr><td>값 형식이 틀림</td><td>아무것도 저장하지 않고 이유를 같은 화면에 보인다(422)</td></tr>
+<tr><td>메일 서버 설정이 없음</td><td>시험 발송이 <code>메일 설정이 없어 보내지 않았습니다</code> 로 끝난다</td></tr>
+<tr><td>쿠키가 없거나 만료됨</td><td>로그인 전 화면으로 돌아간다</td></tr>
+</tbody>
+</table></div>
+<p><strong>지킬 것</strong></p>
+<ul>
+<li>설정 조회·저장·시험 발송은 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 를 호출하지 않는다(<a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>).</li>
+<li>화면과 응답에는 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 보인다. 로그인한 관리자 자신의 입력칸에만 원래 주소가 들어간다.</li>
+<li>비밀번호 원문과 암호화 값은 화면·응답·로그·변경 이력 어디에도 내지 않는다(<a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a>). 비밀번호는 PBKDF2-SHA256 600,000회로 저장한다.</li>
+<li>비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다. 처음 비밀번호 <code>1</code> 을 계속 쓰는 것은 사용자가 정한 운영 방식이다.</li>
+<li>자바스크립트가 꺼져도 읽고 저장할 수 있다. 390px·1920px 에서 가로로 넘치지 않는다.</li>
+</ul>
+<aside class="callout callout-warn"><span class="callout-label">주의</span>
+<p>서버는 평문 HTTP 라서 비밀번호가 사내망에서 그대로 전달된다. 사내망 밖에 열기 전에 HTTPS 를 먼저 정한다(<a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>).</p>
+</aside>
 </section>
 <section class="card kind-req" id="REQ-OPS-001">
 <h3><span class="idtag">REQ-OPS-001</span> 운영 상태 점검</h3>
@@ -8903,7 +8996,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-nfr" id="NFR-SEC-002">
 <h3><span class="idtag">NFR-SEC-002</span> 비밀값을 밖으로 내지 않기</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/core/secrets_loader.py</code>, <code>app/core/notifier.py</code>, <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a>: <code>tests/test_secrets_file.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-002">REQ-CONF-002</a>, <a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/core/secrets_loader.py</code>, <code>app/core/notifier.py</code>, <code>scripts/deploy.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a>: <code>tests/test_secrets_file.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-002">REQ-CONF-002</a>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
 <p><strong>하는 일</strong> API Key·<span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>·비밀번호·수신자 주소 값을 로그·화면·보고서·메일·응답 어디에도 내지 않는다.</p>
 <p><strong>순서</strong></p>
 <ol>
@@ -8936,15 +9029,21 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-nfr" id="NFR-SEC-004">
 <h3><span class="idtag">NFR-SEC-004</span> 접속 범위</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>deploy/nginx/qa-platform.conf</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-003">REQ-KNOW-003</a>, <a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>deploy/nginx/qa-platform.conf</code>, <code>app/core/admin_auth.py</code>, <code>app/web/settings_router.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>, <a class="idref" href="#REQ-KNOW-003">REQ-KNOW-003</a>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-15 설정 탭과 관리자 로그인</span> <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a>: 설정 저장·시험 발송은 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span>(<code class="term" title="로그인했다는 표시. 브라우저가 8시간 들고 있다" tabindex="0">qa_admin</code> 쿠키, 8시간, <code>HttpOnly</code>, <code>SameSite=Strict</code>) 또는 서버 직접 접속일 때만 받는다. 비밀번호는 정한 적이 없으면 <code>1</code>이고 PBKDF2-SHA256 600,000회로 저장한다. 5번 틀리면 10분 동안 로그인을 받지 않는다. 비밀번호 변경을 요구하는 배너나 강제 변경은 없다. 평문 HTTP이므로 외부 노출 전에 HTTPS를 먼저 정한다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 핵심 앱은 사내망에서만 접근할 수 있다는 전제로 운영한다.</p>
 <p><strong>결과</strong></p>
 <ul>
-<li>핵심 앱에는 로그인·권한 확인이 없다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·삭제, <span class="term" title="지식 폴더 안의 파일 하나(사양서·매뉴얼·TC·QA 규칙·지침 프롬프트)다" tabindex="0">지식 자산</span> 업로드·확정, <span class="term" title="동기화 한 번의 시작·끝·상태를 적는 DB 표(sync_log)다" tabindex="0">동기화 기록</span> 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.</li>
+<li>설정 탭(<code>/settings</code>)의 저장·시험 발송은 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span>(비밀번호, 8시간 쿠키) 또는 서버 직접 접속일 때만 받는다(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>). 로그인 요청과 저장 요청은 같은 주소에서 온 것만 받는다.</li>
+<li>그 밖의 화면에는 로그인·권한 확인이 없다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·삭제, <span class="term" title="지식 폴더 안의 파일 하나(사양서·매뉴얼·TC·QA 규칙·지침 프롬프트)다" tabindex="0">지식 자산</span> 업로드·확정, <span class="term" title="동기화 한 번의 시작·끝·상태를 적는 DB 표(sync_log)다" tabindex="0">동기화 기록</span> 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.</li>
 <li>평문 HTTP 로 운영한다.</li>
 <li><span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>는 자체 인증·<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 가진다. <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span> 쿠키 범위를 <code>/manual-hub/</code> 로 좁힌다.</li>
 </ul>
-<p><strong>지킬 것</strong> 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(<code>SECURITY.md</code>).</p>
+<p><strong>지킬 것</strong> 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(<code>SECURITY.md</code>). 설정 탭의 비밀번호는 평문 HTTP 로 전달되므로 외부 노출 전에 반드시 HTTPS 를 먼저 정한다.</p>
 </section>
 <section class="card kind-nfr" id="NFR-PRIV-001">
 <h3><span class="idtag">NFR-PRIV-001</span> 외부로 나가는 글 가리기</h3>
@@ -11732,7 +11831,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <ol>
 <li>허용 키·모델·추론 정도만 저장되고 잘못된 묶음은 전체 거절되는지 본다.</li>
 <li><span class="term" title="저장소 루트의 config.yaml. 비밀이 아닌 설정값을 둔다" tabindex="0">설정 파일</span> 기본값·DB 우선 적용·기본값 복구·변경 기록·DB 읽기 실패 시 기본값을 본다.</li>
-<li>외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다.</li>
+<li>로그인 없는 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다. 저장 주소는 <code>/settings</code>, <code>/settings/reset</code> 이다(<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>).</li>
 <li>새 프로세스가 DB 값을 읽고 이미 읽은 설정 객체는 바뀌지 않는지 본다.</li>
 <li>390px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.</li>
 </ol>
@@ -11787,7 +11886,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-test" id="TEST-MAIL-001">
 <h3><span class="idtag">TEST-MAIL-001</span></h3>
-<p><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>의 <code>Message-ID</code>·가린 주소와 <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>의 시험 발송 함수는 <code>tests/test_notifier.py</code>가 확인한다. 명령줄 시험 발송(<code>scripts/test_notification.py</code>)은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 <code>scripts/test_notification.py</code> 를 실행해 상태를 보고 <code>--send</code> 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a> 이 본문 내용을 본다.</p>
+<p><a class="idref" href="#REQ-MAIL-002">REQ-MAIL-002</a>의 <code>Message-ID</code>·<span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>와 <a class="idref" href="#REQ-MAIL-003">REQ-MAIL-003</a>의 시험 발송 함수는 <code>tests/test_notifier.py</code>가 확인한다. 명령줄 시험 발송(<code>scripts/test_notification.py</code>)은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 <code>scripts/test_notification.py</code> 를 실행해 상태를 보고 <code>--send</code> 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a> 이 본문 내용을 본다.</p>
 </section>
 <section class="card kind-test" id="TEST-SCHED-001">
 <h3><span class="idtag">TEST-SCHED-001</span></h3>
@@ -11797,6 +11896,19 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <section class="card kind-test" id="TEST-WEB-001">
 <h3><span class="idtag">TEST-WEB-001</span></h3>
 <p><a class="idref" href="#REQ-WEB-001">REQ-WEB-001</a>, 002, 003, 006, 007 을 <code>tests/test_web.py</code> 로 확인한다: <code>/health</code>, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span> 카드 링크, 설정된 <span class="term" title="핵심 앱과 다른 프로세스·다른 DB 로 도는 별도 배포 단위(services/&lt;이름&gt;/). 예: 매뉴얼 서버" tabindex="0">하위 서비스</span> 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, <code>/guide</code> 308, <span class="term" title="앱 첫 화면(/). 기능 화면으로 가는 카드만 있다" tabindex="0">허브</span>와 기능 화면의 상단 메뉴 순서·강조 표시, 기간별 결과·자동 점검 범위가 상단 메뉴에 없고 점검 현황 화면에서 열림.</p>
+</section>
+<section class="card kind-test" id="TEST-WEB-003">
+<h3><span class="idtag">TEST-WEB-003</span></h3>
+<p><a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>, <a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a> 를 <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code> 로 확인한다.</p>
+<ol>
+<li>처음 비밀번호 <code>1</code> 로 로그인하면 <code class="term" title="로그인했다는 표시. 브라우저가 8시간 들고 있다" tabindex="0">qa_admin</code> 쿠키(<code>HttpOnly</code>, <code>SameSite=Strict</code>)가 붙고, 틀린 비밀번호나 5번 실패 뒤 10분 잠금, 만료·변조 쿠키 거절을 본다.</li>
+<li>로그인 없이 저장·시험 발송·비밀번호 변경이 403 이고, 서버 직접 접속은 로그인 없이 저장되는지 본다.</li>
+<li>허용 키·형식(주소 1~10개, 사용률 50~100, 허용 모델, 서버 주소)만 저장되고 틀린 묶음은 전체 거절되는지 본다.</li>
+<li>수신자 읽기 순서(화면 값 → <code>DAILY_QA_EMAIL_TO</code> → <code>NOTIFY_EMAIL_TO</code>)와 관리자 메일 기본값을 본다.</li>
+<li>화면·응답·변경 이력에 <span class="term" title="앞 세 글자만 남긴 메일 주소(hon@vieworks.com)" tabindex="0">가린 주소</span>만 있고 비밀번호 암호화 값이 없는지, 로그인한 관리자의 입력칸에만 원래 주소가 있는지 본다.</li>
+<li><code>/settings/ai</code> 가 <code>/settings#ai</code> 로 가는지, 상단 메뉴 이름이 <code>설정</code> 인지 본다.</li>
+<li>390px·1920px 브라우저에서 가로 스크롤이 없는지 확인한다.</li>
+</ol>
 </section>
 <section class="card kind-test" id="TEST-WEB-002">
 <h3><span class="idtag">TEST-WEB-002</span></h3>
@@ -12365,7 +12477,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-AICALL-004">REQ-AICALL-004</a></td><td data-label="Implementation"><code>app/core/model_router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-QAAGENT-011">TEST-QAAGENT-011</a>: <code>tests/test_qa_agent_retired.py</code></td><td data-label="Status"><span class="badge st-deprecated">deprecated</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a></td><td data-label="Implementation"><code>app/core/claude_cli.py</code>, <code>app/core/gemini_client.py</code>, <code>app/core/model_router.py</code>, <code>config.yaml</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-AICALL-006">REQ-AICALL-006</a></td><td data-label="Implementation"><code>app/core/claude_usage.py</code>, <code>app/modules/daily_qa/agent_runner.py</code>, <code>app/main.py</code>, <code>app/web/templates/_claude_usage.html</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/static/vxvue-chatbot.js</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-005">TEST-AICALL-005</a>: <code>tests/test_claude_usage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code>, <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a></td><td data-label="Implementation"><code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings_ai.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a></td><td data-label="Implementation"><code>app/core/config.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/core/storage.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/serve.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/run_view.py</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-006">TEST-AICALL-006</a>: <code>tests/test_setting_overrides.py</code>, <code>tests/test_settings_api.py</code>, <code>tests/test_settings_screen.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-001">REQ-USAGE-001</a></td><td data-label="Implementation"><code>app/core/gemini_client.py</code>, <code>app/core/storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-AICALL-001">TEST-AICALL-001</a>: <code>tests/test_gemini_client.py</code>, <code>tests/test_cost_dashboard.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-002">REQ-USAGE-002</a></td><td data-label="Implementation"><code>app/modules/qa_agent/router.py</code>, <code>app/core/storage.py</code>, <code>app/core/usage.py</code>, <code>app/modules/manual_review/router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-001">TEST-USAGE-001</a>: <code>tests/test_persistent_analyses.py</code>, <code>tests/test_cost_dashboard.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-USAGE-003">REQ-USAGE-003</a></td><td data-label="Implementation"><code>app/core/notifier.py</code>, <code>app/core/gemini_client.py</code>, <code>app/core/storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-USAGE-002">TEST-USAGE-002</a>: <code>tests/test_notifier.py</code>, <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -12382,6 +12494,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-005">REQ-WEB-005</a></td><td data-label="Implementation"><code>app/main.py</code>, <code>app/core/storage.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-002">TEST-WEB-002</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-006">REQ-WEB-006</a></td><td data-label="Implementation"><code>app/web/templates/base.html</code>, <code>app/web/static/app.css</code>, <code>app/web/router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a></td><td data-label="Implementation"><code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code>, <code>app/modules/qa_agent/templates/dashboard.html</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></td><td data-label="Implementation"><code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="Implementation"><code>scripts/monitor_health.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a>: <code>tests/test_monitor_health.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="Implementation"><code>scripts/backup_data.py</code>, <code>app/core/retention.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-002">TEST-OPS-002</a>: <code>tests/test_backup.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-003">REQ-OPS-003</a></td><td data-label="Implementation"><code>app/core/logger.py</code>, <code>deploy/systemd/qa-verification.service</code></td><td data-label="Test"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -12395,7 +12508,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></td><td data-label="Implementation"><code>app/core/knowledge_push.py</code>, <code>app/core/knowledge_upload.py</code>, <code>scripts/retry_product_knowledge.py</code>, <code>scripts/install_product_knowledge_schedule.ps1</code>, <code>app/core/knowledge_retry.py</code></td><td data-label="Test"><a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a>: <code>tests/test_knowledge_upload.py</code>, <code>tests/test_knowledge_sync_integrity.py</code>, <code>tests/test_product_knowledge_retry.py</code>, <code>tests/test_product_knowledge_retry_script.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-SEC-002">NFR-SEC-002</a></td><td data-label="Implementation"><code>app/core/config.py</code>, <code>app/core/secrets_loader.py</code>, <code>app/core/notifier.py</code>, <code>scripts/deploy.ps1</code></td><td data-label="Test"><a class="idref" href="#TEST-SEC-002">TEST-SEC-002</a>: <code>tests/test_secrets_file.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-SEC-003">NFR-SEC-003</a></td><td data-label="Implementation"><code>app/core/knowledge_upload.py</code>, <code>app/core/uploads.py</code>, <code>app/modules/knowledge/router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-SEC-003">TEST-SEC-003</a>: <code>tests/test_knowledge_upload.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></td><td data-label="Implementation"><code>deploy/nginx/qa-platform.conf</code></td><td data-label="Test"><a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#NFR-SEC-004">NFR-SEC-004</a></td><td data-label="Implementation"><code>deploy/nginx/qa-platform.conf</code>, <code>app/core/admin_auth.py</code>, <code>app/web/settings_router.py</code></td><td data-label="Test"><a class="idref" href="#TEST-SEC-004">TEST-SEC-004</a>, <a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-PRIV-001">NFR-PRIV-001</a></td><td data-label="Implementation"><code>app/core/security_filter.py</code>, <code>app/core/gemini_client.py</code></td><td data-label="Test"><a class="idref" href="#TEST-PRIV-001">TEST-PRIV-001</a>: <code>tests/test_security_filter.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-PRIV-002">NFR-PRIV-002</a></td><td data-label="Implementation"><code>.gitignore</code></td><td data-label="Test"><a class="idref" href="#TEST-PRIV-002">TEST-PRIV-002</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-OPS-001">NFR-OPS-001</a></td><td data-label="Implementation"><code>app/core/console.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-004">TEST-OPS-004</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -14416,7 +14529,7 @@ AI가 분석한 것
 <p><strong>순서</strong></p>
 <ol>
 <li><code>GET /qa-agent/automation-policy?product=&lt;제품&gt;</code>은 현재 설정을 JSON으로 반환한다. <code>POST /qa-agent/automation-policy</code>는 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>과 두 값을 폼으로 받고 저장 후 해당 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 대시보드로 303 이동한다. 체크하지 않은 값은 거짓이다.</li>
-<li>설정은 공용 DB에 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별로 저장한다. 변경 시각·요청 위치·두 값을 변경 이력에 남긴다. 읽기와 변경 모두 일반 웹 접속을 허용한다. AI 분석 설정의 서버 안에서만 저장하는 제한(<a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>)은 그대로 유지한다.</li>
+<li>설정은 공용 DB에 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별로 저장한다. 변경 시각·요청 위치·두 값을 변경 이력에 남긴다. 읽기와 변경 모두 일반 웹 접속을 허용한다. 설정 탭의 저장 제한(<span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span> 또는 서버 직접 접속, <a class="idref" href="#REQ-AICALL-007">REQ-AICALL-007</a>·<a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a>)은 그대로 유지한다.</li>
 <li>업무일은 한국 시간의 월~금에서 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 공휴일과 추가 휴일을 뺀 날짜다. 주간 모드는 월요일이 쉬는 날이면 같은 주의 다음 업무일에 실행한다. 그 주에 업무일이 없으면 실행하지 않는다.</li>
 <li>다음 실행 시각·놓친 예약 만회·정시 실행이 같은 정책을 사용한다. 주간 만회는 그 주 첫 업무일의 놓친 예약만 당일에 한 번 처리한다. 지난 실행일의 예약은 만회하지 않는다(<a class="idref" href="#REQ-QAINTEL-035">REQ-QAINTEL-035</a>).</li>
 <li>한도(<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간) 뒤 자동 재개는 일일 모드에서만 가능하다(<a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a>·049). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.</li>
@@ -14553,7 +14666,7 @@ AI가 분석한 것
 </section>
 <section class="card kind-req" id="REQ-QAINTEL-042">
 <h3><span class="idtag">REQ-QAINTEL-042</span> 절약 모드와 선택 분석</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/execution_plan.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/dashboard.py</code>, <code>app/modules/qa_agent/templates/dashboard.html</code>, <code>app/modules/qa_agent/templates/select.html</code>, <code>app/web/static/qa-selection.js</code>, <code>app/web/static/qa-run-progress.js</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_execution_plan.py</code>, <code>tests/test_qa_savings_review.py</code>, <code>tests/test_qa_intel_dashboard.py</code>, <code>tests/test_qa_select_page_browser.py</code>, <code>tests/qa_run_progress_ui.cjs</code></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/execution_plan.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/qa_agent/router.py</code>, <code>app/modules/qa_agent/dashboard.py</code>, <code>app/modules/qa_agent/templates/dashboard.html</code>, <code>app/modules/qa_agent/templates/select.html</code>, <code>app/web/static/qa-selection.js</code>, <code>app/web/static/qa-run-progress.js</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_execution_plan.py</code>, <code>tests/test_qa_savings_review.py</code>, <code>tests/test_qa_intel_dashboard.py</code>, <code>tests/test_qa_select_page_browser.py</code>, <code>tests/qa_run_progress_ui.cjs</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></span></div>
 <details class="history"><summary>변경 이력 3</summary>
 <ul>
 <li><span class="hist">2026-10-15 한도 알림과 사용률 기준 호출 제어</span> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>: 절약 모드의 예약 실행이 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>마다 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 1개만 하던 제한을 없앴다. 필요한 분석을 모두 호출하고, 한도가 풀리면 대기분을 자동으로 이어서 분석한다. 상세 분석 화면의 안내는 호출 횟수 대신 멈춤 기준 사용률을 보인다.</li>
@@ -14581,7 +14694,7 @@ AI가 분석한 것
 </section>
 <section class="card kind-req" id="REQ-QAINTEL-043">
 <h3><span class="idtag">REQ-QAINTEL-043</span> 사용률 기준 호출 제어와 모델</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/execution_budget.py</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/core/qa_execution_storage.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_execution_budget.py</code>, <code>tests/test_qa_limit_alert.py</code>, <code>tests/test_qa_model_policy.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>, <a class="idref" href="#REQ-QAINTEL-049">REQ-QAINTEL-049</a></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/execution_budget.py</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/core/qa_execution_storage.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_execution_budget.py</code>, <code>tests/test_qa_limit_alert.py</code>, <code>tests/test_qa_model_policy.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>, <a class="idref" href="#REQ-QAINTEL-049">REQ-QAINTEL-049</a>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></span></div>
 <details class="history"><summary>변경 이력 2</summary>
 <ul>
 <li><span class="hist">2026-10-15 한도 알림과 사용률 기준 호출 제어</span> <a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>: 호출 횟수 상한(<code>daily_qa.savings.per_run</code>·<code>per_day</code>)을 없애고, 호출 직전 실제 사용률로 멈춘다. 5시간 사용률이 <code>daily_qa.usage_guard.five_hour_percent</code>(기본 80) 이상이거나 주간 사용률이 <code>daily_qa.usage_guard.seven_day_percent</code>(기본 90) 이상이면 새 호출을 멈추고 남은 대상을 대기로 둔다. 사용률을 읽지 못하면 막지 않고 메일에 <code>사용률 미확인</code>이라고 쓴다. 이미 초기화된 창의 저장값은 없는 것으로 본다. 한 실행의 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 수 상한 <code>daily_qa.max_tasks_per_run</code>(30)은 그대로다.</li>
@@ -14738,7 +14851,7 @@ AI가 분석한 것
 </section>
 <section class="card kind-req" id="REQ-QAINTEL-049">
 <h3><span class="idtag">REQ-QAINTEL-049</span> 한도 알림과 풀린 뒤 이어 하기</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/notifier.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/automation_policy.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_limit_alert.py</code>, <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>, <a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/notifier.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/modules/daily_qa/automation_policy.py</code>, <code>app/modules/daily_qa/scheduled_jobs.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_limit_alert.py</code>, <code>tests/test_notifier.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-042">REQ-QAINTEL-042</a>, <a class="idref" href="#REQ-QAINTEL-043">REQ-QAINTEL-043</a>, <a class="idref" href="#REQ-QAINTEL-048">REQ-QAINTEL-048</a>, <a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></span></div>
 <details class="history"><summary>변경 이력 2</summary>
 <ul>
 <li><span class="hist">2026-10-15 한도 알림과 사용률 기준 호출 제어</span> <a class="idref" href="#REQ-QAINTEL-049">REQ-QAINTEL-049</a>: 한도(<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간)에 걸리거나 사용률 기준으로 멈추면 관리자(<code>notifications.admin_email</code>, 없으면 <code>NOTIFY_EMAIL_TO</code>의 첫 주소)에게 <code>[QA Agent] &lt;제품&gt; Claude &lt;한도 종류 또는 사용률 N% 도달&gt; · 초기화 &lt;KST 시각&gt;</code> 메일을 한 통 보낸다. 같은 한도 묶음(<code>episode_key</code>)에는 다시 보내지 않고, 보낸 묶음은 <code>notifications</code> 표에 남긴다. 한도가 풀리면 10분마다 도는 <code>qa_agent_limit_catchup</code>이 절약 모드에서도 대기분을 이어서 분석한다.</li>

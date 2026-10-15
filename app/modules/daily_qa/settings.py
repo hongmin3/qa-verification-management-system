@@ -162,6 +162,21 @@ def _split_recipients(raw: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in raw.replace(";", ",").split(",") if part.strip())
 
 
+def report_recipients(settings: Settings | None = None) -> tuple[str, ...]:
+    """예약 점검 요약 메일을 받는 주소 (REQ-WEB-008).
+
+    읽는 순서: 설정 탭 값(`daily_qa.report_recipients`) → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → 관리자 메일.
+    """
+    settings = settings or get_settings()
+    secrets = settings.secrets
+    return (
+        _split_recipients(str(settings.get("daily_qa.report_recipients", "") or ""))
+        or _split_recipients(str(secrets.daily_qa_email_to or ""))
+        or _split_recipients(str(secrets.notify_email_to or ""))
+        or _split_recipients(str(settings.get("notifications.admin_email", "") or ""))
+    )
+
+
 def configured_products(settings: Settings | None = None) -> list[str]:
     """예약·대시보드가 다루는 제품 이름 목록 (`daily_qa.products`, 없으면 `daily_qa.product`)."""
     settings = settings or get_settings()
@@ -207,9 +222,7 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
     weekly_day = str(get("daily_qa.weekly_day", "mon") or "mon").strip().lower()[:3]
     if weekly_day not in WEEKDAYS:
         raise ValueError(f"daily_qa.weekly_day 는 {', '.join(WEEKDAYS)} 중 하나여야 합니다: {weekly_day}")
-    recipients = _split_recipients(str(secrets.daily_qa_email_to or "")) or _split_recipients(
-        str(secrets.notify_email_to or "")
-    )
+    recipients = report_recipients(settings)
     legacy = str(get("daily_qa.product", "VXvue") or "VXvue")
     chosen = product or configured_products(settings)[0]
     fallback = {

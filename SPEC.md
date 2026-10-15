@@ -3730,9 +3730,9 @@ Finding 하나의 필드:
 
 | 값 | 어디서 |
 |---|---|
-| 수신자 | 비밀 설정 `DAILY_QA_EMAIL_TO`. 비어 있으면 `NOTIFY_EMAIL_TO`. 쉼표나 세미콜론으로 여러 명을 적는다 |
+| 수신자 | 설정 탭의 `daily_qa.report_recipients`(REQ-WEB-008). 비어 있으면 비밀 설정 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`. 쉼표나 세미콜론으로 여러 명을 적는다 |
 | 메일 서버 | 기존 알림 메일 설정 |
-| 점검 기록 보기 링크 앞부분 | `daily_qa.review_base_url`. 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
+| 점검 기록 보기 링크 앞부분 | `daily_qa.review_base_url`(설정 탭에서 바꾼다, REQ-WEB-008). 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
 
 **결과**
 
@@ -4508,7 +4508,7 @@ REQ-QAINTEL-019 가 대신한다.
   - 올라온 파일 이름을 경로로 믿지 않기: NFR-SEC-003
 - 동기화: 동기화 기록, 사양서 동기화, 지식 폴더 업로드. REQ-KNOW-016, REQ-SYNC-001, REQ-SYNC-002
 - 예약: 앱 안 예약 실행기와 등록된 예약 작업. REQ-SCHED-001, REQ-SCHED-002
-- 화면 공통: 허브, 하위 서비스 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 접속 범위. REQ-WEB-001 ~ REQ-WEB-007, NFR-SEC-004
+- 화면 공통: 허브, 하위 서비스 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 설정 탭과 관리자 로그인, 접속 범위. REQ-WEB-001 ~ REQ-WEB-008, NFR-SEC-004
 - 운영
   - 운영 점검, 백업, 로그, 지식 폴더 마운트 설정: REQ-OPS-001 ~ REQ-OPS-004
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
@@ -5674,9 +5674,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-007 화면에서 AI 모델·추론 정도 바꾸기
 
-**하는 일** 운영 담당자가 `/settings/ai` 에서 Claude 모델 등급과 추론 정도를 확인하고 바꾼다. 홈과 AI 사용량에서 연결한다.
+**하는 일** 운영 담당자가 설정 탭(`/settings`, REQ-WEB-008)의 `AI 모델과 사용률 기준` 구획에서 Claude 모델 등급과 추론 정도를 확인하고 바꾼다. 옛 주소 `/settings/ai` 는 `/settings#ai` 로 보낸다.
 
-**언제** 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 일반 접속에서는 버튼을 끄고 SSH 터널 사용법을 안내한다.
+**언제** 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 관리자 로그인 또는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 둘 다 아니면 읽기 전용이고 로그인 칸과 SSH 터널 사용법을 안내한다(NFR-SEC-004).
 
 **순서**
 
@@ -5694,12 +5694,15 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `ai.claude.effort` | 빈 값(CLI 기본), `low`, `medium`, `high`, `xhigh`, `max` |
 | `daily_qa.intelligence.audit_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
 | `daily_qa.intelligence.comment_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
+| `daily_qa.savings.analysis_model` / `review_model` | 허용 모델 |
+
+설정 탭이 함께 바꾸는 메일·사용률·서버 주소 키는 REQ-WEB-008 에 있다.
 
 허용 모델의 기본 목록은 `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` 이다. DB 에 저장한 값이 설정 파일보다 먼저 적용된다(REQ-AICALL-004·005, REQ-DAILY-016).
 
 **안 될 때** DB 읽기에 실패하면 경고를 남기고 설정 파일 값을 쓴다. 저장 실패는 화면에 알린다. 외부 또는 프록시 접속의 저장·복구는 403 으로 거절한다.
 
-**지킬 것** TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청도 저장할 수 없다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. 설정 파일은 수정하지 않는다.
+**지킬 것** 로그인 없이 저장하려면 TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청은 관리자 로그인을 해야 저장할 수 있다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. 설정 파일은 수정하지 않는다.
 
 ### REQ-AICALL-006 Claude 사용량 남은 양 보기
 
@@ -5970,6 +5973,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 - 종류는 알림 종류 값(`claude_usage_limit` 등) 또는 `report`(예약 점검 요약 예시)다.
 - 재발송 대기 시간을 쓰지도 지우지도 않는다. 실제 알림의 대기 기록에 영향이 없다.
 - 제목은 `[QA Agent] [시험] <알림 이름>`이고 본문 첫 줄에 "시험 발송입니다. 실제 오류가 아닙니다."를 쓴다.
+- `report` 는 실제 예약 점검 요약 메일과 같은 구성(상태 띠, 숫자, 확인할 이슈·사양, 남은 일, 사용량, 점검 정보)으로 만들고 값은 `예시` 임을 밝힌 가짜 값이다. 제목은 `[QA Agent] [시험] …`으로 시작한다.
 - 결과는 REQ-MAIL-002와 같다(`status`, `recipients`, `recipient_masks`, `message_id`). 알 수 없는 종류는 보내지 않고 `failed`를 돌려준다.
 
 ### REQ-SCHED-001 앱 안 예약 실행기
@@ -6025,7 +6029,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 | 매뉴얼 개정 검토 | `/manual-review` |
 | 검증 자료 관리 | `/knowledge` |
 | AI 사용량 | `/cost-dashboard` |
-| AI 분석 설정 | `/settings/ai` (REQ-AICALL-007) |
+| 설정 | `/settings` (REQ-WEB-008, REQ-AICALL-007) |
 | 하위 서비스 카드 | REQ-WEB-002 |
 
 화면의 메뉴와 버튼은 업무 이름으로 표시한다. URL·데이터 필드·상태 코드·화면 요소 ID는 유지한다. 점검 현황, 기간별 결과, 자동 점검 범위, 등록 자료와 최신 상태, 점검 실행, 변경사항 점검하기, 현재 이슈 전체 점검, 기존 TC 검토, 점검 기록 보기, 검토 항목, 판단 근거로 안내한다.
@@ -6135,7 +6139,7 @@ AI 제공자 상태(`ai_provider`) 항목:
 
 **하는 일** 어느 화면에 있든 머리 오른쪽에 같은 메뉴가 같은 순서로 보인다. 지금 보고 있는 기능은 강조해서 보인다.
 
-> **예시** 매뉴얼 개정 검토 화면에서는 `QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · AI 분석 설정 · 사용법` 이 보이고 `매뉴얼 개정 검토` 가 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
+> **예시** 매뉴얼 개정 검토 화면에서는 `QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · 설정 · 사용법` 이 보이고 `매뉴얼 개정 검토` 가 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
 
 **결과**
 
@@ -6147,13 +6151,13 @@ AI 제공자 상태(`ai_provider`) 항목:
 | 4 | 매뉴얼 개정 검토 | `/manual-review` | 보인다 |
 | 5 | 검증 자료 관리 | `/knowledge` | 보인다 |
 | 6 | AI 사용량 | `/cost-dashboard` | 보인다 |
-| 7 | AI 분석 설정 | `/settings/ai` | 보인다 |
-| 8 | 사용법 | 그 기능의 `/<기능>/guide`. 사용법이 없는 화면(AI 분석 설정)은 빠진다 | 빠진다 |
+| 7 | 설정 | `/settings` | 보인다 |
+| 8 | 사용법 | 그 기능의 `/<기능>/guide`. 사용법이 없는 화면(설정)은 빠진다 | 빠진다 |
 
 **순서**
 
 1. 메뉴 목록은 `app/web/templates/_nav.html` 의 `top_nav` 하나에만 적는다. 메뉴 이름은 허브 카드 이름과 같다.
-2. 각 화면은 자기 기능 이름(`vxvue_chatbot`·`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`·`settings_ai`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
+2. 각 화면은 자기 기능 이름(`vxvue_chatbot`·`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`·`settings`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
 3. 넘겨받은 기능의 메뉴에 강조 표시(`class="active"`, `aria-current="page"`)를 붙인다. 강조는 한 화면에 하나다.
 
 **지킬 것**
@@ -6162,6 +6166,77 @@ AI 제공자 상태(`ai_provider`) 항목:
 - VXvue AI 챗봇의 대화 화면은 머리 영역을 숨기는 전체 화면이라 상단 메뉴가 없다. 챗봇 사용법 화면에는 있다.
 
 이유: 같은 곳으로 가는 버튼(`점검 현황`과 `사양·이슈 변경 점검`)과 하위 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.
+
+### REQ-WEB-008 설정 탭과 관리자 로그인
+
+**하는 일** 운영 담당자가 `설정` 탭 한 곳에서 메일 수신자, AI 모델, 사용률 기준, 메일 링크의 서버 주소를 화면에서 바꾼다. 설정 파일을 고치거나 서버에 들어가지 않아도 된다. 기존 `AI 분석 설정` 메뉴는 이 탭 안의 `AI 모델과 사용률 기준` 구획으로 합쳤다.
+
+> **예시** 담당자가 설정 탭에서 비밀번호를 넣고 로그인한 뒤 `자동 보고 메일 받는 사람`에 동료 주소를 더해 저장한다. 다음 예약 점검 요약 메일부터 동료도 받는다.
+
+**언제** `GET /settings`. 옛 주소 `GET /settings/ai` 는 `/settings#ai` 로 보낸다(303).
+
+| 용어 | 뜻 |
+|---|---|
+| 관리자 로그인 | 비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다 |
+| 로그인 쿠키(`qa_admin`) | 로그인했다는 표시. 브라우저가 8시간 들고 있다 |
+| 가린 주소 | 앞 세 글자만 남긴 메일 주소(`hon***@vieworks.com`) |
+
+**입력**
+
+| 값 | 어디서 |
+|---|---|
+| 비밀번호 | 로그인 칸. 따로 정한 적이 없으면 `1` 이다 |
+| 설정 값 | 각 구획의 입력칸 |
+| 시험 발송 종류·받을 곳 | `메일 시험 발송` 구획의 고르는 칸 |
+
+**순서**
+
+1. 로그인 전에는 지금 값을 읽기 전용으로 보여 준다. 메일 주소는 가려서 보이고, 비밀번호 한 칸이 있다.
+2. 비밀번호가 맞으면 로그인 쿠키를 주고 `/settings` 로 돌아간다. 쿠키는 이 사이트 안에서만 보내고 자바스크립트가 읽을 수 없으며 다른 사이트에서 온 요청에는 붙지 않는다(`HttpOnly`, `SameSite=Strict`).
+3. 로그인한 뒤에는 아래 구획이 열린다.
+4. 저장하면 값을 검사하고, 하나라도 틀리면 전체를 거절한다. 맞으면 DB 에 저장하고 변경 이력에 남긴 뒤 설정을 다시 읽는다. 다음 AI 호출과 다음 점검 실행부터 새 값을 쓴다.
+
+| 구획 | 하는 일 |
+|---|---|
+| `관리자 메일` | 한도·오류 알림을 받는 관리자 주소 1개 |
+| `자동 보고 메일 받는 사람` | 예약 점검 요약 메일을 받는 사람. 쉼표로 나눠 1~10명, 더하거나 지울 수 있다 |
+| `메일 시험 발송` | 알림 종류나 예약 점검 요약 예시를 고른 곳에만 시험으로 보낸다(REQ-MAIL-003) |
+| `AI 모델과 사용률 기준` | 작업별 모델, 추론 정도, 5시간·주간 사용률 기준(%), `메일 링크 서버 주소` |
+| `관리자 비밀번호 변경` | 선택 기능. 바꾸지 않아도 된다 |
+| `변경 이력` | 최근 변경 10건. 주소는 가려서, 비밀번호는 값 없이 `변경됨` 으로 보인다 |
+
+**설정**
+
+| 키 | 형식 | 기본 | 뜻 |
+|---|---|---|---|
+| `notifications.admin_email` | 메일 주소 1개 | `NOTIFY_EMAIL_TO` 의 첫 주소 | 한도·오류 알림을 받는 관리자(REQ-QAINTEL-049) |
+| `daily_qa.report_recipients` | 쉼표로 나눈 주소 1~10개 | 비어 있음 | 예약 점검 요약 메일 받는 사람. 비어 있으면 `DAILY_QA_EMAIL_TO`, 그다음 `NOTIFY_EMAIL_TO`, 그다음 관리자 메일 순서로 쓴다 |
+| `daily_qa.savings.analysis_model` / `review_model` | 허용 모델 | `claude-sonnet-5-5` / `claude-opus-5-5` | 일반 분석·선택 재검토 모델 |
+| `daily_qa.usage_guard.five_hour_percent` / `seven_day_percent` | 정수 50~100 | 80 / 90 | 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(REQ-QAINTEL-043) |
+| `daily_qa.review_base_url` | `http://` 또는 `https://` 로 시작하는 주소 | 빈 값 | 메일 링크의 서버 주소 |
+| `admin.password_hash` | 화면에서 만든 암호화 값 | 없음(없으면 비밀번호 `1`) | 관리자 비밀번호. 화면과 응답에 보이지 않는다 |
+
+호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 더 이상 읽지 않으므로 설정 탭에 두지 않는다.
+
+**안 될 때**
+
+| 경우 | 동작 |
+|---|---|
+| 비밀번호를 연달아 5번 틀림 | 10분 동안 로그인을 받지 않는다. 안내 문구만 보인다 |
+| 로그인 없이 저장·시험 발송 | 403. 서버에서 직접 접속(SSH 터널 포함)한 경우는 로그인 없이 저장할 수 있다(NFR-SEC-004) |
+| 값 형식이 틀림 | 아무것도 저장하지 않고 이유를 같은 화면에 보인다(422) |
+| 메일 서버 설정이 없음 | 시험 발송이 `메일 설정이 없어 보내지 않았습니다` 로 끝난다 |
+| 쿠키가 없거나 만료됨 | 로그인 전 화면으로 돌아간다 |
+
+**지킬 것**
+
+- 설정 조회·저장·시험 발송은 Claude 를 호출하지 않는다(REQ-QAINTEL-042).
+- 화면과 응답에는 가린 주소만 보인다. 로그인한 관리자 자신의 입력칸에만 원래 주소가 들어간다.
+- 비밀번호 원문과 암호화 값은 화면·응답·로그·변경 이력 어디에도 내지 않는다(NFR-SEC-002). 비밀번호는 PBKDF2-SHA256 600,000회로 저장한다.
+- 비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다. 처음 비밀번호 `1` 을 계속 쓰는 것은 사용자가 정한 운영 방식이다.
+- 자바스크립트가 꺼져도 읽고 저장할 수 있다. 390px·1920px 에서 가로로 넘치지 않는다.
+
+> **주의** 서버는 평문 HTTP 라서 비밀번호가 사내망에서 그대로 전달된다. 사내망 밖에 열기 전에 HTTPS 를 먼저 정한다(NFR-SEC-004).
 
 ### REQ-OPS-001 운영 상태 점검
 
@@ -6691,11 +6766,12 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 **결과**
 
-- 핵심 앱에는 로그인·권한 확인이 없다. 문서 등록·삭제, 지식 자산 업로드·확정, 동기화 기록 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.
+- 설정 탭(`/settings`)의 저장·시험 발송은 관리자 로그인(비밀번호, 8시간 쿠키) 또는 서버 직접 접속일 때만 받는다(REQ-WEB-008). 로그인 요청과 저장 요청은 같은 주소에서 온 것만 받는다.
+- 그 밖의 화면에는 로그인·권한 확인이 없다. 문서 등록·삭제, 지식 자산 업로드·확정, 동기화 기록 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.
 - 평문 HTTP 로 운영한다.
 - 매뉴얼 서버는 자체 인증·세션을 가진다. 세션 쿠키 범위를 `/manual-hub/` 로 좁힌다.
 
-**지킬 것** 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(`SECURITY.md`).
+**지킬 것** 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(`SECURITY.md`). 설정 탭의 비밀번호는 평문 HTTP 로 전달되므로 외부 노출 전에 반드시 HTTPS 를 먼저 정한다.
 
 ### NFR-PRIV-001 외부로 나가는 글 가리기
 
@@ -9288,7 +9364,7 @@ REQ-AICALL-007 을 `tests/test_setting_overrides.py`, `tests/test_settings_api.p
 
 1. 허용 키·모델·추론 정도만 저장되고 잘못된 묶음은 전체 거절되는지 본다.
 2. 설정 파일 기본값·DB 우선 적용·기본값 복구·변경 기록·DB 읽기 실패 시 기본값을 본다.
-3. 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다.
+3. 로그인 없는 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다. 저장 주소는 `/settings`, `/settings/reset` 이다(REQ-WEB-008).
 4. 새 프로세스가 DB 값을 읽고 이미 읽은 설정 객체는 바뀌지 않는지 본다.
 5. 390px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.
 
@@ -9349,6 +9425,18 @@ REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/tes
 ### TEST-WEB-001
 
 REQ-WEB-001, 002, 003, 006, 007 을 `tests/test_web.py` 로 확인한다: `/health`, 허브 카드 링크, 설정된 하위 서비스 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, `/guide` 308, 허브와 기능 화면의 상단 메뉴 순서·강조 표시, 기간별 결과·자동 점검 범위가 상단 메뉴에 없고 점검 현황 화면에서 열림.
+
+### TEST-WEB-003
+
+REQ-WEB-008, NFR-SEC-004 를 `tests/test_admin_auth.py`, `tests/test_settings_screen.py`, `tests/test_settings_api.py` 로 확인한다.
+
+1. 처음 비밀번호 `1` 로 로그인하면 `qa_admin` 쿠키(`HttpOnly`, `SameSite=Strict`)가 붙고, 틀린 비밀번호나 5번 실패 뒤 10분 잠금, 만료·변조 쿠키 거절을 본다.
+2. 로그인 없이 저장·시험 발송·비밀번호 변경이 403 이고, 서버 직접 접속은 로그인 없이 저장되는지 본다.
+3. 허용 키·형식(주소 1~10개, 사용률 50~100, 허용 모델, 서버 주소)만 저장되고 틀린 묶음은 전체 거절되는지 본다.
+4. 수신자 읽기 순서(화면 값 → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO`)와 관리자 메일 기본값을 본다.
+5. 화면·응답·변경 이력에 가린 주소만 있고 비밀번호 암호화 값이 없는지, 로그인한 관리자의 입력칸에만 원래 주소가 있는지 본다.
+6. `/settings/ai` 가 `/settings#ai` 로 가는지, 상단 메뉴 이름이 `설정` 인지 본다.
+7. 390px·1920px 브라우저에서 가로 스크롤이 없는지 확인한다.
 
 ### TEST-WEB-002
 
@@ -9892,7 +9980,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/static/vxvue-chatbot.js` | TEST-AICALL-005: `tests/test_claude_usage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py`, `tests/test_vxvue_chat_router.py` | verified |
-| REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
+| REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
@@ -9909,6 +9997,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-WEB-005 | `app/main.py`, `app/core/storage.py` | TEST-WEB-002 | implemented |
 | REQ-WEB-006 | `app/web/templates/base.html`, `app/web/static/app.css`, `app/web/router.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
 | REQ-WEB-007 | `app/web/templates/_nav.html`, `app/web/static/app.css`, `app/modules/qa_agent/templates/dashboard.html` | TEST-WEB-001: `tests/test_web.py` | verified |
+| REQ-WEB-008 | `app/core/admin_auth.py`, `app/core/setting_overrides.py`, `app/web/settings_router.py`, `app/web/templates/settings.html`, `app/web/templates/admin_login.html`, `app/modules/daily_qa/settings.py`, `app/core/notifier.py` | TEST-WEB-003: `tests/test_admin_auth.py`, `tests/test_settings_screen.py`, `tests/test_settings_api.py` | verified |
 | REQ-OPS-001 | `scripts/monitor_health.py` | TEST-OPS-001: `tests/test_monitor_health.py` | implemented |
 | REQ-OPS-002 | `scripts/backup_data.py`, `app/core/retention.py` | TEST-OPS-002: `tests/test_backup.py` | implemented |
 | REQ-OPS-003 | `app/core/logger.py`, `deploy/systemd/qa-verification.service` | TEST-SCHED-001 | implemented |
@@ -9922,7 +10011,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |
-| NFR-SEC-004 | `deploy/nginx/qa-platform.conf` | TEST-SEC-004 | implemented |
+| NFR-SEC-004 | `deploy/nginx/qa-platform.conf`, `app/core/admin_auth.py`, `app/web/settings_router.py` | TEST-SEC-004, TEST-WEB-003: `tests/test_admin_auth.py` | implemented |
 | NFR-PRIV-001 | `app/core/security_filter.py`, `app/core/gemini_client.py` | TEST-PRIV-001: `tests/test_security_filter.py` | implemented |
 | NFR-PRIV-002 | `.gitignore` | TEST-PRIV-002 | implemented |
 | NFR-OPS-001 | `app/core/console.py` | TEST-OPS-004 | implemented |

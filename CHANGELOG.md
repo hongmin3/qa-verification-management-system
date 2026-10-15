@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-10-15 설정 탭과 관리자 로그인
+
+- REQ-WEB-008: 상단 메뉴 `AI 분석 설정`을 `설정` 탭(`/settings`)으로 바꿨다. 한 화면에서 관리자 메일, 자동 보고 메일 받는 사람(1~10명), 메일 시험 발송, AI 모델·추론 정도와 5시간·주간 사용률 기준, 메일 링크 서버 주소, 관리자 비밀번호 변경, 변경 이력을 다룬다. `/settings/ai`는 `/settings#ai`로 이동한다. 저장 주소는 `/settings`, `/settings/reset`이며 자바스크립트 없이 양식으로 저장된다.
+- NFR-SEC-004: 설정 저장·시험 발송은 관리자 로그인(`qa_admin` 쿠키, 8시간, `HttpOnly`, `SameSite=Strict`) 또는 서버 직접 접속일 때만 받는다. 비밀번호는 정한 적이 없으면 `1`이고 PBKDF2-SHA256 600,000회로 저장한다. 5번 틀리면 10분 동안 로그인을 받지 않는다. 비밀번호 변경을 요구하는 배너나 강제 변경은 없다. 평문 HTTP이므로 외부 노출 전에 HTTPS를 먼저 정한다.
+- REQ-WEB-008: 예약 점검 요약 메일의 수신자 읽기 순서를 설정 탭 값(`daily_qa.report_recipients`) → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → 관리자 메일로 바꿨다. 화면과 응답에는 가린 주소만 보이고, 변경 이력의 주소도 가려서 저장한다. 비밀번호 값은 이력에 남기지 않는다.
+- REQ-AICALL-007: 화면에서 바꿀 수 있는 키에 `daily_qa.savings.analysis_model`·`review_model`, `daily_qa.usage_guard.*_percent`, `daily_qa.review_base_url`, `notifications.admin_email`, `daily_qa.report_recipients`를 더했다. 호출 횟수 상한(`per_run`·`per_day`)은 화면에 두지 않는다. 저장 주소가 `/settings/ai`에서 `/settings`로 바뀌었다.
+- REQ-MAIL-003: 설정 탭의 `report` 시험 발송이 실제 예약 점검 요약 메일과 같은 구성(상태 띠, 숫자, 확인할 이슈·사양, 남은 일, 사용량, 점검 정보)으로 나간다. 값은 예시임을 본문에 밝히고 제목은 `[QA Agent] [시험] …`으로 시작한다.
+
 ## 2026-10-15 한도 알림과 사용률 기준 호출 제어
 
 - REQ-QAINTEL-043: 호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)을 없애고, 호출 직전 실제 사용률로 멈춘다. 5시간 사용률이 `daily_qa.usage_guard.five_hour_percent`(기본 80) 이상이거나 주간 사용률이 `daily_qa.usage_guard.seven_day_percent`(기본 90) 이상이면 새 호출을 멈추고 남은 대상을 대기로 둔다. 사용률을 읽지 못하면 막지 않고 메일에 `사용률 미확인`이라고 쓴다. 이미 초기화된 창의 저장값은 없는 것으로 본다. 한 실행의 작업 수 상한 `daily_qa.max_tasks_per_run`(30)은 그대로다.

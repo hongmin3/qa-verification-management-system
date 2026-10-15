@@ -341,3 +341,17 @@ def test_send_test_report_kind_and_unknown_kind(configured) -> None:
     assert configured[0]["Subject"].startswith("[QA Agent] [시험] ")
     unknown = notifier.send_test("nope", ("qa.person@example.test",))
     assert unknown["status"] == "failed" and len(configured) == 1
+
+
+def test_send_test_report_uses_the_real_summary_layout(configured) -> None:
+    """Validates: REQ-MAIL-003 — 예약 점검 요약 시험 메일은 실제 요약 메일과 같은 구성이다."""
+    result = notifier.send_test("report", ("qa.person@example.test",))
+    assert result["status"] == "sent"
+    message = configured[0]
+    assert message["Subject"].startswith("[QA Agent] [시험] ")
+    text = message.get_body(("plain",)).get_content()
+    assert "시험 발송입니다. 실제 오류가 아닙니다." in text and "예시" in text
+    for section in ("[확인할 이슈]", "[확인할 사양]", "[남은 일]", "[이번 예약 실행의 Claude 사용량]", "[점검 정보]"):
+        assert section in text, section
+    assert message.get_body(("html",)) is not None
+    assert "qa.person" not in text
