@@ -191,7 +191,7 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
 
 
 def catchup_due_products(now: datetime | None = None, clear: bool = True) -> list[str]:
-    """일일 모드에서 세션 한도가 풀린 제품. `clear` 면 실행할 차례 기록만 지운다 (REQ-QAINTEL-025·038)."""
+    """일일 모드에서 한도(세션·주간)나 사용률 기준 멈춤이 풀린 제품. `clear` 면 실행할 차례 기록만 지운다 (REQ-QAINTEL-025·038)."""
     from app.modules.daily_qa.pipeline import STATE_CATCHUP_AFTER
     from app.modules.daily_qa.store import DailyQaStore
 

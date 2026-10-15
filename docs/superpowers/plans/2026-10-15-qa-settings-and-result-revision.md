@@ -462,9 +462,9 @@ def test_card_header_emphasizes_reporter_and_update(client):
 **Files:**
 - Modify: `CHANGELOG.md`(ID 앞머리), `progress.md`, `README.md`(설정 탭 사용법 한 줄), `docs/README.md`(이 계획 행), 화면 안 사용법 `/qa-agent/guide`, `docs/SPEC.html`
 
-- [ ] **Step 1:** `node .project-check/render-spec-html.js .`
-- [ ] **Step 2:** 키트 루트에서 `node tools/cleanup-workspace.js --completed <이 작업 폴더> --apply --auto`
-- [ ] **Step 3:** 전체 `pytest`(Task 1 Step 4와 같은 방법) → 실패 0. `node .project-check/project-readiness.js .` → 오류 0
+- [x] **Step 1:** `node .project-check/render-spec-html.js .`
+- [x] **Step 2:** 키트 루트에서 `node tools/cleanup-workspace.js --completed <이 작업 폴더> --apply --auto`
+- [x] **Step 3:** 전체 `pytest`(Task 1 Step 4와 같은 방법) → 실패 0. `node .project-check/project-readiness.js .` → 오류 0
 - [ ] **Step 4: 이 브랜치를 master에 병합·push** — 다른 세션이 같은 파일을 고치는 중이면 push를 미루고 보고한다.
 - [ ] **Step 5: 운영 배포** — 백업 → 파일 복사 → `systemctl restart qa-verification` → `active`·`/health` 200 → 배포 파일 해시 비교 → `/settings`에서 관리자 메일과 보고 수신자를 관리자 주소로, 메일 링크 서버 주소를 `http://10.13.0.222:24357`로 저장 → 운영 `config.local.yaml`을 다시 읽어 `daily_qa.savings.per_run`·`per_day`(10-15 임시값 30·60)가 새 코드에서 아직 쓰이는지, 사용률 기준(80·90)이 적용됐는지 확인하고 결과를 기록(사용자 요청) → 메일 시험 발송 1통(제목 `[QA Agent]`, 사용자 수신 확인 요청) → 운영 화면 1366px·1920px 확인
 - [ ] **Step 6:** 다음 예약 실행(평일 04:00 KST) 뒤 메일 단계 note의 Message-ID와 사용자 수신 여부를 대조해 `progress.md`에 기록

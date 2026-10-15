@@ -1400,7 +1400,7 @@ class _Run:
         self.token_usage["cost_usd"] = round(self.token_usage["cost_usd"] + float((meta or {}).get("total_cost_usd") or 0), 6)
 
     def _hit_limit(self, limit: claude_limits.LimitInfo) -> None:
-        """한도를 기록하고, 세션 한도면 초기화 뒤 한 번 다시 돌도록 적는다 (REQ-QAINTEL-025)."""
+        """한도를 기록하고, 초기화 시각을 알면 그 뒤 이어 하도록 적는다 (REQ-QAINTEL-025·049)."""
         self.limit = limit
         limit.run_id = self.run_id
         self.store.set_state(self.cfg.state_key(STATE_CLAUDE_LIMIT), claude_limits.dump(limit))

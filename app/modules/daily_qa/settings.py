@@ -47,7 +47,7 @@ class IntelligenceSettings:
     issue_drop_ratio: float = 0.5
     event_max_attempts: int = 3
     recent_fixed_days: int = 90
-    #: 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다 (REQ-QAINTEL-025).
+    #: 한도나 사용률 기준으로 멈춘 점검을 초기화 몇 분 뒤에 이어 할지 (REQ-QAINTEL-049).
     catchup_delay_minutes: int = 5
     #: Knowledge 에 등록된 사양서 조각도 검색할지. 끄면 SRS 스냅샷만 검색한다.
     use_knowledge_documents: bool = True
