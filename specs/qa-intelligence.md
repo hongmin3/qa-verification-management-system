@@ -1522,6 +1522,12 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 - `daily_qa.savings.enabled`가 true이면 수동 준비는 AI 없이 수집·대상 확인만 한다. 예약 실행은 REQ-QAINTEL-048에 따라 두 분석을 예산 안에서 수행한다. 기본은 false로 기존 설치를 보존한다.
 - 목적은 `spec`(사양 변경과 검증 범위), `issues`(신규·업데이트 이슈와 QA 대응), `all`(둘 다)이다. 수동 준비 화면은 자동 전체 선택을 하지 않는다.
 - 준비한 대상은 제품·기간·자료/규칙/설정 지문과 함께 저장한다. 생성 30분 경과, 제품 불일치, 자료 변경, 선택 밖 대상은 실행 전에 거절한다.
+- 대상 선택은 `상세 분석` 화면(`/qa-agent/select?product=<제품>`)에서 한다. 점검 화면(`/qa-agent`)에는 준비 버튼과 한 줄 안내만 둔다. 안내는 `준비된 대상 <N>건 · 상세 분석 열기` 또는 `준비 목록 만료 · 다시 준비하세요`이고, 자바스크립트 없이도 보인다. 준비가 끝나면 진행 표시에 `상세 분석 열기` 링크가 나온다. 상단 메뉴에서는 `사양·이슈 변경 점검`이 켜진 채로 둔다.
+- `상세 분석` 화면은 선택 목록, `선택 대상 분석`, `선택 1건 Opus 재검토`, 호출 예산 안내를 보인다. 목록의 각 행은 체크박스(행 왼쪽)·번호·제목·분석 종류·작성자·이슈 업데이트(한국 시간)·분석 이유를 담고, 행 어디를 눌러도 선택된다. 분석 이유는 그 대상을 고른 변경 이벤트 이름(예: `신규 이슈`, `SRS 변경`)이다.
+
+> **예시** 이슈 VP-200 행은 `[ ] VP-200 · 검색 오류 · 수정 완료 이슈 · 홍길동 · 2026-10-14 17:42 (한국 시간) · 연구소 결과 변경`처럼 보인다. 사양 변경 대상은 작성자가 없으므로 작성자 칸을 비운다.
+
+- 준비 후 30분이 지난 목록은 체크박스 없이 `준비 목록 만료 (준비 2026-10-14 17:41 한국 시간) · 다시 준비하세요`로 보이고, 분석 버튼은 누를 수 없다. 서버는 30분이 지난 선택을 지금처럼 거절한다.
 - 선택하지 않은 대상과 예산 때문에 실행하지 못한 대상은 미분석으로 남긴다. 사양·이슈별 저장 자료의 실제 비교 시작일과 종료일, 요청 기간 중 확인하지 못한 범위를 준비 화면·실행 기록·메일에 표시한다. 자료가 부족하면 전체 기간 완료로 표시하지 않는다.
 - 절약 모드에서는 한도 초기화 후 자동 AI 재개와 형식 실패의 자동 AI 재시도를 하지 않는다. 메일은 기존 수신자·주기를 쓰며 미분석·대기를 완료와 구분한다.
 
@@ -1983,7 +1989,7 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-039 | `app/modules/daily_qa/limit_evidence.py`, `app/modules/daily_qa/pipeline.py`, `app/main.py`, `scripts/capture_limit_evidence.py`, `scripts/sync_limit_evidence.ps1` | TEST-QAINTEL-024: `tests/test_limit_evidence.py` | verified |
 | REQ-QAINTEL-040 | `app/modules/daily_qa/input_budget.py`, `app/modules/daily_qa/rule_context.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-QAINTEL-026: `tests/test_qa_input_budget.py` | implemented |
 | REQ-QAINTEL-041 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/web/static/qa-run-preview.js` | TEST-QAINTEL-027: `tests/test_qa_run_preview.py` | implemented |
-| REQ-QAINTEL-042 | `app/modules/daily_qa/execution_plan.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py` | `tests/test_qa_execution_plan.py`, `tests/test_qa_savings_review.py` | implemented |
+| REQ-QAINTEL-042 | `app/modules/daily_qa/execution_plan.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/select.html`, `app/web/static/qa-selection.js`, `app/web/static/qa-run-progress.js` | `tests/test_qa_execution_plan.py`, `tests/test_qa_savings_review.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_select_page_browser.py`, `tests/qa_run_progress_ui.cjs` | implemented |
 | REQ-QAINTEL-043 | `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py` | `tests/test_qa_execution_budget.py`, `tests/test_qa_model_policy.py` | implemented |
 | REQ-QAINTEL-044 | `app/modules/daily_qa/agent_runner.py`, `scripts/measure_qa_usage.py` | `tests/test_qa_usage_measurement.py`, `tests/test_qa_input_budget.py`, `tests/test_qa_savings_review.py` | implemented |
 | REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |

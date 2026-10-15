@@ -96,6 +96,16 @@ class QaExecutionStorageMixin:
                                "THEN excluded.issue_updated_at ELSE qa_issue_reporters.issue_updated_at END",
                                (product, item['id'], item.get('reporter_id') or '', item.get('reporter_name') or '', item.get('updated') or ''))
 
+    def qa_get_reporters(self, product, subjects):
+        """이슈 번호 → 저장된 작성자·업데이트 시각. 없는 번호는 넣지 않는다."""
+        subjects = sorted({subject for subject in subjects if subject})
+        if not subjects:
+            return {}
+        with self.connect() as db:
+            rows = db.execute('SELECT subject,reporter_id,reporter_name,issue_updated_at FROM qa_issue_reporters '
+                              f"WHERE product=? AND subject IN ({','.join('?' * len(subjects))})", (product, *subjects))
+            return {row[0]: {'reporter_id': row[1], 'reporter_name': row[2], 'issue_updated_at': row[3]} for row in rows}
+
     def qa_set_processing(self, finding_id, product, state, actor, note):
         from app.core.daily_qa_storage import now_iso
         if state not in ('open', 'in_progress', 'done', 'hold') or not actor.strip() or len(actor) > 80 or len(note) > 2000:

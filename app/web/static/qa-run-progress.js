@@ -40,6 +40,7 @@ window.QARunProgress = function (product) {
       seen = false; activeId = null;
       step.textContent = abandoned ? '점검이 계속 실행되는지 확인하지 못했습니다. 점검 기록 보기를 확인해 주세요.' : '실행 시작 기록을 확인하지 못했습니다. 상태를 확인한 뒤 다시 눌러 주세요.';
       time.textContent = ''; link.hidden = !last;
+      link.textContent = '점검 기록 보기';
       if (last) link.href = '/qa-agent/runs/' + encodeURIComponent(last.id);
       return;
     }
@@ -58,7 +59,10 @@ window.QARunProgress = function (product) {
       cancellingId = null; cancelMessage.hidden = true;
       step.textContent = last.result || last.status_label;
       elapsed = progress.elapsed_seconds || 0; fetched = Date.now();
-      link.href = '/qa-agent/runs/' + encodeURIComponent(last.id); link.hidden = false;
+      // 대상 준비를 마친 실행은 다음 할 일인 대상 선택 화면으로 안내한다 (REQ-QAINTEL-042).
+      link.textContent = last.prepared_plan ? '상세 분석 열기' : '점검 기록 보기';
+      link.href = last.prepared_plan ? '/qa-agent/select?product=' + encodeURIComponent(product) : '/qa-agent/runs/' + encodeURIComponent(last.id);
+      link.hidden = false;
     }
     time.textContent = panel.hidden ? '' : `지난 시간 ${Math.floor(elapsed / 60)}분 ${elapsed % 60}초`;
   }

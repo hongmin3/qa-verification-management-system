@@ -48,11 +48,8 @@
     {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">점검 기록 보기</a>{% endif %}
   </div>
   {% if workflow.enabled %}
-  <p class="hint" id="run-message">먼저 AI 없이 대상을 확인합니다. 사양 분석은 변경된 사양의 관련 이슈·선택 버전 TC와 검증 누락을 확인합니다. 이슈 분석은 신규·업데이트 이슈와 연구소 의견을 사양·TC와 대조해 QA 대응을 제안합니다. 기존 결과를 먼저 확인하고 새 분석할 대상만 선택하세요.</p>
-  <div id="qa-selection" data-product="{{ selected }}"><p id="qa-selection-status" role="status"></p><div id="qa-selection-targets"></div>
-    <button type="button" id="qa-selected-run" disabled>선택 대상 분석</button>
-    <button type="button" id="qa-selected-review" disabled>선택 1건 Opus 재검토</button>
-  </div>
+  <p class="hint" id="run-message">먼저 AI 없이 대상을 확인합니다. 사양 분석은 변경된 사양의 관련 이슈·선택 버전 TC와 검증 누락을 확인합니다. 이슈 분석은 신규·업데이트 이슈와 연구소 의견을 사양·TC와 대조해 QA 대응을 제안합니다. 준비가 끝나면 상세 분석 화면에서 기존 결과를 먼저 확인하고 새 분석할 대상만 선택하세요.</p>
+  <p class="qa-selection-notice" id="qa-prepared-notice" data-product="{{ selected }}">{% if not prepared %}아직 준비한 대상이 없습니다. 위 버튼으로 먼저 준비하세요.{% elif prepared.expired %}준비 목록 만료 · 다시 준비하세요{% else %}준비된 대상 {{ prepared.targets|length }}건 · <a href="/qa-agent/select?product={{ selected|urlencode }}">상세 분석 열기</a>{% endif %}</p>
   {% else %}
   <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}
   자동 실행은 TC·매뉴얼을 보지 않습니다.
@@ -128,7 +125,7 @@
   </table></div>
 </section>
 
-<script src="/static/qa-selection.js?v=20261014"></script>
+<script src="/static/qa-selection.js?v=20261015"></script>
 <script>
 (function () {
   const button = document.getElementById('run-now');

@@ -58,3 +58,71 @@ def test_prepare_and_selection_execute_only_selected_target(tmp_path):
     assert h.calls and all(target == 'VP-200' for _, targets in h.calls for target in targets)
     assert len(h.calls) == 1  # No automatic retry of an empty response.
     assert any(event['entity_id'] == 'VP-300' and event['analysis_status'] == 'pending' for event in h.events())
+
+
+# -- 상세 분석 화면용 공개 형식 (REQ-QAINTEL-042) -------------------------------------
+
+CREATED = datetime(2026, 10, 14, 8, 41, 15, tzinfo=timezone.utc)
+
+
+class _NoStorage:
+    def qa_save_plan(self, plan):
+        pass
+
+
+def make_plan(created=CREATED, targets=None, issues=None, events=None):
+    """저장소 없이 준비 목록을 만든다. 기본은 작성자·업데이트가 있는 수정 완료 이슈 한 건이다."""
+    if targets is None:
+        targets = [{'key': 'FIXED_ISSUE:VP-200', 'kind': 'FIXED_ISSUE', 'subject': 'VP-200', 'title': '검색 오류',
+                    'state': 'pending', 'source': None}]
+    if issues is None:
+        issues = [{'id': 'VP-200', 'updated': '2026-10-14T08:00:00Z', 'reporter_id': 'u1', 'reporter_name': '홍길동'}]
+    if events is None:
+        events = [{'entity_id': 'VP-200', 'event_type': 'ISSUE_RD_RESULT_CHANGED',
+                   'analysis_required': True, 'analyses': ['FIXED_ISSUE']}]
+    return plans.create(_NoStorage(), 'vxvue', targets, {'events': events, 'srs': [], 'issues': issues},
+                        [], {}, now=created)
+
+
+def test_public_plan_marks_expired_after_30_minutes():
+    plan = make_plan(created=datetime(2026, 10, 14, 8, 41, 15, tzinfo=timezone.utc))
+    assert plans.public(plan, now=datetime(2026, 10, 14, 9, 11, 16, tzinfo=timezone.utc))['expired'] is True
+    assert plans.public(plan, now=datetime(2026, 10, 14, 9, 11, 14, tzinfo=timezone.utc))['expired'] is False
+
+
+def test_public_plan_rows_carry_kind_reporter_and_update():
+    row = plans.public(make_plan(), now=CREATED)['targets'][0]
+    assert row['kind_label'] == '수정 완료 이슈'
+    assert row['issue_updated_kst'] == '2026-10-14 17:00 (한국 시간)'
+    assert row['issue_updated_kst'].endswith('(한국 시간)')
+    assert row['reporter_name'] == '홍길동'
+    assert row['reason'] == '연구소 결과 변경'
+
+
+def test_public_plan_spec_target_has_no_fake_reporter_or_update():
+    plan = make_plan(targets=[{'key': 'SPEC_COVERAGE:VP-10', 'kind': 'SPEC_COVERAGE', 'subject': 'VP-10',
+                               'title': '목록', 'state': 'pending', 'source': None}],
+                     events=[{'entity_id': 'VP-10', 'event_type': 'SRS_UPDATED',
+                              'analysis_required': True, 'analyses': ['SPEC_COVERAGE']}])
+    row = plans.public(plan, now=CREATED)['targets'][0]
+    assert (row['kind_label'], row['reason']) == ('사양 변경', 'SRS 변경')
+    assert row['reporter_name'] == '' and row['issue_updated_kst'] == ''
+
+
+def test_public_plan_reporter_falls_back_to_saved_reporters_then_id():
+    issues = [{'id': 'VP-200', 'updated': '', 'reporter_id': 'u1', 'reporter_name': ''}]
+    plan = make_plan(issues=issues)
+    saved = {'VP-200': {'reporter_id': 'u1', 'reporter_name': '김철수', 'issue_updated_at': '2026-10-14T01:00:00Z'}}
+    row = plans.public(plan, now=CREATED, reporters=saved)['targets'][0]
+    assert row['reporter_name'] == '김철수' and row['issue_updated_kst'] == '2026-10-14 10:00 (한국 시간)'
+    row = plans.public(plan, now=CREATED)['targets'][0]
+    assert row['reporter_name'] == '이름 미확인 (u1)' and row['issue_updated_kst'] == ''
+
+
+def test_public_plan_reason_merges_comment_events_into_fixed_issue():
+    events = [{'entity_id': 'VP-200', 'event_type': 'ISSUE_RD_RESULT_CHANGED', 'analysis_required': True,
+               'analyses': ['FIXED_ISSUE']},
+              {'entity_id': 'VP-200', 'event_type': 'ISSUE_COMMENT_ADDED', 'analysis_required': True,
+               'analyses': ['COMMENT']}]
+    row = plans.public(make_plan(events=events), now=CREATED)['targets'][0]
+    assert row['reason'] == '연구소 결과 변경, 댓글 추가'

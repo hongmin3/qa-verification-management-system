@@ -640,3 +640,72 @@ def test_on_demand_is_refused_for_wrong_analysis_unknown_action_and_while_locked
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     locked = world["client"].post(f"/qa-agent/findings/{spec_id}/tc-check")
     assert locked.status_code == 409 and locked.json()["detail"] == "점검이 이미 실행 중입니다."
+
+
+# -- 상세 분석 화면 (REQ-QAINTEL-042) -------------------------------------------------
+
+
+def _save_plan(world, *, created: datetime, savings: bool = True):
+    """선택 화면에 보일 준비 목록을 저장한다. 외부 서비스는 부르지 않는다."""
+    from dataclasses import replace
+    from app.modules.daily_qa import execution_plan
+    choice = dash.choose("")
+    choice.cfg = replace(choice.cfg, savings_enabled=savings)
+    targets = [{"key": "FIXED_ISSUE:VP-100", "kind": "FIXED_ISSUE", "subject": "VP-100", "title": "목록 오류",
+                "state": "pending", "source": None}]
+    issues = [{"id": "VP-100", "updated": "2026-09-29T09:00:00Z", "reporter_id": "u1", "reporter_name": "홍길동"}]
+    events = [{"entity_id": "VP-100", "event_type": "ISSUE_RD_RESULT_CHANGED", "analysis_required": True,
+               "analyses": ["FIXED_ISSUE"]}]
+    return execution_plan.create(world["store"].storage, choice.cfg.slug, targets,
+                                 {"events": events, "srs": [], "issues": issues}, [], {}, now=created)
+
+
+@pytest.fixture
+def prepared_plan(world):
+    return _save_plan(world, created=datetime.now(timezone.utc))
+
+
+def test_dashboard_has_no_selection_list_only_link(world, prepared_plan):
+    html = world["client"].get("/qa-agent?product=VXvue").text
+    assert 'id="qa-selection-targets"' not in html and 'id="qa-selected-run"' not in html
+    assert "/qa-agent/select?product=VXvue" in html
+    assert "준비된 대상 1건 · 상세 분석 열기" in re.sub(r"<[^>]+>", "", html)
+
+
+def test_dashboard_notice_says_expired_without_link_to_stale_list(world):
+    _save_plan(world, created=datetime.now(timezone.utc) - timedelta(minutes=31))
+    html = world["client"].get("/qa-agent?product=VXvue").text
+    assert "준비 목록 만료 · 다시 준비하세요" in html
+    assert "준비된 대상 1건" not in html
+
+
+def test_select_page_renders_selection_controls(world, prepared_plan):
+    html = world["client"].get("/qa-agent/select?product=VXvue").text
+    assert "상세 분석" in html and 'id="qa-selected-run"' in html and 'id="qa-selected-review"' in html
+    assert 'id="qa-selection-targets"' in html
+    assert 'class="active" aria-current="page">사양·이슈 변경 점검' in html
+
+
+def test_latest_plan_api_marks_expired_and_adds_row_fields(world):
+    _save_plan(world, created=datetime.now(timezone.utc) - timedelta(minutes=31))
+    plan = world["client"].get("/qa-agent/plans/latest?product=VXvue").json()["plan"]
+    assert plan["expired"] is True
+    row = plan["targets"][0]
+    assert (row["kind_label"], row["reporter_name"], row["reason"]) == ("수정 완료 이슈", "홍길동", "연구소 결과 변경")
+    assert row["issue_updated_kst"] == "2026-09-29 18:00 (한국 시간)"
+
+
+def test_select_page_without_savings_mode_explains_and_has_no_controls(world):
+    _save_plan(world, created=datetime.now(timezone.utc), savings=False)
+    html = world["client"].get("/qa-agent/select?product=VXvue").text
+    assert "절약 모드가 꺼져 있어" in html and 'id="qa-selected-run"' not in html
+
+
+def test_latest_plan_api_fills_missing_reporter_from_saved_reporters(world):
+    plan = _save_plan(world, created=datetime.now(timezone.utc))
+    plan["data"]["issues"] = [{"id": "VP-100", "updated": "", "reporter_id": "", "reporter_name": ""}]
+    world["store"].storage.qa_save_plan({**plan, "id": "second-plan", "created_at": datetime.now(timezone.utc).isoformat()})
+    world["store"].storage.qa_save_reporters(plan["product"], [
+        {"id": "VP-100", "reporter_id": "u9", "reporter_name": "김철수", "updated": "2026-09-30T00:00:00Z"}])
+    row = world["client"].get("/qa-agent/plans/latest?product=VXvue").json()["plan"]["targets"][0]
+    assert (row["reporter_name"], row["issue_updated_kst"]) == ("김철수", "2026-09-30 09:00 (한국 시간)")

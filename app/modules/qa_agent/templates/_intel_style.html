@@ -4,7 +4,10 @@
 .qa-reading-tabs a[aria-selected=true]{background:#176c87;color:white}
 [data-qa-panel][hidden]{display:none}
 #processing .qa-actions{display:flex;flex-wrap:wrap;gap:12px}#processing label{max-width:100%}
-.qa-selection-row{padding:10px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere}.qa-selection-row input{width:auto}
+.qa-selection-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere;cursor:pointer}
+.qa-selection-row input{width:auto;flex:0 0 auto;margin-top:4px}.qa-selection-body{flex:1 1 auto;min-width:0}
+.qa-selection-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:2px;color:#5b6b82;font-size:.92em}
+.qa-selection-notice{margin:8px 0}
 .qa-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
 .qa-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;display:grid;gap:6px}
 .qa-card h4{margin:0;font-size:15px}.qa-card h4 small{font-weight:400;color:#5b6b82}

@@ -461,6 +461,9 @@ def status(choice: ProductChoice) -> dict:
         "progress": progress,
         "last_run": {"id": last["id"], "status": last["status"], "status_label": last["status_label"],
                      "started": kst(last["started_at"]), "finished": kst(last.get("finished_at")),
+                     # 대상 준비를 마친 실행이면 진행 표시가 `상세 분석 열기`를 보인다 (REQ-QAINTEL-042).
+                     "prepared_plan": bool(last.get("summary", {}).get("collection_only") and last["summary"].get("plan_id")
+                                           and last["status"] != "RUNNING"),
                      "result": " · ".join(filter(None, (last["status_label"],
                          "메일 발송 실패" if last.get("email_status") == "failed" else "",
                          claude_limits.KIND_LABELS.get(last["summary"]["claude_limit"].get("kind"), "AI 분석 중단")
@@ -471,6 +474,17 @@ def status(choice: ProductChoice) -> dict:
         "issue_audit_remaining": len(store.list_events(product=cfg.slug, statuses=("pending", "failed"),
                                                        event_types=("ISSUE_AUDIT_TARGET",))),
     }
+
+
+def prepared_plan(choice: ProductChoice) -> dict | None:
+    """가장 최근에 준비한 대상 목록(화면용). 없으면 None. AI·외부 서비스를 부르지 않는다 (REQ-QAINTEL-042)."""
+    from app.modules.daily_qa import execution_plan
+    storage = choice.store.storage
+    plan = storage.qa_get_plan(product=choice.cfg.slug)
+    if not plan:
+        return None
+    reporters = storage.qa_get_reporters(choice.cfg.slug, [target.get('subject') for target in plan['targets']])
+    return execution_plan.public(plan, reporters=reporters)
 
 
 def dashboard(choice: ProductChoice, sort: str = 'updated') -> dict:
@@ -495,6 +509,8 @@ def dashboard(choice: ProductChoice, sort: str = 'updated') -> dict:
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
         "automation_policy": automation_policy.get_policy(store, cfg.slug),
         "workflow": workflow_settings.for_choice(choice) if cfg.savings_enabled else {'enabled': False},
+        # 점검 화면에는 건수와 링크만 둔다. 후보 목록은 `상세 분석` 화면에 있다 (REQ-QAINTEL-042).
+        "prepared": prepared_plan(choice) if cfg.savings_enabled else None,
         "automation_history": [{**item, "changed_at": item.get("updated_at", ""),
                                 "label": automation_policy.LABELS["off" if not item.get("enabled", True)
                                                                  else "daily" if item.get("validation_period", True) else "weekly"]}

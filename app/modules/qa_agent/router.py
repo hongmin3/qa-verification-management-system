@@ -195,13 +195,21 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
 
 @router.get('/plans/latest')
 def latest_plan(product: str = ''):
-    from app.modules.daily_qa import execution_plan, execution_budget
+    from app.modules.daily_qa import execution_budget
     from datetime import datetime, timezone
     choice = _choice(product)
-    return JSONResponse({'plan': execution_plan.public(choice.store.storage.qa_get_plan(product=choice.cfg.slug)),
+    return JSONResponse({'plan': dash.prepared_plan(choice),
                          'budget': {**execution_budget.usage(choice.store.storage, datetime.now(timezone.utc)),
                                     'per_run': choice.cfg.savings_per_run, 'per_day': choice.cfg.savings_per_day}},
                         headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/select', response_class=HTMLResponse)
+def select_targets(request: Request, product: str = ''):
+    """`상세 분석`: 준비한 대상을 고르고 분석한다. 목록은 화면 스크립트가 `/plans/latest`에서 읽는다 (REQ-QAINTEL-042)."""
+    choice = _choice(product)
+    return templates.TemplateResponse(request, 'select.html', _dash_context(
+        products=choice.products, selected=choice.cfg.product, enabled=choice.cfg.savings_enabled))
 
 
 @router.post('/plans/{plan_id}/execute')
