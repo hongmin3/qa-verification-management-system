@@ -276,8 +276,7 @@ daily_qa:
   #   comment_fetch_limit: 300     # 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에
   #   comment_min_chars: 15        # 이보다 짧은 댓글은 의미 없는 댓글로 본다
   #   event_max_attempts: 3        # 같은 이벤트 분석이 이 횟수만큼 실패하면 포기(abandoned)
-  #   catchup_max_hours: 12        # 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다
-  #   catchup_delay_minutes: 5
+  #   catchup_delay_minutes: 5     # 한도(세션·주간)·사용률 멈춤의 초기화 몇 분 뒤에 한 번 다시 돈다
   #   use_knowledge_documents: true  # 등록된 사양서 문서 조각도 후보로 찾는다
   #   audit_batch_size: 10         # 현재 상태 점검(REQ-QAINTEL-030) 한 작업의 이슈 수
   #   audit_model: ""              # 현재 상태 점검 모델. 비우면 ai.claude.models.light

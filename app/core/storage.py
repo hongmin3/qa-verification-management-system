@@ -833,6 +833,11 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, QaExecutionStorageMixin):
             )
         return True
 
+    def release_notification(self, kind: str) -> None:
+        """보내지 못한 알림의 선점을 푼다. 한 번도 보낸 적 없는 행만 지워 다음 시도가 다시 선점할 수 있게 한다."""
+        with self.connect() as db:
+            db.execute("DELETE FROM notifications WHERE kind=? AND last_sent_at IS NULL", (kind,))
+
     def mark_notification_sent(self, kind: str) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self.connect() as db:

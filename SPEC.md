@@ -122,7 +122,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
 | 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
 | 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
-| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
+| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 04:00 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
@@ -3362,7 +3362,7 @@ Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 �
 - 예약 기능은 점검을 웹 프로세스 안에서 돌리지 않는다. `scripts/run_daily_qa.py --product <제품>` 을 웹 프로세스와 분리된 별도 프로세스로 띄우고 바로 돌아온다.
 - 별도 프로세스의 화면 출력은 `output/logs/daily_qa.out` 에 이어 쓴다.
 - 예약 시각에 앱이 멈춰 있었어도 1시간 안에 다시 뜨면 그때 한 번 띄운다.
-- 이와 별도로 감시 예약 `qa_agent_limit_catchup` 이 10분마다 깨어나, Claude 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025).
+- 이와 별도로 감시 예약 `qa_agent_limit_catchup` 이 10분마다 깨어나, Claude 한도(세션·주간)가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025·049).
 
 이유: 점검 한 번이 Claude 작업 때문에 수십 분 걸릴 수 있다. 앱이 재시작돼도 진행 중인 점검은 끊기지 않아야 한다.
 
@@ -6006,7 +6006,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 | `sync_vxvue_specification` | `vxvue.yaml` `sync` (평일 03:30). 설정이 없으면 월 07:30 | 사양서 동기화(REQ-SYNC-001)를 자기 자신의 주소로 부른다 | 크롤러 output 폴더 없음, 이미 진행 중 |
 | `sync_product_knowledge_<slug>` | 제품별 `sync` (VXvue 평일 03:30). 없으면 월 07:45 | 지식 폴더 수집·등록(REQ-KNOW-011) | 폴더 경로 없음(등록 안 함), 폴더 접근 불가, 이미 진행 중 |
 | `qa_agent_<slug>` | `daily_qa.schedule` (평일 04:00). 늦게 깨어나도 1시간 안이면 돈다. `daily_qa.products` 의 제품마다 하나 | QA Agent 점검(REQ-QAINTEL-001)을 별도 프로세스로 띄운다 | 공휴일(`daily_qa.schedule.skip_holidays`), `daily_qa.enabled` 꺼짐, Polarion 설정 없음, 그 제품의 다른 실행이 진행 중 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
-| `qa_agent_limit_catchup` | 10분마다 | 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
+| `qa_agent_limit_catchup` | 10분마다 | 한도(세션·주간)가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025·049) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
 
 **지킬 것** 운영 서버에서는 앞의 두 작업이 폴더를 볼 수 없어 늘 건너뛴다. 이 두 작업의 자동 실행은 담당자 PC 의 작업 스케줄러가 맡는다(REQ-SYNC-001, REQ-SYNC-002).
 

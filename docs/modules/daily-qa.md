@@ -170,7 +170,7 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.intelligence.event_max_attempts` | `3` | 같은 이벤트의 분석 실패가 이 횟수면 포기(`abandoned`) |
 | `daily_qa.intelligence.backlog_max_events` | `10` | 한 실행에 올리는 지난 날 대기 이벤트 수. 오늘 이벤트는 상한 없음(REQ-QAINTEL-006 6번) |
 | `daily_qa.intelligence.comment_model` | 빈 값(`ai.claude.models.light`) | 새 댓글 분석 모델. 운영은 `claude-sonnet-5-5` |
-| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 일일 모드에서 세션 한도 초기화 뒤 자동 재개 조건. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
+| `daily_qa.intelligence.catchup_delay_minutes` | `5` | 일일 모드에서 한도(세션·주간)·사용률 멈춤의 초기화 몇 분 뒤에 자동 재개할지. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
 | `daily_qa.intelligence.use_knowledge_documents` | `true` | 등록된 사양서 문서 조각도 후보로 찾는다 |
 
 ## 자동 점검 모드

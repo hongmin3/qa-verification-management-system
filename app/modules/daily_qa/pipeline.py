@@ -1407,17 +1407,18 @@ class _Run:
         logger.warning("qa_agent_claude_limit product=%s kind=%s reset=%s", self.cfg.slug, limit.kind, limit.reset_at or "-")
         if not self.dry_run:
             self.evidence_files = list(capture_limit_evidence(limit, self.cfg) or [])
-        if limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
+        if limit.reset_at:
             self._schedule_catchup(datetime.fromisoformat(limit.reset_at))
 
     def _schedule_catchup(self, reset: datetime) -> None:
-        """한도가 풀린 뒤 대기분을 이어 하도록 시각을 적는다(절약 모드도 같다, REQ-QAINTEL-049). 너무 먼 초기화는 적지 않는다."""
-        intel = self.cfg.intelligence
+        """한도가 풀린 뒤 대기분을 이어 하도록 시각(초기화 + 지연 분)을 적는다. 모든 멈춤에 적고 기간 제한은 없다(REQ-QAINTEL-049).
+
+        이어 하기 실행이 돌 대기분이 없으면 AI 호출은 0회다.
+        """
         if reset.tzinfo is None:
             reset = reset.replace(tzinfo=timezone.utc)
-        if reset - self.today.astimezone(timezone.utc) <= timedelta(hours=intel.catchup_max_hours):
-            after = reset + timedelta(minutes=intel.catchup_delay_minutes)
-            self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
+        after = reset + timedelta(minutes=self.cfg.intelligence.catchup_delay_minutes)
+        self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
 
     def _usage_now(self) -> dict:
         """호출 직전의 최신 사용률. 이번 실행의 마지막 호출이 돌려준 값을 먼저 쓰고, 없으면 실행 전 저장값을 쓴다."""

@@ -267,3 +267,64 @@ def test_workflow_email_subject_names_limit():
     subject, text, _ = build_email('20261015-040000-vxvue', '일부 실패', {}, stopped, 'https://qa.example/qa-agent/runs/x', '', 'VXvue')
     assert subject.startswith('[QA Agent] VXvue ') and subject.endswith('사용률 80% 도달')
     assert '사용률 80% 도달' in text
+
+
+# --- 수정 1차: 발송 실패 뒤 재시도, 모든 멈춤에 이어 하기 -------------------------------------
+
+def test_failed_send_releases_the_episode_so_the_next_stop_retries(tmp_path, usage_file, fake_smtp, monkeypatch):
+    state = {'fail': True}
+
+    def flaky(config, message):
+        if state['fail']:
+            raise OSError('smtp down')
+        fake_smtp.sent.append(message)
+    monkeypatch.setattr(notifier, '_send', flaky)
+    h = make_world(tmp_path, 3)
+    run_pipeline_hitting_limit(h, KIND_SESSION)
+    assert fake_smtp.sent == []                      # 첫 발송 실패
+    state['fail'] = False
+    h.store.set_state(h.cfg.state_key(STATE_CLAUDE_LIMIT), '')
+    h.issues.append(issue_item('VP-398', '2026-09-30', ['VP-10']))
+    h.run(DAY2 + timedelta(seconds=7), trigger='scheduled', rules_state=h.rules, runner=limit_runner(KIND_SESSION, DAY2 + timedelta(hours=2)))
+    assert [m['To'] for m in fake_smtp.sent] == ['admin@example.test']      # 같은 묶음의 다음 멈춤이 정확히 한 통 보낸다
+    h.store.set_state(h.cfg.state_key(STATE_CLAUDE_LIMIT), '')
+    h.issues.append(issue_item('VP-397', '2026-09-30', ['VP-10']))
+    h.run(DAY2 + timedelta(seconds=9), trigger='scheduled', rules_state=h.rules, runner=limit_runner(KIND_SESSION, DAY2 + timedelta(hours=2)))
+    assert len(fake_smtp.sent) == 1                  # 보낸 뒤에는 다시 보내지 않는다
+
+
+def test_notify_failure_releases_claim_but_success_keeps_it(tmp_path, monkeypatch):
+    from app.core.storage import Storage
+    sent, state = [], {'fail': True}
+
+    def flaky(config, message):
+        if state['fail']:
+            raise OSError('smtp down')
+        sent.append(message)
+    monkeypatch.setattr(notifier, 'load_email_settings', lambda: notifier.EmailSettings(
+        host='smtp.example.test', port=25, use_tls=True, sender='bot@example.test', recipients=('ops@example.test',),
+        username='', password='', cooldown_minutes=180, enabled=True))
+    monkeypatch.setattr(notifier, '_send', flaky)
+    storage = Storage(tmp_path / 'n.db')
+    call = lambda: notifier.notify(notifier.KIND_CLAUDE_USAGE_LIMIT, '본문', storage=storage, recipients=('admin@example.test',), dedupe_key='WEEKLY:x')
+    assert call()['status'] == 'failed'
+    state['fail'] = False
+    assert call()['status'] == 'sent'
+    assert call()['status'] == 'skipped_cooldown' and len(sent) == 1
+
+
+def test_weekly_hard_limit_records_catchup_at_reset_plus_five_minutes(tmp_path, usage_file, fake_smtp):
+    h = make_world(tmp_path, 2)
+    reset = DAY2 + timedelta(days=3)
+    h.run(DAY2, trigger='scheduled', rules_state=h.rules, runner=limit_runner(KIND_WEEKLY, reset))
+    assert h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER)) == (reset + timedelta(minutes=5)).isoformat(timespec='seconds')
+
+
+def test_weekly_utilization_stop_with_reset_three_days_away_records_catchup(tmp_path, usage_file, fake_smtp):
+    h = make_world(tmp_path, 2)
+    reset_kst = (DAY2 + timedelta(days=3)).astimezone(claude_usage.KST).strftime('%Y-%m-%d %H:%M')
+    usage_file.write_text(json.dumps({'windows': {'seven_day': {'used_percent': 90.0, 'resets_at': reset_kst}}}), encoding='utf-8')
+    run_pipeline(h)
+    assert len(h.calls) == 0
+    expected = (DAY2 + timedelta(days=3, minutes=5)).replace(second=0, microsecond=0).isoformat(timespec='seconds')
+    assert h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER)) == expected

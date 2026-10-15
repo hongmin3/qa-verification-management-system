@@ -48,7 +48,6 @@ class IntelligenceSettings:
     event_max_attempts: int = 3
     recent_fixed_days: int = 90
     #: 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다 (REQ-QAINTEL-025).
-    catchup_max_hours: int = 12
     catchup_delay_minutes: int = 5
     #: Knowledge 에 등록된 사양서 조각도 검색할지. 끄면 SRS 스냅샷만 검색한다.
     use_knowledge_documents: bool = True

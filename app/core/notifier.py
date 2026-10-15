@@ -276,7 +276,16 @@ def notify(kind: str, detail: str, context: dict | None = None, storage: Storage
             result["status"] = "skipped_cooldown"
             return result
         message = _build_message(config, kind, detail, context, subject, once=bool(dedupe_key))
-        _send(config, message)
+        try:
+            _send(config, message)
+        except BaseException:
+            if dedupe_key:
+                # 한 번만 보내는 알림은 못 보냈으면 선점을 풀어, 같은 묶음의 다음 멈춤이 다시 시도하게 한다.
+                try:
+                    storage.release_notification(claim)
+                except Exception:  # noqa: BLE001
+                    logger.warning("notification_release_failed kind=%s", kind)
+            raise
         storage.mark_notification_sent(claim)
         result["status"] = "sent"
         result["recipients"] = len(config.recipients)
