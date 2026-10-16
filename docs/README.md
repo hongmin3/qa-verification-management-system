@@ -99,7 +99,7 @@
 | [CONTEXT_ENGINEERING.md](CONTEXT_ENGINEERING.md) | 저장소 관리 기준과 Akela — 작업별 지식 주입으로 컨텍스트 토큰 절감 |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 로컬 설치부터 서버 배포, 실행 중인 작업 차단·재시작, 하위 서비스 통합, 한도 증거·PC 예약 확인까지 |
 | [SERVERS.md](SERVERS.md) | 운영 서버에 떠 있는 3개 서버 프로그램(핵심 앱/Manual Hub/nginx)이 각각 무엇을 하는지, 필수 명령 |
-| [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업, 상태 모니터링 |
+| [OPERATIONS.md](OPERATIONS.md) | 작업 복구, 백업과 보관 기간(배포 전 백업 이름 규칙), 상태 모니터링 |
 | [EVALUATION.md](EVALUATION.md) | Regression 추천 평가 종료와 과거 데이터 보관 안내 |
 | [AUTOMATION.md](AUTOMATION.md) | 진행 상태 SSE, 사양서·지식 폴더 자동 동기화(PC 예약 작업), 하루 실행 순서, 보고서 구조 |
 | [SRS 수집 통합 설계](superpowers/specs/2026-10-13-srs-collection-design.md) · [실행 계획](superpowers/plans/2026-10-13-srs-collection.md) | ALM 수집기의 핵심 앱 통합 범위, PDF 접근 권한·최종 배포 검증, 실패 복구와 운영 전환 |

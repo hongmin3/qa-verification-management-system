@@ -61,7 +61,8 @@ services:
 # 오래된 파일 자동 정리 (app/core/retention.py). scripts/backup_data.py 가 새 백업을 검증한 뒤 실행한다.
 # 값은 보관 일수이고 0 이면 그 종류는 지우지 않는다. 일일 QA 스냅샷(data/daily_qa/snapshots/)은 지우지 않는다.
 retention:
-  backup_days: 30                   # 백업 ZIP. 가장 새 백업 하나는 날짜와 관계없이 남긴다.
+  backup_days: 7                    # 백업 ZIP. 가장 새 백업 하나는 날짜와 관계없이 남긴다.
+  deploy_backup_days: 14            # 배포 전 백업(backups/deploy-<이름>-<UTC 시각>). 가장 새 것 하나는 남긴다.
   ai_cache_days: 180                # AI 응답 저장본(ai_cache). 지워도 같은 요청이 오면 다시 부른다.
   daily_qa_run_days: 365            # 일일 QA 실행 폴더(output/daily_qa/<실행 번호>/)
   daily_qa_workspace_run_days: 30   # 일일 QA 작업 폴더의 실행 입력(<작업 폴더>/runs/<실행 번호>/)

@@ -5283,7 +5283,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `analysis.max_concurrent_jobs` | `2` | 동시에 돌 수 있는 분석 수(REQ-STORE-003) |
 | `analysis.job_timeout_minutes` | `30` | 멈춘 작업으로 보는 시간 |
 | `analysis.max_retries` / `retry_min_seconds` / `retry_max_seconds` | `3` / `1` / `10` | 네트워크 오류 재시도 횟수와 대기 시간(REQ-AICALL-003) |
-| `retention.backup_days` | `30` | 백업 ZIP 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
+| `retention.backup_days` | `7` | 백업 ZIP 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
+| `retention.deploy_backup_days` | `14` | 배포 전 백업 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
 | `retention.ai_cache_days` | `180` | AI 응답 저장본 보관 일수(REQ-AICALL-002) |
 | `retention.daily_qa_run_days` | `365` | 일일 QA 실행 폴더 보관 일수(NFR-DAILY-002) |
 | `retention.daily_qa_workspace_run_days` | `30` | 일일 QA 작업 폴더의 실행 입력 보관 일수(NFR-DAILY-002) |
@@ -6308,11 +6309,15 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 | 대상 | 이름 형식 | 설정 키 | 기본 |
 |---|---|---|---|
-| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 30일. 가장 새 백업 하나는 날짜와 관계없이 남긴다 |
+| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 7일. 가장 새 백업 하나는 날짜와 관계없이 남긴다 |
+| 배포 전 백업 | `deploy-<이름>-YYYYMMDDTHHMMSSZ` 폴더, 또는 같은 이름에 `.tgz`·`.tar`·`.tar.gz`·`.zip` 을 붙인 파일 | `retention.deploy_backup_days` | 14일. 가장 새 배포 전 백업 하나는 날짜와 관계없이 남긴다 |
 | AI 응답 저장본 | `ai_cache` 의 만든 시각(`created_at`) | `retention.ai_cache_days` | 180일 |
 | 일일 QA 실행 폴더 | `output/daily_qa/YYYYMMDD-HHMMSS/` | `retention.daily_qa_run_days` | 365일 |
 | 일일 QA 작업 폴더의 실행 입력 | `<작업 폴더>/runs/YYYYMMDD-HHMMSS/` | `retention.daily_qa_workspace_run_days` | 30일 |
 
+> **예시** 백업 ZIP 하나가 약 900MB 이면 7일 보관으로 백업 폴더는 7GB 안팎에서 더 늘지 않는다. 30일 보관일 때는 27GB 까지 늘었다.
+
+- 백업 ZIP 과 배포 전 백업은 둘 다 백업 폴더(`--destination`, 운영 서버는 앱 폴더의 `backups/`) 안에서만 찾는다.
 - 보관 일수가 0 이면 그 종류는 지우지 않는다.
 - 이름 형식이 맞지 않는 파일·폴더는 날짜와 관계없이 건드리지 않는다.
 - 일일 QA 스냅샷은 지우지 않는다.
@@ -6334,6 +6339,11 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
   이유: 지식 사본은 원본이 담당자 PC 지식 폴더에 있어 다시 올리면 된다.
 
 - 작업 폴더의 실행 입력은 백업을 돌리는 컴퓨터의 작업 폴더만 정리한다. 일일 QA 를 다른 컴퓨터에서 돌리면 그 컴퓨터에서는 지워지지 않는다.
+- 배포하기 전에 서버의 코드·설정·DB 를 따로 백업할 때는 앱 폴더의 `backups/` 안에 `deploy-<이름>-<UTC 시각>` 이름으로 만든다. 예: `backups/deploy-chatbot-20261013T083709Z/`, `backups/deploy-config-20261013T053607Z.tgz`.
+
+  이유: 이름 형식이 다르거나 앱 폴더 밖(홈 폴더 등)에 둔 백업은 자동으로 지워지지 않아 계속 쌓인다. 앱 폴더 밖은 같은 서버의 다른 서비스 영역이기도 하다.
+
+- 같은 날 백업 ZIP 을 손으로 여러 번 만들어도 따로 지우지 않는다. 보관 일수가 지나면 함께 지워진다.
 
 ### REQ-OPS-003 앱 로그
 
@@ -9450,7 +9460,9 @@ REQ-OPS-001 을 `tests/test_monitor_health.py` 로 확인한다: 모두 정상�
 
 ### TEST-OPS-002
 
-REQ-OPS-002 를 `tests/test_backup.py` 로 확인한다: 임시 루트에서 백업 후 확인이 `ok`(`test_backup_round_trip_verifies_sqlite_and_manifest`), 일일 QA 스냅샷은 넣고 지식 사본은 빼기, 보관 일수가 지난 백업·실행 폴더·AI 응답 저장본 지우기(가장 새 백업은 남김), 보관 일수를 설정에서 읽기, 확인 뒤에만 지우기.
+REQ-OPS-002 를 `tests/test_backup.py` 로 확인한다: 임시 루트에서 백업 후 확인이 `ok`(`test_backup_round_trip_verifies_sqlite_and_manifest`), 일일 QA 스냅샷은 넣고 지식 사본은 빼기, 확인 뒤에만 지우기.
+
+보관 정리는 같은 파일에서 확인한다: 보관 일수가 지난 백업·실행 폴더·AI 응답 저장본 지우기(가장 새 백업은 남김), 보관 일수가 지난 배포 전 백업 폴더·묶음 파일 지우기(가장 새 것은 남기고 이름 형식이 다른 것은 두기), 보관 일수를 설정에서 읽기, 실제 설정의 보관 일수(백업 7일·배포 전 백업 14일).
 
 ### TEST-OPS-003
 
@@ -10222,6 +10234,11 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - 백업 범위: 일일 QA 스냅샷은 넣고 지식 사본은 뺀다(REQ-OPS-002).
 - 오래된 백업 지우기: ① `retention.backup_days`(기본 30일)가 지난 것을 지운다. 가장 새 백업 하나는 남긴다(REQ-OPS-002).
 - AI 응답 저장본(`ai_cache`)의 보관 기간: 180일(`retention.ai_cache_days`, REQ-AICALL-002).
+
+**결정됨 (2026-10-16)**
+
+- 백업 ZIP 보관 기간을 30일에서 7일로 줄였다. 백업 ZIP 이 하루 900MB 안팎으로 커져 30일이면 27GB 가 쌓였다(REQ-OPS-002).
+- 배포 전 백업은 `backups/deploy-<이름>-<UTC 시각>` 으로 만들고 14일 뒤 지운다(`retention.deploy_backup_days`, REQ-OPS-002).
 
 ### 13.6 하위 서비스 QA Manual Hub
 
