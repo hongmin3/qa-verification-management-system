@@ -287,9 +287,14 @@ def normalize_issue(item: dict[str, Any], profile: ProductProfile) -> dict[str, 
     linked = _relationship_ids(relationships, relations.get("linked_items", "")) or []
     comment_ids = _relationship_ids(relationships, relations.get("comments", ""))
     authors = _relationship_ids(relationships, 'author') or []
+    assignee_ids = sorted(_short(value) for value in _relationship_ids(relationships, relations.get("assignees", "assignee")) or [])
+    known_names = item.get('_user_names') or {}
+    user_names = {uid: str(known_names[uid]) for uid in [*(_short(a) for a in authors), *assignee_ids] if known_names.get(uid)}
     return {
         "reporter_id": _short(authors[0]) if authors else '',
         "reporter_name": str(item.get('_reporter_name') or ''),
+        "assignees": assignee_ids,
+        "user_names": user_names,
         "id": str(_first(attrs, fields.get("id", ("id",))) or _short(str(item.get("id") or ""))),
         "title": str(_first(attrs, fields.get("title", ())) or ""),
         "status": _enum_text(_first(attrs, fields.get("status", ()))),
