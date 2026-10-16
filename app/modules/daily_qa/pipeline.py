@@ -441,6 +441,7 @@ class _Run:
         self.collection_only = (cfg.savings_enabled and trigger == 'prepare' and not on_demand) or trigger == 'collect'
         #: 수집만 하는 실행(REQ-ALMCHG-001)이 AI 분석을 하지 않는 까닭. 분석 실행이면 빈 값.
         self.collect_reason = ''
+        self.deferred_events = 0
         if trigger == 'collect':
             self.collect_reason = 'policy_off' if automation_policy.get_policy(store, cfg.slug)['mode'] == 'off' else 'weekly_not_due'
         if analysis_scope not in ('all', 'spec', 'issues'):
@@ -838,6 +839,7 @@ class _Run:
             self.detected_events.extend(kind_events)
             stored[kind] = len(ids)
             self.stored_event_ids.extend(ids)
+            self._defer_while_off(rows)
             # 이미 있던 이벤트(같은 기준으로 다시 돈 실행, 기간 실행이 이미 아는 끝 상태)는 새 이벤트로 세지 않는다.
             self.new_events.extend(event for event, row in zip(kind_events, rows) if row.get("id"))
         if not self.dry_run:
@@ -856,6 +858,15 @@ class _Run:
                                        stored=sum(stored.values()), detected=len(self.detected_events),
                                        **{f"type_{key}": value for key, value in by_type.items()})
         self.audit["events"] = by_type
+
+    def _defer_while_off(self, rows) -> None:
+        """자동 분석이 꺼진 동안 자동 실행이 저장한 새 이벤트는 밀린 변경으로 둔다 (REQ-ALMCHG-005)."""
+        if self.trigger not in ("scheduled", "collect") or automation_policy.get_policy(self.store, self.cfg.slug)["mode"] != "off":
+            return
+        deferred = [row["id"] for row in rows if row.get("id") and row.get("analysis_required")]
+        if deferred:
+            self.store.update_events(deferred, "deferred")
+            self.deferred_events += len(deferred)
 
     def _import_legacy_pending(self) -> None:
         """개편 전에 미뤄 둔 사양 변경(`spec_change_pending`)을 대기 이벤트로 바꾼다 (REQ-QAINTEL-006 참고)."""
@@ -1666,6 +1677,7 @@ class _Run:
         summary["collection_only"] = self.collection_only
         summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
         summary["collect_reason"] = self.collect_reason
+        summary["deferred_events"] = self.deferred_events
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary['plan_id'] = self.plan_id
         summary['prepared_targets'] = self.targets_found if self.collection_only else None
@@ -1748,6 +1760,7 @@ class _Run:
         summary["collection_only"] = self.collection_only
         summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
         summary["collect_reason"] = self.collect_reason
+        summary["deferred_events"] = self.deferred_events
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary["rules"] = self.rules_state.as_dict()
         summary["product"] = self.cfg.slug

@@ -42,6 +42,7 @@ RUN_STATUSES = {
 EVENT_STATUSES = {
     "not_required": "분석 필요 없음",
     "pending": "분석 대기",
+    "deferred": "밀린 변경",
     "done": "분석 완료",
     "failed": "분석 실패(다시 시도)",
     "abandoned": "분석 포기",
