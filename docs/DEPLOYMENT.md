@@ -217,6 +217,7 @@ systemctl show qa-verification -p Restart -p RestartUSec
 ## 7. 업데이트 배포 체크리스트
 
 1. 로컬에서 코드 수정 후 `pytest` 통과 확인
+   - 배포 전에 서버 파일을 따로 백업한다면 앱 폴더의 `backups/deploy-<이름>-<UTC 시각>` 으로 만든다. 14일 뒤 자동으로 지워진다([운영 문서](OPERATIONS.md#오래된-백업-자동-정리), REQ-OPS-002). 홈 폴더에 두지 않는다.
 2. `.\scripts\deploy.ps1 -Restart` — 파일 전송, `pip install`, 재기동, 헬스체크를 한 번에 수행한다
    (재기동을 미루고 싶으면 `-Restart` 없이 실행 후 §4-3 마지막 명령으로 나중에 재기동)
 3. 서버에서 `pytest` 재확인

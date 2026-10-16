@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="f82a03b123e15668e15116c194db523ae1fd4a40c36cc004390f210e396f49d3">
+<meta name="spec-source-sha256" content="170ac91cc232082bea9af472e8bab8de3003cd0f1cec599768fb169e9c3d535f">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -7352,7 +7352,8 @@ python scripts/rule_capability_report.py --markdown
 <tr><td><code>analysis.max_concurrent_jobs</code></td><td><code>2</code></td><td>동시에 돌 수 있는 분석 수(<a class="idref" href="#REQ-STORE-003">REQ-STORE-003</a>)</td></tr>
 <tr><td><code>analysis.job_timeout_minutes</code></td><td><code>30</code></td><td><span class="term" title="RUNNING 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다" tabindex="0">멈춘 작업</span>으로 보는 시간</td></tr>
 <tr><td><code>analysis.max_retries</code> / <code>retry_min_seconds</code> / <code>retry_max_seconds</code></td><td><code>3</code> / <code>1</code> / <code>10</code></td><td>네트워크 오류 재시도 횟수와 대기 시간(<a class="idref" href="#REQ-AICALL-003">REQ-AICALL-003</a>)</td></tr>
-<tr><td><code>retention.backup_days</code></td><td><code>30</code></td><td>백업 ZIP <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>). 0 이면 지우지 않는다</td></tr>
+<tr><td><code>retention.backup_days</code></td><td><code>7</code></td><td>백업 ZIP <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>). 0 이면 지우지 않는다</td></tr>
+<tr><td><code>retention.deploy_backup_days</code></td><td><code>14</code></td><td>배포 전 백업 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>). 0 이면 지우지 않는다</td></tr>
 <tr><td><code>retention.ai_cache_days</code></td><td><code>180</code></td><td>AI <span class="term" title="같은 입력에 대한 AI 응답을 DB 표(ai_cache)에 저장해 두고 다시 쓰는 것이다" tabindex="0">응답 저장본</span> <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#REQ-AICALL-002">REQ-AICALL-002</a>)</td></tr>
 <tr><td><code>retention.daily_qa_run_days</code></td><td><code>365</code></td><td>일일 QA <span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span> <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a>)</td></tr>
 <tr><td><code>retention.daily_qa_workspace_run_days</code></td><td><code>30</code></td><td>일일 QA <span class="term" title="Claude 가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 실행 입력 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(<a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a>)</td></tr>
@@ -8542,8 +8543,11 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <section class="card kind-req" id="REQ-OPS-002">
 <h3><span class="idtag">REQ-OPS-002</span> 백업 만들기와 확인</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a>, <a class="idref" href="#REQ-AICALL-002">REQ-AICALL-002</a>, <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-OPS-002">TEST-OPS-002</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 5</summary>
 <ul>
+<li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 백업 ZIP <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 기간을 30일에서 7일로 줄였다(<code>retention.backup_days</code>). 백업 ZIP 이 하루 900MB 안팎으로 커져 30일이면 27GB 가 쌓였다.</li>
+<li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 배포 전 백업을 <code>backups/deploy-&lt;이름&gt;-&lt;UTC 시각&gt;</code> 이름(폴더 또는 <code>.tgz</code>·<code>.tar</code>·<code>.tar.gz</code>·<code>.zip</code>)으로 만들도록 정하고, 14일이 지나면 매일 백업 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>이 지운다(<code>retention.deploy_backup_days</code>). 가장 새 것 하나는 남긴다. 이전에는 이런 백업이 다른 이름이나 홈 폴더에 남아 지워지지 않았다.</li>
+<li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 운영 서버에서 쌓인 백업 약 13GB(오래된 백업 ZIP, 같은 날 손으로 만든 백업 ZIP, 배포 전 백업 폴더·묶음, 홈 폴더의 배포 백업, pip 캐시)를 사용자 승인 후 손으로 지웠다. 디스크 사용률은 64%에서 61%가 됐다.</li>
 <li><span class="hist">2026-09-30 · 자동화 하루 일정과 사양서 읽는 순서 정리</span> <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: SPEC 4절에 예약 시각, 실행 위치, 결과 저장 위치와 알림 경로를 정리했다. 서버 cron 시각은 서버 시간대 기준으로 구분했다.</li>
 <li><span class="hist">2026-09-30 · 사양–코드 불일치 60건 수정 · 결정 대기 18건 반영</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 백업에 일일 QA <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>을 넣는다. 새 백업을 확인한 뒤 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(기본 30일)가 지난 백업을 지운다. 가장 새 백업 하나는 늘 남긴다.</li>
 </ul>
@@ -8567,13 +8571,18 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>대상</th><th>이름 형식</th><th>설정 키</th><th>기본</th></tr></thead>
 <tbody>
-<tr><td data-label="대상">백업 ZIP</td><td data-label="이름 형식"><code>qa-backup-YYYYMMDDTHHMMSSZ.zip</code></td><td data-label="설정 키"><code>retention.backup_days</code></td><td data-label="기본">30일. 가장 새 백업 하나는 날짜와 관계없이 남긴다</td></tr>
+<tr><td data-label="대상">백업 ZIP</td><td data-label="이름 형식"><code>qa-backup-YYYYMMDDTHHMMSSZ.zip</code></td><td data-label="설정 키"><code>retention.backup_days</code></td><td data-label="기본">7일. 가장 새 백업 하나는 날짜와 관계없이 남긴다</td></tr>
+<tr><td data-label="대상">배포 전 백업</td><td data-label="이름 형식"><code>deploy-&lt;이름&gt;-YYYYMMDDTHHMMSSZ</code> 폴더, 또는 같은 이름에 <code>.tgz</code>·<code>.tar</code>·<code>.tar.gz</code>·<code>.zip</code> 을 붙인 파일</td><td data-label="설정 키"><code>retention.deploy_backup_days</code></td><td data-label="기본">14일. 가장 새 배포 전 백업 하나는 날짜와 관계없이 남긴다</td></tr>
 <tr><td data-label="대상">AI <span class="term" title="같은 입력에 대한 AI 응답을 DB 표(ai_cache)에 저장해 두고 다시 쓰는 것이다" tabindex="0">응답 저장본</span></td><td data-label="이름 형식"><code>ai_cache</code> 의 만든 시각(<code>created_at</code>)</td><td data-label="설정 키"><code>retention.ai_cache_days</code></td><td data-label="기본">180일</td></tr>
 <tr><td data-label="대상">일일 QA <span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span></td><td data-label="이름 형식"><code>output/daily_qa/YYYYMMDD-HHMMSS/</code></td><td data-label="설정 키"><code>retention.daily_qa_run_days</code></td><td data-label="기본">365일</td></tr>
 <tr><td data-label="대상">일일 QA <span class="term" title="Claude 가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 실행 입력</td><td data-label="이름 형식"><code>&lt;작업 폴더&gt;/runs/YYYYMMDD-HHMMSS/</code></td><td data-label="설정 키"><code>retention.daily_qa_workspace_run_days</code></td><td data-label="기본">30일</td></tr>
 </tbody>
 </table></div>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>백업 ZIP 하나가 약 900MB 이면 7일 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>으로 백업 폴더는 7GB 안팎에서 더 늘지 않는다. 30일 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>일 때는 27GB 까지 늘었다.</p>
+</aside>
 <ul>
+<li>백업 ZIP 과 배포 전 백업은 둘 다 백업 폴더(<code>--destination</code>, 운영 서버는 앱 폴더의 <code>backups/</code>) 안에서만 찾는다.</li>
 <li><span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 0 이면 그 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>는 지우지 않는다.</li>
 <li>이름 형식이 맞지 않는 파일·폴더는 날짜와 관계없이 건드리지 않는다.</li>
 <li>일일 QA <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 지우지 않는다.</li>
@@ -8594,6 +8603,10 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <p class="why"><span class="why-label">이유</span> <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span>은 원본이 <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span>에 있어 다시 올리면 된다.</p>
 </li>
 <li><p><span class="term" title="Claude 가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 실행 입력은 백업을 돌리는 컴퓨터의 <span class="term" title="Claude 가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>만 정리한다. 일일 QA 를 다른 컴퓨터에서 돌리면 그 컴퓨터에서는 지워지지 않는다.</p></li>
+<li><p>배포하기 전에 서버의 코드·설정·DB 를 따로 백업할 때는 앱 폴더의 <code>backups/</code> 안에 <code>deploy-&lt;이름&gt;-&lt;UTC 시각&gt;</code> 이름으로 만든다. 예: <code>backups/deploy-chatbot-20261013T083709Z/</code>, <code>backups/deploy-config-20261013T053607Z.tgz</code>.</p>
+<p class="why"><span class="why-label">이유</span> 이름 형식이 다르거나 앱 폴더 밖(홈 폴더 등)에 둔 백업은 자동으로 지워지지 않아 계속 쌓인다. 앱 폴더 밖은 같은 서버의 다른 서비스 영역이기도 하다.</p>
+</li>
+<li><p>같은 날 백업 ZIP 을 손으로 여러 번 만들어도 따로 지우지 않는다. <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지나면 함께 지워진다.</p></li>
 </ul>
 </section>
 <section class="card kind-req" id="REQ-OPS-003">
@@ -11968,7 +11981,8 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-test" id="TEST-OPS-002">
 <h3><span class="idtag">TEST-OPS-002</span></h3>
-<p><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a> 를 <code>tests/test_backup.py</code> 로 확인한다: 임시 루트에서 백업 후 확인이 <code>ok</code>(<code>test_backup_round_trip_verifies_sqlite_and_manifest</code>), 일일 QA <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 넣고 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span>은 빼기, <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 백업·<span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span>·AI <span class="term" title="같은 입력에 대한 AI 응답을 DB 표(ai_cache)에 저장해 두고 다시 쓰는 것이다" tabindex="0">응답 저장본</span> 지우기(가장 새 백업은 남김), <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수를 설정에서 읽기, 확인 뒤에만 지우기.</p>
+<p><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a> 를 <code>tests/test_backup.py</code> 로 확인한다: 임시 루트에서 백업 후 확인이 <code>ok</code>(<code>test_backup_round_trip_verifies_sqlite_and_manifest</code>), 일일 QA <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 넣고 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span>은 빼기, 확인 뒤에만 지우기.</p>
+<p><span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 정리는 같은 파일에서 확인한다: <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 백업·<span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span>·AI <span class="term" title="같은 입력에 대한 AI 응답을 DB 표(ai_cache)에 저장해 두고 다시 쓰는 것이다" tabindex="0">응답 저장본</span> 지우기(가장 새 백업은 남김), <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 배포 전 백업 폴더·묶음 파일 지우기(가장 새 것은 남기고 이름 형식이 다른 것은 두기), <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수를 설정에서 읽기, 실제 설정의 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수(백업 7일·배포 전 백업 14일).</p>
 </section>
 <section class="card kind-test" id="TEST-OPS-003">
 <h3><span class="idtag">TEST-OPS-003</span></h3>
@@ -12762,6 +12776,11 @@ npm run build:platform
 <li>백업 범위: 일일 QA <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 넣고 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span>은 뺀다(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>).</li>
 <li>오래된 백업 지우기: ① <code>retention.backup_days</code>(기본 30일)가 지난 것을 지운다. 가장 새 백업 하나는 남긴다(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>).</li>
 <li>AI <span class="term" title="같은 입력에 대한 AI 응답을 DB 표(ai_cache)에 저장해 두고 다시 쓰는 것이다" tabindex="0">응답 저장본</span>(<code>ai_cache</code>)의 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 기간: 180일(<code>retention.ai_cache_days</code>, <a class="idref" href="#REQ-AICALL-002">REQ-AICALL-002</a>).</li>
+</ul>
+<p><strong>결정됨 (2026-10-16)</strong></p>
+<ul>
+<li>백업 ZIP <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 기간을 30일에서 7일로 줄였다. 백업 ZIP 이 하루 900MB 안팎으로 커져 30일이면 27GB 가 쌓였다(<a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>).</li>
+<li>배포 전 백업은 <code>backups/deploy-&lt;이름&gt;-&lt;UTC 시각&gt;</code> 으로 만들고 14일 뒤 지운다(<code>retention.deploy_backup_days</code>, <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>).</li>
 </ul>
 <h3>13.6 하위 서비스 QA Manual Hub</h3>
 <ol>
