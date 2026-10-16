@@ -39,7 +39,10 @@ FILE_LABELS = {
     "findings.json": "분석 결과 목록",
 }
 _DAYS = {"mon": "월요일", "tue": "화요일", "wed": "수요일", "thu": "목요일", "fri": "금요일", "sat": "토요일", "sun": "일요일"}
-TRIGGER_LABELS = {"scheduled": "예약 실행", "manual": "[변경사항 점검하기]", "manual_cli": "명령줄 실행", "catchup": "한도 초기화 뒤 다시 실행"}
+TRIGGER_LABELS = {"scheduled": "예약 실행", "manual": "[변경사항 점검하기]", "manual_cli": "명령줄 실행", "catchup": "한도 초기화 뒤 다시 실행",
+                  "prepare": "대상 준비", "collect": "수집만 실행", "deferred": "밀린 변경 분석"}
+COLLECT_REASONS = {"policy_off": "자동 분석 꺼짐", "weekly_not_due": "주간 모드의 분석일 아님"}
+CHANGE_MAIL_STATUS = {"sent": "보냄", "skipped": "보내지 않음", "failed": "실패", "not_configured": "보내지 않음(메일 설정 없음)"}
 
 
 def plain_note(note: str) -> str:
@@ -95,6 +98,17 @@ def _sentence(key: str, stage: dict, dry_run: bool) -> str:
     if status == "ok":
         return "끝났습니다."
     return ""
+
+
+def _change_mail_line(mail) -> str:
+    """수집·저장 직후 보낸 변경 리포트 메일의 결과 한 줄 (REQ-ALMCHG-004). 보낸 기록이 없으면 빈 문자열."""
+    if not isinstance(mail, dict) or not mail.get("status"):
+        return ""
+    label = CHANGE_MAIL_STATUS.get(mail["status"], mail["status"])
+    reason = str(mail.get("reason") or "").strip()
+    if reason and not label.endswith(")"):
+        label = f"{label}({reason})"
+    return f"변경 리포트 메일: {label}"
 
 
 def _tile(label: str, value, hint: str = "") -> dict:
@@ -235,6 +249,9 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         headline = "이번 실행에서 확인한 변경이 없습니다." if run.get("status") == "NO_CHANGE" else "실행 기록을 확인하세요."
     if run.get("status") == "CANCELLED":
         headline = "사용자 요청으로 이번 점검을 중단했습니다. 이미 저장한 결과를 확인하세요."
+    elif summary.get('run_kind') == 'collect':
+        reason = COLLECT_REASONS.get(summary.get('collect_reason', ''), '')
+        headline = (headline + ' ' if actions else '') + '수집만 실행했습니다' + (f'({reason})' if reason else '') + '. AI 분석은 하지 않았습니다.'
     elif summary.get('collection_only'):
         count = summary.get('prepared_targets')
         prepared = f'분석 대상 {count}개를 준비했습니다.' if count is not None else '분석 대상을 준비했습니다.'
@@ -276,6 +293,7 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         "mail": MAIL_LABELS.get(run.get("email_status") or "", run.get("email_status") or "-"),
         "trigger": "요청 점검" if "on_demand" in stages else TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
         "dry_run": dry_run,
+        "change_mail": _change_mail_line(summary.get("change_mail")),
         "audit": audit_box,
         "audit_remaining": summary.get("issue_audit_remaining"),
     }

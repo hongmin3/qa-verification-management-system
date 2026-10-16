@@ -159,3 +159,20 @@ def test_mail_button_rejects_bad_period(world, monkeypatch):
     _recipients(monkeypatch, ("a@example.com",))
     response = world["client"].post("/qa-agent/changes/mail", data={"product": world["cfg"].product, "since": D3, "until": D1})
     assert response.status_code == 400 and "시작일이 종료일보다 늦습니다." in response.text
+
+
+# Validates: REQ-ALMCHG-004
+def test_mail_button_returns_json_when_sending_raises(world, monkeypatch):
+    from app.core import notifier
+
+    _recipients(monkeypatch, ("a@example.com",))
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr(notifier, "send_report", boom)
+    client, cfg = world["client"], world["cfg"]
+    response = client.post("/qa-agent/changes/mail", data={"product": cfg.product, "since": D2, "until": D3})
+    assert response.status_code == 500
+    body = response.json()
+    assert body["status"] == "failed" and "RuntimeError" in body["detail"]

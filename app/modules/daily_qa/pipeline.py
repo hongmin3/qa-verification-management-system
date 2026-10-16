@@ -816,6 +816,10 @@ class _Run:
 
     def _tc_index(self):
         self._progress("tc_index", "TC 색인")
+        if self.cfg.savings_enabled and self.trigger == 'collect':
+            # 수집만 하는 실행은 AI 분석용 검증 시트 선택을 읽지 않는다. 시트를 못 읽어도 수집 결과는 부분 실패가 아니다 (REQ-ALMCHG-001).
+            self.stages['tc_index'] = _stage('skipped', '수집만 실행 · 검증 시트 확인 생략')
+            return []
         if self.cfg.savings_enabled and not self.on_demand:
             from app.modules.daily_qa import workflow_settings
             paths = workflow_settings.checklist_paths(self.inputs, self.profile)
@@ -925,10 +929,15 @@ class _Run:
             return
         from app.modules.daily_qa import change_mail
 
+        from app.modules.daily_qa.scheduled_jobs import schedule_settings
+
         cfg, key = self.cfg, self.cfg.state_key("change_mail_date")
         since = self.basis.get(snapshots.KIND_ISSUES) or self.basis.get(snapshots.KIND_SRS) or ""
         self.change_mail = {"status": "skipped", "reason": "", "since": since, "until": self.run_date}
         try:
+            if not schedule_settings().get("enabled", True):
+                self.change_mail["reason"] = "자동 실행이 꺼져 있어 보내지 않았습니다."
+                return
             if self.store.get_state(key, "") == self.run_date:
                 self.change_mail["reason"] = "오늘 이미 변경 리포트 메일을 보냈습니다."
                 return
@@ -945,6 +954,9 @@ class _Run:
                     return
             result = (self.mail_sender or _default_sender)(subject, text, body, cfg.email_to)
             status = str(result.get("status", "")) if isinstance(result, dict) else ""
+            if status == "disabled":   # --no-email 처럼 발송을 끈 실행: 실패가 아니고 그날의 진짜 메일을 막지도 않는다
+                self.change_mail["reason"] = "메일 끔"
+                return
             self.change_mail["status"] = status if status in ("sent", "failed", "not_configured") else "failed"
             if status == "failed" and isinstance(result, dict):
                 self.change_mail["reason"] = str(result.get("error", ""))
@@ -1196,8 +1208,11 @@ class _Run:
 
     def _events_with_completed(self, events):
         existing = {event.get('fingerprint') for event in events}
+        # 이미 밀린 변경(deferred)이나 포기(abandoned)로 저장된 변경은 같은 날 다시 수집돼도 자동 분석에 다시 넣지 않는다.
+        # 같은 지문이 다시 만들어져도 저장 쪽이 무시하므로 id 없는 사본이 분석되는 일을 막는다 (REQ-ALMCHG-005).
+        held = {event.get('fingerprint') for event in self.store.list_events(product=self.cfg.slug, statuses=('deferred', 'abandoned'))}
         return [*events, *[event.as_dict() for event in self.detected_events
-                          if event.analysis_required and event.fingerprint not in existing]]
+                          if event.analysis_required and event.fingerprint not in existing and event.fingerprint not in held]]
 
     def _prepare_plan(self, srs_items, issue_items, tc_rows):
         from app.modules.daily_qa import execution_plan, target_reuse

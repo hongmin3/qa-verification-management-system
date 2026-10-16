@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -226,3 +226,31 @@ def test_skipped_collection_sends_failure_mail_not_baseline(tmp_path):
     subject, text, html, _ = change_mails(h)[-1]
     assert "수집 실패" in subject
     assert "첫 기록을 저장했습니다" not in text and "첫 기록을 저장했습니다" not in html
+
+
+def test_schedule_disabled_sends_no_auto_change_mail(tmp_path, monkeypatch):
+    """`daily_qa.schedule.enabled: false` 면 CLI로 `--trigger scheduled`를 돌려도 자동 메일은 나가지 않는다."""
+    from app.modules.daily_qa import scheduled_jobs
+
+    monkeypatch.setattr(scheduled_jobs, "schedule_settings", lambda settings=None: {"enabled": False})
+    h = make(tmp_path)
+    outcome = h.run(FRI, trigger="scheduled")
+    assert change_mails(h) == []
+    assert outcome["summary"]["change_mail"]["status"] == "skipped"
+    assert "꺼져" in outcome["summary"]["change_mail"]["reason"]
+
+
+def test_no_email_run_is_skipped_and_does_not_block_real_mail(tmp_path):
+    """`--no-email`(발송 끔) 실행은 실패가 아니라 건너뜀이며, 그날의 진짜 메일을 막지 않는다."""
+    from app.modules.daily_qa.pipeline import run_daily
+    from tests.daily_qa_fixtures import FakePolarion
+
+    h = make(tmp_path)
+    kwargs = dict(today=FRI, polarion_factory=lambda: FakePolarion(h.srs, h.issues), inputs=h.inputs, store=h.store, trigger="collect")
+    outcome = run_daily(h.cfg, send_email=lambda *args: {"status": "disabled"}, **kwargs)
+    assert outcome["summary"]["change_mail"]["status"] == "skipped"
+    assert outcome["summary"]["change_mail"]["reason"] == "메일 끔"
+    assert h.store.get_state(h.cfg.state_key("change_mail_date"), "") == ""
+    kwargs["today"] = FRI + timedelta(minutes=5)
+    run_daily(h.cfg, send_email=lambda *args: h.sent.append(args) or {"status": "sent"}, **kwargs)
+    assert len(change_mails(h)) == 1

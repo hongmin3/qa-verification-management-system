@@ -39,6 +39,14 @@ RUN_STATUSES = {
     "BASELINE": "기준 스냅샷 생성",
 }
 
+COLLECT_STATUSES = {
+    "SUCCESS": "수집 완료",
+    "NO_CHANGE": "변경사항 없음",
+    "BASELINE": "기준 저장",
+    "PARTIAL": "수집 실패",
+    "FAILED": "수집 실패",
+}
+
 EVENT_STATUSES = {
     "not_required": "분석 필요 없음",
     "pending": "분석 대기",
@@ -231,7 +239,10 @@ class DailyQaStorageMixin:
         data["summary"] = json.loads(data.pop("summary_json") or "{}")
         data["progress"] = json.loads(data.pop("progress_json", "{}") or "{}")
         data["status_label"] = RUN_STATUSES.get(data["status"], data["status"])
-        if data['summary'].get('collection_only') and data['status'] in ('SUCCESS', 'NO_CHANGE', 'BASELINE'):
+        if data['summary'].get('run_kind') == 'collect':
+            # 수집만 한 실행: 분석 준비가 아니라 수집 결과로 부른다 (REQ-ALMCHG-001 결과)
+            data['status_label'] = COLLECT_STATUSES.get(data['status'], data['status_label'])
+        elif data['summary'].get('collection_only') and data['status'] in ('SUCCESS', 'NO_CHANGE', 'BASELINE'):
             data['status_label'] = '분석 준비 완료'
         return data
 

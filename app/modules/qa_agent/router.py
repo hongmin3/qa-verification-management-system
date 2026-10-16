@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -32,6 +33,7 @@ from app.modules.qa_agent.rule_capability import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 templates = Jinja2Templates(
     directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"]
 )
@@ -519,9 +521,13 @@ def changes_mail(product: str = Form(""), since: str = Form(""), until: str = Fo
     recipients = report_recipients()
     if not recipients:
         raise HTTPException(409, "메일 수신자가 설정되지 않았습니다.")
-    subject, text, body, _ = change_mail.compose_for_period(
-        cfg, choice.store, snapshot_module.for_settings(cfg), start.isoformat(), end.isoformat())
-    result = notifier.send_report(subject, text, body, recipients)
+    try:
+        subject, text, body, _ = change_mail.compose_for_period(
+            cfg, choice.store, snapshot_module.for_settings(cfg), start.isoformat(), end.isoformat())
+        result = notifier.send_report(subject, text, body, recipients)
+    except Exception as exc:  # noqa: BLE001 - 화면 버튼은 항상 JSON으로 실패 이유를 알려 준다
+        logger.warning("change_mail_manual_failed error_type=%s", type(exc).__name__)
+        return JSONResponse({"status": "failed", "detail": f"메일을 만들거나 보내지 못했습니다. ({type(exc).__name__})"}, status_code=500)
     status = str(result.get("status", "failed"))
     detail = {"sent": f"메일 {len(recipients)}명에게 보냈습니다.", "not_configured": "메일 설정이 없어 보내지 않았습니다."}.get(
         status, f"메일 발송에 실패했습니다. {result.get('error', '')}".strip())

@@ -332,3 +332,18 @@ def test_other_runs_still_abandon_event_whose_target_left_snapshot(env):
     env.run(DAY_AFTER, trigger="scheduled", runner=FakeRunner(analysis_producer(env.calls)))
     statuses = {e["entity_id"]: e["analysis_status"] for e in env.store.list_events(product=env.cfg.slug, event_types=("ISSUE_CREATED",))}
     assert statuses["VP-200"] == "abandoned"
+
+
+# Validates: REQ-ALMCHG-005
+def test_savings_catchup_does_not_reanalyze_deferred_by_recollection(tmp_path):
+    """절약 모드: 아침 수집이 밀린 변경으로 둔 것을 같은 날 다시 수집해도 자동 분석이 다시 분석하지 않는다."""
+    from tests.test_qa_savings_workflow import prepared
+
+    h, rules = prepared(tmp_path)
+    set_flags(h.store, h.cfg, enabled=False)
+    h.run(DAY2, trigger="collect", rules_state=rules)
+    assert [e["entity_id"] for e in h.events(statuses=("deferred",))]
+    set_flags(h.store, h.cfg, enabled=True)
+    h.run(DAY2 + timedelta(hours=3), trigger="catchup", rules_state=rules)
+    assert h.calls == []
+    assert [e["entity_id"] for e in h.events(statuses=("deferred",))]

@@ -193,3 +193,60 @@ def test_collect_run_with_missing_qa_rules_is_not_partial(env):
     outcome = env.run(DAY2, trigger="collect",
                       rules_state=RulesState(False, "1.17", "QA 규칙 파일이 없습니다.", None, None))
     _assert_collected(env, outcome)
+
+
+# Validates: REQ-ALMCHG-001
+def test_savings_collect_run_ignores_unreadable_verification_sheet(tmp_path, monkeypatch):
+    """절약 모드의 수집만 한 실행은 AI 전용인 검증 시트 확인에 실패해도 부분 실패로 끝나지 않는다."""
+    from dataclasses import replace
+    from app.modules.daily_qa import workflow_settings
+
+    h = Harness(tmp_path)
+    h.cfg = replace(h.cfg, savings_enabled=True)
+    h.srs = [srs_item("VP-10", "01-01", "목록")]
+    h.issues = [issue_item("VP-100", "2026-09-28T00:00:00Z", ["VP-10"], review="", status="open")]
+    h.run(DAY1, trigger="collect")
+    monkeypatch.setattr(workflow_settings, "versions", lambda paths: ({}, ["검증 시트를 읽지 못했습니다."]))
+    h.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-10"], review="", status="open"))
+    outcome = h.run(DAY2, trigger="collect")
+    assert outcome["status"] != "PARTIAL", {k: (v["status"], v.get("note")) for k, v in outcome["stages"].items()}
+    assert outcome["stages"]["preflight"]["status"] == "ok" and h.calls == []
+
+
+# Validates: REQ-ALMCHG-001
+def test_collect_run_is_labeled_as_collection_not_analysis_ready(env):
+    from app.modules.qa_agent import run_view
+
+    first = env.run(DAY1, trigger="collect")
+    assert env.store.get_run(first["run_id"])["status_label"] == "기준 저장"
+    set_flags(env.store, env.cfg, enabled=False)
+    env.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-10"], review="", status="open"))
+    outcome = env.run(DAY2, trigger="collect")
+    run = env.store.get_run(outcome["run_id"])
+    assert run["status_label"] == "수집 완료"
+    view = run_view.build(run, [], [], [])
+    assert view["headline"] == "수집만 실행했습니다(자동 분석 꺼짐). AI 분석은 하지 않았습니다."
+    assert "대상을 선택" not in view["headline"] and view["trigger"] == "수집만 실행"
+
+
+# Validates: REQ-ALMCHG-001
+def test_collect_run_without_changes_is_labeled_no_change(env):
+    env.run(DAY1)
+    set_flags(env.store, env.cfg, enabled=False)
+    outcome = env.run(DAY2, trigger="collect")
+    assert env.store.get_run(outcome["run_id"])["status_label"] == "변경사항 없음"
+
+
+# Validates: REQ-ALMCHG-005
+def test_run_view_trigger_labels_and_change_mail_line():
+    from app.modules.qa_agent import run_view
+
+    def view(trigger, mail):
+        return run_view.build({"status": "SUCCESS", "summary": {"trigger": trigger, "change_mail": mail}}, [], [], [])
+
+    assert view("deferred", None)["trigger"] == "밀린 변경 분석"
+    assert view("prepare", None)["trigger"] == "대상 준비" and view("collect", None)["trigger"] == "수집만 실행"
+    assert view("collect", None)["change_mail"] == ""
+    assert view("collect", {"status": "sent"})["change_mail"] == "변경 리포트 메일: 보냄"
+    assert view("collect", {"status": "skipped", "reason": "변경이 없어 보내지 않았습니다."})["change_mail"] == "변경 리포트 메일: 보내지 않음(변경이 없어 보내지 않았습니다.)"
+    assert view("collect", {"status": "failed", "reason": "smtp"})["change_mail"] == "변경 리포트 메일: 실패(smtp)"
