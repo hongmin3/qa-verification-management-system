@@ -52,6 +52,8 @@ class EntityChanges:
     link: str
     lines: list[ChangeLine] = field(default_factory=list)
     net: dict[str, tuple[str, str]] = field(default_factory=dict)
+    reporter_id: str = ""        # 이슈를 처음 등록한 사람(SRS 는 비어 있다). 메일이 작성자별로 묶는다 (REQ-ALMCHG-004)
+    reporter_name: str = ""
 
 
 @dataclass
@@ -92,6 +94,18 @@ def _user_names(snapshots: list[list[dict]]) -> dict[str, str]:
             if item.get("reporter_id") and item.get("reporter_name"):
                 names[str(item["reporter_id"])] = str(item["reporter_name"])
     return names
+
+
+def _reporters(snapshots: list[list[dict]], names: dict[str, str]) -> dict[str, tuple[str, str]]:
+    """이슈 번호 → (작성자 번호, 이름). 뒤 기록이 앞 기록을 덮어서, 조회에서 빠진 이슈는 마지막으로 본 기록의 값이다."""
+    result: dict[str, tuple[str, str]] = {}
+    for items in snapshots:
+        for item in items:
+            person = str(item.get("reporter_id") or "")
+            name = str(item.get("reporter_name") or "") or names.get(person, "")
+            if person or name:
+                result[item["id"]] = (person, name)
+    return result
 
 
 def _link(cfg, entity_id: str) -> str:
@@ -290,6 +304,9 @@ def build_change_report(cfg, snapshots: SnapshotStore, since: str, until: str, *
 
     issue_net = _net(loaded["issues"][0][1], loaded["issues"][-1][1], names) if len(loaded["issues"]) > 1 else {}
     report.issues = _entities(cfg, "issue", issue_log, issue_net)
+    reporters = _reporters([items for _, items, _ in loaded["issues"]], names)
+    for entity in report.issues:
+        entity.reporter_id, entity.reporter_name = reporters.get(entity.entity_id, ("", ""))
     report.srs = _entities(cfg, "srs", srs_log, {})
     for entity in (*report.issues, *report.srs):
         for line in entity.lines:

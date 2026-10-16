@@ -30,12 +30,15 @@
 {{ heading('요약') }}
 <tr><td style="padding:0 24px;"><div>이슈: {{ view.issue_summary }}</div><div>SRS: {{ view.srs_summary }}</div></td></tr>
 {{ heading('이슈 변경') }}
-{% if not view.issues %}<tr><td style="padding:0 24px;color:#6b7280;">{{ no_change }}</td></tr>{% endif %}
-{% for block in view.issues %}
-<tr><td style="padding:8px 24px 0 24px;">
+{% if not view.issue_groups %}<tr><td style="padding:0 24px;color:#6b7280;">{{ no_change }}</td></tr>{% endif %}
+{% for group in view.issue_groups %}
+<tr><td bgcolor="#eef2f7" style="padding:8px 24px;background-color:#eef2f7;font-weight:bold;color:#173b67;">{{ group.name }} (이슈 {{ group.count }}건)</td></tr>
+{% for block in group.issues %}
+<tr><td style="padding:8px 24px 0 36px;">
 <div style="font-weight:bold;">{{ block.id }} {{ block.title }}{% if block.link %} <a href="{{ block.link }}" style="color:#2563eb;font-weight:normal;font-size:12px;">Polarion 바로가기</a>{% endif %}</div>
 {% for row in block.rows %}<div style="padding-left:12px;color:#374151;"><span style="color:#6b7280;">{{ row.day }}{% if row.time %} {{ row.time }}{% endif %}</span> {{ row.text }}</div>{% endfor %}
 </td></tr>
+{% endfor %}
 {% endfor %}
 {% if view.issue_more %}<tr><td style="padding:8px 24px 0 24px;">나머지 {{ view.issue_more }}건은 <a href="{{ view.url }}" style="color:#2563eb;">화면에서 보기</a></td></tr>{% endif %}
 {{ heading('SRS 변경') }}

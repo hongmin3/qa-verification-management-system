@@ -167,3 +167,17 @@ def test_link_uses_host_and_project(tmp_path):
     save(store, KIND_ISSUES, "2026-10-16", [issue()])
     save(store, KIND_ISSUES, "2026-10-17", [issue(status="B")])
     assert build(cfg, store).issues[0].link == "https://alm.example/polarion/redirect/project/VXvue/workitem?id=VP-1"
+
+
+# Validates: REQ-ALMCHG-004
+def test_entities_carry_issue_reporter(tmp_path):
+    cfg, store = setup(tmp_path)
+    save(store, KIND_ISSUES, "2026-10-16", [issue("VP-1", reporter_id="u1", reporter_name="김철수"), issue("VP-2"),
+                                             issue("VP-3", reporter_id="u3", reporter_name="박민수")])
+    save(store, KIND_ISSUES, "2026-10-19", [issue("VP-1", status="B", reporter_id="u1", reporter_name="김철수"),
+                                             issue("VP-2", status="B")])
+    report = build_change_report(cfg, store, "2026-10-16", "2026-10-19", schedule=SCHEDULE)
+    by_id = {entity.entity_id: entity for entity in report.issues}
+    assert (by_id["VP-1"].reporter_id, by_id["VP-1"].reporter_name) == ("u1", "김철수")
+    assert (by_id["VP-2"].reporter_id, by_id["VP-2"].reporter_name) == ("", "")
+    assert (by_id["VP-3"].reporter_id, by_id["VP-3"].reporter_name) == ("u3", "박민수")   # 조회에서 빠진 이슈도 전 기록의 작성자

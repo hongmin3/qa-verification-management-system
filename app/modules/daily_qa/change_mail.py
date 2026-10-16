@@ -21,6 +21,7 @@ CLOSING = "이 메일은 수집 결과를 자동으로 정리한 것입니다. A
 BASELINE_NOTE = "첫 기록을 저장했습니다. 다음 업무일부터 변경을 보냅니다."
 FAILURE_NOTE = "기준을 유지했고 다음 수집에서 다시 비교합니다."
 NO_CHANGE = "변경 없음"
+UNKNOWN_REPORTER = "작성자 미확인"
 NO_GAP = "빠진 기록 없음"
 AI_LABELS = {"daily": "켜짐", "weekly": "주간", "off": "꺼짐"}
 WEEKDAYS = "월화수목금토일"
@@ -104,6 +105,15 @@ def _issue_block(entity: EntityChanges) -> dict:
             "rows": [{"day": day_label(line.day), "time": line.time, "text": _line_text(line)} for line in entity.lines]}
 
 
+def _issue_groups(entities: list[EntityChanges]) -> list[dict]:
+    """이슈를 작성자별로 묶는다. 작성자는 이름순, 이름을 모르면 맨 뒤 묶음이다. 묶음 안은 받은 순서(최근 변경 순)를 지킨다."""
+    groups: dict[str, list[dict]] = {}
+    for entity in entities:
+        groups.setdefault(entity.reporter_name, []).append(_issue_block(entity))
+    ordered = sorted(groups.items(), key=lambda pair: (not pair[0], pair[0]))
+    return [{"name": name or UNKNOWN_REPORTER, "count": len(blocks), "issues": blocks} for name, blocks in ordered]
+
+
 def _srs_row(entity: EntityChanges) -> dict:
     kinds = {line.kind for line in entity.lines}
     kind = "srs_created" if "srs_created" in kinds else entity.lines[-1].kind
@@ -125,13 +135,15 @@ def _text_body(view: dict) -> str:
     else:
         out += [f"기간: {view['period']}", f"AI 분석: {view['ai']}", "",
                 "[요약]", f"이슈: {view['issue_summary']}", f"SRS: {view['srs_summary']}", "", "[이슈 변경]"]
-        if not view["issues"]:
+        if not view["issue_groups"]:
             out.append(NO_CHANGE)
-        for block in view["issues"]:
-            out.append(f"{block['id']} {block['title']}".rstrip())
-            out += [f"  {_pad(row)}  {row['text']}" for row in block["rows"]]
-            if block["link"]:
-                out.append(f"  Polarion: {block['link']}")
+        for group in view["issue_groups"]:
+            out.append(f"■ {group['name']} (이슈 {group['count']}건)")
+            for block in group["issues"]:
+                out.append(f"  {block['id']} {block['title']}".rstrip())
+                out += [f"    {_pad(row)}  {row['text']}" for row in block["rows"]]
+                if block["link"]:
+                    out.append(f"    Polarion: {block['link']}")
         if view["issue_more"]:
             out.append(f"나머지 {view['issue_more']}건은 화면에서 보기: {view['url']}")
         out += ["", "[SRS 변경]"]
@@ -171,7 +183,7 @@ def build_change_email(report: ChangeReport, *, product: str, page_url: str, ai_
     view = {
         "mode": "report", "heading": f"{product} 변경 리포트", "period": period, "ai": ai,
         "issue_summary": _counts(report, ISSUE_SUMMARY), "srs_summary": _counts(report, SRS_SUMMARY),
-        "issues": [_issue_block(entity) for entity in report.issues[:max_items]],
+        "issue_groups": _issue_groups(report.issues[:max_items]),
         "issue_more": max(0, len(report.issues) - max_items),
         "srs": [_srs_row(entity) for entity in report.srs[:max_items]],
         "srs_more": max(0, len(report.srs) - max_items),
@@ -218,9 +230,9 @@ def sample_report(today: date) -> ChangeReport:
         return ChangeLine(day, values.pop("time", ""), entity_type, "VP-<번호>", title, kind, **values)
 
     issue = EntityChanges("issue", "VP-<번호>", "<이슈 제목>", "", [
-        line("comment", time="<시각>", detail="<작성자>"),
+        line("comment", time="<시각>", detail="<댓글 작성자>"),
         line("status", before="<이전>", after="<이후>"),
-        line("assignee", before="<이전>", after="<이후>")])
+        line("assignee", before="<이전>", after="<이후>")], reporter_name="<이슈 작성자>")
     srs = EntityChanges("srs", "VP-<번호>", "<SRS 제목>", "", [
         line("srs_modified", "srs", "<SRS 제목>", detail="본문(더해진 문장 <n>, 빠진 문장 <n>)")])
     report = ChangeReport("예시", day, day, {"issues": [day], "srs": [day]}, [issue], [srs])

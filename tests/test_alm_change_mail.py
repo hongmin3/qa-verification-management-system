@@ -254,3 +254,36 @@ def test_no_email_run_is_skipped_and_does_not_block_real_mail(tmp_path):
     kwargs["today"] = FRI + timedelta(minutes=5)
     run_daily(h.cfg, send_email=lambda *args: h.sent.append(args) or {"status": "sent"}, **kwargs)
     assert len(change_mails(h)) == 1
+
+
+def _grouped_report(tmp_path):
+    cfg, store = setup(tmp_path)
+    first = [issue("VP-1", reporter_id="u2", reporter_name="이영희"), issue("VP-2", reporter_id="u1", reporter_name="김철수"),
+             issue("VP-3"), issue("VP-4", reporter_id="u2", reporter_name="이영희")]
+    save(store, KIND_ISSUES, "2026-10-16", first)
+    save(store, KIND_ISSUES, "2026-10-19", [dict(item, status="B") for item in first])
+    later = [dict(item, status="B") for item in first]
+    later[0] = dict(later[0], status="C")                      # VP-1 만 하루 더 늦게 바뀐다
+    save(store, KIND_ISSUES, "2026-10-20", later)
+    return build_change_report(cfg, store, "2026-10-16", "2026-10-20", schedule=SCHEDULE)
+
+
+# Validates: REQ-ALMCHG-004
+def test_issues_grouped_by_reporter_name_unknown_last(tmp_path):
+    report = _grouped_report(tmp_path)
+    subject, text, html = change_mail.build_change_email(
+        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0}, max_items=50)
+    groups = [line for line in text.splitlines() if line.startswith("■ ")]
+    assert groups == ["■ 김철수 (이슈 1건)", "■ 이영희 (이슈 2건)", "■ 작성자 미확인 (이슈 1건)"]
+    assert text.index("VP-1 VP-1 제목") < text.index("VP-4 VP-4 제목")   # 같은 작성자 안에서는 최근 변경 순
+    assert html.index("김철수 (이슈 1건)") < html.index("이영희 (이슈 2건)") < html.index("작성자 미확인 (이슈 1건)")
+
+
+# Validates: REQ-ALMCHG-004
+def test_reporter_groups_respect_max_items(tmp_path):
+    report = _grouped_report(tmp_path)
+    subject, text, html = change_mail.build_change_email(
+        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0}, max_items=2)
+    groups = [line for line in text.splitlines() if line.startswith("■ ")]
+    assert sum(int(g.split("이슈 ")[1].split("건")[0]) for g in groups) == 2
+    assert "나머지 2건은 화면에서 보기" in text

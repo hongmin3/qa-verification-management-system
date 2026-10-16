@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="76f581814ab16c898b6b0e2de1b96fb8291904fec5ec1ba56eb5b49c91c3fe94">
+<meta name="spec-source-sha256" content="73080f0825c738fb22ac009c3d441e6adb2883c65016b41dae106cb29e2295dc">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -16068,8 +16068,9 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <section class="card kind-req" id="REQ-ALMCHG-002">
 <h3><span class="idtag">REQ-ALMCHG-002</span> 기간 안 기록을 하루씩 비교</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a>, <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>, <a class="idref" href="#REQ-QAINTEL-027">REQ-QAINTEL-027</a>, <a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>, <a class="idref" href="#TEST-ALMCHG-003">TEST-ALMCHG-003</a></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-10-16 변경 리포트 메일 작성자별 묶기</span> <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>: 변경 목록의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>마다 작성자 번호와 이름을 함께 넘긴다. 조회에서 빠진 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 마지막으로 본 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 작성자를 쓴다.</li>
 <li><span class="hist">2026-10-16 ALM 변경 리포트 구현</span> <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>: <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>에 담당자를 더했다. 기간을 고르면 저장된 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 하루씩 비교해 대상별 날짜순 변경 목록을 만든다. 상태가 바뀌었다 돌아와도 두 줄이 보이고, <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>이 없는 날은 <span class="term" title="리포트가 실제로 비교한 기록의 날짜와, 기록이 없어 하루 단위로 볼 수 없었던 날이다" tabindex="0">확인 범위</span> 문구로 알린다.</li>
 <li><span class="hist">2026-10-16 ALM 변경 리포트 사양 작성 (구현 전)</span> <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>: 기간을 고르면 그 사이 저장된 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 하루씩 비교해 대상별 날짜순 변경 목록을 만드는 요구사항을 새로 정했다. 양 끝만 비교하면 놓치는 중간 변경도 보인다.</li>
 </ul>
@@ -16199,8 +16200,9 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <section class="card kind-req" id="REQ-ALMCHG-004">
 <h3><span class="idtag">REQ-ALMCHG-004</span> 변경 리포트 메일</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a>, <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>, <a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#TEST-ALMCHG-004">TEST-ALMCHG-004</a></span></div>
-<details class="history"><summary>변경 이력 4</summary>
+<details class="history"><summary>변경 이력 5</summary>
 <ul>
+<li><span class="hist">2026-10-16 변경 리포트 메일 작성자별 묶기</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 변경 리포트 메일의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 변경을 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 작성자(처음 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한 사람)별로 묶는다. 묶음 제목은 작성자 이름과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 수다. 작성자는 이름순으로 놓고, 이름을 모르는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 &quot;작성자 미확인&quot; 묶음으로 맨 뒤에 둔다. 같은 작성자 안에서는 최근 변경 순이다(사용자 요청 2026-10-16).</li>
 <li><span class="hist">2026-10-16 ALM 변경 리포트 구현</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 매 업무일 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 끝나면 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>마다 변경 리포트 메일 한 통을 보낸다. 번호·제목·바뀐 값·댓글 작성자와 시각만 담는다. 화면의 [이 기간 리포트 메일 보내기]로 고른 기간의 메일도 보낼 수 있다. <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 실패하면 제목에 <code>수집 실패</code>가 붙는다.</li>
 <li><span class="hist">2026-10-16 ALM 변경 리포트 구현</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 실행 상세에 변경 리포트 메일을 보냈는지 한 줄로 보인다. 자동 실행이 꺼져 있으면 <code>--trigger scheduled</code> 로 돌려도 자동 메일을 보내지 않는다.</li>
 <li><span class="hist">2026-10-16 ALM 변경 리포트 구현</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: <code>--no-email</code> 실행은 변경 리포트 메일을 실패가 아닌 건너뜀(메일 끔)으로 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>하고, 그날의 진짜 메일을 막지 않는다. 화면의 메일 보내기 버튼은 오류가 나도 실패 이유를 알려 준다.</li>
@@ -16224,6 +16226,13 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <li><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a> 로 기간의 변경 목록을 만든다.</li>
 <li>아래 구획대로 HTML 본문과 글 본문을 함께 만든다.</li>
 <li><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>와 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 구획마다 대상을 <code>daily_qa.change_report.max_items</code> 개까지 싣는다. 넘으면 &quot;나머지 &lt;n&gt;건은 화면에서 보기&quot;와 화면 링크를 단다.</li>
+<li>실을 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 작성자별로 묶는다.
+<ul>
+<li>작성자는 이름순으로 놓는다. 작성자 이름을 모르는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 &quot;작성자 미확인&quot; 묶음으로 맨 뒤에 둔다.</li>
+<li>같은 작성자 안에서는 마지막 변경이 최근인 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>부터 놓는다.</li>
+</ul>
+이유: <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한 사람이 자기 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>의 변경을 바로 찾을 수 있다. 절약 모드 요약 메일도 같은 순서로 묶는다.
+</li>
 <li>수신자에게 보낸다. 수신자는 요약 메일과 같은 순서로 정한다(<code>daily_qa.report_recipients</code>, 없으면 <code>DAILY_QA_EMAIL_TO</code>, <code>NOTIFY_EMAIL_TO</code>, <code>notifications.admin_email</code>).</li>
 </ol>
 </div></section>
@@ -16235,7 +16244,7 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <tr><td>기간</td><td>시작·끝 시각, 비교한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span> 날짜</td></tr>
 <tr><td>AI 분석</td><td>자동 분석 상태(켜짐·주간·꺼짐), <span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 수와 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석] 안내</td></tr>
 <tr><td>요약</td><td><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 변경 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>별 건수</td></tr>
-<tr><td><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 변경</td><td>최근 변경 순. <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>마다 번호·제목, 날짜순 <span class="term" title="대상 하나에서 어느 날 바뀐 것 하나다. 예: &quot;10-19 상태 &lt;이전&gt; → &lt;이후&gt;&quot;" tabindex="0">변경 줄</span>, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 바로가기</td></tr>
+<tr><td><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 변경</td><td><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 작성자(<span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 처음 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한 사람)별로 묶는다. 묶음 제목은 작성자 이름과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 수다. <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>마다 번호·제목, 날짜순 <span class="term" title="대상 하나에서 어느 날 바뀐 것 하나다. 예: &quot;10-19 상태 &lt;이전&gt; → &lt;이후&gt;&quot;" tabindex="0">변경 줄</span>, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 바로가기</td></tr>
 <tr><td><span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 변경</td><td>신규·수정·조회에서 빠짐. 번호·제목·바뀐 곳</td></tr>
 <tr><td><span class="term" title="리포트가 실제로 비교한 기록의 날짜와, 기록이 없어 하루 단위로 볼 수 없었던 날이다" tabindex="0">확인 범위</span></td><td><span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>이 없는 날 알림</td></tr>
 <tr><td>링크</td><td>같은 기간의 변경 리포트 화면 주소</td></tr>
@@ -16265,10 +16274,11 @@ AI 분석: 꺼짐 · 밀린 변경 &lt;n&gt;건은 화면의 [밀린 변경 분�
 SRS: 신규 &lt;n&gt; · 수정 &lt;n&gt; · 조회에서 빠짐 &lt;n&gt;
 
 [이슈 변경]
-VP-&lt;번호&gt; &lt;이슈 제목&gt;
-  10-17(토) &lt;시각&gt;  댓글 추가 · &lt;작성자&gt;
-  10-19(월)        상태 &lt;이전&gt; → &lt;이후&gt;
-  10-19(월)        담당자 &lt;이전&gt; → &lt;이후&gt;
+■ &lt;작성자 이름&gt; (이슈 &lt;n&gt;건)
+  VP-&lt;번호&gt; &lt;이슈 제목&gt;
+    10-17(토) &lt;시각&gt;  댓글 추가 · &lt;댓글 작성자&gt;
+    10-19(월)        상태 &lt;이전&gt; → &lt;이후&gt;
+    10-19(월)        담당자 &lt;이전&gt; → &lt;이후&gt;
 
 [SRS 변경]
 신규  VP-&lt;번호&gt; &lt;SRS 제목&gt;

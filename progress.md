@@ -16,6 +16,8 @@
 - 원인: 배포 지식의 필수 규칙(REF-core-deployment#restart-procedure, 재기동은 `sudo systemctl restart qa-verification` 또는 `scripts/deploy.ps1 -Restart`, nohup·kill 방식이 아님)을 배포 전에 읽지 않고 지난 기록의 kill 방식을 따랐다.
 - 서비스 복귀(14:15 KST): 사용자가 임시 프로세스를 끝내고 `sudo systemctl start qa-verification.service` 를 실행했다. 서비스 active(프로세스 3004028), 앱 프로세스 1개, `/health`·`/qa-agent`·`/qa-agent/changes`·`/qa-agent/deferred` 200, 서비스 로그 오류 없음, 새 점검 실행 없음을 확인했다.
 - 미확인: 10-19(월) 04:00 첫 수집 실행과 변경 리포트 메일 수신, 담당자 이름 표시.
+- 작성자별 묶기(사용자 요청, 운영 미반영): 변경 리포트 메일의 이슈를 이슈 작성자별로 묶는다(REQ-ALMCHG-004). 관련 테스트 161건 통과. 운영에는 아직 반영하지 않았다.
+- 수동 메일 발송(14:2x KST): 사용자 요청으로 10-13~10-16 변경 리포트를 설정된 수신자 1명에게 보냈다(앱 응답 sent). 작성자별 묶기 반영 전 형식이다.
 - 확인 필요: 같은 날 사람이 다시 점검하면 그날 기록을 덮어써, 04:00부터 그 시각까지의 변경이 자동 메일에 빠진다(화면에서는 보인다). 변경 리포트 메일 설정(`daily_qa.change_report.*`)은 설정 파일로만 바꾼다.
 
 ## 2026-10-15 VXvue AI 입력 없는 자동 연결 (진행 중)
