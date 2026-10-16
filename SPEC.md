@@ -205,7 +205,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | Polarion 조회 실패·0건·이슈 급감 | 그 수집 단계가 `실패` 다. 오늘 스냅샷과 이벤트를 저장하지 않아 다음 실행이 마지막 정상 스냅샷과 비교한다(REQ-QAINTEL-009). 사양–TC 연결 점검은 저장된 스냅샷으로 돈다 |
 | Claude 토큰이 없고 Claude CLI 로그인도 없음 | AI 단계 `건너뜀`, 이유가 메일과 `audit.json` 에 남는다. 이벤트는 대기로 남는다. 토큰이 없어도 그 PC 의 Claude CLI 가 로그인돼 있으면 로그인으로 부른다 |
 | Claude 사용량 한도·인증 실패 | AI 단계 `Claude 사용량 한도`. 변경 감지는 계속하고 이벤트는 대기로 남는다. 초기화 시각이 메일·대시보드에 보이고, 세션 한도면 풀린 뒤 한 번 다시 돈다(REQ-QAINTEL-025) |
-| QA 규칙 판이 제품 설정의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
+| QA 규칙 원문이 없거나 잘못됨, 또는 판 고정을 설정한 제품의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
 | PC 가 꺼져 있음 | 서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다 |
 | ALM 수집 실패 | 새 사양서 PDF 가 없으므로 사양서 동기화는 마지막 수집본을 대상으로 한다. 지식 업로드는 TC·매뉴얼 등 지식 폴더의 다른 변경도 확인한다 |
 
@@ -736,7 +736,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | Runtime TC | 장비·소프트웨어를 돌려 확인하는 실행형 TC 다 |
 | Dose Table | 발생기 촬영 조건별 선량 표다. 없으면 촬영 가능 조합·출력 정확도를 확정하지 않는다 |
 | Exposure | 실제 X-ray 조사(촬영)다 |
-| QA 규칙 문서 | 제품마다 QA 가 관리하는 두 문서다. `[QA 작성 규칙] <제품> TC 설계 및 자체검토 가이드_Rev*.md` 와 `<제품> 검증 DB AI 지침 프롬프트`. 저장소에 커밋하지 않고 지식 폴더 수집으로 서버 사본을 만든다 |
+| QA 규칙 문서 | 제품마다 QA 가 관리하는 규칙이다. VXvue는 운영 지침과 상세 규칙을 합친 MD 하나를 사용한다. 기존 두 문서 제품은 `[QA 작성 규칙] <제품> TC 설계 및 자체검토 가이드_Rev*.md` 와 `<제품> 검증 DB AI 지침 프롬프트`. 저장소에 커밋하지 않고 지식 폴더 수집으로 서버 사본을 만든다 |
 | 규칙 절 | QA 규칙 문서의 번호 붙은 제목 하나다. 이 문서에서는 "규칙 N절"이라고 쓰고, 코드 주석의 `§N` 과 같다 |
 | 규칙 발췌 | 규칙 문서에서 이번 판단에 필요한 절만 잘라 AI 지시문 뒤에 붙인 글이다. 코드 이름 `system_suffix` |
 | 규칙 구현 현황표 | 규칙 절마다 "무엇으로 구현했고 지금 구현됐는가"를 적은 코드 안의 표다. 코드 이름 `RULE_CAPABILITY` |
@@ -3784,40 +3784,15 @@ REQ-QAINTEL-019 가 대신한다.
 
 `/daily-qa` 의 실행 목록·검토 대기열·Finding 결정·질문 화면은 없어졌다. 결과는 `/qa-agent` 대시보드와 상세 화면(REQ-QAINTEL-020)에서 보고, 승인·거절·근거 추가 필요 입력은 없다. 옛 `/daily-qa/*` 주소는 GET 이면 307 로 새 주소에 넘어가고, 결정 저장 요청은 받지 않는다. 개편 전 결정은 표에 그대로 남는다.
 
-### REQ-DAILY-010 QA 규칙 판 확인
+### REQ-DAILY-010 QA 규칙 원문 확인
 
-**하는 일** 제품 규칙 Skill 은 그 제품 QA 규칙의 특정 판에 맞춰 쓰였다. 서버 지식 사본의 규칙 판이 그 판과 다르면 AI 분석을 멈추고 사람에게 알린다. 예를 들어 VXvue 규칙이 Rev1.18 로 바뀌었는데 제품 설정의 기준 판이 `1.17` 이면, 분석할 대상이 있는 AI 단계가 `규칙 판 불일치` 로 남는다.
+**하는 일** VXvue는 서버에 동기화한 통합 QA 규칙 MD를 읽는다. 파일명이나 개정 번호가 바뀌어도 유효한 원문이면 적용한다. 개정은 표시용이며 적용 내용은 SHA-256으로 기록한다.
 
-이유: 규칙이 바뀌었는데 Skill 이 그대로면 검증 관문 번호나 판정 기준이 어긋난 결과가 나온다.
-
-**순서**
-
-1. 지식 사본에서 QA 규칙 종류의 파일들을 모은다. 파일 이름의 `Rev<숫자.숫자>` 로 판을 읽고, 판이 가장 높은 것 가운데 파일이 있는 것을 고른다. 지침 프롬프트도 같은 방법으로 고른다.
-2. 규칙 파일이 없으면 불일치로 본다.
-3. 기준 판은 제품 설정 `config/products/<slug>.yaml` 의 `qa_intelligence.rules.supported_rev` 다(VXvue 는 2026-10-13 부터 `1.18`). 고른 규칙 파일의 판이 기준 판과 다르면 불일치로 본다. 기준 판이 비어 있으면 판은 보지 않고 규칙 파일이 있는지만 본다.
-4. 불일치면 분석 대상이 있는 AI 단계(다섯 가지 분석, 매뉴얼 누락 후보 점검)를 돌리지 않고, 그 단계를 `규칙 판 불일치` 로 남긴다. 분석 대상이 없는 단계는 `건너뜀` 이다. 분석하지 못한 이벤트는 `pending` 으로 남아 다음 실행에서 다시 분석한다(REQ-QAINTEL-006).
-5. AI 없는 계산(삭제된 SRS 를 가리키는 TC, 사양–TC 연결 점검)은 그대로 돈다.
-6. 사전 점검 단계는 `일부 실패` 가 되고 비고에 이유가 들어간다. 실행 결과는 `일부 실패` 다.
-
-**결과**
-
-| 곳 | 보이는 것 |
-|---|---|
-| 메일 | 첫 줄 "※ <이유>" (HTML 은 붉은 굵은 글씨) |
-| 점검 기록 보기 | "규칙 판 불일치: <이유>" 경고 |
-| 실행 기록 요약 | 규칙 상태(일치 여부, 찾은 판, 기준 판, 이유, 규칙·프롬프트 파일 이름) |
-
-이유 문장:
-
-| 경우 | 문장 |
-|---|---|
-| 규칙 파일 없음 | "수집된 QA 규칙 파일이 없습니다. 지식 폴더 동기화를 확인하세요." |
-| 판 다름 | "QA 규칙 판이 Skill 기준과 다릅니다 (수집본 Rev<찾은 판> / Skill 기준 Rev<기준 판>). 제품 규칙 Skill 을 새 판에 맞춰 검토한 뒤 제품 설정의 qa_intelligence.rules.supported_rev 를 올리세요." |
-
-**지킬 것**
-
-- 제품 설정의 `qa_intelligence.rules.supported_rev` 는 제품 규칙 Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다.
-- 규칙 원문은 저장소에 넣지 않는다. 실행마다 마스킹한 사본을 작업 폴더 `rules/` 로 옮긴다(REQ-DAILY-023).
+1. 통합 표시 `<!-- qa-rules-format: unified-v1 -->`가 있는 MD를 우선 선택한다. 운영 지침과 상세 QA 규칙 구역이 모두 있어야 한다.
+2. 통합 원문이 여러 개이고 내용이 다르거나, 읽기 실패·빈 구역·해시 불일치가 있으면 AI 호출 전에 이유를 남기고 중단한다. 오래된 TXT로 되돌아가지 않는다.
+3. 다른 제품과 전환 전 자료는 기존 두 문서 선택을 유지한다. 다른 제품의 `supported_rev` 설정은 유지할 수 있다. VXvue는 이 값을 고정하지 않는다.
+4. 같은 선택 결과를 단일 이슈 분석·자동 QA·서버 챗봇에 적용한다. 실패한 AI 분석은 대기로 남기고 AI 없는 계산은 계속한다.
+5. 규칙 원문은 저장소에 넣지 않는다. 실행용 사본은 마스킹하며 새 작업은 새 원문을, 진행 중인 질문은 준비된 원본 판을 사용한다.
 
 ### REQ-DAILY-011 수동 실행 명령과 종료 코드
 
@@ -3881,7 +3856,7 @@ python scripts/run_daily_qa.py --check
 4. Claude 인증이 되는가. `CLAUDE_CODE_OAUTH_TOKEN` 이 있거나, 없으면 Claude CLI 가 로그인돼 있는가(`claude auth status`). 어느 쪽인지 쓴다
 5. Claude CLI(`daily_qa.claude_command`)를 실행 경로에서 찾을 수 있는가
 6. 작업 폴더 위치가 규칙에 맞는가(NFR-SEC-001). 맞으면 위치를, 아니면 이유를 쓴다
-7. QA 규칙 판이 제품 설정의 기준 판과 같은가(REQ-DAILY-010). 같으면 `Rev<판>` 을 쓴다
+7. QA 원문을 읽고 내용과 해시를 확인할 수 있는가(REQ-DAILY-010). 개정 번호는 표시용이며 VXvue는 번호로 실행을 막지 않는다
 8. 남아 있는 Claude 사용량 한도가 없는가(REQ-QAINTEL-025). 있으면 한도 설명을 쓴다
 9. 요약 메일 수신자가 있는가. 몇 명인지 쓴다
 
@@ -4277,7 +4252,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
    - 작업 폴더 밖 읽기는 거부되니 다시 시도하지 않는다.
 3. 도구 허용 설정 `.claude/settings.json` 을 매번 새로 쓴다. 허용·금지 도구 목록, 묻지 않고 거부, 원격 측정·오류 보고 끄기, 폴더 안 MCP 설정 쓰지 않기가 들어간다.
 4. 저장소의 공통 Skill 폴더 `app/modules/daily_qa/skills/` 를 `.claude/skills/` 로 통째로 다시 복사한다. 전에 있던 것은 지운다. 이어서 제품 Skill 폴더(`config/products/<slug>/skills/`, VXvue 는 `config/products/vxvue/skills/`)가 있으면 그 위에 복사한다. 이름이 겹치면 제품 것을 쓴다.
-5. QA 규칙 가이드와 지침 프롬프트를 마스킹해 `rules/qa-guide.md`, `rules/instruction-prompt.txt` 로 쓴다. 지식 사본에 없으면 전에 있던 사본을 지운다.
+5. 선택한 QA 원문을 마스킹해 `rules/qa-guide.md`에 쓴다. 통합 MD 모드는 이 파일 하나만 사용하며 옛 `rules/instruction-prompt.txt`를 제거한다. 기존 두 문서 제품은 지침 TXT도 복사한다. 지식 사본에 없으면 전에 있던 사본을 지운다.
 6. `runs/<실행 ID>/` 아래에 `in/`, `out/`, `context/` 를 만든다.
 7. 처음 AI 작업 바로 전에 `context/` 에 아래를 모두 마스킹해 쓴다.
    - 오늘 SRS 전체(`srs_current.jsonl`, 한 줄에 하나)
@@ -4318,7 +4293,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 
 1. 규칙 원문은 작업 폴더 `rules/` 에서 읽는다. 가이드 파일이 없으면 Finding 을 비우고, 검증 관문 G2 를 `FAIL` 로 두고, 질문 "QA 규칙 파일 없음" 하나만 쓰고 끝낸다. 기억으로 규칙을 대신하지 않는다.
 2. 점검 Skill 은 공통 규칙 Skill 과 제품 규칙 Skill 을 읽지 못했으면 판정하지 않는다. Finding 을 비우고 질문 하나만 쓰고 끝낸다.
-3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 지침 프롬프트, 제품 규칙, 공통 규칙 순서로 따른다.
+3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 운영 지침(통합 MD의 운영 구역 또는 TXT), 제품 상세 규칙, 공통 규칙 순서로 따른다.
 4. 사람 없이 도는 실행이므로 질문은 결과 파일 `open_questions` 에 적는다.
 5. 근거 규칙:
 
@@ -5037,6 +5012,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 이유: 파일이 없는 등록은 검색에 도움이 안 되면서 "사양 없음" 오판을 만든다. 이 등록 하나 때문에 분석 전체가 실패한 적이 있다.
 
 ### REQ-KNOW-014 스캔 결과 보기
+
+통합 QA 원문을 읽었지만 개정 번호가 없으면 고급 정보에 `개정 번호 없음(원문 적용)`을 표시한다. 번호가 없다는 이유로 미수집으로 표시하지 않는다.
 
 **하는 일** 지식 폴더를 스캔해 무엇을 고르고 무엇을 왜 뺐는지 JSON 으로 보여 준다. 아무것도 쓰지 않는다.
 
@@ -9086,7 +9063,7 @@ python -m pytest tests/test_daily_qa_pipeline.py tests/test_daily_qa_polarion.py
 
 ### TEST-DAILY-009
 
-자동 테스트 없음. Skill 내용(REQ-DAILY-024, REQ-DAILY-025)은 QA 규칙 판이 바뀔 때 사람이 검토한다. 자동 테스트(`test_prepare_writes_settings_skills_and_rules`)는 Skill 이 작업 폴더로 복사되는지만 본다.
+`tests/test_unified_qa_rules.py`는 통합 원문 선택·필수 구역·해시·업무별 절 전달과 검증 모드를 확인한다. 문장의 의미와 실제 답변 품질은 별도 검토한다.
 
 1. 새 판 규칙의 검증 관문·판정 이름이 제품 규칙 Skill `vxvue-qa-rules`(`config/products/vxvue/skills/vxvue-qa-rules/`)와 `schema.py` 의 `VERDICTS` 와 같은지 본다.
 2. Skill 이 가리키는 절 번호가 새 판에도 같은 뜻인지 본다.
@@ -9816,7 +9793,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_qa_exception_notifications.py` | implemented |
 | REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
-| REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
+| REQ-DAILY-010 | `app/core/qa_rule_source.py`, `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | `tests/test_unified_qa_rules.py`, TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
 | REQ-DAILY-011 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
 | REQ-DAILY-012 | `scripts/run_daily_qa.py`, `app/core/claude_cli.py` | TEST-DAILY-007, `tests/test_qa_intel_login.py` | implemented |
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |

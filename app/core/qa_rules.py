@@ -1,22 +1,7 @@
-"""QA 규칙 문서 로더 — 지침 프롬프트와 TC 작성 규칙을 기계가 쓸 수 있는 형태로 만든다.
+"""서버에 수집된 QA 원문을 선택하고 업무별 절을 전달한다.
 
-QA는 제품별로 두 개의 규칙 문서를 유지한다.
-
-- `<제품> 검증 DB AI 지침 프롬프트` — 역할·Skill Routing·Gate·우선순위 (약 14KB)
-- `[QA 작성 규칙] <제품> TC 설계 및 자체검토 가이드_Rev1.12.md` — 세부 실행 절차 (약 43KB, 52개 절)
-
-이 문서는 원래 GPTs(클라우드)에 통째로 올려 쓰던 것이다. 이 프로젝트는 같은 규칙을 **로컬에서
-Gemini API로** 실행하므로, 규칙 전문을 매 호출마다 보내지 않는다. 대신:
-
-1. 문서를 절(section) 단위로 쪼갠다.
-2. 각 절이 어느 Skill(S01~S11)·어느 Gate(G1~G5)에 필요한지 태깅한다.
-3. 호출 시점에 **그 Skill에 필요한 절만** 문자 예산 안에서 주입한다.
-
-`akela compile`이 에이전트에게 지식을 잘라 주는 것과 같은 원리다. 43KB를 다 보내면 호출 한
-번에 그것만으로 1만 토큰이 넘고, 규칙 대부분은 그 요청과 무관하다.
-
-규칙 문서는 사내 QA 노하우라 저장소에 커밋하지 않는다. `data/product_knowledge/<slug>/`에
-수집된 사본을 읽는다. 없으면 QA Agent의 G1이 `no_rules` 항목으로 BLOCK 하고 AI를 부르지 않는다.
+통합 MD는 운영 지침과 상세 규칙을 함께 담는다. 기존 두 문서 제품도 지원한다.
+사내 원문은 저장소에 넣지 않으며 선택·내용 검사는 qa_rule_source에서 공유한다.
 """
 
 from __future__ import annotations
@@ -27,7 +12,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
-from app.core.product_knowledge import KIND_INSTRUCTION_PROMPT, KIND_QA_RULES, collected_assets, product_dir
+from app.core.product_knowledge import KIND_INSTRUCTION_PROMPT, KIND_QA_RULES
 
 # Skill 식별자. 지침 프롬프트 §3 Agent Skill Routing 과 규칙 §3 Skill Registry 의 정의를 따른다.
 SKILL_TITLES: dict[str, str] = {
@@ -234,7 +219,7 @@ class RuleSet:
 
     @property
     def revision(self) -> str:
-        """대표 리비전 — TC 작성 규칙의 Rev 를 쓴다 (지침 프롬프트와 같은 Rev 로 관리된다)."""
+        """표시용 개정. 실행 가능 여부는 원문 검사 결과로 판단한다."""
         for document in self.documents:
             if document.kind == KIND_QA_RULES and document.revision:
                 return document.revision
@@ -430,20 +415,18 @@ def load_rule_set(product: str, root: Path | None = None) -> RuleSet:
     않는다 — 규칙이 없어도 나머지 분석은 계속 돌아야 한다).
     """
     rule_set = RuleSet(product=product)
-    base = product_dir(product, root)
-    for kind in (KIND_INSTRUCTION_PROMPT, KIND_QA_RULES):
-        for asset in collected_assets(product, kind=kind, root=root):
-            path = base / "original" / kind / asset["file_name"]
-            if not path.is_file():
-                continue
-            try:
-                text = path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            document = parse_rule_document(text, name=asset.get("base_name") or path.stem, kind=kind, path=str(path))
-            if not document.revision:
-                document.revision = asset.get("revision", "")
-            rule_set.documents.append(document)
+    from app.core.qa_rule_source import collected_rule_documents
+    try:
+        sources = collected_rule_documents(product, root)
+    except ValueError:
+        return rule_set
+    for source in sources:
+        path = Path(source["path"])
+        document = parse_rule_document(path.read_text(encoding="utf-8-sig"), name=path.stem, kind=source["kind"], path=str(path))
+        if not document.revision:
+            match = REVISION_RE.search(path.name)
+            document.revision = f"Rev{match.group(1)}" if match else ""
+        rule_set.documents.append(document)
     return rule_set
 
 

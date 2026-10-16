@@ -78,6 +78,10 @@ def read_bundle(plugin, skill, codex_home=None):
     code_paths = sorted(p for p in (source / "scripts").rglob("*") if p.is_file()) if (source / "scripts").is_dir() else []
     code_paths = [p for p in code_paths if p.suffix in (".py", ".js", ".ps1", ".sh")]
     code_paths += [package / name for name in (".mcp.json", "mcp.json") if (package / name).is_file()]
+    # Server connector entry points live at the package root rather than skills/scripts.
+    code_paths += sorted(p for p in package.iterdir() if p.is_file() and p.suffix in (".cjs", ".mjs", ".js", ".py", ".ps1", ".sh"))
+    if any(p.is_symlink() or not p.resolve().is_relative_to(package.resolve()) for p in code_paths):
+        raise ValueError("설치 캐시 밖의 실행 파일은 동기화할 수 없습니다.")
     code_hashes = {p.relative_to(package).as_posix(): digest(p.read_bytes()) for p in code_paths}
     if any(digest(path.read_bytes()) != record["sha256"] for path, record in zip(paths, records)) or any(digest(path.read_bytes()) != code_hashes[path.relative_to(package).as_posix()] for path in code_paths):
         raise ValueError("Skill 내보내기 중 원본이 바뀌었습니다. 다음 동기화에서 다시 확인합니다.")

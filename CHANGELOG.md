@@ -1,5 +1,10 @@
 # 변경 이력
 
+## 2026-10-16
+
+- REQ-DAILY-010, REQ-DAILY-023, REQ-DAILY-024: VXvue 업무 지침을 통합 MD 한 파일에서 읽도록 연결했다. 개정 번호 고정을 해제하고 필수 구역·내용 충돌·원본 해시를 확인한다. 자동 QA는 운영 지침과 업무별 상세 규칙을 함께 읽는다.
+- REQ-VXVUECHATBOT-005, REQ-VXVUECHATBOT-006, REQ-VXVUECHATBOT-008: 구형 로컬 직접 조회 Skill 대신 서버형 연결 Skill을 동기화한다. 통합 원문을 선택하면 이전 MD·TXT는 질문 입력과 검색에서 제외하고, 기존 질문의 원본 판과 연결 도구 계약은 유지한다.
+
 ## 2026-10-15 VXvue AI 입력 없는 자동 연결
 
 - REQ-VXVUECHATBOT-013: Desktop 설치 파일에 서버 주소와 한 번만 쓰는 등록 번호를 넣는다. 처음 실행할 때 이 PC 전용 연결 키를 받아 저장하므로 주소·토큰·계정을 입력하지 않는다. 등록·연결은 사내망 주소에서만 되고, 관리자는 `scripts/vxvue_desktop_devices.py`로 PC별 연결을 보고 취소한다. 서버는 키를 해시로만 저장한다.

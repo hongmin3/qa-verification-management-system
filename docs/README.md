@@ -26,7 +26,7 @@
 | **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합, 메일 미수신 원인, 관리자 설정, 상세·목록 재구성(미구현) |
 | **챗봇 미확인 범위·검색 비용 개선** | [실행 계획](superpowers/plans/2026-10-14-chat-evidence-coverage.md) · [운영 검증 기록](verification/2026-10-14-production-integration.md) |
 | **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
-| **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
+| **서버형 Skill과 통합 QA 규칙 관리** | [관리 방법](VXVUE_SKILL_SYNC_PLAN.md) · [전환 설계](superpowers/plans/2026-10-16-vxvue-single-rule-source.md) |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **2026-10-14 통합 배포와 운영 기능 검증 현황** | [운영 검증 기록](verification/2026-10-14-production-integration.md) |

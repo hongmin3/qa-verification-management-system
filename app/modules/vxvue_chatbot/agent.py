@@ -167,10 +167,10 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     system += "\n\n" + (module / "skill" / "SKILL.md").read_text(encoding="utf-8")
     if snapshot.get("skill_text"):
         system += "\n\n" + snapshot["skill_text"]
-    else:
+    elif "<!-- qa-rules-format: unified-v1 -->" not in snapshot["rules"]:
         system += "\n\n" + (module / "skill" / "references" / "qa-work-principles.md").read_text(encoding="utf-8")
         system += "\n\n" + (module / "skill" / "references" / "generator-integration.md").read_text(encoding="utf-8")
-    system += "\n\n# 서버의 최신 지침 프롬프트·QA 규칙 전문\n" + snapshot["rules"]
+    system += "\n\n# 서버의 현재 QA 업무 지침 전문\n" + snapshot["rules"]
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
     system, system_mask = mask_text(system)
     prompt_file.write_text(system, encoding="utf-8")
