@@ -191,7 +191,7 @@ def build_change_failure_email(product: str, stages: dict, *, kind: str, url: st
     else:
         names = {"collect_srs": "SRS 수집", "collect_issues": "이슈 수집"}
         failed = [{"name": names[key], "note": _plain((stages.get(key) or {}).get("note", ""))}
-                  for key in names if (stages.get(key) or {}).get("status") == "failed"]
+                  for key in names if (stages.get(key) or {}).get("status") in ("failed", "skipped")]
         view = {"mode": "failure", "heading": f"{product} 변경 리포트 · 수집 실패", "headline": "수집에 실패했습니다.",
                 "failed": failed, "url": url}
         subject = mail_subject(product, "변경 리포트 · 수집 실패")

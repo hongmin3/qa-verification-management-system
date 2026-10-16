@@ -879,7 +879,7 @@ class _Run:
                 self.change_mail["reason"] = "오늘 이미 변경 리포트 메일을 보냈습니다."
                 return
             url = change_mail.page_url(cfg, cfg.product, since or self.run_date, self.run_date)
-            failed = any((self.stages.get(name) or {}).get("status") == "failed" for name in ("collect_srs", "collect_issues"))
+            failed = any((self.stages.get(name) or {}).get("status") in ("failed", "skipped") for name in ("collect_srs", "collect_issues"))
             if failed:
                 subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="collect_failed", url=url)
             elif not since:

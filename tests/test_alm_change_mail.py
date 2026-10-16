@@ -197,3 +197,32 @@ def test_settings_defaults_and_config():
 
     cfg = load()
     assert cfg.change_report == ChangeReportSettings(enabled=True, send_when_empty=True, max_items=50)
+
+
+@pytest.mark.parametrize("trigger", ["scheduled", "collect"])
+def test_missed_schedule_run_later_in_day_sends_one_mail(tmp_path, trigger):
+    """04:00 을 놓친 날의 만회는 launch_scheduled 가 scheduled/collect 로 띄운다. 그날 메일이 한 통 나간다."""
+    h = make(tmp_path)
+    h.run(FRI, trigger="collect")
+    h.run(MON.replace(hour=8, minute=2), trigger=trigger)
+    mails = change_mails(h)
+    assert len(mails) == 2 and "10-16(금)~10-19(월)" in mails[-1][0]
+
+
+def test_usage_limit_catchup_sends_no_change_mail(tmp_path):
+    h = make(tmp_path)
+    h.run(FRI, trigger="catchup")
+    assert change_mails(h) == []
+
+
+def test_skipped_collection_sends_failure_mail_not_baseline(tmp_path):
+    h = make(tmp_path)
+    from app.modules.daily_qa.pipeline import run_daily
+
+    cfg = replace(h.cfg, polarion=replace(h.cfg.polarion, host="", token=""))      # Polarion 연결 없음 -> 수집 단계 skipped
+    outcome = run_daily(cfg, today=FRI, inputs=h.inputs, store=h.store, trigger="collect",
+                        send_email=lambda *args: h.sent.append(args) or {"status": "sent"})
+    assert outcome["stages"]["collect_issues"]["status"] == "skipped"
+    subject, text, html, _ = change_mails(h)[-1]
+    assert "수집 실패" in subject
+    assert "첫 기록을 저장했습니다" not in text and "첫 기록을 저장했습니다" not in html
