@@ -250,3 +250,46 @@ def test_run_view_trigger_labels_and_change_mail_line():
     assert view("collect", {"status": "sent"})["change_mail"] == "변경 리포트 메일: 보냄"
     assert view("collect", {"status": "skipped", "reason": "변경이 없어 보내지 않았습니다."})["change_mail"] == "변경 리포트 메일: 보내지 않음(변경이 없어 보내지 않았습니다.)"
     assert view("collect", {"status": "failed", "reason": "smtp"})["change_mail"] == "변경 리포트 메일: 실패(smtp)"
+
+
+def _savings_collect_env(tmp_path):
+    from dataclasses import replace
+    from tests.test_qa_workflow_settings import workbook
+
+    h = Harness(tmp_path)
+    h.cfg = replace(h.cfg, savings_enabled=True)
+    path = workbook(tmp_path / "Checklist.xlsx", ["V1.1.0", "V2.0.0"])
+    h.inputs.tc_paths = [path]
+    h.inputs.checklist_template = path
+    h.srs = [srs_item("VP-10", "01-01", "목록"), srs_item("VP-11", "01-02", "상세")]
+    h.issues = [issue_item("VP-100", "2026-09-28T00:00:00Z", ["VP-11"], review="", status="open")]
+    h.run(DAY1, trigger="collect")                      # 기준 기록
+    return h
+
+
+# Validates: REQ-QAINTEL-028, REQ-ALMCHG-001
+def test_savings_collect_still_produces_removed_srs_finding(tmp_path):
+    """절약 모드의 수집만 한 실행도 TC가 가리키던 SRS가 사라지면 COV-removed 결과를 만든다(다음 실행은 이미 새 기록과 비교한다)."""
+    h = _savings_collect_env(tmp_path)
+    h.srs = [srs_item("VP-11", "01-02", "상세")]        # VP-10 삭제, TC 는 VP-10 을 가리킨다
+    outcome = h.run(DAY2, trigger="collect")
+    removed = [f for f in h.store.list_findings(run_id=outcome["run_id"]) if f["task_id"] == "COV-removed"]
+    assert [f["subject"] for f in removed] == ["VP-10"]
+    assert h.calls == [] and outcome["summary"]["claude_calls"] == 0
+
+
+# Validates: REQ-QAINTEL-028, REQ-ALMCHG-001
+def test_savings_collect_sheet_read_failure_is_not_blocking(tmp_path, monkeypatch):
+    """검증 시트를 읽지 못해도 수집만 한 실행은 부분 실패가 아니고, tc_index 단계는 상태에 영향을 주지 않게 기록되며 기록·이벤트는 저장된다."""
+    from app.modules.daily_qa import workflow_settings
+
+    h = _savings_collect_env(tmp_path)
+    monkeypatch.setattr(workflow_settings, "versions", lambda paths: ({}, ["검증 시트를 읽지 못했습니다."]))
+    h.srs = [srs_item("VP-11", "01-02", "상세")]
+    h.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-11"], review="", status="open"))
+    outcome = h.run(DAY2, trigger="collect")
+    assert outcome["status"] != "PARTIAL", {k: (v["status"], v.get("note")) for k, v in outcome["stages"].items()}
+    assert outcome["stages"]["tc_index"]["status"] == "skipped" and "검증 시트를 읽지 못했습니다" in outcome["stages"]["tc_index"]["note"]
+    assert outcome["stages"]["preflight"]["status"] == "ok" and h.calls == []
+    assert "VP-200" in [e["entity_id"] for e in h.events(outcome["run_id"])]
+    assert (h.cfg.issue_snapshot_dir / "2026-09-30.json").is_file()

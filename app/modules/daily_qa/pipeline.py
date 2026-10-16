@@ -816,10 +816,6 @@ class _Run:
 
     def _tc_index(self):
         self._progress("tc_index", "TC 색인")
-        if self.cfg.savings_enabled and self.trigger == 'collect':
-            # 수집만 하는 실행은 AI 분석용 검증 시트 선택을 읽지 않는다. 시트를 못 읽어도 수집 결과는 부분 실패가 아니다 (REQ-ALMCHG-001).
-            self.stages['tc_index'] = _stage('skipped', '수집만 실행 · 검증 시트 확인 생략')
-            return []
         if self.cfg.savings_enabled and not self.on_demand:
             from app.modules.daily_qa import workflow_settings
             paths = workflow_settings.checklist_paths(self.inputs, self.profile)
@@ -828,6 +824,11 @@ class _Run:
             rows, row_errors = workflow_settings.selected_rows(paths, self.verification_sheet)
             errors += row_errors
             self.audit['verification_sheet'] = self.verification_sheet
+            if errors and self.trigger == 'collect':
+                # 수집만 하는 실행은 시트를 못 읽어도 부분 실패가 아니다. AI 차단·preflight 변경 없이 읽은 행만 쓴다 (REQ-ALMCHG-001).
+                # 읽은 행은 SRS 삭제 결과(REQ-QAINTEL-028)에 필요하므로 계속 돌려준다.
+                self.stages['tc_index'] = _stage('skipped', '; '.join(errors), rows=len(rows))
+                return rows
             self.stages['tc_index'] = _stage('failed' if errors else 'ok', '; '.join(errors), rows=len(rows))
             if errors:
                 self.ai_block = self.ai_block or 'tc_version'
