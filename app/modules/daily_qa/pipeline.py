@@ -580,7 +580,8 @@ class _Run:
                 except (OSError, UnicodeError, ValueError):
                     self.rules_state.ok = False
                     self.rules_state.reason = '사용자 지침 또는 QA 규칙 원문을 읽지 못했습니다.'
-        if not self.rules_state.ok:
+        collect = self.trigger == 'collect'   # 수집만 하는 실행은 AI 전용 점검(규칙·한도·작업 폴더)을 보지 않는다 (REQ-ALMCHG-001)
+        if not self.rules_state.ok and not collect:
             self.ai_block = "rules"
         self.claude_login = None
         if not self.collection_only and not self.dry_run and not cfg.claude_token and self.runner is None:
@@ -591,7 +592,7 @@ class _Run:
                 self.audit["claude_auth"] = {"mode": "login", "method": login["method"], "subscription": login["subscription"]}
             else:
                 self.ai_block = self.ai_block or "token"
-        if not self.dry_run:
+        if not self.dry_run and not collect:
             self.limit = active_limit(self.store, cfg, self.today)
             if self.limit is not None and self.limit.kind == claude_limits.KIND_AUTH and self.claude_login:
                 # 로그인 방식은 토큰 지문이 늘 같아 인증 실패 기록이 풀리지 않는다. 로그인이 다시 확인되면 푼다.
@@ -600,8 +601,9 @@ class _Run:
             if self.limit is not None:
                 self.ai_block = self.ai_block or "limit"
         try:
-            self.workspace = prepare(cfg.product_workspace_dir, cfg.root, self.run_id, self.rules_state.guide_path,
-                                     self.rules_state.prompt_path, cfg.product, self.profile.skills_dir, self.profile.product_skill)
+            if not collect:
+                self.workspace = prepare(cfg.product_workspace_dir, cfg.root, self.run_id, self.rules_state.guide_path,
+                                         self.rules_state.prompt_path, cfg.product, self.profile.skills_dir, self.profile.product_skill)
         except WorkspaceError as exc:
             self.ai_block = self.ai_block or "workspace"
             self.stages["preflight"] = _stage("failed", str(exc))
@@ -610,7 +612,7 @@ class _Run:
                      "token": "CLAUDE_CODE_OAUTH_TOKEN 이 없고 Claude CLI 도 로그인돼 있지 않아 AI 단계를 건너뜁니다.",
                      "limit": self.limit.describe() + (" 한도가 풀린 뒤 다시 요청하세요." if self.on_demand else
                                                        " AI 분석은 대기로 남깁니다.") if self.limit else ""}
-            note = notes.get(self.ai_block, "")
+            note = "수집만 실행 · Claude 점검 없음" if collect else notes.get(self.ai_block, "")
             if not self.ai_block and self.claude_login:
                 note = f"Claude CLI 로그인({self.claude_login['method'] or '로그인'})으로 부릅니다."
             self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)

@@ -9,7 +9,7 @@ import pytest
 
 from app.modules.daily_qa import holidays, scheduled_jobs
 from app.modules.daily_qa.store import DailyQaStore
-from tests.daily_qa_fixtures import REPO_ROOT, issue_item, make_settings, srs_item
+from tests.daily_qa_fixtures import REPO_ROOT, issue_item, make_settings, make_tc_workbook, srs_item
 from tests.qa_intel_harness import DAY1, DAY2, Harness
 
 KST = holidays.KST
@@ -104,7 +104,8 @@ def test_missed_run_catches_up_collect_when_off(launcher):
 
 @pytest.fixture
 def env(tmp_path):
-    h = Harness(tmp_path)
+    workbook = make_tc_workbook(tmp_path / "(TC) VXvue_TestCase.xlsx", [("TC_1", "VP-10", "목록 표시")])
+    h = Harness(tmp_path, tc_paths=[workbook])
     h.srs = [srs_item("VP-10", "01-01", "목록")]
     h.issues = [issue_item("VP-100", "2026-09-28T00:00:00Z", ["VP-10"], review="", status="open")]
     return h
@@ -149,3 +150,46 @@ def test_collect_run_makes_no_prepare_plan(env):
 def test_analysis_run_reports_run_kind_analysis(env):
     outcome = env.run(DAY1)
     assert outcome["summary"]["run_kind"] == "analysis" and outcome["summary"]["collect_reason"] == ""
+
+
+def _collect_after_baseline(h, mutate):
+    h.run(DAY1)                               # 기준 기록
+    set_flags(h.store, h.cfg, enabled=False)
+    h.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-10"], review="", status="open"))
+    mutate(h)
+    return h.run(DAY2, trigger="collect")
+
+
+def _assert_collected(h, outcome):
+    assert outcome["status"] in ("SUCCESS", "NO_CHANGE", "BASELINE"), {k: (v["status"], v.get("note")) for k, v in outcome["stages"].items()}
+    assert outcome["stages"]["preflight"]["status"] == "ok"
+    assert h.calls == [] and outcome["summary"]["claude_calls"] == 0
+    assert [e["entity_id"] for e in h.events(outcome["run_id"])] == ["VP-200"]
+    assert (h.cfg.issue_snapshot_dir / "2026-09-30.json").is_file()
+    assert (h.cfg.srs_snapshot_dir / "2026-09-30.json").is_file()
+
+
+# Validates: REQ-ALMCHG-001
+def test_collect_run_under_active_claude_limit_is_not_partial(env):
+    from datetime import timedelta
+    from app.modules.daily_qa import claude_limits, pipeline
+
+    def limit(h):
+        info = claude_limits.LimitInfo(claude_limits.KIND_WEEKLY, (DAY2 + timedelta(days=2)).isoformat(), "주간 한도")
+        h.store.set_state(h.cfg.state_key(pipeline.STATE_CLAUDE_LIMIT), claude_limits.dump(info))
+
+    outcome = _collect_after_baseline(env, limit)
+    _assert_collected(env, outcome)
+    assert "claude_limit" not in outcome["summary"]
+
+
+# Validates: REQ-ALMCHG-001
+def test_collect_run_with_missing_qa_rules_is_not_partial(env):
+    from app.modules.daily_qa.rules import RulesState
+
+    env.run(DAY1)
+    set_flags(env.store, env.cfg, enabled=False)
+    env.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-10"], review="", status="open"))
+    outcome = env.run(DAY2, trigger="collect",
+                      rules_state=RulesState(False, "1.17", "QA 규칙 파일이 없습니다.", None, None))
+    _assert_collected(env, outcome)
