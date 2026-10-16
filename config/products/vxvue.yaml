@@ -23,8 +23,8 @@ knowledge_source:
   dir: "${QA_KNOWLEDGE_DIR_VXVUE:-C:/Users/2024980/Documents/자동화/projects/vxvue/VXvue 지식파일}"
   skill_sync:
     enabled: true
-    plugin: "vxvue-db-ai-local@vxvue-local"
-    skill: "vxvue-local-knowledge"
+    plugin: "vxvue-server-ai@vxvue-server-local"
+    skill: "vxvue-ai"
   # 지식 폴더에 함께 두지만 이 시스템의 지식 자산이 아닌 파일. 수집하지 않는다.
   # polarion_query_backup.pdf 는 Polarion 이슈 조회 결과를 묶은 보고서 PDF 로, 파일명 규약의 어느
   # 종류에도 속하지 않는다. 이 시스템은 이슈를 issue_source.export_dir 에서 읽는다.
@@ -97,9 +97,8 @@ alm:
 qa_intelligence:
   enabled: true
   rules:
-    # 제품 규칙 Skill(config/products/vxvue/skills/vxvue-qa-rules)이 기준으로 삼는 QA 규칙 판.
-    # Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다 (REQ-DAILY-010).
-    supported_rev: "1.18"
+    # 최신 원문 내용과 해시를 확인한다. 개정 번호는 실행 조건이 아니다.
+    supported_rev: ""
     product_skill: "vxvue-qa-rules"
   # 수정 완료 이슈 분석의 Regression 축. GENERATOR(X-ray Generator 조건)는 VXvue 제품에만 있다.
   regression_axes: [DIRECT, STATE, DATA, PERSISTENCE, INTEGRATION, PERMISSION, PRIOR_ISSUE, GENERATOR]

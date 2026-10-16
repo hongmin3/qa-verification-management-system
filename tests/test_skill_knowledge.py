@@ -127,3 +127,15 @@ def test_export_rejects_path_escape_and_hand_edited_generated_file(tmp_path):
     with pytest.raises(ValueError):
         skill_knowledge.export_skill(cfg, codex_home=home)
     assert (folder / "[Skill 지침] Sample.md").read_text(encoding="utf-8") == "user file"
+
+def test_root_server_bridge_change_updates_code_hash_without_exporting_code(tmp_path):
+    home=tmp_path/'codex'
+    root=package(home,'1.0')
+    bridge=root/'server.cjs'
+    bridge.write_text('PRIVATE_BRIDGE_CODE_ONE',encoding='utf-8')
+    first,body=skill_knowledge.read_bundle('sample@local','qa',home)
+    bridge.write_text('PRIVATE_BRIDGE_CODE_TWO',encoding='utf-8')
+    second,new_body=skill_knowledge.read_bundle('sample@local','qa',home)
+    assert first['code_hash']!=second['code_hash']
+    assert first['content_hash']==second['content_hash']
+    assert 'PRIVATE_BRIDGE_CODE' not in body+new_body

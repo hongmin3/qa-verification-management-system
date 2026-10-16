@@ -23,7 +23,8 @@
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
 | **챗봇 미확인 범위·검색 비용 개선** | [실행 계획](superpowers/plans/2026-10-14-chat-evidence-coverage.md) · [운영 검증 기록](verification/2026-10-14-production-integration.md) |
 | **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
-| **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
+| **서버형 Skill과 통합 QA 지침 관리하기** | [서버형 지침 관리](VXVUE_SKILL_SYNC_PLAN.md) |
+| **VXvue QA 지침을 MD 하나로 관리하기** | [단일 MD 전환 계획](superpowers/plans/2026-10-16-vxvue-single-rule-source.md) · 최신 원문 적용, Rev 고정 해제, 기존 서버 연결 호환·운영 전환 결과 |
 | **새 제품을 추가하기** | [새 제품 추가](PRODUCT_ONBOARDING.md) |
 | **QA 규칙을 자동화로 어디까지 구현했는지** | [QA Agentic Workflow 구조](QA_AGENT_ARCHITECTURE.md) → 앱 안 `/qa-agent/rules` |
 | **2026-10-14 통합 배포와 운영 기능 검증 현황** | [운영 검증 기록](verification/2026-10-14-production-integration.md) |
