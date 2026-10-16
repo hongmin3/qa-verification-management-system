@@ -167,6 +167,41 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
     return JSONResponse(result, status_code=202)
 
 
+@router.get("/deferred")
+def deferred_status(product: str = "", since: str = "", until: str = ""):
+    """[밀린 변경 분석]의 확인 창이 읽는 건수·기간·분석 종류별 수 (REQ-ALMCHG-005)."""
+    try:
+        return JSONResponse(dash.deferred_summary(_choice(product), since, until), headers={"Cache-Control": "no-store"})
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
+@router.post("/deferred")
+def deferred_run(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """[밀린 변경 분석]. 고른 기간의 밀린 변경만 분석하는 실행을 [변경사항 점검하기]와 같은 경로로 띄운다 (REQ-ALMCHG-005 5번)."""
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+
+    choice = _choice(product)
+    try:
+        summary = dash.deferred_summary(choice, since, until)
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    if not summary["count"]:
+        return JSONResponse({"detail": "고른 기간에 밀린 변경이 없습니다."}, status_code=400)
+    result = launch_detached(choice.cfg.product, trigger="deferred", deferred_since=since, deferred_until=until)
+    messages = {
+        "running": "점검이 이미 실행 중입니다.",
+        "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
+        "not_configured": "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다.",
+    }
+    if result["status"] in messages:
+        return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
+    limit = dash.limit_info(choice)
+    if limit:
+        result["warning"] = f"{limit['description']} 한도가 풀린 뒤 다시 눌러 주세요. 지금은 분석하지 못하고 밀린 변경으로 남습니다."
+    return JSONResponse(result, status_code=202)
+
+
 @router.post("/issue-audit")
 def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str = Form("")):
     """[현재 이슈 전체 점검]. 이슈 기록이 없는 기간을 지금 이슈 상태 기준으로 점검한다 (REQ-QAINTEL-030)."""

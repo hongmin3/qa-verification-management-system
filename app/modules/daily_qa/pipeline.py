@@ -236,6 +236,8 @@ def run_daily(
     finding_id: int | None = None,
     selection_id: str = "",
     analysis_scope: str = "all",
+    deferred_since: date | None = None,
+    deferred_until: date | None = None,
 ) -> dict:
     """`since`·`until` 을 주면 그 기간의 변경을 분석한다 (REQ-QAINTEL-027).
 
@@ -253,7 +255,7 @@ def run_daily(
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
                        rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit,
                        on_demand=on_demand, finding_id=finding_id, selection_id=selection_id, analysis_scope=analysis_scope,
-                       sender=send_email)
+                       sender=send_email, deferred_since=deferred_since, deferred_until=deferred_until)
             outcome = run.execute()
             run._check_cancel()
         except RunCancelled:
@@ -268,6 +270,8 @@ def run_daily(
                                 "result_cache": run.result_cache})
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
+        if run is not None:
+            run.restore_deferred()   # 성공·한도·중단·실패 어느 쪽이든 끝나지 않은 밀린 변경은 되돌린다 (REQ-ALMCHG-005 6번)
         if on_demand or selection_id or trigger in ('prepare', 'collect') or (cfg.savings_enabled and trigger.startswith("manual")) or outcome["status"] == "CANCELLED":
             # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
             store.set_email_status(run_id, "skipped")
@@ -435,8 +439,13 @@ class _TaskOutcome:
 
 class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
-                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all", sender=None):
+                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all", sender=None,
+                 deferred_since=None, deferred_until=None):
         self.selection_id = selection_id
+        #: [밀린 변경 분석]이 고른 기간(한국 날짜)과, 이번 실행이 밀린 변경에서 꺼낸 이벤트 번호 (REQ-ALMCHG-005).
+        self.deferred_since = deferred_since
+        self.deferred_until = deferred_until
+        self.deferred_chosen: list[int] = []
         self.mail_sender = sender
         #: 자동 변경 리포트 메일 결과 (REQ-ALMCHG-004). 보내지 않는 실행은 None.
         self.change_mail: dict | None = None
@@ -541,6 +550,8 @@ class _Run:
             raise RunCancelled("사용자 중단")
 
     def execute(self) -> dict:
+        if self.trigger == "deferred":
+            return self._execute_deferred()
         if self.selection_id:
             return self._execute_selection()
         if self.on_demand:
@@ -564,6 +575,49 @@ class _Run:
         self.stages["F"] = _stage("not_due", "매뉴얼 점검은 자동으로 돌지 않습니다. 사람이 요청할 때만 돕니다(`--on-demand manual-check`).")
         self._draft_excel()
         return self._finish()
+
+    def _execute_deferred(self) -> dict:
+        """[밀린 변경 분석]. 새로 수집하지 않고 저장된 최신 스냅샷으로 고른 밀린 변경만 분석한다 (REQ-ALMCHG-005)."""
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        self._preflight()
+        note = "밀린 변경 분석: 저장된 최신 스냅샷을 씁니다(Polarion 을 새로 읽지 않음)"
+        self.stages["collect_srs"] = _stage("ok", note)
+        self.stages["collect_issues"] = _stage("ok", note)
+        tc_rows = self._tc_index()
+        srs_items, issue_items = self._saved_srs(), self._saved_issues()
+        self._analyses(None, srs_items, issue_items, tc_rows)
+        self._draft_excel()
+        return self._finish()
+
+    def _deferred_bounds(self) -> tuple[str | None, str | None]:
+        """고른 한국 날짜 기간을 저장 시각(UTC) 범위로 바꾼다. 비워 둔 쪽은 제한이 없다."""
+        since = until = None
+        if self.deferred_since is not None:
+            since = datetime.combine(self.deferred_since, datetime.min.time(), tzinfo=claude_limits.KST).astimezone(timezone.utc).isoformat(timespec="seconds")
+        if self.deferred_until is not None:
+            until = datetime.combine(self.deferred_until + timedelta(days=1), datetime.min.time(), tzinfo=claude_limits.KST).astimezone(timezone.utc).isoformat(timespec="seconds")
+        return since, until
+
+    def _take_deferred(self) -> list[dict]:
+        since, until = self._deferred_bounds()
+        events = self.store.list_events(product=self.cfg.slug, statuses=("deferred",), since=since, until=until)
+        if self.dry_run or not events:
+            return events
+        ids = [event["id"] for event in events]
+        self.store.update_events(ids, "pending")   # 남은 분석(`remaining_analyses`)은 저장 때부터 있어 그대로다
+        self.deferred_chosen = ids
+        return self.store.list_events(ids=ids)
+
+    def restore_deferred(self) -> None:
+        """이번 실행이 꺼낸 밀린 변경 가운데 아직 끝나지 않은 것(대기·실패)을 밀린 변경으로 되돌린다."""
+        if not self.deferred_chosen:
+            return
+        try:
+            left = [event["id"] for event in self.store.list_events(ids=self.deferred_chosen)
+                    if event["analysis_status"] in ("pending", "failed")]
+            self.store.update_events(left, "deferred", error="")
+        except Exception as exc:  # noqa: BLE001 - 되돌리기 실패가 실행 결과를 바꾸지 않는다
+            logger.warning("deferred_restore_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
 
     def _preflight(self) -> None:
         self._progress("preflight", "준비")
@@ -961,6 +1015,8 @@ class _Run:
 
     # -- AI 분석 -----------------------------------------------------------------
     def _target_events(self) -> list[dict]:
+        if self.trigger == "deferred":
+            return self._take_deferred()
         if self.on_demand_events is not None:
             return self.on_demand_events
         if self.dry_run:
@@ -1479,6 +1535,8 @@ class _Run:
 
         이어 하기 실행이 돌 대기분이 없으면 AI 호출은 0회다.
         """
+        if self.trigger == "deferred":
+            return   # [밀린 변경 분석]은 한도에 걸려도 자동으로 이어 하지 않는다 (REQ-ALMCHG-005 6번)
         if reset.tzinfo is None:
             reset = reset.replace(tzinfo=timezone.utc)
         after = reset + timedelta(minutes=self.cfg.intelligence.catchup_delay_minutes)
@@ -1718,7 +1776,7 @@ class _Run:
                         "token_usage": self.token_usage, "cancelled": cancellation,
                         "result_cache_hits": self.result_cache["hits"], "result_cache": self.result_cache})
         summary["collection_only"] = self.collection_only
-        summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
+        summary["run_kind"] = {"collect": "collect", "deferred": "deferred"}.get(self.trigger, "analysis")
         summary["collect_reason"] = self.collect_reason
         summary["deferred_events"] = self.deferred_events
         if self.change_mail is not None:
@@ -1803,7 +1861,7 @@ class _Run:
             status = "SUCCESS"
         summary = report.summarize(self.all_findings, self.question_count)
         summary["collection_only"] = self.collection_only
-        summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
+        summary["run_kind"] = {"collect": "collect", "deferred": "deferred"}.get(self.trigger, "analysis")
         summary["collect_reason"] = self.collect_reason
         summary["deferred_events"] = self.deferred_events
         if self.change_mail is not None:

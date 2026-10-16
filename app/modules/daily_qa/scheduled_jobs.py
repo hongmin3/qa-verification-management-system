@@ -63,7 +63,8 @@ def schedule_settings(settings=None) -> dict:
 
 def launch_detached(product: str | None = None, *, trigger: str = "scheduled", today: datetime | None = None,
                     popen=subprocess.Popen, since: str = "", until: str = "", issue_audit: bool = False,
-                    on_demand: str = "", finding_id: int | None = None, selection_id: str = "", analysis_scope: str = "all") -> dict:
+                    on_demand: str = "", finding_id: int | None = None, selection_id: str = "", analysis_scope: str = "all",
+                    deferred_since: str = "", deferred_until: str = "") -> dict:
     """점검 프로세스를 띄우고 바로 돌아온다. 돌려주는 `status` 로 화면·로그가 이유를 안다.
 
     `launched` 이외의 상태는 휴일·진행 중·설정 없음·자동 점검 정책 등으로 띄우지 않은 결과다.
@@ -91,7 +92,7 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
                 logger.info("qa_agent_skipped reason=weekly_catchup_disabled product=%s", cfg.slug)
                 return {"status": "not_due", "product": cfg.slug}
     # 종료일이 지난 날인 기간 실행과 버튼 요청 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
-    if not cfg.polarion.configured and not until and not on_demand and not selection_id:
+    if not cfg.polarion.configured and not until and not on_demand and not selection_id and trigger != "deferred":
         logger.info("qa_agent_skipped reason=polarion_설정_없음 product=%s", cfg.slug)
         return {"status": "not_configured", "product": cfg.slug}
     if trigger == "scheduled":
@@ -129,6 +130,11 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         command += ["--issue-audit"]
     if selection_id:
         command += ['--selection-id', selection_id, '--no-email']
+    if trigger == "deferred":
+        if deferred_since:
+            command += ["--deferred-since", deferred_since]
+        if deferred_until:
+            command += ["--deferred-until", deferred_until]
     if analysis_scope != 'all':
         command += ['--analysis-scope', analysis_scope]
     if on_demand:

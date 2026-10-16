@@ -756,6 +756,7 @@ def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
         "automation_policy": automation_policy.get_policy(store, cfg.slug),
+        "deferred": deferred_summary(choice),
         "workflow": workflow_settings.for_choice(choice) if cfg.savings_enabled else {'enabled': False},
         # 점검 화면에는 건수와 링크만 둔다. 후보 목록은 `상세 분석` 화면에 있다 (REQ-QAINTEL-042).
         "prepared": prepared_plan(choice) if cfg.savings_enabled else None,
@@ -838,6 +839,30 @@ def parse_run_period(since: str, until: str, today: date | None = None) -> tuple
     if (until_day - since_day).days + 1 > MAX_PERIOD_DAYS:
         raise PeriodError(f"조회 기간은 {MAX_PERIOD_DAYS}일까지입니다.")
     return since_day.isoformat(), ("" if until_day == today else until_day.isoformat())
+
+
+def deferred_summary(choice: ProductChoice, since: str = "", until: str = "") -> dict:
+    """밀린 변경(자동 분석이 꺼진 동안 저장된 변경)의 건수·기간·분석 종류별 수 (REQ-ALMCHG-005 3·4번).
+
+    `since`·`until` 은 한국 날짜이고 둘 다 비워 둘 수 있다(비우면 전체). 잘못된 날짜는 PeriodError 다.
+    """
+    try:
+        start = date.fromisoformat(since) if since else None
+        end = date.fromisoformat(until) if until else None
+    except ValueError as exc:
+        raise PeriodError("날짜는 YYYY-MM-DD 로 입력하세요.") from exc
+    if start and end and start > end:
+        raise PeriodError("시작일이 종료일보다 늦습니다.")
+    lower = _utc_bounds(start, start)[0] if start else None
+    upper = _utc_bounds(end, end)[1] if end else None
+    events = choice.store.list_events(product=choice.cfg.slug, statuses=("deferred",), since=lower, until=upper)
+    days = sorted(kst(event["created_at"])[:10] for event in events)
+    by_analysis: dict[str, int] = {}
+    for event in events:
+        for analysis in event.get("remaining_analyses") or event.get("analyses") or []:
+            by_analysis[analysis] = by_analysis.get(analysis, 0) + 1
+    return {"count": len(events), "first": days[0] if days else "", "last": days[-1] if days else "",
+            "by_analysis": by_analysis}
 
 
 def run_period_defaults(today: date | None = None, min_day: str = "") -> dict:

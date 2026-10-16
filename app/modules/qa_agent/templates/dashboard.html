@@ -58,6 +58,19 @@
 
   <div id="qa-run-preview" class="hint" role="status" aria-live="polite" data-product="{{ selected }}">저장된 대기 분석을 확인하는 중입니다.</div>
   <script src="/static/qa-run-preview.js?v=20261014"></script>
+  {% if deferred.count %}
+  <div id="deferred-box" class="qa-banner" data-product="{{ selected }}">
+    <span id="deferred-line">밀린 변경 <b>{{ deferred.count }}</b>건 ({{ deferred.first }} ~ {{ deferred.last }})</span>
+    <button type="button" id="deferred-open" title="자동 분석이 꺼진 동안 쌓인 변경을 지금 분석합니다."{% if status.running %} disabled{% endif %}>밀린 변경 분석</button>
+    <div id="deferred-confirm" hidden>
+      <label>기간 <input type="date" id="deferred-since" value="{{ deferred.first }}" min="{{ deferred.first }}" max="{{ deferred.last }}"></label>
+      <label>~ <input type="date" id="deferred-until" value="{{ deferred.last }}" min="{{ deferred.first }}" max="{{ deferred.last }}"></label>
+      <p id="deferred-summary" class="hint" role="status" aria-live="polite"></p>
+      <button type="button" id="deferred-start">분석 시작</button>
+      <button type="button" id="deferred-close">닫기</button>
+    </div>
+  </div>
+  {% endif %}
   {% include "_run_progress.html" %}
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}
@@ -128,6 +141,36 @@
     if ({{ workflow.enabled|tojson }} || confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) start('/qa-agent/issue-audit');
   });
   if (window.QASelection) window.QASelection(progress);
+  {% if deferred.count %}
+  {
+    const deferredBox = document.getElementById('deferred-box');
+    const labels = {{ analysis_labels|tojson }};
+    const confirmBox = document.getElementById('deferred-confirm');
+    const dSince = document.getElementById('deferred-since'), dUntil = document.getElementById('deferred-until');
+    const dSummary = document.getElementById('deferred-summary'), dStart = document.getElementById('deferred-start');
+    const query = () => new URLSearchParams({product: deferredBox.dataset.product, since: dSince.value, until: dUntil.value});
+    async function refreshDeferred() {
+      dStart.disabled = true; dSummary.textContent = '확인하는 중입니다.';
+      try {
+        const response = await fetch('/qa-agent/deferred?' + query(), {cache: 'no-store'});
+        const data = await response.json();
+        if (!response.ok) { dSummary.textContent = data.detail || '확인하지 못했습니다.'; return; }
+        const kinds = Object.entries(data.by_analysis).map(([name, count]) => (labels[name] || name) + ' ' + count + '건').join(', ');
+        dSummary.textContent = data.count ? `밀린 변경 ${data.count}건 (${data.first} ~ ${data.last})${kinds ? ' · ' + kinds : ''} · Claude 사용량을 씁니다.` : '고른 기간에 밀린 변경이 없습니다.';
+        dStart.disabled = !data.count;
+      } catch (_) { dSummary.textContent = '확인하지 못했습니다. 다시 시도해 주세요.'; }
+    }
+    document.getElementById('deferred-open').addEventListener('click', () => { confirmBox.hidden = false; refreshDeferred(); });
+    document.getElementById('deferred-close').addEventListener('click', () => { confirmBox.hidden = true; });
+    dSince.addEventListener('change', refreshDeferred); dUntil.addEventListener('change', refreshDeferred);
+    dStart.addEventListener('click', () => {
+      const body = new FormData(); body.append('product', deferredBox.dataset.product);
+      body.append('since', dSince.value); body.append('until', dUntil.value);
+      confirmBox.hidden = true;
+      return progress.launch('/qa-agent/deferred', body, message);
+    });
+  }
+  {% endif %}
 })();
 </script>
 {% endblock %}

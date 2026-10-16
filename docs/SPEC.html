@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="04bb884f135f7163d9efef0ea1dfd09ece5d84469b1e2e4d8518d75659055a34">
+<meta name="spec-source-sha256" content="6e03acd0cc73636b586fe91cf4ba4494740e671ac263aeb44178296815de78d9">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -644,7 +644,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-ALMCHG-002">REQ-ALMCHG-002 <span>기간 안 기록을 하루씩 비교</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-ALMCHG-003">REQ-ALMCHG-003 <span>변경 리포트 화면</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-ALMCHG-004">REQ-ALMCHG-004 <span>변경 리포트 메일</span></a></li>
-<li class="toc-id kind-req"><a href="#REQ-ALMCHG-005">REQ-ALMCHG-005 <span>켠 시각 기준 분석과 [밀린 변경 분석]</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-ALMCHG-005">REQ-ALMCHG-005 <span>저장 시점의 설정 기준 분석과 [밀린 변경 분석]</span></a></li>
 <li class="toc-2"><a href="#doc-alm-change-report-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMCHG-001">TEST-ALMCHG-001 <span>AI 설정과 상관없는 수집</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMCHG-002">TEST-ALMCHG-002 <span>중간 기록을 거친 기간 비교</span></a></li>
@@ -1030,7 +1030,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-draft">draft</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a></td><td data-label="이름">변경 리포트 화면</td><td data-label="상태"><span class="badge st-draft">draft</span></td><td data-label="구현"><code>app/modules/qa_agent/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-003">TEST-ALMCHG-003</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a></td><td data-label="이름">변경 리포트 메일</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a></td><td data-label="이름">켠 시각 기준 분석과 [밀린 변경 분석]</td><td data-label="상태"><span class="badge st-draft">draft</span></td><td data-label="구현"><code>app/modules/daily_qa/pipeline.py</code>, <code>app/core/daily_qa_storage.py</code>, <code>app/modules/qa_agent/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-005">TEST-ALMCHG-005</a></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a></td><td data-label="이름">저장 시점의 설정 기준 분석과 [밀린 변경 분석]</td><td data-label="상태"><span class="badge st-draft">draft</span></td><td data-label="구현"><code>app/modules/daily_qa/pipeline.py</code>, <code>app/core/daily_qa_storage.py</code>, <code>app/modules/qa_agent/router.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-005">TEST-ALMCHG-005</a></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -14669,7 +14669,7 @@ AI가 분석한 것
 <li>한도(<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간) 뒤 자동 재개는 일일 모드에서만 가능하다(<a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a>·049). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.</li>
 <li>서버의 <code>daily_qa.schedule.enabled: false</code>는 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>을 포함한 모든 자동 실행 경로에서 우선 적용한다. <span class="term" title="config/products/&lt;slug&gt;.yaml. 제품마다 다른 Polarion 프로젝트·조회식·필드 이름·연구소 결과 값·Checklist 형식을 적는다" tabindex="0">제품 설정</span>을 켜도 <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span>의 <code>config.local.yaml</code>에 저장된 예약 비활성화를 바꾸지 않는다.</li>
 <li>[변경사항 점검하기]은 자동 점검 중지 중에도 분석할 수 있다. 메일을 보내기 직전에 현재 설정을 다시 읽으며 중지 중에는 메일을 생략하고 이유를 실행 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>에 남긴다.</li>
-<li>꺼짐에서 켜짐으로 바꾸면, 자동 분석은 켠 시각 뒤에 찾은 변경과 끄기 전부터 대기 중이던 변경만 다룬다. 꺼져 있던 동안의 변경은 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]으로만 분석한다(<a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a>).</li>
+<li>꺼짐에서 켜짐으로 바꾸면, 자동 분석은 다시 켠 뒤에 저장한 변경과 끄기 전부터 대기 중이던 변경만 다룬다. 저장할 때 설정이 꺼져 있던 변경은 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]으로만 분석한다(<a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a>).</li>
 </ol>
 <p><strong>결과</strong> 화면에 저장한 두 값, 현재 모드, 다음 자동 실행 시각 또는 중지 이유를 표시한다. 주간 한도 대기는 다음 주 예약 또는 수동 실행에서 이어 간다는 안내를 표시한다.</p>
 <p><strong>지킬 것</strong> 중지로 바꿔도 진행 중인 분석을 강제로 종료하지 않는다. 다음 자동 실행과 다음 메일부터 막는다. 진행 중인 실행의 종료는 <a href="../specs/REQ-QAINTEL-036">분석 중단</a>을 사용한다. 기존 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>·대기 이벤트·결과·수신자는 설정 변경으로 지우거나 바꾸지 않는다.</p>
@@ -15919,7 +15919,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li>QA 담당자는 <code>/qa-agent/changes</code> 화면에서 기간을 골라 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>별·<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span>별 변경을 날짜순으로 본다. 상태가 A에서 B로 갔다가 A로 돌아와도 보인다.</li>
 <li>매 업무일 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 끝나면 직전 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>부터 오늘까지의 변경 리포트 메일이 자동으로 온다. 월요일 메일은 금요일부터 월요일까지를 담는다.</li>
 <li>메일에는 번호·제목·바뀐 값·댓글 작성자와 시각만 넣는다. 댓글 본문과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 본문은 화면에서 본다.</li>
-<li>AI 자동 분석을 다시 켜면 켠 뒤에 찾은 변경만 자동으로 분석한다. 꺼져 있던 동안의 변경은 사람이 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]을 누를 때만 분석한다.</li>
+<li>변경을 저장하는 때 AI 자동 분석이 꺼져 있었다면 그 변경은 다시 켜도 자동으로 분석하지 않는다. 꺼져 있던 동안의 변경은 사람이 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]을 누를 때만 분석한다.</li>
 </ul>
 <figure class="flow">
 <svg viewBox="0 0 760 452" width="760" height="452" role="img" aria-label="매 업무일 04:00 예약 → Polarion 수집(SRS·이슈, AI 없음), Polarion 수집(SRS·이슈, AI 없음) → 날짜별 스냅샷·변경 이벤트, 날짜별 스냅샷·변경 이벤트 → 변경 리포트 메일, 날짜별 스냅샷·변경 이벤트 → 기간의 기록을 하루씩 비교, 기간의 기록을 하루씩 비교 → /qa-agent/changes 화면, 날짜별 스냅샷·변경 이벤트 → AI 분석(specs/qa-intelligence.md), AI 분석(specs/qa-intelligence.md) → 요약 메일, 날짜별 스냅샷·변경 이벤트 → 밀린 변경, 밀린 변경 → 사람이 [밀린 변경 분석], 사람이 [밀린 변경 분석] → AI 분석, Polarion 수집 → 기준 유지, 기준 유지 → 수집 실패 알림 메일">
@@ -15973,7 +15973,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li>기간 안의 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 하루씩 비교한 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 변경 목록</li>
 <li><code>/qa-agent/changes</code> 변경 리포트 화면</li>
 <li>자동 변경 리포트 메일과 화면에서 보내는 수동 메일</li>
-<li>켠 시각 기준 자동 분석과 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석] 버튼</li>
+<li>저장 시점의 설정 기준 자동 분석과 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석] 버튼</li>
 </ul>
 <h3>제외</h3>
 <ul>
@@ -15999,7 +15999,7 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <li><span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span> 쌓기: <a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a>(매 업무일 <span class="term" title="AI 를 부르지 않고 SRS·이슈를 읽어 스냅샷과 변경 이벤트만 남기는 실행이다" tabindex="0">수집 실행</span>)</li>
 <li>변경 목록 만들기: <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>(기간 안 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 하루씩 비교)</li>
 <li>받아 보기: <a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a>(변경 리포트 화면), <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>(변경 리포트 메일)</li>
-<li>AI 분석과 맞추기: <a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a>(켠 시각 기준 분석과 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석])</li>
+<li>AI 분석과 맞추기: <a class="idref" href="#REQ-ALMCHG-005">REQ-ALMCHG-005</a>(저장 시점의 설정 기준 분석과 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석])</li>
 </ul>
 <section class="card kind-req" id="REQ-ALMCHG-001">
 <h3><span class="idtag">REQ-ALMCHG-001</span> 매 업무일 수집 실행</h3>
@@ -16298,7 +16298,7 @@ VP-&lt;번호&gt; &lt;이슈 제목&gt;
 </div></section>
 </section>
 <section class="card kind-req" id="REQ-ALMCHG-005">
-<h3><span class="idtag">REQ-ALMCHG-005</span> 켠 시각 기준 분석과 [밀린 변경 분석]</h3>
+<h3><span class="idtag">REQ-ALMCHG-005</span> 저장 시점의 설정 기준 분석과 [밀린 변경 분석]</h3>
 <div class="card-meta"><span class="badge st-draft">draft</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/pipeline.py</code>, <code>app/core/daily_qa_storage.py</code>, <code>app/modules/qa_agent/router.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-ALMCHG-005">TEST-ALMCHG-005</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#TEST-ALMCHG-005">TEST-ALMCHG-005</a></span></div>
 <details class="history"><summary>변경 이력 1</summary>
 <ul>
@@ -16306,7 +16306,7 @@ VP-&lt;번호&gt; &lt;이슈 제목&gt;
 </ul>
 </details>
 <section class="field"><h4>하는 일</h4><div class="field-body">
-<p>자동 분석을 다시 켜면 켠 뒤에 저장한 변경만 자동으로 분석한다. 꺼져 있던 동안 쌓인 변경은 <span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span>으로 남겨 두고, 사람이 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]을 누를 때만 분석한다.</p>
+<p>변경을 저장하는 때 자동 분석이 꺼져 있었다면 그 변경은 <span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span>으로 남겨 두고, 다시 켜도 자동으로 분석하지 않는다. 켠 뒤에 저장한 변경은 자동으로 분석한다. <span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span>은 사람이 [<span class="term" title="자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다" tabindex="0">밀린 변경</span> 분석]을 누를 때만 분석한다.</p>
 <p class="why"><span class="why-label">이유</span> 꺼 둔 기간이 길면 켜자마자 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량이 한꺼번에 몰린다.</p>
 </div></section>
 <section class="field"><h4>언제</h4><div class="field-body">

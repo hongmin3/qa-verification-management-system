@@ -7,7 +7,7 @@ window.QARunProgress = function (product) {
   const link = document.getElementById('qa-progress-link');
   const cancelButton = document.getElementById('qa-cancel');
   const cancelMessage = document.getElementById('qa-cancel-message');
-  const buttons = [...document.querySelectorAll('#run-now,#audit-now,button.on-demand,#manual-check')];
+  const buttons = [...document.querySelectorAll('#run-now,#audit-now,#deferred-open,#deferred-start,button.on-demand,#manual-check')];
   let latest, pending = false, priorId, activeId, seen = false, pendingIdle = 0, elapsed = 0, fetched = Date.now(), timer, tick;
   let currentRunId = null, cancellingId = null, cancelPending = false;
   const started = () => { panel.hidden = false; spinner.hidden = false; step.textContent = '준비'; link.hidden = true; };
