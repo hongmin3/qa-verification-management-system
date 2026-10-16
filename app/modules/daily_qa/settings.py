@@ -152,6 +152,12 @@ class DailyQaSettings:
         return self.snapshot_dir / "issues"
 
     @property
+    def change_mail_base_dir(self) -> Path:
+        """자동 변경 리포트 메일이 끝으로 비교한 기록의 사본(`issues.json`, `srs.json`, REQ-ALMCHG-004).
+        스냅샷 폴더 밖에 두어 AI 분석의 비교 기준과 날짜별 기록 목록에 섞이지 않는다."""
+        return self.product_data_dir / "change_mail_base"
+
+    @property
     def legacy_snapshot_dir(self) -> Path | None:
         """개편 전 SRS 스냅샷 위치(`data/daily_qa/snapshots/*.json`). 옛 제품에만 있다."""
         return self.data_dir / "snapshots" if self.is_legacy_product else None
