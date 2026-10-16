@@ -112,3 +112,50 @@ def test_dashboard_and_period_run_link(world):
     page = client.get("/qa-agent/runs/20261016-040000-vxvue").text
     assert f"/qa-agent/changes?product={cfg.slug}&amp;since={D1}&amp;until={D3}" in page
     assert "/qa-agent/changes" not in client.get("/qa-agent/runs/20261016-050000-vxvue").text
+
+
+def _recipients(monkeypatch, value):
+    from app.modules.daily_qa import settings as settings_module
+
+    monkeypatch.setattr(settings_module, "report_recipients", lambda settings=None: value)
+
+
+# Validates: REQ-ALMCHG-004
+def test_mail_button_sends_one_mail(world, monkeypatch):
+    from app.core import notifier
+
+    _recipients(monkeypatch, ("a@example.com", "b@example.com"))
+    sent = []
+    monkeypatch.setattr(notifier, "send_report", lambda subject, text, html="", recipients=(): sent.append((subject, text, html, recipients)) or {"status": "sent"})
+    client, store, cfg = world["client"], world["store"], world["cfg"]
+    page = client.get(f"/qa-agent/changes?since={D2}&until={D3}").text
+    assert "이 기간 리포트 메일 보내기" in page and "disabled" not in page.split("change-mail-button")[1].split(">")[0]
+    assert "수신자 2명" in page
+    response = client.post("/qa-agent/changes/mail", data={"product": cfg.product, "since": D2, "until": D3})
+    assert response.status_code == 200 and response.json()["status"] == "sent"
+    assert len(sent) == 1
+    subject, text, html, recipients = sent[0]
+    assert "변경 리포트 · 10-15(목)~10-16(금)" in subject and recipients == ("a@example.com", "b@example.com")
+    assert "BODY-SECRET" not in text and "BODY-SECRET" not in html and "이영희" in text
+    assert store.get_state(cfg.state_key("change_mail_date"), "") == ""        # 자동 메일의 하루 한 통 기록은 그대로
+
+
+# Validates: REQ-ALMCHG-004
+def test_mail_button_without_recipients(world, monkeypatch):
+    from app.core import notifier
+
+    _recipients(monkeypatch, ())
+    monkeypatch.setattr(notifier, "send_report", lambda *args, **kwargs: pytest.fail("메일을 보내면 안 된다"))
+    client, cfg = world["client"], world["cfg"]
+    page = client.get(f"/qa-agent/changes?since={D2}&until={D3}").text
+    assert "메일 수신자가 설정되지 않았습니다." in page
+    assert "disabled" in page.split("change-mail-button")[1].split(">")[0]
+    response = client.post("/qa-agent/changes/mail", data={"product": cfg.product, "since": D2, "until": D3})
+    assert response.status_code == 409 and "메일 수신자가 설정되지 않았습니다." in response.text
+
+
+# Validates: REQ-ALMCHG-004
+def test_mail_button_rejects_bad_period(world, monkeypatch):
+    _recipients(monkeypatch, ("a@example.com",))
+    response = world["client"].post("/qa-agent/changes/mail", data={"product": world["cfg"].product, "since": D3, "until": D1})
+    assert response.status_code == 400 and "시작일이 종료일보다 늦습니다." in response.text

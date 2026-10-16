@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ view.heading }}</title>
+</head>
+{#- Outlook 호환: 표 배치와 인라인 스타일만 쓴다. 댓글 본문·설명·재현 절차·SRS 본문 문장은 view 에 없다 (REQ-ALMCHG-004). -#}
+{% macro heading(text) -%}
+<tr><td style="padding:18px 24px 6px 24px;font-size:16px;font-weight:bold;color:#111827;border-top:1px solid #e5e7eb;">{{ text }}</td></tr>
+{%- endmacro %}
+<body style="margin:0;padding:0;background-color:#f3f4f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f4f6" style="background-color:#f3f4f6;">
+<tr><td align="center" style="padding:16px;">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:640px;max-width:100%;background-color:#ffffff;font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:1.5;color:#111827;">
+<tr><td bgcolor="{{ '#c62828' if view.mode == 'failure' else '#173b67' }}" style="background-color:{{ '#c62828' if view.mode == 'failure' else '#173b67' }};padding:16px 24px;color:#ffffff;font-size:20px;font-weight:bold;">{{ view.heading }}</td></tr>
+{% if view.mode == 'failure' %}
+<tr><td style="padding:16px 24px 4px 24px;">{{ view.headline }}</td></tr>
+<tr><td style="padding:4px 24px;">
+{%- for item in view.failed %}<div>- {{ item.name }}: {{ item.note or '이유 미상' }}</div>{% endfor -%}
+</td></tr>
+<tr><td style="padding:8px 24px;">{{ failure_note }}</td></tr>
+{% elif view.mode == 'baseline' %}
+<tr><td style="padding:16px 24px;">{{ baseline_note }}</td></tr>
+{% else %}
+<tr><td style="padding:16px 24px 4px 24px;">
+<div><b>기간</b> {{ view.period }}</div>
+<div><b>AI 분석</b> {{ view.ai }}</div>
+</td></tr>
+{{ heading('요약') }}
+<tr><td style="padding:0 24px;"><div>이슈: {{ view.issue_summary }}</div><div>SRS: {{ view.srs_summary }}</div></td></tr>
+{{ heading('이슈 변경') }}
+{% if not view.issues %}<tr><td style="padding:0 24px;color:#6b7280;">{{ no_change }}</td></tr>{% endif %}
+{% for block in view.issues %}
+<tr><td style="padding:8px 24px 0 24px;">
+<div style="font-weight:bold;">{{ block.id }} {{ block.title }}{% if block.link %} <a href="{{ block.link }}" style="color:#2563eb;font-weight:normal;font-size:12px;">Polarion 바로가기</a>{% endif %}</div>
+{% for row in block.rows %}<div style="padding-left:12px;color:#374151;"><span style="color:#6b7280;">{{ row.day }}{% if row.time %} {{ row.time }}{% endif %}</span> {{ row.text }}</div>{% endfor %}
+</td></tr>
+{% endfor %}
+{% if view.issue_more %}<tr><td style="padding:8px 24px 0 24px;">나머지 {{ view.issue_more }}건은 <a href="{{ view.url }}" style="color:#2563eb;">화면에서 보기</a></td></tr>{% endif %}
+{{ heading('SRS 변경') }}
+{% if not view.srs %}<tr><td style="padding:0 24px;color:#6b7280;">{{ no_change }}</td></tr>{% endif %}
+{% for row in view.srs %}
+<tr><td style="padding:4px 24px 0 24px;"><b>{{ row.word }}</b> {{ row.id }} {{ row.title }}{% if row.where %} · 바뀐 곳: {{ row.where }}{% endif %}{% if row.link %} <a href="{{ row.link }}" style="color:#2563eb;font-size:12px;">Polarion 바로가기</a>{% endif %}</td></tr>
+{% endfor %}
+{% if view.srs_more %}<tr><td style="padding:8px 24px 0 24px;">나머지 {{ view.srs_more }}건은 <a href="{{ view.url }}" style="color:#2563eb;">화면에서 보기</a></td></tr>{% endif %}
+{{ heading('확인 범위') }}
+<tr><td style="padding:0 24px;">{% for note in view.notices %}<div>{{ note }}</div>{% endfor %}</td></tr>
+{% endif %}
+{% if view.url %}<tr><td style="padding:16px 24px 0 24px;"><a href="{{ view.url }}" style="color:#2563eb;">전체 보기</a></td></tr>{% endif %}
+<tr><td style="padding:16px 24px 20px 24px;font-size:12px;color:#6b7280;">{{ closing }}</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

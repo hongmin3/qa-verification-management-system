@@ -132,11 +132,11 @@ def test_collect_run_calls_claude_zero_times(env, mode, reason, note):
 # Validates: REQ-ALMCHG-001
 def test_collect_run_sends_no_ai_summary_mail(env):
     env.run(DAY1)
-    sent_before = len(env.sent)         # 기준 기록 실행의 메일은 따로 센다
+    sent_before = len(env.summary_sent)         # 기준 기록 실행의 메일은 따로 센다
     set_flags(env.store, env.cfg, enabled=False)
     env.issues.append(issue_item("VP-200", "2026-09-29T09:00:00Z", ["VP-10"], review="", status="open"))
     outcome = env.run(DAY2, trigger="collect")
-    assert len(env.sent) == sent_before
+    assert len(env.summary_sent) == sent_before
     assert outcome["email"]["status"] == "skipped"
 
 

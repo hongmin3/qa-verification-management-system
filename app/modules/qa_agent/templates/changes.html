@@ -32,6 +32,26 @@
   </div>
   <p class="hint">AI 분석: {{ analysis_state }} · 밀린 변경 {{ deferred }}건</p>
 
+  <div class="qa-run">
+    <button type="button" id="change-mail-button" {% if not recipient_count %}disabled{% endif %}>이 기간 리포트 메일 보내기</button>
+    <span class="hint" id="change-mail-result">{% if not recipient_count %}메일 수신자가 설정되지 않았습니다.{% endif %}</span>
+  </div>
+  <script>
+  (function () {
+    var button = document.getElementById("change-mail-button"), out = document.getElementById("change-mail-result");
+    if (!button || button.disabled) return;
+    button.addEventListener("click", function () {
+      if (!confirm("수신자 {{ recipient_count }}명에게 {{ since }} ~ {{ until }} 변경 리포트 메일을 보냅니다. 보낼까요?")) return;
+      button.disabled = true; out.textContent = "보내는 중...";
+      var form = new URLSearchParams({product: {{ selected|tojson }}, since: {{ since|tojson }}, until: {{ until|tojson }}});
+      fetch("/qa-agent/changes/mail", {method: "POST", body: form})
+        .then(function (r) { return r.json().then(function (d) { return r.ok ? d.detail : (d.detail || "메일을 보내지 못했습니다."); }); })
+        .catch(function () { return "메일을 보내지 못했습니다."; })
+        .then(function (text) { out.textContent = text; button.disabled = false; });
+    });
+  })();
+  </script>
+
   <h3>확인 범위</h3>
   <p class="hint">비교한 이슈 기록: {{ report.compared_days.get('issues', [])|join(', ') or '없음' }}<br>
     비교한 SRS 기록: {{ report.compared_days.get('srs', [])|join(', ') or '없음' }}</p>

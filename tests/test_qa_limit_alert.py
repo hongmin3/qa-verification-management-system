@@ -134,7 +134,7 @@ def test_unknown_usage_does_not_block(tmp_path, usage_file, fake_smtp):
     h = make_world(tmp_path, 2)
     out = run_pipeline(h, usage_after_each=[None, None])
     assert len(h.calls) == 2 and 'usage_guard' not in out['summary']
-    subject, text, _ = h.sent[0][:3]
+    subject, text, _ = h.summary_sent[0][:3]
     assert '사용률 미확인' in text
 
 

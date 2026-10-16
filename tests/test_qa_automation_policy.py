@@ -182,6 +182,6 @@ def test_off_is_read_again_immediately_before_sender(tmp_path, monkeypatch):
 
     monkeypatch.setattr(report, "build_email", switch_off)
     result = h.run(DAY1)
-    assert not h.sent
+    assert not h.summary_sent
     assert result["status"] not in ("RUNNING", "CANCELLED")
     assert result["email"]["status"] == "skipped"

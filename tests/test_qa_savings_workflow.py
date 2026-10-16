@@ -22,7 +22,7 @@ def prepared(tmp_path):
 def test_schedule_collects_once_analyzes_both_and_sends_one_mail(tmp_path):
     h, rules = prepared(tmp_path)
     out = h.run(DAY2, trigger='scheduled', rules_state=rules)
-    assert len(h.calls) == 2 and len(h.sent) == 1
+    assert len(h.calls) == 2 and len(h.summary_sent) == 1
     assert {skill for skill, _ in h.calls} == {'qa-spec-coverage-analysis', 'qa-new-issue-analysis'}
     assert out['summary']['scope_targets'] == {'spec': 1, 'issues': 1}
     assert out['summary']['verification_sheet']['sheet'] == 'V1.1.0'
@@ -57,7 +57,7 @@ def test_usage_threshold_after_first_call_leaves_other_scope_pending(tmp_path, m
     out = h.run(DAY2, trigger='scheduled', rules_state=rules)
     assert len(h.calls) == 1 and out['summary']['call_budget_exhausted']
     assert out['summary']['usage_guard']['reason'] == '사용률 82% 도달'
-    assert len(h.sent) == 1 and out['status'] != 'SUCCESS'
+    assert len(h.summary_sent) == 1 and out['status'] != 'SUCCESS'
 
 
 def test_changed_answer_after_prepare_requires_new_plan(tmp_path):
@@ -120,7 +120,7 @@ def test_run_stores_usage_before_and_mail_shows_this_runs_usage(tmp_path, monkey
     out = _run_with_sender(h, rules, lambda *args: h.sent.append(args) or {'status': 'sent'})
     assert out['summary']['usage_before'] == {'five_hour': 5.0, 'seven_day': 70.0, 'measured_at': '2026-09-30 07:00',
                                              'five_hour_resets_kst': '2026-10-15 09:00', 'seven_day_resets_kst': '2026-10-18 01:00'}
-    subject, text, html = h.sent[0][:3]
+    subject, text, html = h.summary_sent[0][:3]
     assert subject.startswith('[QA Agent] ') and '점검 · 검토 필요' in subject
     line = next(row for row in text.splitlines() if row.startswith('- 5시간 사용량'))
     assert '실행 전 5% (2026-09-30 07:00 측정) → 실행 후 7% (+2%p)' in line and '초기화 2026-10-15 09:00' in line
@@ -138,7 +138,7 @@ def test_mail_is_sent_even_when_usage_and_next_run_cannot_be_read(tmp_path, monk
     monkeypatch.setattr(automation_policy, 'next_run', boom)
     h, rules = prepared(tmp_path)
     out = _run_with_sender(h, rules, lambda *args: h.sent.append(args) or {'status': 'sent'})
-    assert out['email']['status'] == 'sent' and len(h.sent) == 1 and out['stages']['email']['status'] == 'ok'
-    subject, text, html = h.sent[0][:3]
+    assert out['email']['status'] == 'sent' and len(h.summary_sent) == 1 and out['stages']['email']['status'] == 'ok'
+    subject, text, html = h.summary_sent[0][:3]
     assert subject.startswith('[QA Agent] ')
     assert '사용량 기록 없음 (이번 실행의 호출 기록을 읽지 못했습니다)' in text and '다음 자동 실행' not in text

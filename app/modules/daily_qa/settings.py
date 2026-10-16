@@ -63,6 +63,15 @@ class IntelligenceSettings:
 
 
 @dataclass(frozen=True)
+class ChangeReportSettings:
+    """자동 변경 리포트 메일 (`daily_qa.change_report`, SPEC REQ-ALMCHG-004)."""
+
+    enabled: bool = True
+    send_when_empty: bool = True
+    max_items: int = 50
+
+
+@dataclass(frozen=True)
 class DailyQaSettings:
     root: Path
     product: str
@@ -83,6 +92,7 @@ class DailyQaSettings:
     #: 개편 전 데이터(제품 열이 빈 기록, 옛 스냅샷 위치, 전역 상태 키)의 주인. `daily_qa.product` 다.
     legacy_product: str = ""
     intelligence: IntelligenceSettings = field(default_factory=IntelligenceSettings)
+    change_report: ChangeReportSettings = field(default_factory=ChangeReportSettings)
     #: 분석 작업의 모델·추론 정도. 화면 AI 기능과 같은 `ai.claude.models.standard`·`ai.claude.effort` (REQ-DAILY-016).
     claude_model: str = ""
     claude_effort: str = ""
@@ -201,6 +211,24 @@ def usage_guard_percent(get, window: str) -> int:
     return value if 50 <= value <= 100 else default
 
 
+def _flag(value, default: bool) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "0", "no", "off", "")
+    return default if value is None else bool(value)
+
+
+def _change_report(get) -> ChangeReportSettings:
+    defaults = ChangeReportSettings()
+    try:
+        max_items = int(get("daily_qa.change_report.max_items", defaults.max_items))
+    except (TypeError, ValueError):
+        max_items = defaults.max_items
+    return ChangeReportSettings(
+        enabled=_flag(get("daily_qa.change_report.enabled", True), True),
+        send_when_empty=_flag(get("daily_qa.change_report.send_when_empty", True), True),
+        max_items=max_items if max_items >= 1 else defaults.max_items)
+
+
 def _intelligence(get) -> IntelligenceSettings:
     defaults = IntelligenceSettings()
     values = {}
@@ -270,4 +298,5 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         profile=profile,
         legacy_product=legacy,
         intelligence=_intelligence(get),
+        change_report=_change_report(get),
     )

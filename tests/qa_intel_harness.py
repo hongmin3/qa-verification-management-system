@@ -31,6 +31,11 @@ def complete_rules(tmp):
     return state
 
 
+def without_change_mails(sent: list) -> list:
+    """변경 리포트 메일(REQ-ALMCHG-004)을 뺀 발송 기록. AI 요약 메일만 센다."""
+    return [mail for mail in sent if "변경 리포트" not in mail[0]]
+
+
 class Harness:
     def __init__(self, tmp: Path, tc_paths: list[Path] | None = None, manuals: dict | None = None, **settings) -> None:
         self.tmp = tmp
@@ -85,6 +90,10 @@ class Harness:
         kwargs.setdefault("spec_chunks_loader", lambda: ([], {}, []))
         return run_daily(self.cfg, today=day, polarion_factory=lambda: self.polarion, inputs=self.inputs, store=self.store,
                          send_email=lambda *args: self.sent.append(args) or {"status": "sent"}, **kwargs)
+
+    @property
+    def summary_sent(self) -> list:
+        return without_change_mails(self.sent)
 
     def events(self, run_id: str | None = None, **filters) -> list[dict]:
         return self.store.list_events(product=self.cfg.slug, run_id=run_id, **filters)

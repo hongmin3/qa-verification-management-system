@@ -7,6 +7,8 @@ QA Intelligence 개편(specs/qa-intelligence.md) 뒤에도 유지되는 것만 �
 
 from __future__ import annotations
 
+from tests.qa_intel_harness import without_change_mails
+
 import json
 from datetime import datetime, timezone
 
@@ -190,7 +192,7 @@ def test_first_failure_reason_is_in_stage_note_and_email(env):
     outcome = _run(env, runner=runner)
     note = outcome["stages"]["SPEC_COVERAGE"]["note"]
     assert note.startswith("1개 작업 모두 실패") and "결과 파일을 쓰지 못했습니다" in note
-    assert "결과 파일을 쓰지 못했습니다" in env["sent"][0][1]
+    assert "결과 파일을 쓰지 못했습니다" in without_change_mails(env["sent"])[0][1]
 
 
 # --- OPEN_QUESTIONS 8-7 --------------------------------------------------------------------------

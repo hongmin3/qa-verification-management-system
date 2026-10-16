@@ -459,11 +459,38 @@ def changes_view(request: Request, product: str = "", since: str = "", until: st
 
     policy = automation_policy.get_policy(choice.store, cfg.slug)
     deferred = len(choice.store.list_events(product=cfg.slug, statuses=("deferred",)))
+    from app.modules.daily_qa.settings import report_recipients
     return templates.TemplateResponse(request, "changes.html", _dash_context(
+        recipient_count=len(report_recipients()),
         products=choice.products, selected=cfg.product, report=report, since=since_day, until=until_day,
         kind=kind, q=q, tab=tab, kind_labels=KIND_LABELS, issue_rows=visible(report.issues),
         srs_rows=visible(report.srs), policy=policy, deferred=deferred,
         analysis_state={"daily": "켜짐", "weekly": "주간", "off": "꺼짐"}[policy["mode"]]))
+
+
+@router.post("/changes/mail")
+def changes_mail(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """고른 기간의 변경 리포트를 메일로 한 통 보낸다 (REQ-ALMCHG-004). 자동 메일의 하루 한 통 기록은 건드리지 않는다."""
+    from app.core import notifier
+    from app.modules.daily_qa import change_mail, snapshots as snapshot_module
+    from app.modules.daily_qa.settings import report_recipients
+
+    choice = _choice(product)
+    cfg = choice.cfg
+    try:
+        start, end = dash.parse_period(since, until)
+    except dash.PeriodError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    recipients = report_recipients()
+    if not recipients:
+        raise HTTPException(409, "메일 수신자가 설정되지 않았습니다.")
+    subject, text, body, _ = change_mail.compose_for_period(
+        cfg, choice.store, snapshot_module.for_settings(cfg), start.isoformat(), end.isoformat())
+    result = notifier.send_report(subject, text, body, recipients)
+    status = str(result.get("status", "failed"))
+    detail = {"sent": f"메일 {len(recipients)}명에게 보냈습니다.", "not_configured": "메일 설정이 없어 보내지 않았습니다."}.get(
+        status, f"메일 발송에 실패했습니다. {result.get('error', '')}".strip())
+    return JSONResponse({"status": status if status in ("sent", "not_configured") else "failed", "detail": detail})
 
 
 @router.get("/period", response_class=HTMLResponse)

@@ -175,7 +175,7 @@ def _context(request: Request, notice: str = "", notice_kind: str = "info", mail
                "edit": {row["key"]: row["_raw"] for row in rows} if session else {},
                "recipient_masks": [notifier.mask_address(item) for item in report_recipients(settings)],
                "admin_masks": [notifier.mask_address(item) for item in notifier.admin_recipients(settings)],
-               "mail_kinds": [("report", "예약 점검 요약 (예시)"), *notifier.KIND_LABELS.items()],
+               "mail_kinds": [("report", "예약 점검 요약 (예시)"), ("change_report", "변경 리포트 (예시)"), *notifier.KIND_LABELS.items()],
                "test_targets": TEST_TARGETS, "sections": SECTIONS}
     return context
 
@@ -338,7 +338,7 @@ async def test_mail(request: Request, actor: str = Depends(require_admin)):
     settings = get_settings()
     kind = data.get("kind") if isinstance(data, dict) else None
     target = data.get("target") if isinstance(data, dict) else None
-    valid_kinds = {"report", *notifier.KIND_LABELS}
+    valid_kinds = {"report", "change_report", *notifier.KIND_LABELS}
     problem = ""
     if kind not in valid_kinds:
         problem = "알 수 없는 시험 종류입니다."

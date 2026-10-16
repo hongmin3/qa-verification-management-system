@@ -252,7 +252,8 @@ def run_daily(
         try:
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
                        rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit,
-                       on_demand=on_demand, finding_id=finding_id, selection_id=selection_id, analysis_scope=analysis_scope)
+                       on_demand=on_demand, finding_id=finding_id, selection_id=selection_id, analysis_scope=analysis_scope,
+                       sender=send_email)
             outcome = run.execute()
             run._check_cancel()
         except RunCancelled:
@@ -434,8 +435,11 @@ class _TaskOutcome:
 
 class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
-                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all"):
+                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all", sender=None):
         self.selection_id = selection_id
+        self.mail_sender = sender
+        #: 자동 변경 리포트 메일 결과 (REQ-ALMCHG-004). 보내지 않는 실행은 None.
+        self.change_mail: dict | None = None
         #: 실행을 시작할 때 저장해 둔 가장 최근 사용률. 메일의 "실행 전 값"이다 (REQ-QAINTEL-048). 못 읽으면 값 없음.
         self.usage_before = _saved_usage_reading()
         self.collection_only = (cfg.savings_enabled and trigger == 'prepare' and not on_demand) or trigger == 'collect'
@@ -550,6 +554,7 @@ class _Run:
         issues = self._collect_issues(client)
         tc_rows = self._tc_index()
         self._persist(srs, issues)
+        self._send_change_mail()
         srs_items = srs.items if srs else self._saved_srs()
         issue_items = issues.items if issues else self._saved_issues()
         if not self.dry_run:
@@ -858,6 +863,44 @@ class _Run:
                                        stored=sum(stored.values()), detected=len(self.detected_events),
                                        **{f"type_{key}": value for key, value in by_type.items()})
         self.audit["events"] = by_type
+
+    def _send_change_mail(self) -> None:
+        """수집·저장 직후 변경 리포트 메일을 보낸다. AI 분석을 기다리지 않고, 실패해도 실행 결과를 바꾸지 않는다 (REQ-ALMCHG-004)."""
+        if (self.trigger not in ("scheduled", "collect") or self.dry_run or self.since is not None or self.until is not None
+                or not self.cfg.change_report.enabled):
+            return
+        from app.modules.daily_qa import change_mail
+
+        cfg, key = self.cfg, self.cfg.state_key("change_mail_date")
+        since = self.basis.get(snapshots.KIND_ISSUES) or self.basis.get(snapshots.KIND_SRS) or ""
+        self.change_mail = {"status": "skipped", "reason": "", "since": since, "until": self.run_date}
+        try:
+            if self.store.get_state(key, "") == self.run_date:
+                self.change_mail["reason"] = "오늘 이미 변경 리포트 메일을 보냈습니다."
+                return
+            url = change_mail.page_url(cfg, cfg.product, since or self.run_date, self.run_date)
+            failed = any((self.stages.get(name) or {}).get("status") == "failed" for name in ("collect_srs", "collect_issues"))
+            if failed:
+                subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="collect_failed", url=url)
+            elif not since:
+                subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="baseline", url=url)
+            else:
+                subject, text, body, built = change_mail.compose_for_period(cfg, self.store, self.snapshots, since, self.run_date)
+                if not built.issues and not built.srs and not cfg.change_report.send_when_empty:
+                    self.change_mail["reason"] = "변경이 없어 보내지 않았습니다."
+                    return
+            result = (self.mail_sender or _default_sender)(subject, text, body, cfg.email_to)
+            status = str(result.get("status", "")) if isinstance(result, dict) else ""
+            self.change_mail["status"] = status if status in ("sent", "failed", "not_configured") else "failed"
+            if status == "failed" and isinstance(result, dict):
+                self.change_mail["reason"] = str(result.get("error", ""))
+        except Exception as exc:  # noqa: BLE001 - 메일 실패가 수집·분석을 막지 않는다
+            logger.warning("change_mail_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+            self.change_mail.update(status="failed", reason=type(exc).__name__)
+        try:
+            self.store.set_state(key, self.run_date)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("change_mail_state_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
 
     def _defer_while_off(self, rows) -> None:
         """자동 분석이 꺼진 동안 자동 실행이 저장한 새 이벤트는 밀린 변경으로 둔다 (REQ-ALMCHG-005)."""
@@ -1678,6 +1721,8 @@ class _Run:
         summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
         summary["collect_reason"] = self.collect_reason
         summary["deferred_events"] = self.deferred_events
+        if self.change_mail is not None:
+            summary["change_mail"] = self.change_mail
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary['plan_id'] = self.plan_id
         summary['prepared_targets'] = self.targets_found if self.collection_only else None
@@ -1761,6 +1806,8 @@ class _Run:
         summary["run_kind"] = "collect" if self.trigger == "collect" else "analysis"
         summary["collect_reason"] = self.collect_reason
         summary["deferred_events"] = self.deferred_events
+        if self.change_mail is not None:
+            summary["change_mail"] = self.change_mail
         summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary["rules"] = self.rules_state.as_dict()
         summary["product"] = self.cfg.slug

@@ -381,17 +381,40 @@ def _sample_report() -> tuple[str, str, str]:
     return subject, "\n".join([_TEST_NOTICE, _SAMPLE_NOTICE, "", text, "", "이 메일은 자동 발송되었습니다."]), html_body
 
 
+_CHANGE_SAMPLE_NOTICE = "아래 내용은 모두 예시 자료입니다. 실제 변경 리포트가 아닙니다."
+
+
+def _sample_change_report() -> tuple[str, str, str]:
+    """변경 리포트 시험 메일. 실제 메일과 같은 구성(`change_mail.build_change_email`)에 꺾쇠 자리표시 값을 넣는다 (REQ-ALMCHG-004)."""
+    from app.modules.daily_qa import change_mail
+    from app.modules.daily_qa.holidays import KST
+
+    base = str(get_settings().get("daily_qa.review_base_url", "") or "").strip().rstrip("/")
+    today = datetime.now(KST).date()
+    report = change_mail.sample_report(today)
+    url = f"{base}/qa-agent/changes?product=예시&since={today.isoformat()}&until={today.isoformat()}"
+    subject, text, html_body = change_mail.build_change_email(
+        report, product="예시", page_url=url, ai_state={"label": "꺼짐", "deferred": 0}, max_items=50)
+    subject = mail_subject("", f"[시험] {subject.removeprefix(SUBJECT_PREFIX).strip()}")
+    notice_html = (f"<div style='padding:10px 24px;background:#fef3c7;color:#92400e;font:14px sans-serif'>"
+                   f"<b>{_TEST_NOTICE}</b> {_CHANGE_SAMPLE_NOTICE}</div>")
+    html_body, inserted = re.subn(r"(<body[^>]*>)", lambda match: match.group(1) + notice_html, html_body, count=1)
+    if not inserted:
+        html_body = notice_html + html_body
+    return subject, "\n".join([_TEST_NOTICE, _CHANGE_SAMPLE_NOTICE, "", text]), html_body
+
+
 def send_test(kind: str, recipients: tuple[str, ...]) -> dict:
     """설정 화면의 시험 발송 (REQ-MAIL-003). 고른 수신자에게만 보내고 재발송 대기 기록은 건드리지 않는다.
 
     `kind` 는 알림 종류 값 또는 `report`(예약 점검 요약 예시)다. 예외를 올리지 않는다.
     """
     targets = tuple(item.strip() for item in recipients or () if item and item.strip())
-    if kind == "report":
+    if kind in ("report", "change_report"):
         if not targets:
             return {"status": "failed", "error": "시험 수신자가 없습니다."}
         try:
-            subject, text, html_body = _sample_report()
+            subject, text, html_body = _sample_report() if kind == "report" else _sample_change_report()
         except Exception as exc:  # noqa: BLE001 - 시험 발송은 예외를 올리지 않는다
             logger.warning("send_test_report_build_failed error_type=%s", type(exc).__name__)
             return {"status": "failed", "error": f"시험 메일을 만들지 못했습니다: {type(exc).__name__}"}
