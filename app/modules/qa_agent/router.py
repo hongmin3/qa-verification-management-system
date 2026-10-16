@@ -419,6 +419,53 @@ def set_processing(finding_id: int, product: str = Form(''), state: str = Form('
     return RedirectResponse(f'/qa-agent/findings/{finding_id}', status_code=303)
 
 
+@router.get("/changes", response_class=HTMLResponse)
+def changes_view(request: Request, product: str = "", since: str = "", until: str = "", kind: str = "",
+                 q: str = "", tab: str = "issues"):
+    """변경 리포트: 저장된 스냅샷을 하루씩 비교한 이슈·SRS 변경 (REQ-ALMCHG-003). 읽기만 하고 AI 를 부르지 않는다."""
+    from app.modules.daily_qa import automation_policy, snapshots as snapshot_module
+    from app.modules.daily_qa.change_report import KIND_LABELS, build_change_report
+
+    choice = _choice(product)
+    cfg = choice.cfg
+    snaps = snapshot_module.for_settings(cfg)
+    try:
+        if not since and not until:
+            days = [path.stem for path in snaps.between(snapshot_module.KIND_ISSUES, "0000-01-01", "9999-12-31")]
+            latest = days[-1] if days else ""
+            if latest:
+                since_day, until_day = (days[-2] if len(days) > 1 else latest), latest
+            else:
+                start, end = dash.parse_period("", "")
+                since_day, until_day = start.isoformat(), end.isoformat()
+        else:
+            start, end = dash.parse_period(since, until)
+            since_day, until_day = start.isoformat(), end.isoformat()
+    except dash.PeriodError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    report = build_change_report(cfg, snaps, since_day, until_day)
+    tab = tab if tab in ("issues", "srs") else "issues"
+    needle = q.strip().lower()
+
+    def visible(entities):
+        rows = []
+        for entity in entities:
+            if needle and needle not in entity.entity_id.lower():
+                continue
+            lines = [line for line in entity.lines if not kind or line.kind == kind]
+            if lines:
+                rows.append((entity, lines))
+        return rows
+
+    policy = automation_policy.get_policy(choice.store, cfg.slug)
+    deferred = len(choice.store.list_events(product=cfg.slug, statuses=("deferred",)))
+    return templates.TemplateResponse(request, "changes.html", _dash_context(
+        products=choice.products, selected=cfg.product, report=report, since=since_day, until=until_day,
+        kind=kind, q=q, tab=tab, kind_labels=KIND_LABELS, issue_rows=visible(report.issues),
+        srs_rows=visible(report.srs), policy=policy, deferred=deferred,
+        analysis_state={"daily": "켜짐", "weekly": "주간", "off": "꺼짐"}[policy["mode"]]))
+
+
 @router.get("/period", response_class=HTMLResponse)
 def period_view(request: Request, product: str = "", start: str = "", end: str = "", event_type: str = ""):
     """기간 분석 조회 (REQ-QAINTEL-024)."""

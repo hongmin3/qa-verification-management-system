@@ -1,0 +1,75 @@
+{% extends "module_base.html" %}
+{% block content %}
+{% include "_intel_style.html" %}
+{% macro tab_url(name) %}/qa-agent/changes?product={{ selected|urlencode }}&since={{ since }}&until={{ until }}&kind={{ kind|urlencode }}&q={{ q|urlencode }}&tab={{ name }}{% endmacro %}
+<style>
+.ch-lines{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.ch-lines li{border-top:1px solid #e2e8f0;padding-top:6px;line-height:1.55}
+.ch-day{color:#57606a;font-size:13px;margin-right:6px}
+.ch-tabs{display:flex;gap:8px;margin:16px 0 8px}
+.ch-tabs a{padding:6px 14px;border:1px solid #cbd5e1;border-radius:999px;text-decoration:none;color:#173b67}
+.ch-tabs a.on{background:#173b67;color:#fff}
+.ch-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;margin-top:10px}
+.ch-card h4{margin:0}.ch-net{font-size:13px;color:#57606a;margin:4px 0 0}
+.ch-comment{margin-top:4px;font-size:13px}.ch-comment p{white-space:pre-wrap;margin:6px 0}
+</style>
+<section>
+  <h2>변경 리포트</h2>
+  <p class="hint">저장된 기록을 하루씩 비교해 이슈·SRS 변경을 날짜순으로 보여 줍니다. AI 를 부르지 않고 Polarion 을 새로 읽지 않습니다. 날짜는 한국 시간입니다.</p>
+  <form method="get" action="/qa-agent/changes" class="qa-run">
+    {% if products|length > 1 %}<select name="product">{% for item in products %}<option value="{{ item }}" {% if item == selected %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+    {% else %}<input type="hidden" name="product" value="{{ selected }}">{% endif %}
+    <label>시작일 <input type="date" name="since" value="{{ since }}"></label>
+    <label>종료일 <input type="date" name="until" value="{{ until }}"></label>
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <button type="submit">조회</button>
+  </form>
+
+  <h3>요약 ({{ since }} ~ {{ until }})</h3>
+  <div class="qa-stats">
+    {% for code, name in kind_labels.items() %}{% if report.counts.get(code, 0) %}<div class="qa-stat"><b>{{ report.counts[code] }}</b>{{ name }}</div>{% endif %}{% endfor %}
+    {% if not report.counts %}<div class="qa-stat"><b>0</b>변경 없음</div>{% endif %}
+  </div>
+  <p class="hint">AI 분석: {{ analysis_state }} · 밀린 변경 {{ deferred }}건</p>
+
+  <h3>확인 범위</h3>
+  <p class="hint">비교한 이슈 기록: {{ report.compared_days.get('issues', [])|join(', ') or '없음' }}<br>
+    비교한 SRS 기록: {{ report.compared_days.get('srs', [])|join(', ') or '없음' }}</p>
+  {% if report.empty_reason %}<p class="status">{{ report.empty_reason }}</p>{% endif %}
+  {% for note in report.notices %}<p class="hint">{{ note }}</p>{% endfor %}
+
+  <form method="get" action="/qa-agent/changes" class="qa-run">
+    <input type="hidden" name="product" value="{{ selected }}">
+    <input type="hidden" name="since" value="{{ since }}"><input type="hidden" name="until" value="{{ until }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <label>변경 종류 <select name="kind"><option value="">전체</option>{% for code, name in kind_labels.items() %}<option value="{{ code }}" {% if code == kind %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+    <label>번호 <input type="search" name="q" value="{{ q }}" placeholder="VP-1234"></label>
+    <button type="submit">거르기</button>
+  </form>
+
+  <nav class="ch-tabs">
+    <a href="{{ tab_url('issues') }}" class="{{ 'on' if tab == 'issues' }}">이슈 ({{ issue_rows|length }})</a>
+    <a href="{{ tab_url('srs') }}" class="{{ 'on' if tab == 'srs' }}">SRS ({{ srs_rows|length }})</a>
+  </nav>
+
+  {% set rows = issue_rows if tab == 'issues' else srs_rows %}
+  {% for entity, lines in rows %}
+  <article class="ch-card">
+    <h4>{% if entity.link %}<a href="{{ entity.link }}" target="_blank" rel="noopener">{{ entity.entity_id }}</a>{% else %}{{ entity.entity_id }}{% endif %} {{ entity.title }}</h4>
+    {% for name, pair in entity.net.items() %}<p class="ch-net">기간 전체: {{ '상태' if name == 'status' else '담당자' }} {{ pair[0] or '-' }} → {{ pair[1] or '-' }}</p>{% endfor %}
+    <ul class="ch-lines">
+      {% for line in lines %}
+      <li><span class="ch-day">{{ line.day }}{% if line.time %} {{ line.time }}{% endif %}</span>
+        <span class="pill">{{ kind_labels.get(line.kind, line.kind) }}</span>
+        {% if line.before or line.after %}{{ line.before or '-' }} → {{ line.after or '-' }}{% endif %}
+        {% if line.detail %}<span class="hint">{{ line.detail }}</span>{% endif %}
+        {% if line.comment_text %}<details class="ch-comment"><summary>댓글 본문 보기</summary><p>{{ line.comment_text }}</p></details>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% else %}
+  <p class="hint">조건에 맞는 변경이 없습니다.</p>
+  {% endfor %}
+</section>
+{% endblock %}

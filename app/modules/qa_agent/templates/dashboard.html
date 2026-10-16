@@ -78,6 +78,7 @@
     <input type="hidden" name="product" value="{{ selected }}">
     기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
+  <a href="/qa-agent/changes?product={{ selected|urlencode }}">변경 리포트</a>
   <a class="hint" href="/qa-agent/rules?product={{ selected|urlencode }}">자동 점검 범위 보기</a>
   {% if listing.groups %}
   {% for group in listing.groups %}

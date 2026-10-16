@@ -38,6 +38,8 @@
     {% if view.dry_run %}<span class="pill">시험 실행</span>{% endif %}
   </div>
   <p class="rv-headline rv-outcome rv-{{ view.tone }}">{{ view.headline }}</p>
+  {% set period = run.summary.period|default({}) %}
+  {% if period.since and period.until %}<p><a href="/qa-agent/changes?product={{ (run.product or "")|urlencode }}&amp;since={{ period.since }}&amp;until={{ period.until }}">이 기간({{ period.since }} ~ {{ period.until }})의 변경 리포트 보기</a></p>{% endif %}
   {% for kind, coverage in (run.summary.coverage|default({})).items() %}
   <p class="hint">{{ '사양' if kind == 'srs' else '이슈' }} 자료: {{ coverage.start or '기준 없음' }} ~ {{ coverage.end or '자료 없음' }}{% for warning in coverage.warnings %}<br>{{ warning }}{% endfor %}</p>
   {% endfor %}
