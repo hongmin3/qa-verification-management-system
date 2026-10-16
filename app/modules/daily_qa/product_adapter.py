@@ -60,7 +60,7 @@ STANDARD_ISSUE_FIELDS: dict[str, tuple[str, ...]] = {
     "created": ("created",),
     "updated": ("updated",),
 }
-STANDARD_RELATIONS = {"linked_items": "linkedWorkItems", "comments": "comments"}
+STANDARD_RELATIONS = {"linked_items": "linkedWorkItems", "comments": "comments", "assignees": "assignee"}
 
 COMMENT_TEXT_LIMIT = 2000
 WHITESPACE_RE = re.compile(r"\s+")
@@ -287,13 +287,16 @@ def normalize_issue(item: dict[str, Any], profile: ProductProfile) -> dict[str, 
     linked = _relationship_ids(relationships, relations.get("linked_items", "")) or []
     comment_ids = _relationship_ids(relationships, relations.get("comments", ""))
     authors = _relationship_ids(relationships, 'author') or []
-    assignee_ids = sorted(_short(value) for value in _relationship_ids(relationships, relations.get("assignees", "assignee")) or [])
+    assignee_raw = _relationship_ids(relationships, relations.get("assignees", ""))
+    assignee_ids = sorted(_short(value) for value in assignee_raw or [])
     known_names = item.get('_user_names') or {}
     user_names = {uid: str(known_names[uid]) for uid in [*(_short(a) for a in authors), *assignee_ids] if known_names.get(uid)}
+    # 담당자 관계가 응답에 없으면 모르는 값이다. 키를 두지 않아 비교에서 빠진다(없는 것과 비어 있는 것은 다르다).
+    optional = {} if assignee_raw is None else {"assignees": assignee_ids}
     return {
+        **optional,
         "reporter_id": _short(authors[0]) if authors else '',
         "reporter_name": str(item.get('_reporter_name') or ''),
-        "assignees": assignee_ids,
         "user_names": user_names,
         "id": str(_first(attrs, fields.get("id", ("id",))) or _short(str(item.get("id") or ""))),
         "title": str(_first(attrs, fields.get("title", ())) or ""),

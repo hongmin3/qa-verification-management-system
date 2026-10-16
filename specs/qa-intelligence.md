@@ -182,6 +182,8 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 | 이슈 | `id`, `title`, `status`, `severity`, `assignees`(담당자 사용자 번호 목록), `rd_result`(공통 값), `rd_result_raw`, `description`, `reproduction_step`, `occurrence_cause`, `action_details`, `occurred_versions`, `target_versions`, `linked_ids`, `comment_ids`, `comments`, `created`, `updated` |
 | 댓글 | `id`, `created`, `author`(작성자 사용자 번호), `text`(2000자까지) |
 
+> **참고** 담당자 관계가 응답에 아예 없으면 담당자를 모르는 것이라 `assignees` 키를 두지 않고, 그날은 담당자를 비교하지 않는다. 관계는 있는데 비어 있으면 담당자 없음(`[]`)이다.
+
 > **참고** SRS 기록의 필드 이름은 이전 스냅샷 파일과 같다. 그래서 개편 전에 저장한 스냅샷도 그대로 비교 기준으로 쓸 수 있다.
 
 **지킬 것**

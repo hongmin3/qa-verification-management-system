@@ -23,10 +23,36 @@ def test_normalize_issue_reads_assignees_and_names():
     assert item["user_names"] == {"u-assignee": "담당자A", "u-author": "작성자A"}
 
 
-def test_missing_assignee_relation_is_empty_list():
+def test_absent_assignee_relation_writes_no_assignees_key():
     item = normalize_issue(issue_item("VP-1", "2026-10-01", []), VXVUE_PROFILE)
-    assert item["assignees"] == []
+    assert "assignees" not in item
     assert item["user_names"] == {}
+
+
+def test_present_empty_assignee_relation_is_empty_list():
+    for data in ([], None):
+        raw = issue_item("VP-1", "2026-10-01", [])
+        raw["relationships"]["assignee"] = {"data": data}
+        assert normalize_issue(raw, VXVUE_PROFILE)["assignees"] == []
+
+
+def test_assignee_relation_name_comes_from_profile_relations():
+    from app.modules.daily_qa.product_adapter import STANDARD_RELATIONS
+
+    assert STANDARD_RELATIONS["assignees"] == "assignee"
+
+
+def test_previous_assignees_then_relation_omitted_is_no_event():
+    before = issue(assignees=["a"])
+    after = normalize_issue(issue_item("VP-1", "2026-10-01", []), VXVUE_PROFILE)
+    after = {**issue(), **{k: v for k, v in after.items() if k == "user_names"}}
+    assert "assignees" not in after
+    assert detect_issue_events([before], [after]) == []
+
+
+def test_previous_assignees_then_present_empty_is_metadata_event():
+    events = detect_issue_events([issue(assignees=["a"])], [issue(assignees=[])])
+    assert [(e.event_type, e.changed_fields) for e in events] == [(ISSUE_METADATA_CHANGED, ["assignees"])]
 
 
 def test_assignee_change_is_metadata_event():

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="0b56b2d5123f3c5735c9c518a4961de81fc4cb6feba163533b45a812dda4c02b">
+<meta name="spec-source-sha256" content="04bb884f135f7163d9efef0ea1dfd09ece5d84469b1e2e4d8518d75659055a34">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -13022,6 +13022,9 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <tr><td>댓글</td><td><code>id</code>, <code>created</code>, <code>author</code>(작성자 사용자 번호), <code>text</code>(2000자까지)</td></tr>
 </tbody>
 </table></div>
+<aside class="callout callout-info"><span class="callout-label">참고</span>
+<p>담당자 관계가 응답에 아예 없으면 담당자를 모르는 것이라 <code>assignees</code> 키를 두지 않고, 그날은 담당자를 비교하지 않는다. 관계는 있는데 비어 있으면 담당자 없음(<code>[]</code>)이다.</p>
+</aside>
 <aside class="callout callout-info"><span class="callout-label">참고</span>
 <p><span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 필드 이름은 이전 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span> 파일과 같다. 그래서 개편 전에 저장한 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>도 그대로 비교 기준으로 쓸 수 있다.</p>
 </aside>
