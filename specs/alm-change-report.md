@@ -6,7 +6,7 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `alm-change-report` |
-| Document Version | 0.2.0 |
+| Document Version | 0.3.0 |
 | Last Updated | 2026-10-16 |
 | Status | draft |
 
@@ -51,6 +51,7 @@ Polarion 수집 -(실패)-> 기준 유지 -> 수집 실패 알림 메일
 | 순 변화 | 기간의 첫 기록과 마지막 기록만 비교한 결과다. 중간에 바뀌었다가 돌아온 것은 보이지 않는다 |
 | 확인 범위 | 리포트가 실제로 비교한 기록의 날짜와, 기록이 없어 하루 단위로 볼 수 없었던 날이다 |
 | 밀린 변경 | 자동 분석이 꺼진 동안 자동 실행이 저장한, AI 분석이 필요한 새 이벤트다. 저장하는 순간의 설정으로 정한다 |
+| 메일 기준 기록 | 자동 변경 리포트 메일이 끝으로 비교한 기록의 사본이다. 다음 자동 메일만 읽는다(REQ-ALMCHG-004) |
 
 ## 2. 범위
 
@@ -227,8 +228,15 @@ REQ-ALMCHG-002 의 "안 될 때"와 같은 문구를 화면에 표시한다. 메
 #### 입력
 자동 메일의 기간은 직전 기록 날짜부터 오늘 기록 날짜까지다. 월요일이면 금요일부터, 연휴 다음 날이면 연휴 전 마지막 업무일부터다. 수동 메일은 화면에서 고른 기간이다.
 
+자동 메일은 끝으로 비교한 기록을 한 벌 더 보관한다. 이것을 "메일 기준 기록"이라고 부른다. 같은 날 다시 수집해 그날 기록이 덮어써져도, 다음 자동 메일은 메일 기준 기록부터 비교한다.
+
+> **예시** 10-16 04:00 수집으로 자동 메일이 나갔다. 10:00 에 사람이 [변경사항 점검하기]를 눌러 10-16 기록이 다시 저장됐다. 10-19 자동 메일은 10-16 04:00 기록 → 10-16 10:00 기록 → 10-19 기록 순서로 하루씩 비교한다. 04:00 부터 10:00 사이 변경은 10-16 날짜 줄로 실린다.
+
 #### 순서
-1. REQ-ALMCHG-002 로 기간의 변경 목록을 만든다.
+1. REQ-ALMCHG-002 로 기간의 변경 목록을 만든다. 자동 메일은 아래 조건이 모두 맞을 때 메일 기준 기록을 시작 기록 앞에 넣어 함께 비교한다.
+   - 메일 기준 기록의 날짜가 기간의 시작 기록 날짜와 같다.
+   - 두 기록의 내용(이슈·SRS 목록)이 다르다. 그날 기록이 메일 뒤에 다시 수집되어 바뀌었다는 뜻이다.
+   - 조건이 맞지 않으면 메일 기준 기록을 쓰지 않는다.
 2. 아래 구획대로 HTML 본문과 글 본문을 함께 만든다.
 3. 이슈와 SRS 구획마다 대상을 `daily_qa.change_report.max_items` 개까지 싣는다. 넘으면 "나머지 <n>건은 화면에서 보기"와 화면 링크를 단다.
 4. 실을 이슈를 작성자별로 묶는다.
@@ -237,6 +245,11 @@ REQ-ALMCHG-002 의 "안 될 때"와 같은 문구를 화면에 표시한다. 메
 
    이유: 이슈를 등록한 사람이 자기 이슈의 변경을 바로 찾을 수 있다. 절약 모드 요약 메일도 같은 순서로 묶는다.
 5. 수신자에게 보낸다. 수신자는 요약 메일과 같은 순서로 정한다(`daily_qa.report_recipients`, 없으면 `DAILY_QA_EMAIL_TO`, `NOTIFY_EMAIL_TO`, `notifications.admin_email`).
+6. 자동 메일이 기록을 비교했으면 오늘 기록을 메일 기준 기록으로 보관한다(`data/daily_qa/<제품>/change_mail_base/issues.json`, `srs.json`). 이슈와 SRS 를 따로 두고, 제품·종류마다 한 벌만 두어 매번 덮어쓴다.
+   - 보관하는 경우: 메일을 보냄, 메일 발송 실패, 변경이 없어 보내지 않음, 첫 기록 저장.
+   - 보관하지 않는 경우: 수집 실패, 오늘 이미 보낸 날, 발송을 끈 실행(`--no-email`), 자동 실행 꺼짐, 수동 메일.
+
+이유: 수집 실패 메일은 기록을 비교하지 않았다. 이미 보낸 날 다시 보관하면 아침 메일이 비교한 기록을 잃는다.
 
 #### 결과
 제목은 `[QA Agent] <제품> 변경 리포트 · <시작>~<끝> · 이슈 <n>건 · SRS <n>건` 이다(REQ-MAIL-001 의 제목 규칙).
@@ -248,7 +261,7 @@ REQ-ALMCHG-002 의 "안 될 때"와 같은 문구를 화면에 표시한다. 메
 | 요약 | 이슈·SRS 변경 종류별 건수 |
 | 이슈 변경 | 이슈 작성자(이슈를 처음 등록한 사람)별로 묶는다. 묶음 제목은 작성자 이름과 이슈 수다. 이슈마다 번호·제목, 날짜순 변경 줄, Polarion 바로가기 |
 | SRS 변경 | 신규·수정·조회에서 빠짐. 번호·제목·바뀐 곳 |
-| 확인 범위 | 기록이 없는 날 알림 |
+| 확인 범위 | 기록이 없는 날 알림. 메일 기준 기록을 썼으면 "<날짜> 기록은 지난 자동 메일 뒤 다시 수집되어(<시각>) 지난 메일이 비교한 기록(<시각>)부터 이어서 비교했습니다." |
 | 링크 | 같은 기간의 변경 리포트 화면 주소 |
 | 맺음말 | "이 메일은 수집 결과를 자동으로 정리한 것입니다. AI 판단은 들어 있지 않습니다." |
 
@@ -309,6 +322,7 @@ REQ-ALMCHG-002 의 "안 될 때"와 같은 문구를 화면에 표시한다. 메
 
 #### 지킬 것
 - 자동 메일은 제품마다 업무일 하루 한 통이다. 놓친 예약 만회나 같은 날 다시 돈 실행이 같은 메일을 또 보내지 않는다.
+- 메일 기준 기록은 자동 메일만 읽는다. 날짜별 스냅샷 폴더 밖에 두므로 AI 분석의 비교 기준(REQ-QAINTEL-003, REQ-QAINTEL-004, REQ-QAINTEL-027), 변경 리포트 화면, 수동 메일은 지금처럼 날짜별 기록만 쓴다.
 - AI 분석 결과를 담는 요약 메일(REQ-DAILY-008)과 따로 보낸다.
 - `daily_qa.schedule.enabled: false` 면 자동 메일도 보내지 않는다.
 - 설정 탭의 시험 발송(REQ-MAIL-001)에 변경 리포트 견본을 더한다. 견본에는 "예시 자료" 표시를 단다.
@@ -434,6 +448,23 @@ REQ-ALMCHG-005
 #### Expected Result
 1번에서 끄기 전 대기 이벤트만 분석되고 밀린 변경은 분석되지 않는다. 2번에서 고른 하루치만 분석되고 밀린 변경 수가 줄어든다. 3번에서 남은 이벤트가 밀린 변경으로 돌아간다.
 
+### TEST-ALMCHG-006 같은 날 다시 수집한 뒤의 자동 메일
+
+#### 검증 대상
+REQ-ALMCHG-004
+
+#### 선행 조건
+가짜 메일 발송기를 쓴다. 절약 모드다. 금요일 04:00 수집 실행으로 기준 기록과 자동 메일이 있다.
+
+#### 절차
+1. 금요일 04:00 수집 실행을 돌린다. 이어서 이슈 상태를 바꾸고 같은 날 [변경사항 점검하기](`prepare`)를 돌린다.
+2. 월요일 수집 실행에서 담당자를 바꾸고 돌린다.
+3. 같은 흐름에서 AI 분석의 비교 기준과 변경 리포트 화면 목록을 읽는다.
+4. 금요일 재수집 없이 월요일을 돌린 경우와, 메일 기준 기록의 날짜가 시작 기록 날짜와 다른 경우를 각각 돌린다.
+
+#### Expected Result
+월요일 자동 메일에 금요일 날짜의 상태 변경 줄과 월요일 날짜의 담당자 변경 줄이 함께 있다. 확인 범위에 다시 수집한 안내가 있다. AI 분석의 비교 기준은 금요일 날짜 기록(재수집 내용)이고, 날짜별 스냅샷 폴더에는 메일 기준 기록이 없다. 재수집이 없거나 날짜가 다르면 메일 기준 기록을 쓰지 않고 안내도 없다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
@@ -443,7 +474,7 @@ REQ-ALMCHG-005
 | REQ-ALMCHG-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `scripts/run_daily_qa.py` | TEST-ALMCHG-001: `tests/test_alm_change_collect.py` | verified |
 | REQ-ALMCHG-002 | `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/change_events.py`, `app/modules/daily_qa/product_adapter.py`, `app/modules/daily_qa/polarion.py`, `app/modules/daily_qa/change_report.py` | TEST-ALMCHG-002: `tests/test_alm_change_report.py`, `tests/test_alm_assignee.py` | verified |
 | REQ-ALMCHG-003 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/changes.html`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/_guide_changes.html` | TEST-ALMCHG-003: `tests/test_alm_change_page.py` | verified |
-| REQ-ALMCHG-004 | `app/modules/daily_qa/change_mail.py`, `app/modules/daily_qa/templates/change_report_email.html`, `app/modules/daily_qa/settings.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py`, `app/web/settings_router.py`, `app/modules/qa_agent/router.py`, `config.yaml` | TEST-ALMCHG-004: `tests/test_alm_change_mail.py`, `tests/test_alm_change_page.py` | verified |
+| REQ-ALMCHG-004 | `app/modules/daily_qa/change_mail.py`, `app/modules/daily_qa/templates/change_report_email.html`, `app/modules/daily_qa/settings.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py`, `app/web/settings_router.py`, `app/modules/qa_agent/router.py`, `config.yaml` | TEST-ALMCHG-004: `tests/test_alm_change_mail.py`, `tests/test_alm_change_page.py`; TEST-ALMCHG-006: `tests/test_alm_change_mail_base.py` | verified |
 | REQ-ALMCHG-005 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/core/daily_qa_storage.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/web/static/qa-run-progress.js`, `scripts/run_daily_qa.py` | TEST-ALMCHG-005: `tests/test_alm_deferred.py` | verified |
 
 Status 값: `draft` (사양만 있음) / `implemented` / `verified` (게이트가 실행하는 자동 테스트로 확인) /
@@ -454,5 +485,4 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 ## 13. 미확정 사항
 
 - 확인 필요: 운영 서버에 이슈·SRS 스냅샷이 업무일마다 쌓여 있는지. 자동 분석을 꺼 두었거나 주간 모드였던 기간은 기록이 없어서, 그 기간은 하루 단위로 보이지 않는다.
-- 확인 필요: 같은 날 04:00 수집 뒤에 사람이 [변경사항 점검하기]를 다시 누르면 그날의 기록이 새 내용으로 덮어써진다. 그러면 04:00 부터 그 실행 사이에 바뀐 내용은 어느 자동 메일에도 실리지 않는다(`/qa-agent/changes` 화면에서는 볼 수 있다). 해결 방법은 둘이다. 하나는 자동 메일이 끝난 시점의 기록을 따로 한 벌 더 보관하는 것이고, 다른 하나는 이 한계를 그대로 받아들이는 것이다.
 - (TBD) 변경 리포트 메일 설정(`daily_qa.change_report.*`)을 설정 탭 화면에서 바꾸는 방법. 처음에는 설정 파일로만 바꾼다.

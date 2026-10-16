@@ -62,6 +62,8 @@ class ChangeReport:
     since: str
     until: str
     compared_days: dict[str, list[str]] = field(default_factory=dict)
+    #: 비교한 기록마다 수집 시각(`collected_at`). `compared_days` 와 순서가 같다.
+    collected_at: dict[str, list[str]] = field(default_factory=dict)
     issues: list[EntityChanges] = field(default_factory=list)
     srs: list[EntityChanges] = field(default_factory=list)
     counts: dict[str, int] = field(default_factory=dict)
@@ -263,8 +265,28 @@ def _gap_notices(cfg, schedule: dict, days: list[str], since: str, until: str) -
     return notices
 
 
+def _clock(iso: str) -> str:
+    moment = _kst(iso)
+    return moment.strftime("%H:%M") if moment else ""
+
+
+def _with_mail_base(snapshots: SnapshotStore, rows: list, base) -> tuple[list, str]:
+    """메일 기준 기록이 시작 기록과 같은 날짜인데 내용이 다르면(메일 뒤 같은 날 다시 수집함) 앞에 넣는다 (REQ-ALMCHG-004)."""
+    if base is None or not rows or not base.is_file():
+        return rows, ""
+    meta = snapshots.meta(base)
+    day, items, start_meta = rows[0][0], snapshots.load(base) or [], rows[0][2]
+    if str(meta.get("run_date", "")) != day or items == rows[0][1]:
+        return rows, ""
+    before, after = _clock(meta.get("collected_at", "")), _clock(start_meta.get("collected_at", ""))
+    note = (f"{day} 기록은 지난 자동 메일 뒤 다시 수집되어" + (f"({after})" if after else "")
+            + " 지난 메일이 비교한 기록" + (f"({before})" if before else "") + "부터 이어서 비교했습니다.")
+    return [(day, items, meta), *rows], note
+
+
 def build_change_report(cfg, snapshots: SnapshotStore, since: str, until: str, *, intel=None, noise_patterns=(),
-                        schedule: dict | None = None) -> ChangeReport:
+                        schedule: dict | None = None, mail_base: dict | None = None) -> ChangeReport:
+    """`mail_base` 는 자동 메일만 넘기는 메일 기준 기록 경로(`{"issues": Path, "srs": Path}`)다."""
     if schedule is None:
         from app.modules.daily_qa.scheduled_jobs import schedule_settings
         schedule = schedule_settings()
@@ -274,7 +296,11 @@ def build_change_report(cfg, snapshots: SnapshotStore, since: str, until: str, *
     for kind, key in ((KIND_ISSUES, "issues"), (KIND_SRS, "srs")):
         paths = snapshots.between(kind, since, until)
         loaded[key] = [(path.stem, snapshots.load(path) or [], snapshots.meta(path)) for path in paths]
+        loaded[key], note = _with_mail_base(snapshots, loaded[key], (mail_base or {}).get(key))
+        if note and note not in report.notices:
+            report.notices.append(note)
         report.compared_days[key] = [stem for stem, _, _ in loaded[key]]
+        report.collected_at[key] = [str(meta.get("collected_at", "")) for _, _, meta in loaded[key]]
     counts = [len(v) for v in loaded.values()]
     if not any(counts):
         report.empty_reason = NO_RECORDS

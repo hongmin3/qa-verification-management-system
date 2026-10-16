@@ -58,7 +58,8 @@ def ai_state(store, cfg) -> dict:
 
 
 def period_times(snapshots, report: ChangeReport) -> tuple[str, str]:
-    """비교한 첫·마지막 기록을 수집한 한국 시각. 못 읽으면 빈 값."""
+    """비교한 첫·마지막 기록을 수집한 한국 시각. 못 읽으면 빈 값.
+    메일 기준 기록을 앞에 넣었으면 첫 시각은 그 기록의 것이다 (REQ-ALMCHG-004)."""
     from app.modules.daily_qa.snapshots import KIND_ISSUES, KIND_SRS
 
     for kind, key in ((KIND_ISSUES, "issues"), (KIND_SRS, "srs")):
@@ -66,9 +67,13 @@ def period_times(snapshots, report: ChangeReport) -> tuple[str, str]:
         if not days:
             continue
         stamps = []
-        for day in (days[0], days[-1]):
-            paths = snapshots.between(kind, day, day)
-            raw = str(snapshots.meta(paths[0]).get("collected_at", "")) if paths else ""
+        known = report.collected_at.get(key) or []
+        for index, day in ((0, days[0]), (-1, days[-1])):
+            if len(known) == len(days):
+                raw = known[index]
+            else:
+                paths = snapshots.between(kind, day, day)
+                raw = str(snapshots.meta(paths[0]).get("collected_at", "")) if paths else ""
             try:
                 moment = datetime.fromisoformat(raw.replace("Z", "+00:00"))
                 stamps.append((moment if moment.tzinfo else moment.replace(tzinfo=KST)).astimezone(KST).strftime("%Y-%m-%d %H:%M"))
@@ -211,9 +216,32 @@ def build_change_failure_email(product: str, stages: dict, *, kind: str, url: st
     return subject, text, html
 
 
-def compose_for_period(cfg, store, snapshots, since: str, until: str) -> tuple[str, str, str, ChangeReport]:
-    """저장된 기록만 읽어 기간의 변경 리포트 메일을 만든다. 자동·수동 메일이 같이 쓴다."""
-    report = build_change_report(cfg, snapshots, since, until)
+def mail_base_paths(cfg) -> dict:
+    """자동 메일이 끝으로 비교한 기록의 사본 경로. 없는 종류는 뺀다."""
+    paths = {key: cfg.change_mail_base_dir / f"{key}.json" for key in ("issues", "srs")}
+    return {key: path for key, path in paths.items() if path.is_file()}
+
+
+def keep_mail_base(cfg, snapshots, run_date: str) -> None:
+    """오늘 기록을 다음 자동 메일의 시작 기록으로 한 벌 보관한다. 임시 파일에 쓰고 이름을 바꿔 반쪽 파일을 남기지 않는다."""
+    from app.modules.daily_qa.snapshots import KIND_ISSUES, KIND_SRS
+
+    for kind, key in ((KIND_ISSUES, "issues"), (KIND_SRS, "srs")):
+        source = snapshots.directory(kind) / f"{run_date}.json"
+        if not source.is_file():
+            continue
+        target = cfg.change_mail_base_dir / f"{key}.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(".json.tmp")
+        temporary.write_bytes(source.read_bytes())
+        temporary.replace(target)
+
+
+def compose_for_period(cfg, store, snapshots, since: str, until: str, *,
+                       mail_base: dict | None = None) -> tuple[str, str, str, ChangeReport]:
+    """저장된 기록만 읽어 기간의 변경 리포트 메일을 만든다. 자동·수동 메일이 같이 쓴다.
+    `mail_base` 는 자동 메일만 넘긴다(메일 기준 기록, REQ-ALMCHG-004)."""
+    report = build_change_report(cfg, snapshots, since, until, mail_base=mail_base)
     subject, text, html = build_change_email(
         report, product=cfg.product, page_url=page_url(cfg, cfg.product, since, until), ai_state=ai_state(store, cfg),
         max_items=cfg.change_report.max_items, times=period_times(snapshots, report))

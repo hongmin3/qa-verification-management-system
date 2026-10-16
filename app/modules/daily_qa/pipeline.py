@@ -935,6 +935,7 @@ class _Run:
         cfg, key = self.cfg, self.cfg.state_key("change_mail_date")
         since = self.basis.get(snapshots.KIND_ISSUES) or self.basis.get(snapshots.KIND_SRS) or ""
         self.change_mail = {"status": "skipped", "reason": "", "since": since, "until": self.run_date}
+        compared = False     # 기록을 비교했는가. 비교한 메일만 오늘 기록을 메일 기준 기록으로 남긴다
         try:
             if not schedule_settings().get("enabled", True):
                 self.change_mail["reason"] = "자동 실행이 꺼져 있어 보내지 않았습니다."
@@ -949,10 +950,13 @@ class _Run:
             elif not since:
                 subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="baseline", url=url)
             else:
-                subject, text, body, built = change_mail.compose_for_period(cfg, self.store, self.snapshots, since, self.run_date)
+                subject, text, body, built = change_mail.compose_for_period(
+                    cfg, self.store, self.snapshots, since, self.run_date, mail_base=change_mail.mail_base_paths(cfg))
                 if not built.issues and not built.srs and not cfg.change_report.send_when_empty:
                     self.change_mail["reason"] = "변경이 없어 보내지 않았습니다."
+                    self._keep_mail_base()
                     return
+            compared = not failed
             result = (self.mail_sender or _default_sender)(subject, text, body, cfg.email_to)
             status = str(result.get("status", "")) if isinstance(result, dict) else ""
             if status == "disabled":   # --no-email 처럼 발송을 끈 실행: 실패가 아니고 그날의 진짜 메일을 막지도 않는다
@@ -968,6 +972,18 @@ class _Run:
             self.store.set_state(key, self.run_date)
         except Exception as exc:  # noqa: BLE001
             logger.warning("change_mail_state_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+        if compared:
+            self._keep_mail_base()
+
+    def _keep_mail_base(self) -> None:
+        """다음 자동 메일이 이어서 비교할 기록을 남긴다. 같은 날 다시 수집해 그날 기록이 덮어써져도
+        아침 메일 뒤의 변경이 다음 메일에 실린다 (REQ-ALMCHG-004). 실패해도 실행 결과를 바꾸지 않는다."""
+        from app.modules.daily_qa import change_mail
+
+        try:
+            change_mail.keep_mail_base(self.cfg, self.snapshots, self.run_date)
+        except OSError as exc:
+            logger.warning("change_mail_base_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
 
     def _defer_while_off(self, rows) -> None:
         """자동 분석이 꺼진 동안 자동 실행이 저장한 새 이벤트는 밀린 변경으로 둔다 (REQ-ALMCHG-005)."""
