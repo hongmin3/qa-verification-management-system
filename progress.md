@@ -1,6 +1,6 @@
 # 진행 상태
 
-## 2026-10-16 ALM 변경 리포트 (운영 반영 완료, 서비스는 임시 실행 중)
+## 2026-10-16 ALM 변경 리포트 (운영 반영 완료)
 
 - 구현: [구현 계획](docs/superpowers/plans/2026-10-16-alm-change-report.md)의 Task 1~7이다. 수집 분리(4315782, ab347e3), 밀린 변경 저장(55483ab), 담당자 수집(3e6c5f9, bee24ea, 98ff324), 기간 비교(c3ea1e8), `/qa-agent/changes` 화면(29a90c8), 변경 리포트 메일(03e6bc4, ebf9aeb), [밀린 변경 분석](05eb5c0, 2dbc031).
 - 최종 검토 뒤 수정(2137896, dcb070e): 절약 모드에서 같은 날 다시 수집하면 밀린 변경이 자동 분석되던 경로를 막았다. 수집만 한 실행의 상태 이름과 제목을 고쳤다. 서버 예약이 꺼져 있으면 자동 메일도 보내지 않는다. 절약 모드 수집 실행도 TC 색인을 읽어 삭제된 SRS 를 가리키는 TC 결과(REQ-QAINTEL-028)를 남긴다.
@@ -14,7 +14,7 @@
 - 재시작 사고: 주 프로세스를 SIGTERM 으로 끝냈더니 systemd 가 정상 종료로 보고 다시 띄우지 않았다(`Restart=on-failure`). 14:07:58~14:11:05 KST(약 3분) 웹 서비스가 멈췄다. sudo 권한이 없어 `ubuntu` 계정으로 같은 폴더에서 `.venv/bin/python -m app.serve` 를 직접 띄웠다(프로세스 3003390, 로그 `output/logs/manual-serve-20261016T051105Z.log`). 내려갈 때 서비스 안의 `script`·`claude` 하위 프로세스도 종료 대상이 됐다.
 - 배포 뒤 확인: `/health`·`/qa-agent`·`/qa-agent/changes`(10-13~10-16, SRS 탭)·`/qa-agent/guide`·`/qa-agent/deferred`·`/settings` 모두 200. 운영 변경 리포트의 건수가 실제 기록 대조 결과와 같다(상태 13·댓글 6·연구소 결과 1·원인·조치 3·SRS 수정 1). AI 분석 꺼짐·밀린 변경 0건·메일 수신자 1명으로 보인다. 앱 로그 오류 없음, 재시작 뒤 새 점검 실행 없음.
 - 원인: 배포 지식의 필수 규칙(REF-core-deployment#restart-procedure, 재기동은 `sudo systemctl restart qa-verification` 또는 `scripts/deploy.ps1 -Restart`, nohup·kill 방식이 아님)을 배포 전에 읽지 않고 지난 기록의 kill 방식을 따랐다.
-- 남은 일: 앱이 systemd 밖에서 돌아 서버를 다시 켜거나 프로세스가 죽으면 자동으로 뜨지 않는다. sudo 권한이 있는 사람이 `kill 3003390` 뒤 `sudo systemctl start qa-verification.service` 로 서비스 관리로 되돌려야 한다.
+- 서비스 복귀(14:15 KST): 사용자가 임시 프로세스를 끝내고 `sudo systemctl start qa-verification.service` 를 실행했다. 서비스 active(프로세스 3004028), 앱 프로세스 1개, `/health`·`/qa-agent`·`/qa-agent/changes`·`/qa-agent/deferred` 200, 서비스 로그 오류 없음, 새 점검 실행 없음을 확인했다.
 - 미확인: 10-19(월) 04:00 첫 수집 실행과 변경 리포트 메일 수신, 담당자 이름 표시.
 - 확인 필요: 같은 날 사람이 다시 점검하면 그날 기록을 덮어써, 04:00부터 그 시각까지의 변경이 자동 메일에 빠진다(화면에서는 보인다). 변경 리포트 메일 설정(`daily_qa.change_report.*`)은 설정 파일로만 바꾼다.
 
