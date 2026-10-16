@@ -16,11 +16,14 @@
 - 원인: 배포 지식의 필수 규칙(REF-core-deployment#restart-procedure, 재기동은 `sudo systemctl restart qa-verification` 또는 `scripts/deploy.ps1 -Restart`, nohup·kill 방식이 아님)을 배포 전에 읽지 않고 지난 기록의 kill 방식을 따랐다.
 - 서비스 복귀(14:15 KST): 사용자가 임시 프로세스를 끝내고 `sudo systemctl start qa-verification.service` 를 실행했다. 서비스 active(프로세스 3004028), 앱 프로세스 1개, `/health`·`/qa-agent`·`/qa-agent/changes`·`/qa-agent/deferred` 200, 서비스 로그 오류 없음, 새 점검 실행 없음을 확인했다.
 - 미확인: 10-19(월) 04:00 첫 수집 실행과 변경 리포트 메일 수신, 담당자 이름 표시.
-- 작성자별 묶기(사용자 요청, 운영 미반영): 변경 리포트 메일의 이슈를 이슈 작성자별로 묶는다(REQ-ALMCHG-004). 관련 테스트 161건 통과. 운영에는 아직 반영하지 않았다.
+- 작성자별 묶기(사용자 요청, 2차 운영 반영 완료): 변경 리포트 메일의 이슈를 이슈 작성자별로 묶는다(REQ-ALMCHG-004). 관련 테스트 161건 통과. 운영에는 아직 반영하지 않았다.
 - 수동 메일 발송(14:2x KST): 사용자 요청으로 10-13~10-16 변경 리포트를 설정된 수신자 1명에게 보냈다(앱 응답 sent). 작성자별 묶기 반영 전 형식이다.
 - 같은 날 다시 수집할 때 자동 메일에서 변경이 빠지던 한계를 해결했다(사용자가 "자동 메일 끝 기록 보관" 선택). 자동 메일이 끝으로 비교한 기록을 `data/daily_qa/<제품>/change_mail_base/` 에 보관하고 다음 자동 메일이 그 기록부터 비교한다. 새 테스트 `tests/test_alm_change_mail_base.py`(TEST-ALMCHG-006) 8건. AI 분석 기준 보호 테스트는 보관 위치를 일부러 스냅샷 폴더 안으로 바꿨을 때 실패하는 것을 확인했다. 전체 테스트 1,981건 통과·8건 건너뜀·실패 0(36분). 안내 문구 테스트 1건은 그 뒤 더해 따로 통과했다. 운영 서버 배포 전이라 실제 메일로는 확인하지 않았다.
 - 후속 병합(운영 미반영): `claude/pensive-burnell-73768b` 의 `37c832c`(같은 날 재수집 시 메일 기준 기록 보관)를 이 브랜치에 병합했다(`67edad7`). 합친 코드로 전체 테스트 1,985건 통과·8건 건너뜀·실패 0. 작성자별 묶기와 함께 운영에는 아직 반영하지 않았다. 보관 기간 변경은 이제 `origin/master`(`7f21f50`)에 있으므로 다음 배포 전에는 `origin/master` 를 병합한다.
 - 다음 배포 전 주의: 운영 `config.yaml` 에는 다른 세션이 바꾼 보관 기간 두 줄(`retention.backup_days: 7`, `retention.deploy_backup_days: 14`, 브랜치 `claude/production-server-backup-cleanup-a8bef9` 의 `9ad40e7`)이 있다. 이 브랜치의 `config.yaml` 을 그대로 복사하지 말고 그 브랜치를 먼저 병합하거나 두 줄을 유지한다. 배포 전 백업은 앱 폴더 `backups/deploy-<이름>-<UTC 시각>` 에 둔다(14일 뒤 자동 정리).
+- 2차 운영 반영(16:48 KST, 작성자별 묶기 + 같은 날 재수집 보완): `origin/master`(`7f21f50`, 보관 기간 개정)를 병합한 `c4a8923` 로 전체 테스트 1,986건 통과·8건 건너뜀·실패 0. 배포 전 차이 점검에서 운영 260개 파일 중 254개가 같고 6개만 이번 대상이었다(보관 기간 `retention.py`·`config.yaml` 은 이미 같음, 운영에만 있는 파일 0). 백업 `backups/deploy-alm-grouping-20261016T074808Z/`(6개 원본·`app.db`·`MANIFEST.txt`, 14일 보관) 뒤 6개를 CRLF 형식으로 반영하고 해시·문법·불러오기를 확인했다.
+- 재기동: 사용자 요청으로 에이전트가 했다. sudo 비밀번호를 쓸 수 없어 진행 중 점검 0건과 서비스 하위 작업 없음을 확인한 뒤 주 프로세스를 SIGKILL 로 끝냈고, `Restart=on-failure` 로 6초 뒤 다시 떴다(프로세스 3022530, systemd 관리 유지). 배포 지식 규칙은 `sudo systemctl restart` 를 권하므로, 다음에는 sudo 권한자가 재기동하는 편이 맞다.
+- 2차 배포 뒤 확인: `/health` `{"status":"ok"}`, `/`·`/knowledge`·`/qa-agent`·`/qa-agent/changes`·`/qa-agent/guide`·`/qa-agent/deferred` 200, 서비스 로그 오류 0, 새 점검 실행 없음. `/analyses` 는 404 인데 배포 전 코드에도 없는 주소다(배포 지식 확인 목록이 낡음, Akela 반증 기록).
 - 확인 필요: 변경 리포트 메일 설정(`daily_qa.change_report.*`)은 설정 파일로만 바꾼다.
 
 ## 2026-10-16 운영 서버 백업 정리와 보관 기간 개정
