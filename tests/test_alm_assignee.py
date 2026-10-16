@@ -43,9 +43,9 @@ def test_assignee_relation_name_comes_from_profile_relations():
 
 
 def test_previous_assignees_then_relation_omitted_is_no_event():
-    before = issue(assignees=["a"])
-    after = normalize_issue(issue_item("VP-1", "2026-10-01", []), VXVUE_PROFILE)
-    after = {**issue(), **{k: v for k, v in after.items() if k == "user_names"}}
+    before = normalize_issue(issue_item("VP-1", "2026-10-01", [], assignees=(("u1", "담당자A"),)), VXVUE_PROFILE)
+    after = normalize_issue(issue_item("VP-1", "2026-10-02", []), VXVUE_PROFILE)
+    assert before["assignees"] == ["u1"]
     assert "assignees" not in after
     assert detect_issue_events([before], [after]) == []
 
