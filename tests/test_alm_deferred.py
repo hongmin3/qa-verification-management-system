@@ -292,3 +292,43 @@ def test_post_launches_deferred_run(world, monkeypatch):
     response = world["client"].post("/qa-agent/deferred", data={"product": "", "since": day, "until": day})
     assert response.status_code == 202 and response.json()["status"] == "launched"
     assert seen["trigger"] == "deferred" and seen["deferred_since"] == day
+
+
+# Validates: REQ-ALMCHG-005
+def test_cancel_just_before_mail_keeps_deferred(two_days, monkeypatch):
+    h = two_days
+    monkeypatch.setattr(h.store, "begin_email", lambda *args, **kwargs: False)   # 분석이 끝난 직후 취소 요청이 들어온 경우
+    outcome = run_deferred(h, since=kst_day(DAY2), until=kst_day(DAY2), runner=FakeRunner(lambda task, run: RunnerOutcome(False, 1, 0.0, "실패")))
+    assert outcome["status"] == "CANCELLED"
+    statuses = {e["entity_id"]: e["analysis_status"] for e in h.store.list_events(product=h.cfg.slug)}
+    assert statuses["VP-200"] == "deferred" and statuses["VP-300"] == "deferred"
+
+
+def _fill_baseline(h):
+    """이슈가 한두 건만 빠져도 조회 실패로 보지 않도록(이슈 급감 점검) 기준 기록에 이슈를 넉넉히 둔다."""
+    h.issues += [issue_item(f"VP-9{n:02d}", "2026-09-28T00:00:00Z", ["VP-10"], review="", status="open") for n in range(20)]
+
+
+def _remove_vp200_then_collect(h):
+    h.issues[:] = [item for item in h.issues if not str(item["id"]).endswith("VP-200")]
+    h.run(DAY3, trigger="collect")
+
+
+# Validates: REQ-ALMCHG-005
+def test_deferred_run_keeps_event_whose_target_left_snapshot(env):
+    _fill_baseline(env)
+    new_issue_after_baseline(env, "off", "collect")
+    _remove_vp200_then_collect(env)
+    run_deferred(env)
+    statuses = {e["entity_id"]: e["analysis_status"] for e in env.store.list_events(product=env.cfg.slug, event_types=("ISSUE_CREATED",))}
+    assert statuses["VP-200"] == "deferred"
+
+
+# Validates: REQ-ALMCHG-005
+def test_other_runs_still_abandon_event_whose_target_left_snapshot(env):
+    _fill_baseline(env)
+    new_issue_after_baseline(env, "on", "collect")
+    _remove_vp200_then_collect(env)
+    env.run(DAY_AFTER, trigger="scheduled", runner=FakeRunner(analysis_producer(env.calls)))
+    statuses = {e["entity_id"]: e["analysis_status"] for e in env.store.list_events(product=env.cfg.slug, event_types=("ISSUE_CREATED",))}
+    assert statuses["VP-200"] == "abandoned"

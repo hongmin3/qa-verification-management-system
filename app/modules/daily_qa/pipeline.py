@@ -1126,7 +1126,8 @@ class _Run:
                                   latest_analysis_loader=lambda subject: self.store.latest_issue_analysis(
                                       subject, self.cfg.slug, exclude_run_id=self.run_id))
                 if item is None:
-                    if not self.dry_run and self.until is None and not self.on_demand:
+                    if not self.dry_run and self.until is None and not self.on_demand and self.trigger != "deferred":
+                        # 밀린 변경은 지우지 않는다. 대상이 스냅샷에 없어도 밀린 변경으로 남는다 (REQ-ALMCHG-005).
                         self.store.update_events(event_ids, "abandoned", self.run_id, error="대상이 오늘 스냅샷에 없습니다")
                     continue
                 if self.cfg.savings_enabled and not self.on_demand:
@@ -1770,6 +1771,7 @@ class _Run:
             pending = [event["id"] for event in self.store.list_events(ids=self._active_event_ids)
                        if event["analysis_status"] in ("pending", "failed")]
             self.store.update_events(pending, "pending", error="사용자 중단으로 대기")
+        self.restore_deferred()   # 위에서 pending 으로 쓴 밀린 변경을 다시 밀린 변경으로 (순서에 기대지 않는다)
         summary = report.summarize(self.all_findings, self.question_count)
         summary.update({"product": self.cfg.slug, "trigger": self.trigger, "events": self.audit.get("events", {}),
                         "ai_settings": self.audit["ai_settings"], "claude_calls": self.claude_calls,
