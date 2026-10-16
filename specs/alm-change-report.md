@@ -6,7 +6,7 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `alm-change-report` |
-| Document Version | 0.1.0 |
+| Document Version | 0.2.0 |
 | Last Updated | 2026-10-16 |
 | Status | draft |
 
@@ -432,15 +432,13 @@ REQ-ALMCHG-005
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
 
-`draft` 행의 Implementation 칸은 구현할 때 고칠 기존 파일이다. 새로 만드는 파일은 구현하면서 더한다.
-
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
-| REQ-ALMCHG-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py` | TEST-ALMCHG-001 | draft |
-| REQ-ALMCHG-002 | `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/change_events.py`, `app/modules/daily_qa/product_adapter.py` | TEST-ALMCHG-002 | draft |
-| REQ-ALMCHG-003 | `app/modules/qa_agent/router.py` | TEST-ALMCHG-003 | draft |
-| REQ-ALMCHG-004 | `app/modules/daily_qa/report.py`, `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py` | TEST-ALMCHG-004 | draft |
-| REQ-ALMCHG-005 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/modules/qa_agent/router.py` | TEST-ALMCHG-005 | draft |
+| REQ-ALMCHG-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `scripts/run_daily_qa.py` | TEST-ALMCHG-001: `tests/test_alm_change_collect.py` | verified |
+| REQ-ALMCHG-002 | `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/change_events.py`, `app/modules/daily_qa/product_adapter.py`, `app/modules/daily_qa/polarion.py`, `app/modules/daily_qa/change_report.py` | TEST-ALMCHG-002: `tests/test_alm_change_report.py`, `tests/test_alm_assignee.py` | verified |
+| REQ-ALMCHG-003 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/changes.html`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/_guide_changes.html` | TEST-ALMCHG-003: `tests/test_alm_change_page.py` | verified |
+| REQ-ALMCHG-004 | `app/modules/daily_qa/change_mail.py`, `app/modules/daily_qa/templates/change_report_email.html`, `app/modules/daily_qa/settings.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py`, `app/web/settings_router.py`, `app/modules/qa_agent/router.py`, `config.yaml` | TEST-ALMCHG-004: `tests/test_alm_change_mail.py`, `tests/test_alm_change_page.py` | verified |
+| REQ-ALMCHG-005 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/core/daily_qa_storage.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/web/static/qa-run-progress.js`, `scripts/run_daily_qa.py` | TEST-ALMCHG-005: `tests/test_alm_deferred.py` | verified |
 
 Status 값: `draft` (사양만 있음) / `implemented` / `verified` (게이트가 실행하는 자동 테스트로 확인) /
 `deprecated`. 수동 절차만 있으면 `implemented`로 둔다.

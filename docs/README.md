@@ -24,7 +24,7 @@
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
 | **Claude Desktop·Claude Code에 VXvue AI 배포하기** | [사양 REQ-VXVUECHATBOT-011~014](../specs/vxvue-chatbot.md) · 입력 없는 설치·CLI 설치 명령·연결 실패 안내는 앱의 `/vxvue-desktop` · 연결된 PC 목록·취소는 `scripts/vxvue_desktop_devices.py` · [구현 계획](superpowers/plans/2026-10-15-vxvue-claude-desktop.md) |
 | **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합(완료), 메일 재구성·사용률 기준 호출, 관리자 설정, 상세·목록 재구성(2026-10-15 운영 배포) |
-| **ALM 이슈·SRS 변경 리포트(매일 수집·기간 비교·메일)** | [사양 REQ-ALMCHG-001~005](../specs/alm-change-report.md) · [구현 계획](superpowers/plans/2026-10-16-alm-change-report.md) · AI 설정과 상관없는 매 업무일 수집, `/qa-agent/changes` 화면, 변경 리포트 메일, [밀린 변경 분석](구현 전) |
+| **ALM 이슈·SRS 변경 리포트(매일 수집·기간 비교·메일)** | [사양 REQ-ALMCHG-001~005](../specs/alm-change-report.md) · [구현 계획](superpowers/plans/2026-10-16-alm-change-report.md) · AI 설정과 상관없는 매 업무일 수집, `/qa-agent/changes` 화면, 변경 리포트 메일, [밀린 변경 분석] |
 | **챗봇 미확인 범위·검색 비용 개선** | [실행 계획](superpowers/plans/2026-10-14-chat-evidence-coverage.md) · [운영 검증 기록](verification/2026-10-14-production-integration.md) |
 | **Opus medium 챗봇의 사용량 절감 방안** | [절감 계획과 적용 기준](VXVUE_CHATBOT_COST_PLAN.md) |
 | **로컬 Skill 지침을 챗봇에 자동 반영하기** | [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md) |
