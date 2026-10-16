@@ -4,7 +4,10 @@
 
 - 운영 서버 디스크: 469G 중 295G(64%) 사용이었다. 가장 큰 사용처는 다른 프로젝트의 VM 이미지(`/home/ubuntu/vhd-masters` 227G)이고 정리 시점에도 새 이미지가 기록 중이었다. 이 파일들은 건드리지 않았다.
 - 사용자 승인 후 QA 앱 관련 52개 항목(약 13G)을 지웠다. 9/16~10/8 일일 백업 ZIP 23개, 같은 날 손으로 만든 백업 ZIP 5개, `backups/` 안 배포 전 백업 폴더·묶음, 홈 폴더의 QA 배포 백업(`qa-app-backup-*.tgz`·`qa-deploy-backups/`·비밀값 사본 등), `~/.cache/pip`이다. 사용량 282G(61%), 남은 백업은 10/9~10/15 일일 ZIP 7개(4.5G)다. 정리 뒤 핵심 앱·Manual Hub `/health` 모두 `ok`.
-- REQ-OPS-002 개정(미배포): 백업 ZIP 7일, 배포 전 백업(`backups/deploy-<이름>-<UTC 시각>`) 14일 보관. 운영 서버에 반영하려면 배포가 필요하다. 배포 전까지 서버는 30일 보관 설정으로 돈다.
+- REQ-OPS-002 개정: 백업 ZIP 7일, 배포 전 백업(`backups/deploy-<이름>-<UTC 시각>`) 14일 보관. 전체 회귀 1,876건 통과·8건 건너뜀(32분 37초).
+- 운영 반영(15:04 KST): 배포 전 차이 점검에서 서버의 앱 코드·`config.yaml`이 master가 아니라 다른 세션이 같은 날 배포한 `claude/alm-srs-daily-reporting-e6dcf9`(`8fd5b91`, master 미병합)와 같음을 확인했다. 그래서 `deploy.ps1` 대신 바뀐 파일 4개(`app/core/retention.py`, `tests/test_backup.py`, `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md`, 서버 판은 모두 master와 같았음)만 옮기고 서버 `config.yaml`의 보관 설정 두 줄만 고쳤다. 백업은 `backups/deploy-retention-20261016T060438Z/`다. 재기동은 하지 않았다(보관 설정은 매일 백업 작업이 실행될 때 읽는다).
+- 배포 후 확인: 4개 파일 지문 일치, 서버 `tests/test_backup.py` 10건 통과, 서버 설정의 보관 일수 7·14, 지금 정리하면 지울 대상 0건, `/health` `ok`. ALM 세션에 다음 배포 때 이 두 줄을 유지하거나 이 브랜치를 병합하라고 알렸다.
+- 남은 일: 이 브랜치와 ALM 브랜치의 master 병합. 오늘 14:15(서버 시간) 첫 정리 실행 결과는 `output/logs/backup.log`에서 확인한다.
 - 확인 필요: SPEC 4절 예약 표는 백업 시각을 02:15 로 적었지만 운영 crontab 은 `15 14 * * *`(서버 시간 EDT)다.
 
 ## 2026-10-15 VXvue AI 입력 없는 자동 연결 (진행 중)
