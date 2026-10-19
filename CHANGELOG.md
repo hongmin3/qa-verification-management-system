@@ -1,5 +1,9 @@
 # 변경 이력
 
+## 2026-10-19 PC 지식 업로드 예약의 1분 로그 정리
+
+- REQ-SYNC-002: 1분마다 도는 PC 예약이 수집 요청을 물을 때마다 HTTP 요청 줄(`HTTP Request: GET …/knowledge/product-knowledge/request`)이 `output/logs/product_knowledge_retry.log` 에 쌓이던 문제를 고쳤다. 할 일이 없는 실행은 이제 아무 줄도 남기지 않는다. PC 실행본에 반영하려면 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 한다.
+
 ## 2026-10-19 Knowledge 상세의 지금 수집과 VXvue 매뉴얼 화면 등록
 
 - REQ-KNOW-021: 제품 상세 화면 머리에 `지금 수집` 버튼을 하나 두었다. 누르면 그 시점의 지식 폴더 전체를 수집한다. 운영 서버처럼 폴더를 볼 수 없으면 수집 요청을 남기고, 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 남은 요청은 버튼 옆에 "수집 요청 대기 중"으로 보인다.

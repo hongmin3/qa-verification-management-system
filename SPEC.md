@@ -6691,6 +6691,10 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 
 이유: 기다리는 동안에는 다음 실행이 건너뛰어져 수집 요청을 늦게 본다.
 
+할 일이 없는 실행(`NOT_DUE`)은 `output/logs/product_knowledge_retry.log`에 아무 줄도 남기지 않는다. 수집 요청을 묻는 HTTP 요청 줄도 남기지 않는다.
+
+이유: 1분마다 한 줄씩 남기면 하루 약 1,440줄이 쌓여 실제 업로드 기록을 찾기 어렵다.
+
 **입력**
 
 | CLI 인자 | 뜻 |

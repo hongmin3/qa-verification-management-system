@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="2535843125f71953cb58395c58d82d8a5bb965e2d94ff3d2d3036486d62b1de9">
+<meta name="spec-source-sha256" content="527a7b5db37af5d147dcefcdeec35810ac8c9932e9a9322080d8ed69ef5755b6">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -8989,8 +8989,9 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <section class="card kind-req" id="REQ-SYNC-002">
 <h3><span class="idtag">REQ-SYNC-002</span> 지식 폴더 업로드</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-005">REQ-KNOW-005</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>, <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-KNOW-017">REQ-KNOW-017</a>, <a class="idref" href="#REQ-KNOW-018">REQ-KNOW-018</a>, <a class="idref" href="#REQ-KNOW-021">REQ-KNOW-021</a>, <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a>, <a class="idref" href="#REQ-QAINTEL-022">REQ-QAINTEL-022</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a></span></div>
-<details class="history"><summary>변경 이력 8</summary>
+<details class="history"><summary>변경 이력 9</summary>
 <ul>
+<li><span class="hist">2026-10-19 PC 지식 업로드 예약의 1분 로그 정리</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 1분마다 도는 PC 예약이 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청을 물을 때마다 HTTP 요청 줄(<code>HTTP Request: GET …/knowledge/product-knowledge/request</code>)이 <code>output/logs/product_knowledge_retry.log</code> 에 쌓이던 문제를 고쳤다. 할 일이 없는 실행은 이제 아무 줄도 남기지 않는다. PC 실행본에 반영하려면 관리자 PowerShell 에서 <code>scripts/install_product_knowledge_schedule.ps1</code> 을 다시 실행해야 한다.</li>
 <li><span class="hist">2026-10-19 Knowledge 상세의 지금 수집과 VXvue 매뉴얼 화면 등록</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 예약 <code>QA_ProductKnowledge_Sync</code> 가 15분이 아니라 1분마다 돌고, 실행할 때마다 서버에 남은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청을 묻는다. 매일 08:00 업로드와 15분 재시도 시각은 그대로다. 할 일이 없는 실행은 로그에 남기지 않는다. 바뀐 예약은 PC 에서 설치 스크립트를 다시 실행해야 적용된다.</li>
 <li><span class="hist">2026-10-19 중단된 지식 동기화 시험 보완</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: Windows가 파일 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>를 잠깐 거부하면 원본·정규화 파일 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>와 <span class="term" title="보관한 문서나 버전을 다시 활성(active)으로 돌리는 것이다" tabindex="0">복원</span>을 최대 5회 시도한다. 다른 오류와 계속되는 거부는 오류로 반환한다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 지식 동기화를 매일 08:00 KST와 실패 후 15분 재시도로 바꾼다. PC 시작 때 놓친 실행을 만회하고 성공 뒤에는 전송을 멈춘다. 손상 전송과 부분 실패가 기존 서버 자료를 지우지 않도록 고쳤다.</li>
@@ -9021,6 +9022,8 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <p><strong>설치</strong> <code>scripts/install_product_knowledge_schedule.ps1 -CheckOnly</code>로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 바꾼다. <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 별도 중복 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 만들지 않는다.</p>
 <p>예약은 1분마다 돌므로 재시도 시각까지 기다리지 않고 끝낸다(<code>--wait-retry</code> 를 붙이지 않는다).</p>
 <p class="why"><span class="why-label">이유</span> 기다리는 동안에는 다음 실행이 건너뛰어져 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청을 늦게 본다.</p>
+<p>할 일이 없는 실행(<code>NOT_DUE</code>)은 <code>output/logs/product_knowledge_retry.log</code>에 아무 줄도 남기지 않는다. <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청을 묻는 HTTP 요청 줄도 남기지 않는다.</p>
+<p class="why"><span class="why-label">이유</span> 1분마다 한 줄씩 남기면 하루 약 1,440줄이 쌓여 실제 업로드 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 찾기 어렵다.</p>
 <p><strong>입력</strong></p>
 <div class="table-wrap"><table>
 <thead><tr><th>CLI 인자</th><th>뜻</th></tr></thead>

@@ -1,5 +1,12 @@
 # 진행 상태
 
+## 2026-10-19 PC 지식 업로드 예약의 1분 로그 정리 (REQ-SYNC-002)
+
+- 문제: 예약 재설치 뒤 확인에서 `output/logs/product_knowledge_retry.log` 에 매분 `HTTP Request: GET http://10.13.0.222:24357/knowledge/product-knowledge/request?product=VXvue "HTTP/1.1 200 OK"` 줄이 쌓였다(하루 약 1,440줄). 결과 줄은 막아 두었지만 httpx 라이브러리의 INFO 로그가 남았다.
+- 수정: `scripts/retry_product_knowledge.py` 에서 httpx 로그 수준을 WARNING 으로 올렸다. SPEC REQ-SYNC-002 카드에 할 일 없는 실행은 로그를 남기지 않는다는 규칙을 적었다.
+- 확인: 새 회귀 시험은 수정 전 실패, 수정 뒤 통과했다. 관련 시험 14건 통과. 운영 서버 요청 조회(읽기 전용)를 실제 httpx 로 불러 수정 전 설정은 1줄, 수정 뒤 설정은 0줄이 남는 것을 확인했다.
+- 남은 일: PC 실행본(`data/knowledge_retry/worker-*`)은 아직 이전 판이다. 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 로그가 멈춘다. 운영 서버 배포는 필요 없다(서버 코드 변경 없음).
+
 ## 2026-10-19 Knowledge 상세 지금 수집·VXvue 매뉴얼 화면 등록·지침 프롬프트 숨김
 
 - 사용자 요청: 제품 상세에 지식 폴더 전체를 그 시점에 수집하는 수동 버튼, VXvue 매뉴얼에 TC 같은 등록·교체·삭제, VXvue 지침 프롬프트 구역 삭제.

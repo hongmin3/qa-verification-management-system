@@ -33,6 +33,8 @@ def main():
     log = settings.root / "output" / "logs" / "product_knowledge_retry.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(filename=log, encoding="utf-8", level=logging.INFO, format="%(asctime)s %(message)s")
+    # httpx 는 요청마다 INFO 한 줄을 남긴다. 1분마다 묻는 수집 요청 조회가 그대로 쌓이지 않게 막는다.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     if (Path(__file__).parent / "knowledge_retry.py").is_file():
         from knowledge_retry import run_due
         from knowledge_push import fetch_collect_request, push_product
