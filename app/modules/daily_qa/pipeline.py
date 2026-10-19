@@ -963,6 +963,10 @@ class _Run:
                 self.change_mail["reason"] = "메일 끔"
                 return
             self.change_mail["status"] = status if status in ("sent", "failed", "not_configured") else "failed"
+            if status == "sent" and isinstance(result, dict):
+                # 메일함에서 찾을 수 있게 요약 메일의 메일 단계와 같은 형식으로 남긴다 (REQ-ALMCHG-004, REQ-MAIL-002)
+                self.change_mail["message_id"] = str(result.get("message_id") or "")
+                self.change_mail["note"] = _mail_note(result, cfg.email_to, datetime.now(timezone.utc))
             if status == "failed" and isinstance(result, dict):
                 self.change_mail["reason"] = str(result.get("error", ""))
         except Exception as exc:  # noqa: BLE001 - 메일 실패가 수집·분석을 막지 않는다

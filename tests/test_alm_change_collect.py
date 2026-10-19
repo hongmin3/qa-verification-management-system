@@ -248,6 +248,8 @@ def test_run_view_trigger_labels_and_change_mail_line():
     assert view("prepare", None)["trigger"] == "대상 준비" and view("collect", None)["trigger"] == "수집만 실행"
     assert view("collect", None)["change_mail"] == ""
     assert view("collect", {"status": "sent"})["change_mail"] == "변경 리포트 메일: 보냄"
+    note = "발송 2026-10-19 04:00 · 수신 hon***@vieworks.com · Message-ID <m1@example>"
+    assert view("collect", {"status": "sent", "note": note})["change_mail"] == f"변경 리포트 메일: 보냄 · {note}"
     assert view("collect", {"status": "skipped", "reason": "변경이 없어 보내지 않았습니다."})["change_mail"] == "변경 리포트 메일: 보내지 않음(변경이 없어 보내지 않았습니다.)"
     assert view("collect", {"status": "failed", "reason": "smtp"})["change_mail"] == "변경 리포트 메일: 실패(smtp)"
 
