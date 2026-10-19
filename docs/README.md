@@ -48,7 +48,7 @@
 
 | **분석 결과 설명 개선 범위(2026-10-14)** | [분석 결과 설명 계획](superpowers/plans/2026-10-14-finding-explanation.md) |
 | **2026-10-02 자동 분석 간소화·TC 수동 점검 작업 계획** | [핵심 분석 전환 계획](superpowers/plans/2026-10-02-qa-agent-core-analysis.md) · 최신 검증 결과는 [progress](../progress.md) |
-| **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) |
+| **사양서·지식 폴더 자동 동기화 설정, PC 예약 작업 확인** | [자동화 아키텍처 §7](AUTOMATION.md) · 10-19 평일 03:30 변경·중단 작업 재개 확인은 [progress](../progress.md) |
 | **비밀정보 취급 규칙** | [SECURITY.md](../SECURITY.md) |
 | **운영 서버 반영 계획(2026-10-02 서버 상태·배포·되돌리기, 미실행)** | [운영 서버 반영 계획](local/DEPLOY_PLAN_2026-10-02.md) |
 | **운영 서버 주소·경로·재기동 절차(사내 정보)** | [운영 로컬 메모](local/OPERATIONS_LOCAL.md) · 2026-09-09 노출 사고 기록은 [보안 사고 메모](local/SECURITY_INCIDENT_2026-09-09.md). 비공개 저장소에만 있다 |

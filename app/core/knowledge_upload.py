@@ -29,6 +29,7 @@ import hashlib
 import unicodedata
 import tempfile
 import shutil
+import time
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -59,6 +60,18 @@ MAX_ASSET_BYTES = 200 * 1024 * 1024
 
 class UploadRejected(ValueError):
     """업로드를 받을 수 없는 이유. 호출자가 그대로 400 으로 돌려준다."""
+
+
+def _replace_file(source: Path, target: Path) -> None:
+    """Windows가 잠깐 파일 교체를 거부하면 같은 원자적 교체를 다시 시도한다."""
+    for attempt in range(5):
+        try:
+            source.replace(target)
+            return
+        except PermissionError as exc:
+            if getattr(exc, "winerror", None) not in (5, 32, 33) or attempt == 4:
+                raise
+            time.sleep(0.05 * (attempt + 1))
 
 
 def safe_file_name(raw: str) -> str:
@@ -165,7 +178,7 @@ def store_asset(product: str, kind: str, file_name: str, data: bytes, sha256: st
             # Keep a readable previous same-name file. A new unreadable asset remains available
             # for diagnosis only when no previous version exists.
             if not target.exists():
-                staged.replace(target)
+                _replace_file(staged, target)
             record["error"] = f"정규화 실패 {type(exc).__name__}: {exc}"
             return record
         normalized = Path(folder) / "normalized"
@@ -174,12 +187,12 @@ def store_asset(product: str, kind: str, file_name: str, data: bytes, sha256: st
         existed = target.exists()
         if existed:
             shutil.copy2(target, previous)
-        staged.replace(target)
+        _replace_file(staged, target)
         try:
-            normalized.replace(normalized_target)
+            _replace_file(normalized, normalized_target)
         except OSError:
             if existed:
-                previous.replace(target)
+                _replace_file(previous, target)
             else:
                 target.unlink(missing_ok=True)
             raise

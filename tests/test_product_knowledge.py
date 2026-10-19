@@ -443,7 +443,10 @@ def test_real_knowledge_dir_has_no_unclassified_assets() -> None:
     assert unclassified == [], f"분류되지 않은 파일: {unclassified}"
     assert scan.counts().get(KIND_SPECIFICATION, 0) > 0
     assert scan.counts().get(KIND_QA_RULES, 0) == 1
-    assert scan.counts().get(KIND_INSTRUCTION_PROMPT, 0) == 1
+    # 통합 MD 모드(`qa-rules-format: unified-v1`)는 지침 TXT 없이 MD 하나만 쓴다(REQ-DAILY-023).
+    [rules] = [asset for asset in scan.selected if asset.kind == KIND_QA_RULES]
+    unified = "qa-rules-format: unified-v1" in (source / rules.file_name).read_text(encoding="utf-8", errors="ignore")
+    assert scan.counts().get(KIND_INSTRUCTION_PROMPT, 0) == (0 if unified else 1)
 
 
 @pytest.mark.skipif(_real_knowledge_dir() is None, reason="real_fixtures.local.env의 REAL_VXVUE_KNOWLEDGE_DIR 미설정")

@@ -94,6 +94,63 @@ def test_unchanged_content_keeps_the_parsed_copy(server) -> None:
     assert cache_file.exists()
 
 
+@pytest.mark.parametrize("failed_file", ["original", "normalized"])
+def test_same_name_upload_retries_transient_windows_replace(server, monkeypatch, failed_file) -> None:
+    # Validates: REQ-SYNC-002
+    name = "(사양서) VXvue 부록.txt"
+    store_asset(PRODUCT, "specification", name, b"old", root=server.root)
+    replace = Path.replace
+    refused = []
+    waits = []
+
+    def temporarily_refused(path, target):
+        selected = path.name == (name if failed_file == "original" else "normalized")
+        if selected and not refused:
+            refused.append(path)
+            error = PermissionError("temporary Windows sharing refusal")
+            error.winerror = 5
+            raise error
+        return replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", temporarily_refused)
+    monkeypatch.setattr("time.sleep", waits.append)
+    result = store_asset(PRODUCT, "specification", name, b"new", root=server.root)
+
+    base = product_dir(PRODUCT, server.root)
+    assert (base / "original" / "specification" / name).read_bytes() == b"new"
+    assert (base / result["normalized_path"]).read_text(encoding="utf-8") == "new"
+    assert len(refused) == len(waits) == 1
+
+
+@pytest.mark.parametrize("winerror, expected_calls", [(5, 5), (32, 5), (None, 1)])
+@pytest.mark.parametrize("failed_file", ["original", "normalized"])
+def test_failed_replace_keeps_previous_upload_and_does_not_retry_other_errors(server, monkeypatch, winerror, expected_calls, failed_file) -> None:
+    # Validates: REQ-SYNC-002
+    name = "(사양서) VXvue 부록.txt"
+    first = store_asset(PRODUCT, "specification", name, b"old", root=server.root)
+    replace = Path.replace
+    calls = []
+
+    def refused(path, target):
+        if path.name == (name if failed_file == "original" else "normalized"):
+            calls.append(path)
+            error = PermissionError("permanent refusal")
+            if winerror is not None:
+                error.winerror = winerror
+            raise error
+        return replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", refused)
+    monkeypatch.setattr("time.sleep", lambda delay: None)
+    with pytest.raises(PermissionError, match="permanent refusal"):
+        store_asset(PRODUCT, "specification", name, b"new", root=server.root)
+
+    base = product_dir(PRODUCT, server.root)
+    assert (base / "original" / "specification" / name).read_bytes() == b"old"
+    assert (base / first["normalized_path"]).read_text(encoding="utf-8") == "old"
+    assert len(calls) == expected_calls
+
+
 # --- 5-9: 지식 폴더에서 통째로 빠진 문서의 등록도 지운다 ------------------------------
 
 

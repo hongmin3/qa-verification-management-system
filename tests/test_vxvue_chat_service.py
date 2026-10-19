@@ -98,13 +98,18 @@ def test_title_write_failure_keeps_job_done(tmp_path, monkeypatch):
     chat = store.vxchat_create("owner")
     job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
     result = {"text": "답변", "title": "제목", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    # 제목 저장 실패만 확인한다. 지식 사본의 파일 이동은 별도 지식 시험에서 확인한다.
+    monkeypatch.setattr(service, "prepare_knowledge", lambda *a, **k: {})
     monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
+    title_attempts = []
     def boom(*a, **k):
+        title_attempts.append(a)
         raise RuntimeError("db locked")
     monkeypatch.setattr(store, "vxchat_set_ai_title", boom)
     service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
     assert store.vxchat_job("owner", job["id"])["status"] == "DONE"
     assert store.vxchat_get("owner", chat["id"])["messages"][-1]["content"] == "답변"
+    assert title_attempts == [(chat["id"], "제목")]
 
 
 # Validates: REQ-AICALL-006

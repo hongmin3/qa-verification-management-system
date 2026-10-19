@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="4a3f8dda7b0c63b26882c9584d43f80b855176597d632451f2786cb15a4bbb01">
+<meta name="spec-source-sha256" content="61eaf1719b5ccebb28df7f1fcc47c9c0517c04df64788c747c19de1511c2b09d">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -6063,8 +6063,9 @@ python scripts/rule_capability_report.py --markdown
 <section class="card kind-req" id="REQ-DAILY-023">
 <h3><span class="idtag">REQ-DAILY-023</span> 격리 작업 폴더 구성</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-DAILY-006">TEST-DAILY-006</a>, <a class="idref" href="#TEST-DAILY-012">TEST-DAILY-012</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-19 중단된 지식 동기화 시험 보완</span> <a class="idref" href="#REQ-DAILY-023">REQ-DAILY-023</a>: 실제 <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span> 확인 시험이 통합 <span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span> MD 형식에서는 별도 지침 TXT를 요구하지 않도록 고쳤다.</li>
 <li><span class="hist">2026-10-16 VXvue 통합 QA 지침과 서버형 Skill 동기화</span> <a class="idref" href="#REQ-DAILY-010">REQ-DAILY-010</a>, <a class="idref" href="#REQ-DAILY-023">REQ-DAILY-023</a>, <a class="idref" href="#REQ-DAILY-024">REQ-DAILY-024</a>: VXvue 업무 지침을 통합 MD 한 파일에서 읽도록 연결했다. 개정 번호 고정을 해제하고 필수 구역·내용 충돌·원본 해시를 확인한다. 자동 QA는 운영 지침과 업무별 상세 규칙을 함께 읽는다.</li>
 </ul>
 </details>
@@ -8922,8 +8923,9 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <section class="card kind-req" id="REQ-SYNC-002">
 <h3><span class="idtag">REQ-SYNC-002</span> 지식 폴더 업로드</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-005">REQ-KNOW-005</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>, <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-KNOW-017">REQ-KNOW-017</a>, <a class="idref" href="#REQ-KNOW-018">REQ-KNOW-018</a>, <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a>, <a class="idref" href="#REQ-QAINTEL-022">REQ-QAINTEL-022</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a></span></div>
-<details class="history"><summary>변경 이력 6</summary>
+<details class="history"><summary>변경 이력 7</summary>
 <ul>
+<li><span class="hist">2026-10-19 중단된 지식 동기화 시험 보완</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: Windows가 파일 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>를 잠깐 거부하면 원본·정규화 파일 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>와 <span class="term" title="보관한 문서나 버전을 다시 활성(active)으로 돌리는 것이다" tabindex="0">복원</span>을 최대 5회 시도한다. 다른 오류와 계속되는 거부는 오류로 반환한다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 지식 동기화를 매일 08:00 KST와 실패 후 15분 재시도로 바꾼다. PC 시작 때 놓친 실행을 만회하고 성공 뒤에는 전송을 멈춘다. 손상 전송과 부분 실패가 기존 서버 자료를 지우지 않도록 고쳤다.</li>
 <li><span class="hist">2026-09-30 · 자동화 하루 일정과 사양서 읽는 순서 정리</span> <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: SPEC 4절에 예약 시각, 실행 위치, 결과 저장 위치와 알림 경로를 정리했다. 서버 cron 시각은 서버 시간대 기준으로 구분했다.</li>
 <li><span class="hist">2026-09-30 · 사양–코드 불일치 60건 수정 · 결정 대기 18건 반영</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 가 읽지 못한 새 판도 서버로 보내 옛 판이 지워지지 않게 했다. PC <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 일부 실패도 PARTIAL 로 끝난다. 업로드 결과에 이전 판을 유지한 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>와 읽지 못한 파일을 한 줄씩 보인다.</li>
@@ -15590,8 +15592,9 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-req" id="REQ-VXVUECHATBOT-002">
 <h3><span class="idtag">REQ-VXVUECHATBOT-002</span> 브라우저별 대화 이력</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/vxchat_storage.py</code>, <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/prompts/vxvue_chatbot.yaml</code>, <code>app/web/static/vxvue-chatbot.js</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_storage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 4</summary>
 <ul>
+<li><span class="hist">2026-10-19 중단된 지식 동기화 시험 보완</span> <a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a>: 제목 저장 실패 시험에서 <span class="term" title="서버가 지식 폴더에서 받아 둔 사본(data/product_knowledge/&lt;제품&gt;/). 서버는 지식 폴더를 직접 볼 수 없다" tabindex="0">지식 사본</span> 준비를 분리하고 제목 저장 호출 인자도 확인한다. 다른 시험은 실제 지식 준비 경로를 유지한다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a>: 첫 답변이 끝나면 AI가 대화 내용에 맞는 제목(40자 이하)을 붙인다. 사용자가 직접 바꾼 제목은 덮어쓰지 않으며, 제목 저장이 실패해도 답변은 정상 완료로 남는다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a>, <a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a>: VXvue AI 챗봇을 더했다. 왼쪽 대화 목록과 메시지 화면에서 이력을 열고 제목을 바꾸거나 삭제한다. 로그인 없이 브라우저별로 대화와 다운로드를 확인한다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a>: 백업에 채팅 첨부와 조회한 원본 판을 포함한다. 다시 만들 수 있는 검색 색인은 제외한다.</li>
