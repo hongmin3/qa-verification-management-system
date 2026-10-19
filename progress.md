@@ -5,7 +5,10 @@
 - 문제: 예약 재설치 뒤 확인에서 `output/logs/product_knowledge_retry.log` 에 매분 `HTTP Request: GET http://10.13.0.222:24357/knowledge/product-knowledge/request?product=VXvue "HTTP/1.1 200 OK"` 줄이 쌓였다(하루 약 1,440줄). 결과 줄은 막아 두었지만 httpx 라이브러리의 INFO 로그가 남았다.
 - 수정: `scripts/retry_product_knowledge.py` 에서 httpx 로그 수준을 WARNING 으로 올렸다. SPEC REQ-SYNC-002 카드에 할 일 없는 실행은 로그를 남기지 않는다는 규칙을 적었다.
 - 확인: 새 회귀 시험은 수정 전 실패, 수정 뒤 통과했다. 관련 시험 14건 통과. 운영 서버 요청 조회(읽기 전용)를 실제 httpx 로 불러 수정 전 설정은 1줄, 수정 뒤 설정은 0줄이 남는 것을 확인했다.
-- 남은 일: PC 실행본(`data/knowledge_retry/worker-*`)은 아직 이전 판이다. 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 로그가 멈춘다. 운영 서버 배포는 필요 없다(서버 코드 변경 없음).
+- PC 재설치(2026-10-19 15:37, 관리자 PowerShell): `-CheckOnly` 통과 뒤 설치했다. 원래 예약 백업은 `backups/knowledge-schedule-20261019-153751`, 새 실행본은 `data/knowledge_retry/worker-5b3bcf66642d869a/` 이다. `retry_product_knowledge.py` 해시가 저장소 판과 같다. 1분 반복과 PC 시작 트리거가 남아 있고, 15:38 실행 결과는 0 이다. 마지막 `HTTP Request` 줄은 이전 실행본의 15:37:03 이고, 15:38~15:42 실행은 줄을 남기지 않았다. 운영 서버 배포는 필요 없다(서버 코드 변경 없음).
+- 지식 폴더 정리 뒤 전수 점검(15:40 KST, 읽기 전용): 폴더 26개 파일 중 24개가 규약대로 분류된다. 운영 서버 등록 문서 20건(사양서 7, 매뉴얼 9, TC 4)을 내려받아 비교했고, 모두 폴더 파일과 바이트가 같다. 사양서 6건은 03:30 자동 수집본(`output/srs_crawler/2026-10-19`)과도 해시가 같다. `[Skill 지침] VXvue.md` 는 자동 생성 형식이 맞고 설치된 플러그인 1.2.2 와 내용이 같다. QA 규칙 MD 는 229절로 해석된다(통합 형식이라 개정 번호 없음).
+- 아직 서버에 없는 것: 15:30 동기화 뒤 폴더에 들어온 Shimadzu 연동 가이드 2건(`(매뉴얼) How to Integrate VXvue with Shimadzu Mobile System.V1.0.6W2_KO_확인완료.docx`, `(매뉴얼) How to Integrate VXvue with Shimadzu System.V1.0.7W2_EN.docx`)이다. 다음 08:00 업로드나 화면 `지금 수집` 으로 올라간다.
+- 수집하지 않는 파일 2건(사용자 결정 대기): `(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx` 는 해당 자료 종류가 없어 `unknown` 으로 빠진다. `(이슈) Polarion Issue Report_VP-767 lab_fixed.pdf` 는 원래 `polarion_query_backup.pdf` 였다. 이름이 바뀌면서 `vxvue.yaml` 제외 패턴(`polarion_query_backup*`)에 더는 맞지 않아, 제외 목록에 `unknown` 으로 보인다.
 
 ## 2026-10-19 Knowledge 상세 지금 수집·VXvue 매뉴얼 화면 등록·지침 프롬프트 숨김
 
