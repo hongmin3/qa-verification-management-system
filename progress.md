@@ -4,7 +4,9 @@
 
 - 사용자 요청: 제품 상세에 지식 폴더 전체를 그 시점에 수집하는 수동 버튼, VXvue 매뉴얼에 TC 같은 등록·교체·삭제, VXvue 지침 프롬프트 구역 삭제.
 - 운영 서버 `/knowledge/products/vxvue` 고급 정보가 `폴더 접근: 불가(담당자 PC 가 업로드)` 였다. 사용자 결정으로 버튼은 "PC 에 수집 요청" 방식이다(REQ-KNOW-021).
-- 남은 일(배포): 운영 서버에 앱을 반영하고, 담당자 PC 에서 관리자 PowerShell 로 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 1분 확인과 요청 처리 코드가 적용된다. 그 전까지 요청은 "대기 중"으로 남고 다음 08:00 예약 때 처리된다.
+- 운영 반영(2026-10-19): 사전 대조에서 서버의 대상 파일 11개가 모두 변경 직전 판(`2a0abc0`)과 같았고, 서버에서만 바뀐 내용은 없었다. 실행 중인 점검·분석 0건을 확인했다. 대상 파일을 `backups/deploy-knowledge-collect-20261019T053703Z.tgz` 로 백업한 뒤 `eab7d69` 의 파일 13개만 반영했다. 반영 뒤 해시가 모두 일치했고, 서버 관련 테스트 46건이 통과했다. 서비스 재기동 뒤 health 는 ok 였다.
+- 운영 화면 확인: VXvue 상세에 `지금 수집` 1개, 지침 프롬프트 구역 없음, 매뉴얼 구역에 교체 8·삭제 8·새 문서 등록 1이 보였다. Bellalun 의 지침 프롬프트 구역은 그대로다. 요청 조회 응답은 `requested_at: ""` 였다. health·Knowledge·사용법·QA Agent·매뉴얼 검토·VXvue 챗봇 화면은 모두 200 이었다. 운영에서 `지금 수집` 버튼은 누르지 않았다.
+- 남은 일(PC): 담당자 PC 에서 관리자 PowerShell 로 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 1분 확인과 요청 처리 코드가 적용된다. 그 전까지 요청은 "대기 중"으로 남고 다음 08:00 예약 때 처리된다.
 - 잔여 작업: Bellalun Viewer 의 지침 프롬프트 구역도 숨긴다(`config/products/bellalun-viewer.yaml` 에 `instruction_prompt: {source: knowledge_folder, hidden: true}`). 지침 프롬프트와 QA 규칙 MD 를 합치는 작업을 먼저 끝낸 뒤에 한다(사용자 요청 2026-10-19).
 - 참고: Bellalun Viewer 는 PC 업로드 예약이 없어(예약은 VXvue 만 올린다) 운영 서버에서 `지금 수집` 을 누르면 요청이 대기 중으로 남는다.
 
