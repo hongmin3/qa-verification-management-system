@@ -251,3 +251,91 @@ def test_startup_closes_sync_rows_left_running(tmp_path, monkeypatch) -> None:
     with storage.connect() as db:
         status, detail = db.execute("SELECT status, detail FROM sync_log WHERE id=?", (stuck,)).fetchone()
     assert status == "FAILED" and "재시작" in detail
+
+
+# --- 화면에서 올린 판을 지식 폴더의 옛 판이 되살리지 않는다 (REQ-KNOW-012) -------------
+
+
+def _register_on_screen(server, name: str, body: bytes, source: str = "upload") -> int:
+    """화면 업로드처럼 지식 사본 밖 경로에 파일을 두고 등록한다."""
+    import hashlib
+
+    from app.core.product_knowledge import parse_asset_name
+
+    path = server.root / "screen" / name
+    path.parent.mkdir(exist_ok=True)
+    path.write_bytes(body)
+    parsed = parse_asset_name(name)
+    metadata = {"source": source, "base_name": parsed["base_name"], "revision_kind": parsed["revision_kind"],
+                "language": parsed["language"], "sha256": hashlib.sha256(body).hexdigest()}
+    return server.storage.add_document("specification", PRODUCT, "1.0", parsed["revision"], name, path, metadata)
+
+
+def _push_folder(server, record: dict) -> dict:
+    """PC 업로드처럼 manifest 에 파일명에서 읽은 이름·리비전을 함께 보낸다."""
+    from app.core.product_knowledge import parse_asset_name
+
+    parsed = parse_asset_name(record["file_name"])
+    entry = _entry(record, base_name=parsed["base_name"], revision=parsed["revision"], revision_kind=parsed["revision_kind"],
+                   language=parsed["language"])
+    return _push(server, [record], entries=[entry])
+
+
+def _active_names(server) -> list[str]:
+    return sorted(document["name"] for document in server.storage.active_documents("specification", PRODUCT))
+
+
+def test_folder_copy_without_comparable_revision_yields_to_screen_registration(server) -> None:
+    # Validates: REQ-KNOW-012
+    _register_on_screen(server, "(사양서) VXvue 부록.txt", "화면에서 올린 새 내용".encode("utf-8"))
+    folder = store_asset(PRODUCT, "specification", "(사양서) VXvue 부록.txt", "폴더의 옛 내용".encode("utf-8"), root=server.root)
+
+    result = _push_folder(server, folder)
+
+    [document] = server.storage.active_documents("specification", PRODUCT)
+    assert "screen" in Path(document["path"]).parts, "지식 폴더의 옛 판이 다시 등록됐습니다"
+    assert "화면 등록본 우선으로 건너뜀 1건" in result["detail"]
+
+
+def test_older_folder_revision_yields_to_newer_screen_revision(server) -> None:
+    # Validates: REQ-KNOW-012
+    _register_on_screen(server, "(사양서) VXvue 사양서1(260930).txt", "새 판".encode("utf-8"))
+    folder = store_asset(PRODUCT, "specification", "(사양서) VXvue 사양서1(260710).txt", "옛 판".encode("utf-8"), root=server.root)
+
+    result = _push_folder(server, folder)
+
+    assert _active_names(server) == ["(사양서) VXvue 사양서1(260930).txt"]
+    assert "등록된 판이 더 최신이라 건너뜀 1건" in result["detail"]
+
+
+def test_newer_folder_revision_still_replaces_older_screen_revision(server) -> None:
+    # Validates: REQ-KNOW-012
+    _register_on_screen(server, "(사양서) VXvue 사양서1(260710).txt", "옛 판".encode("utf-8"))
+    folder = store_asset(PRODUCT, "specification", "(사양서) VXvue 사양서1(260930).txt", "새 판".encode("utf-8"), root=server.root)
+
+    _push_folder(server, folder)
+
+    assert _active_names(server) == ["(사양서) VXvue 사양서1(260930).txt"]
+
+
+def test_identical_screen_copy_is_replaced_by_folder_copy(server) -> None:
+    # Validates: REQ-KNOW-012
+    _register_on_screen(server, "(사양서) VXvue 부록.txt", "같은 내용".encode("utf-8"))
+    folder = store_asset(PRODUCT, "specification", "(사양서) VXvue 부록.txt", "같은 내용".encode("utf-8"), root=server.root)
+
+    result = _push_folder(server, folder)
+
+    [document] = server.storage.active_documents("specification", PRODUCT)
+    assert "screen" not in Path(document["path"]).parts
+    assert "화면 등록본 우선" not in result["detail"]
+
+
+def test_automatic_registration_is_not_treated_as_screen_registration(server) -> None:
+    # Validates: REQ-KNOW-012
+    _register_on_screen(server, "(사양서) VXvue 부록.txt", "사양서 동기화가 올린 내용".encode("utf-8"), source="alm_crawler")
+    folder = store_asset(PRODUCT, "specification", "(사양서) VXvue 부록.txt", "폴더 내용".encode("utf-8"), root=server.root)
+
+    result = _push_folder(server, folder)
+
+    assert len(server.storage.active_documents("specification", PRODUCT)) == 2
+    assert "화면 등록본 우선" not in result["detail"]

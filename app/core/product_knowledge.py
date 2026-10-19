@@ -579,6 +579,8 @@ class RegisterOutcome:
     duplicates: list[str] = field(default_factory=list)
     #: 같은 논리 문서의 더 최신 판이 이미 등록돼 있어 등록하지 않은 수집본 (REQ-KNOW-012).
     skipped_older: list[str] = field(default_factory=list)
+    #: 리비전 비교는 안 되지만 사람이 화면에서 같은 논리 문서를 등록해 두어 등록하지 않은 수집본 (REQ-KNOW-012).
+    skipped_person: list[str] = field(default_factory=list)
     detail: str = ""
 
 
@@ -654,6 +656,7 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
     문서는 지우지 않고 `duplicates` 로 보고한다 — 사람이 다른 기준으로 올려둔 것일 수 있다.
     """
     from app.core import document_cache
+    from app.core.knowledge_registry import registered_by_person
     from app.core.storage import Storage
 
     storage = storage or Storage()
@@ -698,6 +701,23 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                 )
                 if newer is not None:
                     outcome.skipped_older.append(f"{asset['file_name']} (등록된 {newer['name']} 가 더 최신)")
+                    continue
+                # 리비전으로 가릴 수 없으면 사람이 화면에서 올린 판을 따른다. 화면 업로드가 이 수집본의
+                # 이전 등록을 이미 뺐으므로, 여기서 등록하면 폴더의 옛 판이 되살아난다.
+                person = next(
+                    (
+                        document for document in existing_all
+                        if document["kind"] == kind and document["id"] not in removed_ids
+                        and registered_by_person(document)
+                        and document_logical_key(kind, document["name"], json.loads(document.get("metadata_json") or "{}")) == asset_key
+                        and not _is_strictly_older(document["name"], asset)
+                        and not _is_same_file(document["path"], asset)
+                        and Path(document["path"]).is_file()
+                    ),
+                    None,
+                )
+                if person is not None:
+                    outcome.skipped_person.append(f"{asset['file_name']} (화면에서 등록한 {person['name']} 우선)")
                     continue
             if already is not None:
                 # 리비전 표시가 없는 이름은 내용이 바뀌어도 같은 경로에 덮어쓴다. 등록 때의 sha256 과
@@ -774,6 +794,8 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
         outcome.detail += f", 내용 변경으로 다시 읽음 {len(outcome.refreshed)}건"
     if outcome.skipped_older:
         outcome.detail += f", 등록된 판이 더 최신이라 건너뜀 {len(outcome.skipped_older)}건"
+    if outcome.skipped_person:
+        outcome.detail += f", 화면 등록본 우선으로 건너뜀 {len(outcome.skipped_person)}건"
     return outcome
 
 

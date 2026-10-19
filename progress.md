@@ -11,6 +11,13 @@
 
 # 진행 상태
 
+## 2026-10-19 화면 등록본 우선과 사양서 동기화 시각
+
+- REQ-KNOW-012 구현: 리비전으로 가릴 수 없으면 사람이 화면에서 올린 판을 우선한다. 회귀 시험 5건(화면 판 우선, 더 최신 화면 판 유지, 더 최신 폴더 판 교체, 같은 바이트 정리, 자동 등록 제외)을 더했다. 새 규칙 시험은 구현 전에 실패를 확인했다.
+- 운영 서버 반영 전이다. 서버의 업로드 확정 단계에서 동작하므로 배포 뒤부터 적용된다.
+- 실제 지식 폴더를 읽는 opt-in 시험 `test_real_knowledge_dir_has_no_unclassified_assets`는 변경 전 코드에서도 실패한다. 폴더에 지침 프롬프트 파일이 없다(통합 MD 전환 영향으로 보임). 이번 변경과 무관하며 아직 고치지 않았다.
+- PC 작업 `AIRegressionAnalyzer_VXvueSpecSync`의 03:30 변경을 다시 시도했으나 `Access is denied`로 거부됐다. 실제 예약은 여전히 평일 09:40이다. 변경 전 XML은 `backups/spec-sync-schedule-20261019-094848/`에 있다. 관리자 PowerShell에서 변경해야 한다.
+
 ## 2026-10-16 VXvue QA 지침 단일 MD 전환 계획
 
 - [전환 계획](docs/superpowers/plans/2026-10-16-vxvue-single-rule-source.md)을 작성했다. 사람이 관리하는 QA 원본을 MD 하나로 합치고, 특정 Rev 고정 대신 최신 원문의 내용·해시를 적용하는 방안이다.

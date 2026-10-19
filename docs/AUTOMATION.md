@@ -107,7 +107,7 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
   | 설정 | 값 |
   |---|---|
-  | 트리거 | Weekly, 월~금 03:30 (KST) — QA Agent 점검(평일 04:00)보다 30분 먼저, 전날 09:00 수집본을 올린다. 2026-10-14 에 09:40 에서, 2026-09-28 에 월 07:30 에서 바꿨고, 바꾸기 전 설정 XML 은 이 PC 의 `backups/`(Git 제외)에 있다 |
+  | 트리거 | Weekly, 월~금 03:30 (KST) — QA Agent 점검(평일 04:00)보다 30분 먼저, 전날 09:00 수집본을 올린다. 2026-09-28 에 월 07:30 에서 09:40 으로 바꿨다. 03:30 변경은 관리자 PowerShell 에서만 된다(일반 권한은 `Access is denied`). 실제 반영 여부는 `progress.md` 에 적는다. 바꾸기 전 설정 XML 은 이 PC 의 `backups/`(Git 제외)에 있다 |
   | 실행 파일 | `...\자동화\projects\qa-verification-management-system\.venv\Scripts\python.exe` (2026-09-28 `projects/` 재배치 때 Action 경로를 갱신했다) |
   | 인자 | `scripts\sync_vxvue_spec.py` (기본 `--target-url`이 운영 서버라 생략) |
   | LogonType | `S4U` — 비밀번호를 저장하지 않고 로그인하지 않은 상태에서도 실행 (기존 ALM 크롤러 작업과 동일 패턴) |
