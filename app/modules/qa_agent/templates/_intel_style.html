@@ -1,4 +1,22 @@
 <style>
+/* 분석 상세: 한 흐름(왼쪽)과 처리 상태(넓은 화면에서는 오른쪽에 붙음) (REQ-QAINTEL-020) */
+.qa-detail-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+.qa-flow{min-width:0;display:grid;gap:14px}.qa-flow>*{min-width:0}
+.qa-flow .qa-section{margin-top:4px}.qa-flow h4{margin:12px 0 4px;color:#375272}
+.qa-flow h2{margin:0 0 8px}.qa-open{font-size:14px;font-weight:700;margin-left:8px;color:#075985}
+.qa-meta-line{margin:0 0 6px;font-size:18px;line-height:1.5;overflow-wrap:anywhere}
+.qa-trigger{margin:0}.qa-question{margin:0;font-weight:700;color:#173b67}
+.qa-after{background:#fef3c7;color:#92400e}.qa-review-needed{background:#fef3c7;color:#92400e}
+.qa-comment{border-top:1px solid #e2e8f0;padding-top:8px}.qa-comment p{margin:6px 0}
+.qa-record{border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;background:#f8fafc}.qa-record>summary{font-weight:700}
+.qa-process{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;min-width:0}
+.qa-process h3{margin:0 0 8px}.qa-process-form{display:grid;gap:10px}.qa-process-form label{max-width:100%}
+@media(min-width:1200px){.qa-detail-layout{grid-template-columns:minmax(0,1fr) 320px}
+.qa-process{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}}
+.qa-selection-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere;cursor:pointer}
+.qa-selection-row input{width:auto;flex:0 0 auto;margin-top:4px}.qa-selection-body{flex:1 1 auto;min-width:0}
+.qa-selection-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:2px;color:#5b6b82;font-size:.92em}
+.qa-selection-notice{margin:8px 0}
 .qa-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
 .qa-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#f8fafc;display:grid;gap:6px}
 .qa-card h4{margin:0;font-size:15px}.qa-card h4 small{font-weight:400;color:#5b6b82}
@@ -10,6 +28,26 @@
 .level{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:700}
 .level-conflict{background:#fee2e2;color:#991b1b}.level-check{background:#fef3c7;color:#92400e}
 .level-weak{background:#e0e7ff;color:#3730a3}.level-info{background:#e0f2fe;color:#075985}.level-ok{background:#dcfce7;color:#166534}
+/* 분석결과 목록: 작성자·업데이트를 첫 줄에 굵게, 종류·판정·상태를 둘째 줄에 (REQ-QAINTEL-019·046) */
+.qa-filters{display:grid;gap:8px;margin:14px 0 8px}.qa-filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.qa-filters label{display:flex;flex-direction:column;gap:4px;max-width:100%}.qa-filters input,.qa-filters select{max-width:100%;min-width:150px}
+.qa-filters .qa-search{flex:1 1 320px}.qa-filters .qa-search input{width:100%}
+.qa-detail-filters>summary{font-weight:700}.qa-detail-filters .qa-filter-row{margin-top:8px}
+.qa-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.qa-chip{display:inline-block;padding:4px 12px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;color:#173b67;font-size:14px;text-decoration:none}
+.qa-chip.on{background:#173b67;border-color:#173b67;color:#fff;font-weight:700}
+.qa-view-switch{margin:6px 0 10px;color:#5b6b82}
+.qa-group{margin:18px 0 0;padding-bottom:4px;border-bottom:2px solid #e2e8f0}
+.qa-result-card h3,.qa-result-card h4{margin:0;font-size:15px;overflow-wrap:anywhere}
+.qa-card-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.qa-reporter{display:inline-block;padding:2px 10px;border-radius:999px;background:#173b67;color:#fff;font-weight:700;font-size:14px}
+.qa-updated{font-weight:700;color:#173b67;font-size:14px}.qa-spec-label{font-weight:700;color:#375272}
+.qa-kind{display:inline-block;padding:2px 8px;border-radius:6px;background:#e2e8f0;color:#334155;font-size:13px}
+.qa-kind-legacy{background:#f1f5f9;border:1px dashed #94a3b8}
+.qa-changed{display:inline-block;padding:2px 10px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:13px;font-weight:700}
+.qa-why{margin:0;font-size:14px;color:#334155;overflow-wrap:anywhere}
+.qa-result-card .qa-summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.qa-card-foot{margin:0}
 .qa-ok-cards{margin-top:12px}.qa-ok-cards summary{cursor:pointer;font-weight:700}
 .qa-key{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;background:#f8fafc;display:grid;gap:10px}
 .qa-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -19,7 +57,7 @@
 .qa-banner{padding:12px 14px;border-radius:9px;background:#fdf1e7;border:1px solid #f0b27a;margin:0 0 14px}
 .qa-run{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
 .pill.SUCCESS,.pill.done{background:#dcfce7;color:#166534}.pill.FAILED,.pill.failed,.pill.abandoned{background:#fee2e2;color:#991b1b}
-.pill.PARTIAL,.pill.pending,.pill.CANCELLED{background:#fef9c3;color:#854d0e}.pill.NO_CHANGE,.pill.BASELINE,.pill.not_required{background:#e2e8f0}
+.pill.PARTIAL,.pill.pending,.pill.CANCELLED{background:#fef9c3;color:#854d0e}.pill.deferred{background:#e0e7ff;color:#3730a3}.pill.NO_CHANGE,.pill.BASELINE,.pill.not_required{background:#e2e8f0}
 .qa-section{margin-top:18px}.qa-section h3{margin-bottom:6px}
 .qa-kv{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:14px}.qa-kv dt{color:#5b6b82}.qa-kv dd{margin:0;white-space:pre-wrap}
 .qa-pre{white-space:pre-wrap;font-size:13px;background:#f8fafc;padding:8px 10px;border-radius:8px}

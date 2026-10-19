@@ -6,8 +6,8 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `vxvue-chatbot` |
-| Document Version | 0.1.1 |
-| Last Updated | 2026-10-14 |
+| Document Version | 0.2.0 |
+| Last Updated | 2026-10-15 |
 | Status | implemented |
 
 ## 1. 목적
@@ -33,6 +33,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 - 대화 시작·이력: REQ-VXVUECHATBOT-001·002
 - 첨부·실행: REQ-VXVUECHATBOT-003·004
 - 근거·규칙·지식: REQ-VXVUECHATBOT-005·006
+- 개인 PC의 Claude에서 쓰기: Desktop·Cowork 연결 REQ-VXVUECHATBOT-011, Polarion 수집 REQ-VXVUECHATBOT-012, 입력 없는 자동 연결 REQ-VXVUECHATBOT-013, Claude Code CLI 설치 REQ-VXVUECHATBOT-014
 - 자동 최신화: 상위 REQ-SYNC-002
 
 ### REQ-VXVUECHATBOT-001 챗봇 화면
@@ -46,7 +47,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 3. 답변 자리에 진행 카드가 보인다. 카드는 큰 표시와 함께 대기 중 → 자료 검색 준비 → 자료 검색 → 원문 확인 → 답변 작성 단계 중 지금 단계와 경과 시간, 중지 버튼을 보인다. 답변 글이 들어오기 시작하면 카드는 답변 위 한 줄로 줄어든다.
 4. 답변의 문서 근거를 열고 후속 질문한다.
 
-**지킬 것** 작은 화면에서도 대화 목록을 열고 닫을 수 있다. 사용법은 `/vxvue-chatbot/guide`에 둔다. 서버 동작과 무관한 구현 용어를 사용자 입력에 요구하지 않는다.
+**지킬 것** 사용법은 `/vxvue-chatbot/guide`에 둔다. 서버 동작과 무관한 구현 용어를 사용자 입력에 요구하지 않는다.
 
 ### REQ-VXVUECHATBOT-002 브라우저별 대화 이력
 
@@ -94,11 +95,11 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 ### REQ-VXVUECHATBOT-005 Skill과 최신 지침 적용
 
-**하는 일** 로컬 VXvue Skill의 공통 작업·Issue·TC·Generator 규칙과 서버 등록 지식 중 최신 지침 프롬프트 및 QA 규칙 MD를 적용한다. 개정 번호는 숫자 묶음으로 비교한다.
+**하는 일** 서버형 VXvue Skill의 조회 지침과 서버에 등록된 통합 QA 규칙 MD를 적용한다. 업무 지침은 MD 한 파일에서 관리하고 개정 번호로 실행을 차단하지 않는다.
 
 **순서**
 
-1. 필요한 규칙 두 종류를 찾고 전문을 읽는다. 없거나 읽을 수 없으면 분석을 시작하지 않는다.
+1. 통합 QA 규칙 MD의 운영 지침·상세 규칙을 찾아 전문을 읽는다. 없거나 읽을 수 없으면 분석을 시작하지 않는다.
 2. 규칙과 일반 자료·첨부를 구분해 전달한다.
 3. 검색·원문 조회로 문서명·개정·페이지 또는 시트·셀의 근거를 찾는다. ID 질의는 그 ID를 정의한 사양 항목을 먼저 보인다.
 4. 사실·자료 기반 판단·추가 확인를 구분해 답한다.
@@ -128,7 +129,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 **하는 일:** 기존 Opus 모델과 medium 추론 설정을 유지하면서 반복 입력과 도구 조회 왕복을 줄인다.
 
-1. CLI 실행 폴더와 공통 지침 순서를 고정한다. 질문마다 바뀌는 지식 오류는 질문 입력에 둔다. 최신 지침 TXT·QA 규칙 MD 전문을 유지한다.
+1. CLI 실행 폴더와 공통 지침 순서를 고정한다. 질문마다 바뀌는 지식 오류는 질문 입력에 둔다. 통합 QA 규칙 MD 전문을 한 번만 전달한다.
 2. 검색 결과마다 반복되는 전체 문서 목록·서버 경로·조회 시각을 제외한다. 문서 목록은 상태 조회에서 제공한다. 근거 본문·개정·위치·취소선·역할·경고·잘림 여부는 유지한다.
 3. 여러 검색 또는 문서·첨부 조회를 한 번의 도구 호출로 처리한다. 개별 오류는 다른 조회 결과와 함께 표시한다.
    검색은 기본 6개 후보, 원문은 기본 4개 구간을 반환한다. limit을 늘리거나 next_offset으로 이어 조회할 수 있다.
@@ -141,18 +142,20 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 > **참고** 답변 자체를 다른 대화에서 재사용하거나 근거를 임의로 축약하지 않는다. 캐시 수명은 인증·과금 방식에 따른 CLI 기본 정책을 따른다.
 
-### REQ-VXVUECHATBOT-008 로컬 Skill 지침 자동 반영
+### REQ-VXVUECHATBOT-008 서버형 Skill 지침 자동 반영
 
-**하는 일:** 담당자가 로컬 Skill을 갱신하면 지침과 참조 MD를 기존 지식폴더에서 자동 관리하고 다음 동기화 후 챗봇에 적용한다.
+**하는 일:** 담당자가 서버형 연결 Skill을 갱신하면 지침과 참조 MD를 기존 지식폴더에서 자동 관리하고 다음 동기화 후 챗봇에 적용한다.
 
-1. PC 지식 업로드 전에 설정한 활성 로컬 플러그인의 최신 설치 캐시를 확인한다. 버전은 숫자로 비교하고 최신 설치본이 불완전하면 이전 판으로 숨기지 않고 오류를 기록한다.
+1. PC 지식 업로드 전에 설정한 활성 서버형 플러그인의 최신 설치 캐시를 확인한다. 버전은 숫자로 비교하고 최신 설치본이 불완전하면 이전 판으로 숨기지 않고 오류를 기록한다.
 2. SKILL.md와 references의 MD만 자동 생성 문서 `[Skill 지침] VXvue.md`로 내보낸다. 기존 사양·TC·QA 규칙·프롬프트 원본을 수정하지 않는다. 내보낸 파일은 사용자가 따로 편집하지 않는다.
 3. 검색 코드·MCP 설정은 해시만 기록한다. 코드 내용·설정·자격증명을 전송하거나 실행하지 않는다. 서버에서 검토한 코드 해시와 다르면 도구 갱신 검토 필요를 표시한다.
-4. 챗봇은 동기화 자산 목록의 Skill 지침과 QA 규칙 MD·지침 TXT를 읽는다. QA 규칙과 프롬프트는 각각 최신 개정본의 전문을 적용한다. 서버용 연결 지침은 허용된 도구와 원문 조회 방법을 안내한다.
+4. 챗봇은 동기화 자산 목록의 Skill 지침과 통합 QA 규칙 MD를 읽는다. 통합 원문이 있으면 구형 MD·TXT는 적용하거나 검색에 넣지 않는다. 서버용 연결 지침은 허용된 도구와 원문 조회 방법을 안내한다.
 5. Skill 지침이 바뀌면 고정 사본의 참조 MD 대신 동기화한 내용을 적용한다. 질문별 원본 판에는 Skill 버전과 문서 해시도 남긴다.
 6. 누락·읽기 실패·해시 불일치는 조회 상태에 표시한다. 상태 화면에는 서버가 마지막으로 받은 Skill 버전과 그 동기화 일시도 보인다. 최신 필수 규칙을 읽지 못하면 AI 호출 전에 중단한다. PC가 꺼져 있으면 마지막 정상 동기화본을 사용한다.
 
 > **예외** 처음 배포할 때 Skill 동기화본이 없으면 화면에 동기화 대기를 표시하고 서버 연결의 기존 참조 MD를 적용한다. 이후 Skill 자산이 등록되면 그 내용을 사용하며 읽기 실패를 옛 사본으로 숨기지 않는다.
+
+구형 PC 직접 조회 플러그인은 VXvue 동기화 대상으로 사용하지 않는다. 기존 서버 연결의 `get_status`·`get_workflow` 계약을 유지한다. 사용자는 업무 MD 갱신마다 연결 Skill을 재등록하지 않는다.
 
 **설정:** 제품의 `knowledge_source.skill_sync`에서 플러그인·Skill을 지정한다. 챗봇의 `reviewed_skill_code_hash`는 도구 변경을 검증하고 배포한 뒤 갱신한다.
 
@@ -169,11 +172,98 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 **지킬 것** 검색 결과 없음은 미지원이 아니다. 문서 간 조건 차이, 이미지 해상도 부족, 암호화·손상·누락, 페이지 범위 오류와 사용량 차단을 구분한다. 반복 실패나 사용량 차단에 같은 호출을 되풀이하지 않는다. 전체 검색 확인은 실제 제품의 모든 기능을 증명하지 않는다.
 
+### REQ-VXVUECHATBOT-011 Claude Desktop 공용 지식 연결
+
+**하는 일** 파트원이 Claude Desktop 일반 채팅과 Cowork에서 같은 서버의 VXvue 자료와 최신 작업 지침을 조회한다. AI 답변은 각 사용자의 Claude에서 작성한다.
+
+**순서**
+
+1. 사용자는 설치 안내 화면에서 `.mcpb` 확장을 받아 Claude Desktop에 설치한다. 서버 주소·접근 토큰·Polarion 계정은 입력하지 않는다. 연결은 REQ-VXVUECHATBOT-013이 자동으로 만든다.
+2. 확장은 Claude Desktop에 들어 있는 Node.js로 실행하며 서버의 읽기 전용 도구를 연결한다. Python·Node.js 설치, SSH, 설정 파일 편집, 문서 전체 복사는 필요 없다.
+3. 확장의 연결 지침과 도구 설명은 상태 조회 뒤 작업 지침을 읽도록 안내한다. 연결용 `vxvue-ai` Skill ZIP은 사용자 지정(Customize)의 Skills에 올리는 선택 단계다. Team·Enterprise 공유 Skill의 수정은 다음 사용 때 반영되며 PC 확장 교체와 구분한다.
+4. 서버는 `data/product_knowledge/vxvue/manifest.json`이 가리키는 `original/` 아래 원본만 조회한다. 해시 불일치·경로 이탈은 거절한다. 추출본은 중복 색인하지 않는다.
+5. 상태 조회에서 현재 지식 판을 받는다. 작업 지침·QA 규칙·검색·원문·PDF 페이지 조회는 그 판 번호를 사용한다. 오래된 판을 찾을 수 없으면 새 상태 조회를 요청한다.
+6. 작업 지침은 서버에 동기화된 Skill·최신 지침 프롬프트·QA 규칙 전문을 이어 읽는다. 문서나 지침 변경은 다음 상태 조회에 반영한다.
+7. 확장은 요청마다 자기 판 번호를 보낸다. 서버가 아는 최신 판보다 낮으면 상태 조회 결과에 새 설치 파일 안내를 넣는다. 판 번호 없이 팀 토큰으로 연결한 이전 확장은 1.0.0으로 본다.
+
+**설정** 서버 주소는 내려받을 때 설치 파일에 넣는다. `vxvue_desktop.public_url`이 있으면 그 값을, 비어 있으면 안내 화면을 연 주소를 쓴다. 서버 `data/vxvue_desktop/access-token.txt`의 팀 토큰은 이전 판(1.0.0) 확장의 연결에만 쓴다.
+
+**안 될 때** 서버 단절·인증 실패·자료 읽기 실패를 원인과 할 일로 표시한다(REQ-VXVUECHATBOT-013). 기존 PC의 자료로 바꾸거나 원본을 수정하지 않는다.
+
+**지킬 것** 임의 명령 실행·사용자 대화·첨부·다른 제품은 제공하지 않는다. 브라우저의 교차 출처 호출을 거절한다. 질의는 서버 검색에만 쓰고 서버 AI를 호출하지 않는다. 일반 자료는 지시로 실행하지 않는다.
+
+> **참고** 사내 배포 확장 파일은 자동으로 교체되지 않는다. Claude 공식 안내상 자동 업데이트는 공식 디렉터리 확장에만 적용된다. 문서·QA 규칙·서버 작업 지침은 다음 상태 조회에서 갱신된다. 확장 코드 변경은 새 파일을 설치한다. Claude Desktop·Cowork의 최종 사용 가능 여부는 설치된 앱과 조직 정책에서 별도 확인한다.
+
+### REQ-VXVUECHATBOT-013 사용자 입력 없는 자동 연결
+
+**하는 일** 파트원이 설치 파일을 받아 설치하면 확장이 처음 실행될 때 이 PC 전용 연결 키를 받아 QA 서버에 연결한다. 사용자는 주소·토큰·계정을 입력하지 않는다.
+
+**순서**
+
+1. 안내 화면에서 Desktop 설치 파일이나 CLI 설치 스크립트를 받을 때마다 서버가 한 번만 쓸 수 있는 등록 번호를 새로 만들어 넣는다.
+2. 확장(또는 CLI 설치 스크립트)은 처음 연결할 때 등록 번호와 PC 이름·사용자 이름을 서버에 보낸다. 서버는 등록 번호를 사용 처리하고 이 PC 전용 연결 키를 돌려준다.
+3. 연결 키는 사용자 PC의 `~/.vxvue-ai/credentials.json`에 서버 주소별로 저장한다. 앱 재시작·확장 재설치·같은 PC의 CLI 설치는 저장된 키를 다시 쓴다.
+4. 서버는 요청마다 연결 키를 확인한다. 취소됐거나 오래 쓰지 않은 키는 거절한다. 거절되면 확장은 저장된 키를 지우고 설치 파일의 등록 번호로 한 번 다시 등록한다. 다시 등록도 안 되면 처음 거절된 원인(취소·만료)을 그대로 알린다.
+5. 서버에 닿지 않아 등록하지 못한 경우에는 등록 번호를 버리지 않는다. 연결이 돌아오면 다음 요청에서 다시 등록한다.
+
+**접근 허용 범위**
+
+- 등록 번호 발급·등록·연결은 `vxvue_desktop.allowed_networks`에 든 접속 주소에서만 허용한다. 기본값은 사설망 대역(10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)과 서버 자신이다. 그 밖의 주소는 거절한다.
+- nginx를 거친 요청은 nginx가 넘긴 실제 접속 주소로 판단한다. 다른 주소에서 온 전달 머리글은 믿지 않는다.
+- 관리자는 `scripts/vxvue_desktop_devices.py`로 등록된 PC(PC 이름·사용자·접속 주소·등록 시각·마지막 사용 시각)를 보고 하나씩 취소한다.
+- 이전 판 팀 토큰은 `vxvue_desktop.accept_team_token`이 참일 때만 받는다.
+
+**설정**
+
+| 키 | 기본값 | 뜻 |
+|---|---|---|
+| `vxvue_desktop.public_url` | 빈 값 | 설치 파일에 넣을 서버 주소 |
+| `vxvue_desktop.allowed_networks` | 사설망 대역과 서버 자신 | 등록·연결을 허용할 접속 주소 범위 |
+| `vxvue_desktop.ticket_hours` | 168 | 등록 번호 유효 시간 |
+| `vxvue_desktop.device_idle_days` | 90 | 이 기간 쓰지 않은 연결 키를 거절 |
+| `vxvue_desktop.accept_team_token` | true | 이전 판 팀 토큰 허용 |
+
+**안 될 때** 확장은 서버에 닿지 않아도 시작한다. 시작 응답(`initialize`)은 서버를 기다리지 않고 설치 파일에 든 연결 지침으로 바로 답한다. 도구 목록은 서버에 10초까지 묻고, 답이 없으면 설치 파일에 든 목록을 쓴다. 이유: Claude Desktop은 시작 응답이 늦은 확장을 실패로 처리한다. 확장은 단계별 기록을 `~/.vxvue-ai/bridge.log`에 남기며 키·등록 번호·조회 내용은 적지 않는다. 도구 결과에 원인과 할 일을 한국어로 돌려준다. 원인은 사내망 연결 없음, 주소 해석 실패, 서버 프로그램 중지, 응답 시간 초과, 허용되지 않은 네트워크, 등록 번호 사용됨·만료, 연결 키 취소·만료, 서버 오류로 나눈다.
+
+**지킬 것** 연결 키와 등록 번호를 로그·화면·도구 응답에 출력하지 않는다. 서버는 둘 다 해시만 저장한다. 등록 번호는 한 번만 쓴다. Polarion 계정은 서버에만 두고 PC로 보내지 않는다.
+
+> **참고** 등록 번호는 한 번만 쓰이므로 다른 사람에게 전달한 설치 파일은 등록되지 않는다. 각자 안내 화면에서 받는다.
+
+### REQ-VXVUECHATBOT-014 Claude Code CLI 연결 설치
+
+**하는 일** Claude Code CLI 사용자는 안내 화면의 PowerShell 명령 한 줄로 VXvue AI 연결과 Skill을 등록한다.
+
+**순서**
+
+1. 명령이 서버에서 설치 스크립트를 받아 실행한다. 스크립트에는 서버 주소와 새 등록 번호가 들어 있다.
+2. 저장된 연결 키가 있으면 다시 쓰고, 없으면 REQ-VXVUECHATBOT-013 방식으로 등록한다.
+3. `claude mcp add --transport http --scope user vxvue-ai <서버>/vxvue-desktop/mcp`로 사용자 범위 연결을 등록한다. 같은 이름의 이전 연결은 바꾼다.
+4. `~/.claude/skills/vxvue-ai/SKILL.md`를 설치한다. 같은 이름의 다른 Skill이 있으면 덮어쓰지 않고 알린다. 이 스크립트가 설치한 표시가 있는 이전 판만 교체한다.
+
+**안 될 때** `claude` 명령을 찾지 못하거나 등록·연결 등록에 실패하면 원인을 보이고 멈춘다. 이미 바꾼 단계는 알린다.
+
+**지킬 것** Node.js·Python 설치를 요구하지 않는다. 서버의 `/vxvue-desktop/mcp`는 MCP HTTP 방식의 POST 요청을 받는다. 알림에는 202, GET에는 405를 돌려준다. 연결 키는 사용자 PC의 Claude 설정에만 저장한다.
+
+### REQ-VXVUECHATBOT-012 Polarion 번호·필터로 현재 자료 수집
+
+**하는 일** VP 번호 또는 사용자가 준 Polarion 필터로 사양·이슈를 읽어 Claude의 분석 근거로 사용한다. 기존 서버의 제품 설정·인증과 GET 전용 API 클라이언트를 쓴다.
+
+**순서**
+
+1. VP 번호는 해당 제품 프로젝트의 항목을 조회한다. 필터는 고치지 않고 프로젝트별 workitems 조회에 전달한다.
+2. 필터 결과는 페이지 번호와 다음 페이지 표시로 이어 읽는다. 한 번에 1~50개, 기본 10개다. 전체 수집 요청은 다음 페이지가 없을 때까지 이어 읽고 누락·실패한 페이지를 알린다.
+3. 항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 수집 범위에 포함하지 않는다.
+4. API 응답은 수집 시각·조회 조건과 함께 서버 임시 결과로 저장하고 12,000자씩 이어 읽는다. 링크된 VP 번호를 추가 조회해 관련 사양과 기존 TC를 대조한다.
+
+**지킬 것** 수집과 AI 분석을 구분한다. 서버에서 AI를 호출하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. 토큰은 서버에 두고 PC로 보내지 않는다.
+
+**안 될 때** 인증·권한·필터·경로·네트워크 실패를 오류로 표시한다. 실패를 0건으로 처리하지 않는다. 조회 결과는 24시간 보관하며 오래된 결과는 재수집한다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
 
-격리된 DB와 파일 폴더, 서로 다른 브라우저로 이력 저장·10개 허용·11개 거절·다른 소유자의 모든 조회·다운로드·삭제 거절을 확인한다. 390px와 데스크톱에서 입력·이력·표·중지 동작을 확인한다.
+격리된 DB와 파일 폴더, 서로 다른 브라우저로 이력 저장·10개 허용·11개 거절·다른 소유자의 모든 조회·다운로드·삭제 거절을 확인한다. 1366px·1920px 화면에서 입력·이력·표·중지 동작을 확인한다.
 
 ### TEST-VXVUECHATBOT-002 CLI·규칙·원문 조회
 
@@ -191,12 +281,20 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 숫자 버전·참조 MD 갱신·중복 실행·코드 해시 분리·경로 이탈·불완전 설치·손상 문서·CRLF를 확인한다. 업로드·자산 확정 후 문서 DB 등록 없이 최신 규칙 전문과 Skill을 읽고, 이전 질문의 원본 판을 보존한다. 화면에서 적용 버전과 도구 검토 상태를 확인한다.
 
+### TEST-VXVUECHATBOT-006 자동 연결과 실패 안내
+
+합성 등록 번호로 한 번 사용·만료·허용되지 않은 네트워크 거절, 해시 저장, 연결 키 취소·유휴 만료, 이전 팀 토큰 호환을 확인한다. 실제 Node 전달기로 첫 등록, 재시작 후 키 재사용, 서버 중지·연결 거부·인증 거절의 안내 문구를 확인한다. 설치 파일과 스크립트에 장기 키가 없는지 확인한다. 실제 Claude CLI·Desktop 일반 채팅·Cowork 확인은 `progress.md`에 각각 기록한다.
+
 ## 12. 요구사항 추적성
 
 <!-- Skill 동기화 시험은 문서 DB 등록 없이 실제 자산 확정 경로를 사용한다. -->
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
+| REQ-VXVUECHATBOT-011 | `app/modules/vxvue_chatbot/desktop.py`, `deploy/claude-desktop/server.cjs`, `scripts/build_vxvue_desktop.py`, `scripts/configure_vxvue_desktop.py` | `tests/test_vxvue_desktop.py` | implemented |
+| REQ-VXVUECHATBOT-012 | `app/modules/vxvue_chatbot/desktop_polarion.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
+| REQ-VXVUECHATBOT-013 | `app/modules/vxvue_chatbot/desktop_enroll.py`, `app/core/vxdesk_storage.py`, `deploy/claude-desktop/server.cjs`, `scripts/vxvue_desktop_devices.py` | TEST-VXVUECHATBOT-006: `tests/test_vxvue_desktop_enroll.py`, `tests/test_vxvue_desktop_bridge.py` | implemented |
+| REQ-VXVUECHATBOT-014 | `app/modules/vxvue_chatbot/desktop.py`, `deploy/claude-desktop/install-claude-code.ps1` | TEST-VXVUECHATBOT-006: `tests/test_vxvue_desktop_enroll.py` | implemented |
 | REQ-VXVUECHATBOT-001 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/router.py`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/prompts/vxvue_chatbot.yaml`, `app/web/static/vxvue-chatbot.js` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-003 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/mcp_server.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |

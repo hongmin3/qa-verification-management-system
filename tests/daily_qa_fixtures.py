@@ -58,8 +58,16 @@ def srs_item(item_id: str, old_id: str, title: str, text: str = "본문", status
 
 def issue_item(item_id: str, updated: str, linked: list[str], review: str = "lab_fixed", *, title: str = "",
                status: str = "verified", description: str = "설명", repro: str = "1. 실행", cause: str = "", action: str = "",
-               comment_ids: list[str] | None = None) -> dict:
+               comment_ids: list[str] | None = None, assignees: tuple = (), author: tuple | None = None) -> dict:
+    """`assignees`·`author` 는 (사용자 번호, 이름). 이름은 클라이언트가 `included` 에서 붙이는 `_user_names` 로 흉내 낸다."""
     relationships = {"linkedWorkItems": {"data": [{"id": f"VXvue/{item_id}/relates_to/VXvue/{target}"} for target in linked]}}
+    users = {}
+    if assignees:
+        relationships["assignee"] = {"data": [{"type": "users", "id": uid} for uid, _ in assignees]}
+        users.update(dict(assignees))
+    if author:
+        relationships["author"] = {"data": {"type": "users", "id": author[0]}}
+        users[author[0]] = author[1]
     if comment_ids is not None:
         relationships["comments"] = {"data": [{"id": value} for value in comment_ids]}
     return {
@@ -73,6 +81,7 @@ def issue_item(item_id: str, updated: str, linked: list[str], review: str = "lab
             "actionDetails": {"type": "text/html", "value": f"<p>{action}</p>"},
         },
         "relationships": relationships,
+        **({"_user_names": users, "_reporter_name": users.get(author[0], "") if author else ""} if users else {}),
     }
 
 

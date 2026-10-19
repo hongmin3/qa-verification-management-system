@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from app.modules.daily_qa.srs_snapshot import load_snapshot, previous_snapshot, 
 
 KIND_SRS = "srs"
 KIND_ISSUES = "issues"
+_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,19 @@ class SnapshotStore:
     def at_or_before(self, kind: str, day: str) -> Path | None:
         """`day` 날짜이거나 그 전 가장 최근 스냅샷 (기간 분석의 기준, REQ-QAINTEL-027)."""
         return self.previous(kind, f"{day}~")   # '~' 는 숫자보다 뒤라 그날 파일까지 포함한다
+
+    def between(self, kind: str, start_day: str, end_day: str) -> list[Path]:
+        """변경 리포트의 비교 대상 (REQ-ALMCHG-002). 시작일 또는 그 전 가장 가까운 기록과
+        `start_day < 날짜 <= end_day` 인 기록을 날짜순으로. 같은 날짜가 두 폴더에 있으면 새 폴더 것이다."""
+        by_day: dict[str, Path] = {}
+        for directory in reversed(self._dirs(kind)):     # 새 폴더가 마지막에 덮어쓴다
+            if directory.is_dir():
+                for path in directory.glob("*.json"):
+                    if _DAY_RE.fullmatch(path.stem):
+                        by_day[path.stem] = path
+        start = max((day for day in by_day if day <= start_day), default=None)
+        return [by_day[day] for day in sorted(by_day)
+                if day == start or start_day < day <= end_day]
 
     def latest(self, kind: str) -> Path | None:
         return self.previous(kind, "9999-99-99")

@@ -277,7 +277,7 @@ def test_auth_failure_blocks_ai_until_token_changes(tmp_path):
     assert resumed["stages"]["NEW_ISSUE"]["status"] == "ok"
 
 
-def test_weekly_limit_schedules_no_catchup_and_resumes_after_reset(tmp_path):
+def test_weekly_limit_schedules_catchup_and_resumes_after_reset(tmp_path):
     h = harness(tmp_path)
     h.run(DAY1)
     h.issues.append(new_issue("VP-200"))
@@ -286,7 +286,7 @@ def test_weekly_limit_schedules_no_catchup_and_resumes_after_reset(tmp_path):
     assert outcome["summary"]["claude_limit"]["kind"] == claude_limits.KIND_WEEKLY
     assert outcome["summary"]["claude_limit"]["reset_kst"] == "2026-10-06 09:00"
     assert h.store.get_state(h.cfg.state_key(STATE_CLAUDE_LIMIT))
-    assert not h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER))   # 주간 한도는 다시 돌지 않는다
+    assert h.store.get_state(h.cfg.state_key(STATE_CATCHUP_AFTER)) == "2026-10-06T00:05:00+00:00"   # 초기화(KST 09:00) + 5분 (REQ-QAINTEL-049)
     assert (h.events(entity_id="VP-200")[0]["analysis_status"], h.events(entity_id="VP-200")[0]["attempts"]) == ("pending", 0)
 
     h.outcome_override = None

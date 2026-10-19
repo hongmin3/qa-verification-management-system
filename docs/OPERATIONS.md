@@ -21,6 +21,25 @@ SQLite Online Backup API로 일관된 DB 사본을 만들고 업로드·사양�
 ZIP에 함께 저장한다. 챗봇 대화 DB, 첨부와 답변이 조회한 원본 판도 포함한다. 다시 만들 수 있는 챗봇 검색 색인은 제외한다. `manifest.json` SHA-256과 임시 복원 DB의 `PRAGMA integrity_check`를
 모두 통과해야 성공이다. 원본 운영 데이터를 덮어쓰는 자동 복원 기능은 의도적으로 제공하지 않는다.
 
+### 오래된 백업 자동 정리
+
+새 백업 확인이 끝나면 같은 명령이 보관 일수가 지난 것을 지운다(REQ-OPS-002, `config.yaml` `retention.*`).
+
+| 대상 | 보관 |
+|---|---|
+| 백업 ZIP `backups/qa-backup-<UTC 시각>.zip` | 7일. 가장 새 것 하나는 남긴다 |
+| 배포 전 백업 `backups/deploy-<이름>-<UTC 시각>` (폴더 또는 `.tgz`·`.tar`·`.tar.gz`·`.zip`) | 14일. 가장 새 것 하나는 남긴다 |
+
+배포하기 전에 서버 코드·설정·DB 를 따로 백업할 때는 반드시 위 이름으로 `backups/` 안에 만든다.
+
+```bash
+cd /home/ubuntu/ai-regression-impact-analyzer
+tar czf "backups/deploy-app-$(date -u +%Y%m%dT%H%M%SZ).tgz" app scripts config config.yaml
+```
+
+다른 이름이나 홈 폴더(`/home/ubuntu/qa-*.tgz` 등)에 둔 백업은 자동으로 지워지지 않는다.
+2026-10-16 에 이렇게 쌓인 백업 약 13GB 를 손으로 지웠다.
+
 ## 모니터링
 
 ```bash
@@ -33,9 +52,10 @@ ZIP에 함께 저장한다. 챗봇 대화 DB, 첨부와 답변이 조회한 원�
 `/health`, `/config/status`, `/operations/status`를 확인하고 디스크 부족, 토큰 한도 초과,
 DB 무결성 오류, stale 작업, 마지막 지식 동기화 실패 시 exit code 1을 반환한다.
 
-운영 서버의 사용자 crontab에는 다음 두 작업을 등록한다.
+운영 서버의 사용자 crontab에는 다음 두 작업을 등록한다. 시각은 서버 시간대(`America/New_York`) 기준이다.
+14:15 는 한국 시간 03:15(미국 서머타임이 아닐 때 04:15)다.
 
 ```cron
-15 2 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
-*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --disk-path . >> output/logs/monitor.log 2>&1
+15 14 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
+*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --check nginx=http://127.0.0.1/health --check manual_hub=http://127.0.0.1/manual-hub/api/health --disk-path . >> output/logs/monitor.log 2>&1
 ```

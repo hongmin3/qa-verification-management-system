@@ -288,6 +288,9 @@ def validate_finding(finding: dict, analysis_type: str, known: KnownIds, targets
             record.notes.append("FULLY_COVERED 인데 확인된 TC 가 없어 판정을 버렸습니다.")
             return None, "FULLY_COVERED 를 뒷받침하는 TC 가 없습니다."
 
+    if tc_mode and analysis_type in (NEW_ISSUE, SPEC_DECISION, COMMENT):
+        sections['tc_coverage'] = _clean_tc_entries(sections.get('tc_coverage'), known, record, 'tc_coverage')
+
     for text in [finding.get("action") or "", *((sections.get("recommendation") or {}).get("actions") or [])]:
         if FORBIDDEN_ACTION_RE.search(str(text)):
             return None, f"금지된 조치를 담고 있습니다(QA 규칙 §55): {str(text)[:80]}"

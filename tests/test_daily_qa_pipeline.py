@@ -7,6 +7,8 @@ REQ-QAINTEL-003, REQ-QAINTEL-018, REQ-QAINTEL-023.
 
 from __future__ import annotations
 
+from tests.qa_intel_harness import without_change_mails
+
 import json
 from datetime import datetime, timezone
 
@@ -108,8 +110,8 @@ def test_full_run_uses_legacy_snapshot_and_creates_findings_draft_and_email(env)
     assert {task["task_id"] for task in audit["tasks"]} == {"COV-001"}
     assert (out_dir / "sent" / "COV-001.json").is_file()               # 보낸 입력이 남는다
     out_dir = env["cfg"].output_dir / outcome["run_id"]
-    assert env["sent"] and "Finding" in env["sent"][0][0] and "VXvue" in env["sent"][0][0]
-    assert "/qa-agent/runs/" in env["sent"][0][1]
+    assert without_change_mails(env["sent"]) and "Finding" in without_change_mails(env["sent"])[0][0] and "VXvue" in without_change_mails(env["sent"])[0][0]
+    assert "/qa-agent/runs/" in without_change_mails(env["sent"])[0][1]
     assert store.get_run(outcome["run_id"])["email_status"] == "sent"
     assert outcome["run_id"].endswith("-vxvue")
     # 새 스냅샷은 제품 폴더에 저장된다
@@ -122,7 +124,7 @@ def test_rules_mismatch_skips_ai_but_keeps_deterministic_stages(env):
     assert runner.calls == []
     assert outcome["stages"]["SPEC_COVERAGE"]["status"] == "rules"
     assert outcome["stages"]["E"]["status"] == "ok"
-    assert outcome["status"] == "PARTIAL" and "판이 다릅니다" in env["sent"][0][1]
+    assert outcome["status"] == "PARTIAL" and "판이 다릅니다" in without_change_mails(env["sent"])[0][1]
     events = env["store"].list_events(product="vxvue", event_types=("SRS_UPDATED",))
     assert events and events[0]["analysis_status"] == "pending"          # 규칙이 고쳐지면 분석한다
 

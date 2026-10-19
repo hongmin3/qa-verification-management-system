@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -21,6 +22,7 @@ from app.core.config import get_settings
 from app.core.qa_rules import SKILL_TITLES, load_rule_set, rule_coverage
 from app.core.storage import Storage
 from app.modules.qa_agent import dashboard as dash
+from app.modules.qa_agent import issue_body
 from app.modules.qa_agent import run_view
 from app.modules.qa_agent.schemas import AXIS_LABELS
 from app.modules.qa_agent.rule_capability import (
@@ -31,6 +33,7 @@ from app.modules.qa_agent.rule_capability import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 templates = Jinja2Templates(
     directory=[Path(__file__).parent / "templates", get_settings().root / "app" / "web" / "templates"]
 )
@@ -57,11 +60,21 @@ def _dash_context(**values) -> dict:
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-def dashboard_home(request: Request, product: str = ""):
-    """QA Intelligence 대시보드 (REQ-QAINTEL-019·022)."""
+def dashboard_home(request: Request, product: str = "", category: str = '', subject: str = '', reporter: str = '', q: str = '',
+                   state: str = '', level: str = '', start: str = '', end: str = '', sort: str = 'updated', view: str = '',
+                   quick: str = '', group: str = '', subject_id: str = ''):
+    """QA Intelligence 대시보드 (REQ-QAINTEL-019·022). 분석결과 구역은 결과 페이지와 같은 조건을 받는다 (REQ-QAINTEL-046)."""
     choice = _choice(product)
+    if sort not in ('updated', 'analyzed', 'author', 'number'):
+        raise HTTPException(status_code=400, detail='정렬 기준을 확인해 주세요.')
+    filters = dict(category=category, subject=subject, reporter=reporter, q=q, state=state, level=level, start=start, end=end,
+                   sort=sort, view=view, quick=quick, group=group, subject_id=subject_id)
+    try:
+        data = dash.dashboard(choice, sort=sort, filters=filters)
+    except (ValueError, dash.PeriodError) as exc:
+        raise HTTPException(400, str(exc)) from exc
     return templates.TemplateResponse(
-        request, "dashboard.html", _dash_context(products=choice.products, selected=choice.cfg.product, **dash.dashboard(choice))
+        request, "dashboard.html", _dash_context(products=choice.products, selected=choice.cfg.product, **data)
     )
 
 
@@ -88,9 +101,16 @@ def automation_policy_status(product: str = ""):
 
 @router.post("/automation-policy")
 def save_automation_policy(request: Request, product: str = Form(""), enabled: bool = Form(False),
-                           validation_period: bool = Form(False)):
+                           validation_period: bool = Form(False), verification_sheet: str = Form("")):
     from app.modules.daily_qa.automation_policy import save_policy
     choice = _choice(product)
+    if verification_sheet:
+        from app.modules.daily_qa import workflow_settings
+        try:
+            workflow_settings.save(choice.store, choice.cfg.slug, verification_sheet,
+                                   workflow_settings.for_choice(choice)['options'])
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     save_policy(choice.store, choice.cfg.slug, enabled=enabled, validation_period=validation_period,
                 changed_by=request.client.host if request.client else "")
     return RedirectResponse(f"/qa-agent?product={quote(choice.cfg.product, safe='')}", status_code=303)
@@ -130,7 +150,9 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
     refusal, period_warning = dash.period_snapshot_check(choice.cfg, until_day)
     if refusal:
         return JSONResponse({"detail": refusal}, status_code=400)
-    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day)
+    result = launch_detached(choice.cfg.product, trigger="prepare" if choice.cfg.savings_enabled else "manual",
+                             since=since_day, until=until_day,
+                             **({'analysis_scope': 'spec'} if choice.cfg.savings_enabled else {}))
     messages = {
         "running": "점검이 이미 실행 중입니다.",
         "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
@@ -144,6 +166,41 @@ def run_now(product: str = Form(""), since: str = Form(""), until: str = Form(""
         result["warning"] = f"{limit['description']} 이번 실행은 변경 감지만 하고 AI 분석은 대기로 남습니다."
     if period_warning:
         result["warning"] = " ".join(text for text in (result.get("warning", ""), period_warning) if text)
+    return JSONResponse(result, status_code=202)
+
+
+@router.get("/deferred")
+def deferred_status(product: str = "", since: str = "", until: str = ""):
+    """[밀린 변경 분석]의 확인 창이 읽는 건수·기간·분석 종류별 수 (REQ-ALMCHG-005)."""
+    try:
+        return JSONResponse(dash.deferred_summary(_choice(product), since, until), headers={"Cache-Control": "no-store"})
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
+@router.post("/deferred")
+def deferred_run(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """[밀린 변경 분석]. 고른 기간의 밀린 변경만 분석하는 실행을 [변경사항 점검하기]와 같은 경로로 띄운다 (REQ-ALMCHG-005 5번)."""
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+
+    choice = _choice(product)
+    try:
+        summary = dash.deferred_summary(choice, since, until)
+    except dash.PeriodError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    if not summary["count"]:
+        return JSONResponse({"detail": "고른 기간에 밀린 변경이 없습니다."}, status_code=400)
+    result = launch_detached(choice.cfg.product, trigger="deferred", deferred_since=since, deferred_until=until)
+    messages = {
+        "running": "점검이 이미 실행 중입니다.",
+        "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
+        "not_configured": "Polarion 설정(POLARION_HOST / POLARION_TOKEN / 프로젝트)이 없습니다.",
+    }
+    if result["status"] in messages:
+        return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
+    limit = dash.limit_info(choice)
+    if limit:
+        result["warning"] = f"{limit['description']} 한도가 풀린 뒤 다시 눌러 주세요. 지금은 분석하지 못하고 밀린 변경으로 남습니다."
     return JSONResponse(result, status_code=202)
 
 
@@ -164,7 +221,9 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
     if until_day and snapshots.for_settings(choice.cfg).at_or_before(snapshots.KIND_ISSUES, until_day) is None:
         return JSONResponse({"detail": f"{until_day} 이전 이슈 스냅샷이 없어 현재 이슈 전체 점검을 할 수 없습니다. 종료일을 오늘로 고르세요."},
                             status_code=400)
-    result = launch_detached(choice.cfg.product, trigger="manual", since=since_day, until=until_day, issue_audit=True)
+    result = launch_detached(choice.cfg.product, trigger="prepare" if choice.cfg.savings_enabled else "manual",
+                             since=since_day, until=until_day, issue_audit=not choice.cfg.savings_enabled,
+                             **({'analysis_scope': 'issues'} if choice.cfg.savings_enabled else {}))
     messages = {
         "running": "점검이 이미 실행 중입니다.",
         "disabled": "점검 기능이 꺼져 있습니다 (daily_qa.enabled).",
@@ -172,11 +231,51 @@ def issue_audit_now(product: str = Form(""), since: str = Form(""), until: str =
     }
     if result["status"] in messages:
         return JSONResponse({"detail": messages[result["status"]], **result}, status_code=409)
-    result["warning"] = "이슈 변경 기록이 없는 기간은 현재 이슈 상태 기준으로 점검합니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다."
+    result["warning"] = ("기간의 신규·업데이트 이슈 대상을 준비합니다. 아직 AI를 실행하지 않습니다." if choice.cfg.savings_enabled else
+                         "이슈 변경 기록이 없는 기간은 현재 이슈 상태 기준으로 점검합니다. 기간 중 상태 변화와 중간 댓글은 알 수 없습니다.")
     limit = dash.limit_info(choice)
     if limit:
         result["warning"] += f" {limit['description']} AI 점검은 대기로 남습니다. 설정한 자동 점검 주기의 예정 실행이나 [변경사항 점검하기]에서 이어 갈 수 있습니다."
     return JSONResponse(result, status_code=202)
+
+
+@router.get('/plans/latest')
+def latest_plan(product: str = ''):
+    from app.modules.daily_qa import execution_budget
+    from datetime import datetime, timezone
+    choice = _choice(product)
+    return JSONResponse({'plan': dash.prepared_plan(choice),
+                         'budget': {**execution_budget.usage(choice.store.storage, datetime.now(timezone.utc)),
+                                    'five_hour_percent': choice.cfg.usage_guard_five_hour_percent, 'seven_day_percent': choice.cfg.usage_guard_seven_day_percent}},
+                        headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/select', response_class=HTMLResponse)
+def select_targets(request: Request, product: str = ''):
+    """`상세 분석`: 준비한 대상을 고르고 분석한다. 목록은 화면 스크립트가 `/plans/latest`에서 읽는다 (REQ-QAINTEL-042)."""
+    choice = _choice(product)
+    return templates.TemplateResponse(request, 'select.html', _dash_context(
+        products=choice.products, selected=choice.cfg.product, enabled=choice.cfg.savings_enabled))
+
+
+@router.post('/plans/{plan_id}/execute')
+def execute_plan(plan_id: str, product: str = Form(''), targets: str = Form('[]'), review: bool = Form(False)):
+    from app.modules.daily_qa import execution_plan, workflow_settings
+    from app.modules.daily_qa.scheduled_jobs import launch_detached
+    from app.modules.daily_qa.pipeline import is_running
+    choice = _choice(product)
+    if not choice.cfg.savings_enabled or is_running(choice.cfg):
+        raise HTTPException(409, '절약 모드가 꺼져 있거나 점검이 실행 중입니다.')
+    try:
+        keys = json.loads(targets)
+        if not isinstance(keys, list) or not all(isinstance(key, str) for key in keys):
+            raise ValueError('선택 대상 형식이 잘못되었습니다.')
+        policy = execution_plan.policy(choice.cfg, workflow_settings.for_choice(choice)['selected'])
+        selection = execution_plan.select(choice.store.storage, plan_id, choice.cfg.slug, keys, policy, review=review)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    result = launch_detached(choice.cfg.product, trigger='manual', selection_id=selection)
+    return JSONResponse(result, status_code=202 if result['status'] == 'launched' else 409)
 
 
 #: 버튼 요청 → (원래 분석 종류, 거절 문구). 원래 분석이 맞지 않으면 띄우지 않는다 (REQ-QAINTEL-016·032).
@@ -231,6 +330,15 @@ def run_detail(request: Request, run_id: str):
     out_dir = choice.cfg.output_dir / run_id
     files = sorted(path.name for path in out_dir.glob("*") if path.suffix in DOWNLOADABLE_SUFFIXES) if out_dir.is_dir() else []
     findings = store.list_findings(run_id=run_id, limit=-1)
+    if (run.get('summary') or {}).get('savings_enabled'):
+        findings = []
+        page = 1
+        while True:
+            found = store.storage.qa_search_findings(run.get('product') or '', run_id=run_id, page=page)
+            findings.extend(found['items'])
+            if len(findings) >= found['total']:
+                break
+            page += 1
     events = store.list_events(run_id=run_id)
     cards = [dash.card(item) for item in findings]
     return templates.TemplateResponse(request, "run_detail.html", _dash_context(
@@ -245,6 +353,14 @@ def run_findings(request: Request, run_id: str, page: int = 1):
     run = store.get_run(run_id)
     if not run:
         raise HTTPException(404, "실행 기록이 없습니다.")
+    if (run.get('summary') or {}).get('savings_enabled'):
+        found = store.storage.qa_search_findings(run.get('product') or '', run_id=run_id, page=page)
+        pages = max(1, (found['total'] + 49) // 50)
+        if page < 1 or page > pages:
+            raise HTTPException(404, '결과 페이지가 없습니다.')
+        return templates.TemplateResponse(request, 'run_findings.html', _dash_context(
+            run=run, cards=[dash.card(row) for row in found['items']],
+            total=found['total'], page=page, pages=pages))
     cards = dash.sort_cards([dash.card(item) for item in store.list_findings(run_id=run_id, limit=-1)])
     pages = max(1, (len(cards) + 49) // 50)
     if page < 1 or page > pages:
@@ -268,7 +384,10 @@ def run_file(run_id: str, name: str):
 
 @router.get("/findings/{finding_id}", response_class=HTMLResponse)
 def finding_detail(request: Request, finding_id: int):
-    """분석 상세. 분석 종류에 맞는 구획을 보인다 (REQ-QAINTEL-020)."""
+    """분석 상세. 이슈 본문 → AI 판단 → QA 할 일 → 댓글 → 근거 자료 순으로 한 흐름이다 (REQ-QAINTEL-020).
+
+    저장된 기록과 최신 이슈 스냅샷만 읽는다. AI 도 Polarion 도 부르지 않는다.
+    """
     store = dash.choose("").store
     finding = store.get_finding(finding_id)
     if not finding:
@@ -276,11 +395,143 @@ def finding_detail(request: Request, finding_id: int):
     events = store.list_events(ids=finding.get("event_ids") or []) if finding.get("event_ids") else []
     questions = store.list_questions(run_id=finding["run_id"], subject=finding["subject"])
     choice = dash.choose(finding.get("product") or "")
+    from app.modules.qa_agent.result_views import STATES, LEVEL_HELP
+    enriched = store.storage.qa_search_findings(finding.get('product') or '', finding_id=finding_id)['items']
+    if enriched:
+        finding = enriched[0]
+    polarion = choice.cfg.polarion if choice else None
+    kind = finding.get("analysis_type", "")
+    slug = choice.cfg.slug if choice else (finding.get("product") or "")
+    issue, later_events = None, []
+    if kind not in dash.SRS_SUBJECT_KINDS:
+        issue = issue_body.load(slug, finding["subject"], storage=store.storage,
+                                snapshot_dir=choice.cfg.issue_snapshot_dir if choice else None)
+        later_events = store.list_events(product=slug, entity_id=finding["subject"])
+    card = dash.card(finding)
+    authors = {str(comment.get("author") or "") for event in events for comment in (event.get("after") or {}).get("comments") or []}
+    explanation = dash.finding_explanation(finding, events, polarion=polarion, issue=issue,
+                                           names=store.storage.qa_reporter_names(slug, authors))
+    if kind == "TC_CHECK" or (kind == "SPEC_COVERAGE" and finding.get("skill") == "qa-spec-coverage-analysis"):
+        view = "COVERAGE"
+    elif kind == "SPEC_COVERAGE":
+        view = "SPEC_SUMMARY"
+    elif kind == "TC_DRAFT":
+        view = "FIXED_ISSUE"
+    else:
+        view = kind
     return templates.TemplateResponse(request, "finding_detail.html", _dash_context(
-        finding=finding, card=dash.card(finding), explanation=dash.finding_explanation(
-            finding, events, polarion=choice.cfg.polarion if choice else None),
+        finding=finding, card=card, explanation=explanation, view=view,
+        issue=issue, issue_view=dash.issue_view(issue, finding, card, explanation, polarion), freshness=dash.freshness(finding, issue, later_events),
+        trigger=dash.trigger_line(events), verdict_view=dash.verdict_view(finding, view),
         events=events, questions=questions, event_labels=dash.EVENT_LABELS,
-        axes=AXIS_LABELS))
+        axes=AXIS_LABELS, processing_states=STATES, level_help=LEVEL_HELP,
+        processing_history=store.storage.qa_processing_history(finding_id), integrated_tc=choice.cfg.savings_enabled))
+
+
+@router.get('/results', response_class=HTMLResponse)
+def results_view(request: Request, product: str = '', category: str = '', subject: str = '', reporter: str = '',
+                 q: str = '', state: str = '', level: str = '', start: str = '', end: str = '', run_id: str = '', page: int = 1, sort: str = 'updated',
+                 view: str = '', quick: str = '', group: str = '', subject_id: str = ''):
+    from app.modules.qa_agent.result_views import search
+    choice = _choice(product)
+    filters = dict(category=category, subject=subject, reporter=reporter, q=q, state=state, level=level,
+                   start=start, end=end, run_id=run_id, page=page, sort=sort, view=view, quick=quick, group=group, subject_id=subject_id)
+    try:
+        data = search(choice, filters)
+    except (ValueError, dash.PeriodError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return templates.TemplateResponse(request, 'results.html', _dash_context(selected=choice.cfg.product, listing=data, **data))
+
+
+@router.post('/results/{finding_id}/processing')
+def set_processing(finding_id: int, product: str = Form(''), state: str = Form(''), actor: str = Form(''), note: str = Form('')):
+    choice = _choice(product)
+    finding = choice.store.get_finding(finding_id)
+    if not finding or finding.get('product') not in (choice.cfg.slug, '' if choice.cfg.is_legacy_product else choice.cfg.slug):
+        raise HTTPException(404, '해당 제품의 분석 결과가 없습니다.')
+    try:
+        choice.store.storage.qa_set_processing(finding_id, finding.get('product', ''), state, actor, note)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return RedirectResponse(f'/qa-agent/findings/{finding_id}', status_code=303)
+
+
+@router.get("/changes", response_class=HTMLResponse)
+def changes_view(request: Request, product: str = "", since: str = "", until: str = "", kind: str = "",
+                 q: str = "", tab: str = "issues"):
+    """변경 리포트: 저장된 스냅샷을 하루씩 비교한 이슈·SRS 변경 (REQ-ALMCHG-003). 읽기만 하고 AI 를 부르지 않는다."""
+    from app.modules.daily_qa import automation_policy, snapshots as snapshot_module
+    from app.modules.daily_qa.change_report import KIND_LABELS, build_change_report
+
+    choice = _choice(product)
+    cfg = choice.cfg
+    snaps = snapshot_module.for_settings(cfg)
+    try:
+        if not since and not until:
+            days = [path.stem for path in snaps.between(snapshot_module.KIND_ISSUES, "0000-01-01", "9999-12-31")]
+            latest = days[-1] if days else ""
+            if latest:
+                since_day, until_day = (days[-2] if len(days) > 1 else latest), latest
+            else:
+                start, end = dash.parse_period("", "")
+                since_day, until_day = start.isoformat(), end.isoformat()
+        else:
+            start, end = dash.parse_period(since, until)
+            since_day, until_day = start.isoformat(), end.isoformat()
+    except dash.PeriodError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    report = build_change_report(cfg, snaps, since_day, until_day)
+    tab = tab if tab in ("issues", "srs") else "issues"
+    needle = q.strip().lower()
+
+    def visible(entities):
+        rows = []
+        for entity in entities:
+            if needle and needle not in entity.entity_id.lower():
+                continue
+            lines = [line for line in entity.lines if not kind or line.kind == kind]
+            if lines:
+                rows.append((entity, lines))
+        return rows
+
+    policy = automation_policy.get_policy(choice.store, cfg.slug)
+    deferred = len(choice.store.list_events(product=cfg.slug, statuses=("deferred",)))
+    from app.modules.daily_qa.settings import report_recipients
+    return templates.TemplateResponse(request, "changes.html", _dash_context(
+        recipient_count=len(report_recipients()),
+        products=choice.products, selected=cfg.product, report=report, since=since_day, until=until_day,
+        kind=kind, q=q, tab=tab, kind_labels=KIND_LABELS, issue_rows=visible(report.issues),
+        srs_rows=visible(report.srs), policy=policy, deferred=deferred,
+        analysis_state={"daily": "켜짐", "weekly": "주간", "off": "꺼짐"}[policy["mode"]]))
+
+
+@router.post("/changes/mail")
+def changes_mail(product: str = Form(""), since: str = Form(""), until: str = Form("")):
+    """고른 기간의 변경 리포트를 메일로 한 통 보낸다 (REQ-ALMCHG-004). 자동 메일의 하루 한 통 기록은 건드리지 않는다."""
+    from app.core import notifier
+    from app.modules.daily_qa import change_mail, snapshots as snapshot_module
+    from app.modules.daily_qa.settings import report_recipients
+
+    choice = _choice(product)
+    cfg = choice.cfg
+    try:
+        start, end = dash.parse_period(since, until)
+    except dash.PeriodError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    recipients = report_recipients()
+    if not recipients:
+        raise HTTPException(409, "메일 수신자가 설정되지 않았습니다.")
+    try:
+        subject, text, body, _ = change_mail.compose_for_period(
+            cfg, choice.store, snapshot_module.for_settings(cfg), start.isoformat(), end.isoformat())
+        result = notifier.send_report(subject, text, body, recipients)
+    except Exception as exc:  # noqa: BLE001 - 화면 버튼은 항상 JSON으로 실패 이유를 알려 준다
+        logger.warning("change_mail_manual_failed error_type=%s", type(exc).__name__)
+        return JSONResponse({"status": "failed", "detail": f"메일을 만들거나 보내지 못했습니다. ({type(exc).__name__})"}, status_code=500)
+    status = str(result.get("status", "failed"))
+    detail = {"sent": f"메일 {len(recipients)}명에게 보냈습니다.", "not_configured": "메일 설정이 없어 보내지 않았습니다."}.get(
+        status, f"메일 발송에 실패했습니다. {result.get('error', '')}".strip())
+    return JSONResponse({"status": status if status in ("sent", "not_configured") else "failed", "detail": detail})
 
 
 @router.get("/period", response_class=HTMLResponse)
@@ -296,11 +547,12 @@ def period_view(request: Request, product: str = "", start: str = "", end: str =
 
 
 @router.get("/guide", response_class=HTMLResponse)
-def guide(request: Request):
+def guide(request: Request, product: str = ''):
+    choice = _choice(product)
     return templates.TemplateResponse(
         request,
         "guide.html",
-        {},
+        {'savings_enabled': choice.cfg.savings_enabled},
     )
 
 

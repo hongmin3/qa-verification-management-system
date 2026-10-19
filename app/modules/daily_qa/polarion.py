@@ -82,6 +82,8 @@ class ReadOnlyPolarionClient:
                 {
                     "query": query,
                     "fields[workitems]": fields,
+                    "include": "author,assignee",
+                    "fields[users]": "name",
                     "sort": sort,
                     "page[size]": self.config.page_size,
                     "page[number]": page,
@@ -90,11 +92,21 @@ class ReadOnlyPolarionClient:
             items = data.get("data") or []
             if not items:
                 return
+            names = {str(user.get('id') or ''): (user.get('attributes') or {}).get('name', '')
+                     for user in data.get('included') or [] if user.get('type') == 'users'}
             for item in items:
                 item_id = str(item.get("id") or "")
                 if item_id in seen:
                     continue
                 seen.add(item_id)
+                author = (((item.get('relationships') or {}).get('author') or {}).get('data') or {}).get('id', '')
+                item['_reporter_name'] = names.get(author, '')
+                relationships = item.get('relationships') or {}
+                user_ids = {author}
+                assigned = (relationships.get('assignee') or {}).get('data') or []
+                for entry in [assigned] if isinstance(assigned, dict) else assigned:
+                    user_ids.add(str((entry or {}).get('id') or ''))
+                item['_user_names'] = {uid: names[uid] for uid in sorted(user_ids) if uid and uid in names}
                 yield item
             if not (data.get("links") or {}).get("next"):
                 return

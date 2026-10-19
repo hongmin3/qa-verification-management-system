@@ -280,3 +280,78 @@ def test_notification_log_records_what_was_sent(configured, storage) -> None:
     assert [row["kind"] for row in rows] == [KIND_QUOTA_EXHAUSTED]
     assert rows[0]["sent_count"] == 1
     assert rows[0]["last_sent_at"]
+
+
+# --- 제목·고유 번호·시험 발송 (REQ-MAIL-001·002·003) ------------------------------
+
+
+def test_every_subject_starts_with_qa_agent(configured, storage) -> None:
+    notify(KIND_QUOTA_EXHAUSTED, "429", storage=storage)
+    notify(notifier.KIND_CLAUDE_USAGE_LIMIT, "Claude CLI session limit", storage=storage)
+    assert [message["Subject"] for message in configured] == [
+        "[QA Agent] Gemini API 할당량·크레딧 소진", "[QA Agent] Claude 사용량 한도 도달"]
+
+
+def test_mail_subject_is_the_single_builder() -> None:
+    assert notifier.mail_subject("VXvue", "10/15 점검") == "[QA Agent] VXvue 10/15 점검"
+    assert notifier.mail_subject("", "알림") == "[QA Agent] 알림"
+    assert notifier.mail_subject("  ", " 알림 ") == "[QA Agent] 알림"
+
+
+def test_send_report_returns_message_id_and_masks(configured) -> None:
+    result = notifier.send_report("s", "t", recipients=("qa.person@example.test", "ab@example.test"))
+    assert result["status"] == "sent" and result["recipients"] == 2
+    assert result["message_id"] == configured[0]["Message-ID"]
+    assert result["message_id"].startswith("<") and result["message_id"].endswith("@example.com>")   # 발신 도메인
+    assert result["recipient_masks"] == ["qa.***@example.test", "a***@example.test"]
+    assert "qa.person" not in str(result)
+
+
+def test_message_ids_are_unique(configured) -> None:
+    first = notifier.send_report("s", "t")
+    second = notifier.send_report("s", "t")
+    assert first["message_id"] != second["message_id"]
+
+
+def test_not_configured_report_has_no_message_id(monkeypatch) -> None:
+    monkeypatch.setattr(notifier, "load_email_settings", lambda: EmailSettings(
+        host="", port=587, use_tls=True, sender="", recipients=(), username="", password="", cooldown_minutes=180, enabled=True))
+    assert notifier.send_report("s", "t") == {"status": "not_configured"}
+
+
+def test_mask_address_keeps_three_letters() -> None:
+    assert notifier.mask_address("hongmin@vieworks.com") == "hon***@vieworks.com"
+    assert notifier.mask_address("ab@vieworks.com") == "a***@vieworks.com"
+    assert notifier.mask_address("not-an-address") == "***"
+
+
+def test_send_test_goes_only_to_given_recipients_and_keeps_cooldown(configured, storage) -> None:
+    before = storage.notification_log()
+    result = notifier.send_test(notifier.KIND_CLAUDE_USAGE_LIMIT, ("qa.person@example.test",))
+    assert result["status"] == "sent" and result["recipient_masks"] == ["qa.***@example.test"]
+    message = configured[0]
+    assert message["To"] == "qa.person@example.test"
+    assert message["Subject"] == "[QA Agent] [시험] Claude 사용량 한도 도달"
+    assert "시험 발송입니다. 실제 오류가 아닙니다." in message.get_content()
+    assert storage.notification_log() == before
+
+
+def test_send_test_report_kind_and_unknown_kind(configured) -> None:
+    assert notifier.send_test("report", ("qa.person@example.test",))["status"] == "sent"
+    assert configured[0]["Subject"].startswith("[QA Agent] [시험] ")
+    unknown = notifier.send_test("nope", ("qa.person@example.test",))
+    assert unknown["status"] == "failed" and len(configured) == 1
+
+
+def test_send_test_report_uses_the_real_summary_layout(configured) -> None:
+    """Validates: REQ-MAIL-003 — 예약 점검 요약 시험 메일은 실제 요약 메일과 같은 구성이다."""
+    result = notifier.send_test("report", ("qa.person@example.test",))
+    assert result["status"] == "sent"
+    message = configured[0]
+    assert message["Subject"].startswith("[QA Agent] [시험] ")
+    text = message.get_body(("plain",)).get_content()
+    assert "시험 발송입니다. 실제 오류가 아닙니다." in text and "예시" in text
+    for section in ("[확인할 이슈]", "[확인할 사양]", "[남은 일]", "[이번 예약 실행의 Claude 사용량]", "[점검 정보]"):
+        assert section in text, section
+    assert message.get_body(("html",)) is not None
+    assert "qa.person" not in text

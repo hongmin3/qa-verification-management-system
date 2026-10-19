@@ -1,4 +1,6 @@
-# Gate 판정표 (가이드 §76 기준)
+# Gate 결과 형식 연결
+
+아래 절 번호와 명칭은 탐색 힌트다. rules/qa-guide.md의 현재 Gate 정의를 먼저 읽는다. 개정 번호 차이로 중단하지 않으며 의미가 결과 형식과 충돌하면 확인 필요로 남긴다.
 
 `gate_status` 에는 아래 7개 중 이 작업에 해당하는 것만 넣는다. 값은 네 가지다.
 
@@ -21,4 +23,4 @@
 
 §44 의 "Gate 4 = Execution Feasibility, Gate 5 = Cross-check" 는 옛 번호다. 쓰지 않는다.
 
-Rev1.18 은 §76 의 Gate 구조(G1~G7)를 그대로 두고 G3·G4·G7 에 Generator 확인 항목만 더했다.
+현재 원문 은 §76 의 Gate 구조(G1~G7)를 그대로 두고 G3·G4·G7 에 Generator 확인 항목만 더했다.

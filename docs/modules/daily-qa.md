@@ -164,12 +164,13 @@ Claude 호출이 0회인 것이 정상이다. 다음 실행부터 바뀐 것만 
 | `daily_qa.schedule.run_missed` | `true` | 예약 시각에 앱이 꺼져 있었으면 앱이 다시 돌 때 오늘 몫을 한 번 띄운다(REQ-QAINTEL-035) |
 | `daily_qa.polarion.issue_query` 등 | `type:issue` | 제품 설정 `alm.queries` 가 없을 때만 쓰는 대체값 |
 | `daily_qa.max_tasks_per_run` | `30` | 한 실행의 AI 작업 묶음 상한. 넘은 이벤트는 `pending` 으로 다음 실행에 |
+| `daily_qa.usage_guard.five_hour_percent` / `.seven_day_percent` | `80` / `90` | 절약 모드에서 호출 직전 5시간·주간 사용률이 이 값(50~100) 이상이면 새 호출을 멈추고 대기로 둔다. 한도가 풀리면 `qa_agent_limit_catchup`이 이어 한다(REQ-QAINTEL-043·049). 호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 읽지 않는다 |
 | `daily_qa.intelligence.comment_fetch_limit` | `300` | 한 실행에서 댓글을 읽을 이슈 수 상한. 넘은 이슈는 다음 실행에 |
 | `daily_qa.intelligence.comment_min_chars` | `15` | 이보다 짧은 댓글은 의미 없는 댓글로 본다 |
 | `daily_qa.intelligence.event_max_attempts` | `3` | 같은 이벤트의 분석 실패가 이 횟수면 포기(`abandoned`) |
 | `daily_qa.intelligence.backlog_max_events` | `10` | 한 실행에 올리는 지난 날 대기 이벤트 수. 오늘 이벤트는 상한 없음(REQ-QAINTEL-006 6번) |
 | `daily_qa.intelligence.comment_model` | 빈 값(`ai.claude.models.light`) | 새 댓글 분석 모델. 운영은 `claude-sonnet-5-5` |
-| `daily_qa.intelligence.catchup_max_hours` / `catchup_delay_minutes` | `12` / `5` | 일일 모드에서 세션 한도 초기화 뒤 자동 재개 조건. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
+| `daily_qa.intelligence.catchup_delay_minutes` | `5` | 일일 모드에서 한도(세션·주간)·사용률 멈춤의 초기화 몇 분 뒤에 자동 재개할지. 주간·중지·서버 예약 비활성화면 재개하지 않는다 |
 | `daily_qa.intelligence.use_knowledge_documents` | `true` | 등록된 사양서 문서 조각도 후보로 찾는다 |
 
 ## 자동 점검 모드

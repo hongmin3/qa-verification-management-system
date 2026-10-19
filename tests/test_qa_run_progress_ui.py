@@ -1,4 +1,4 @@
-"""공용 진행원의 중단 요청·다른 사용자 상태·종료 표시. Validates: REQ-QAINTEL-021, REQ-QAINTEL-036."""
+"""공용 진행원의 중단 요청·다른 사용자 상태·종료 표시. Validates: REQ-QAINTEL-021, REQ-QAINTEL-036, REQ-QAINTEL-042."""
 import shutil
 import subprocess
 from pathlib import Path
@@ -8,7 +8,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.parametrize("scenario", ["cancel", "shared", "rejected", "lost", "email"])
+@pytest.mark.parametrize("scenario", ["cancel", "shared", "rejected", "lost", "email", "prepared"])
 def test_common_progress_cancel_behavior(scenario):
     node = shutil.which("node")
     if not node:

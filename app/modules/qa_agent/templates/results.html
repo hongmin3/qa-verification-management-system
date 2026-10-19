@@ -1,0 +1,22 @@
+{% extends "module_base.html" %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+{% include "_intel_style.html" %}
+<section>
+  <h2>분석결과 · {{ selected }}</h2>
+  <p class="hint">저장된 결과를 조회합니다. 검색·필터·상세보기는 AI를 호출하지 않습니다. 기간은 최초 분석 날짜 기준입니다.</p>
+  {% include "_result_filters.html" %}
+  <details><summary>AI 판정과 처리 상태의 차이</summary>{% for name, description in level_help.items() %}<p><b>{{ name }}</b> · {{ description }}</p>{% endfor %}<p>확인 완료는 이 분석에 대한 QA 처리를 마쳤다는 표시입니다. 이슈 종료나 실제 검증 PASS로 처리하지 않습니다.</p></details>
+  <p>{{ total }}건{% if listing.view == 'issue' %} (이슈마다 최신 결과 한 건){% endif %} · {{ page }} / {{ pages }} 페이지</p>
+  {% if listing.groups %}
+  {% for group in listing.groups %}
+  <h3 class="qa-group">{{ group.name }} <span class="hint">{{ group.id }} · {{ group.cards|length }}건</span></h3>
+  <div class="qa-cards">{% for item in group.cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
+  {% endfor %}
+  {% else %}
+  <div class="qa-cards">{% for item in cards %}{% set hl = 'h3' %}{% include "_result_card.html" %}{% endfor %}</div>
+  {% endif %}
+  {% if not cards %}<p>조건에 맞는 분석 결과가 없습니다. 조건을 줄이거나 기간을 넓혀 보세요.</p>{% endif %}
+  <nav aria-label="분석결과 페이지">{% if page > 1 %}<a href="{{ prev_url }}">이전 50개</a>{% endif %} <span>{{ page }} / {{ pages }}</span> {% if page < pages %}<a href="{{ next_url }}">다음 50개</a>{% endif %}</nav>
+</section>
+{% endblock %}

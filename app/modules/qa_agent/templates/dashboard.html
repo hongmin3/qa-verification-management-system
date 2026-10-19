@@ -43,16 +43,34 @@
     <span>다음 자동 실행 <b>{{ status.next_run or '-' }}</b></span>
     <label>분석 기간 <input type="date" id="run-since" value="{{ run_period.since }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
     <label>~ <input type="date" id="run-until" value="{{ run_period.until }}" max="{{ run_period.max }}"{% if run_period.min %} min="{{ run_period.min }}"{% endif %}></label>
-    <button type="button" id="run-now" title="선택한 기간의 사양·이슈 변경과 남은 분석 대상을 점검합니다." data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% else %}변경사항 점검하기{% endif %}</button>
-    <button type="button" id="audit-now" title="현재 이슈를 사양과 비교합니다. 변경 이력이 없는 기간에도 사용할 수 있습니다." {% if status.running %}disabled{% endif %}>현재 이슈 전체 점검</button>
+    <button type="button" id="run-now" data-idle-label="{{ '사양 변경 분석 준비' if workflow.enabled else '변경사항 점검하기' }}" title="선택한 기간의 사양 변경을 확인합니다." data-product="{{ selected }}" {% if status.running %}disabled{% endif %}>{% if status.running %}실행 중…{% elif workflow.enabled %}사양 변경 분석 준비{% else %}변경사항 점검하기{% endif %}</button>
+    <button type="button" id="audit-now" title="기간의 신규·업데이트 이슈와 연구소 의견을 확인합니다." {% if status.running %}disabled{% endif %}>{{ '이슈 변경 분석 준비' if workflow.enabled else '현재 이슈 전체 점검' }}</button>
     {% if status.last_run %}<a href="/qa-agent/runs/{{ status.last_run.id }}">점검 기록 보기</a>{% endif %}
   </div>
+  {% if workflow.enabled %}
+  <p class="hint" id="run-message">먼저 AI 없이 대상을 확인합니다. 사양 분석은 변경된 사양의 관련 이슈·선택 버전 TC와 검증 누락을 확인합니다. 이슈 분석은 신규·업데이트 이슈와 연구소 의견을 사양·TC와 대조해 QA 대응을 제안합니다. 준비가 끝나면 상세 분석 화면에서 기존 결과를 먼저 확인하고 새 분석할 대상만 선택하세요.</p>
+  <p class="qa-selection-notice" id="qa-prepared-notice" data-product="{{ selected }}">{% if not prepared %}아직 준비한 대상이 없습니다. 위 버튼으로 먼저 준비하세요.{% elif prepared.expired %}준비 목록 만료 · 다시 준비하세요{% else %}준비된 대상 {{ prepared.targets|length }}건 · <a href="/qa-agent/select?product={{ selected|urlencode }}">상세 분석 열기</a>{% endif %}</p>
+  {% else %}
   <p class="hint" id="run-message">기본은 전날부터 오늘까지의 변경입니다. 시작일 날짜(또는 그 전 가장 가까운) 스냅샷과 비교하며, 이미 분석한 변경은 다시 분석하지 않습니다.{% if run_period.min %} 고를 수 있는 가장 이른 날짜는 저장된 스냅샷이 시작된 {{ run_period.min }} 입니다.{% endif %}
   자동 실행은 TC·매뉴얼을 보지 않습니다.
   <b>현재 이슈 전체 점검</b>은 이슈 변경 기록이 없는 기간에 씁니다. 지금 이슈 전체를 그 기간의 SRS 변화와 맞춰 보고, 사양과 어긋나는 이슈를 찾습니다.{% if status.issue_audit_remaining %} 남은 점검 대상 {{ status.issue_audit_remaining }}건은 다음 실행이 이어서 합니다.{% endif %}</p>
+  {% endif %}
 
   <div id="qa-run-preview" class="hint" role="status" aria-live="polite" data-product="{{ selected }}">저장된 대기 분석을 확인하는 중입니다.</div>
   <script src="/static/qa-run-preview.js?v=20261014"></script>
+  {% if deferred.count %}
+  <div id="deferred-box" class="qa-banner" data-product="{{ selected }}">
+    <span id="deferred-line">밀린 변경 <b>{{ deferred.count }}</b>건 ({{ deferred.first }} ~ {{ deferred.last }})</span>
+    <button type="button" id="deferred-open" title="자동 분석이 꺼진 동안 쌓인 변경을 지금 분석합니다."{% if status.running %} disabled{% endif %}>밀린 변경 분석</button>
+    <div id="deferred-confirm" hidden>
+      <label>기간 <input type="date" id="deferred-since" value="{{ deferred.first }}" min="{{ deferred.first }}" max="{{ deferred.last }}"></label>
+      <label>~ <input type="date" id="deferred-until" value="{{ deferred.last }}" min="{{ deferred.first }}" max="{{ deferred.last }}"></label>
+      <p id="deferred-summary" class="hint" role="status" aria-live="polite"></p>
+      <button type="button" id="deferred-start">분석 시작</button>
+      <button type="button" id="deferred-close">닫기</button>
+    </div>
+  </div>
+  {% endif %}
   {% include "_run_progress.html" %}
   <h3>오늘 변경 요약</h3>
   {% if last_run and last_run.status == 'NO_CHANGE' %}<p class="status">변경사항 없음 — AI 를 부르지 않았습니다.</p>{% endif %}
@@ -65,35 +83,27 @@
   </div>
 </section>
 
-<section class="qa-section">
-  <h2>최신 분석 결과</h2>
+<section class="qa-section" id="results">
+  <h2>분석결과</h2>
+  {% include "_result_filters.html" %}
+  <p><a href="/qa-agent/results?product={{ selected|urlencode }}">전체 결과·검색</a> · 조건에 맞는 {{ listing.total }}건 중 맨 위 {{ cards|length }}건</p>
   <form method="get" action="/qa-agent/period" class="inline-form">
     <input type="hidden" name="product" value="{{ selected }}">
     기간별 결과 <input type="date" name="start"> ~ <input type="date" name="end"> <button type="submit">조회</button>
   </form>
+  <a href="/qa-agent/changes?product={{ selected|urlencode }}">변경 리포트</a>
   <a class="hint" href="/qa-agent/rules?product={{ selected|urlencode }}">자동 점검 범위 보기</a>
-  {% macro result_card(item) %}
-    <div class="qa-card">
-      <div class="qa-card-head"><span class="level {{ item.level_class }}">{{ item.level }}</span>
-        <span class="hint" style="margin:0">{{ item.kind }} · {{ item.created }}</span></div>
-      <h4>[{{ item.subject }}] {{ item.title }}</h4>
-      <div class="qa-summary">{{ item.summary }}</div>
-      {% if item.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in item.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
-      <a href="/qa-agent/findings/{{ item.id }}">상세보기</a>
-    </div>
-  {% endmacro %}
-  {% set open_cards = cards | rejectattr("level", "equalto", "문제 없음") | list %}
-  {% set ok_cards = cards | selectattr("level", "equalto", "문제 없음") | list %}
+  {% if listing.groups %}
+  {% for group in listing.groups %}
+  <h3 class="qa-group">{{ group.name }} <span class="hint">{{ group.id }} · {{ group.cards|length }}건</span></h3>
+  <div class="qa-cards">{% for item in group.cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}</div>
+  {% endfor %}
+  {% else %}
   <div class="qa-cards">
-  {% for item in open_cards %}{{ result_card(item) }}{% endfor %}
+  {% for item in cards %}{% set hl = 'h4' %}{% include "_result_card.html" %}{% endfor %}
   </div>
-  {% if not cards %}<p class="hint">아직 분석 결과가 없습니다.</p>
-  {% elif not open_cards %}<p class="hint">확인이 필요한 결과가 없습니다.</p>{% endif %}
-  {% if ok_cards %}
-  <details class="qa-ok-cards"><summary>문제 없음 {{ ok_cards | length }}건</summary>
-    <div class="qa-cards">{% for item in ok_cards %}{{ result_card(item) }}{% endfor %}</div>
-  </details>
   {% endif %}
+  {% if not cards %}<p class="hint">조건에 맞는 분석 결과가 없습니다. 조건을 줄여 보세요.</p>{% endif %}
 </section>
 
 <section class="qa-section">
@@ -113,6 +123,7 @@
   </table></div>
 </section>
 
+<script src="/static/qa-selection.js?v=20261015"></script>
 <script>
 (function () {
   const button = document.getElementById('run-now');
@@ -127,8 +138,39 @@
   }
   button.addEventListener('click', () => start('/qa-agent/runs'));
   audit.addEventListener('click', () => {
-    if (confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) start('/qa-agent/issue-audit');
+    if ({{ workflow.enabled|tojson }} || confirm('고른 기간을 현재 이슈 상태 기준으로 점검할까요? 이슈 전체를 보므로 AI 사용량이 많을 수 있습니다.')) start('/qa-agent/issue-audit');
   });
+  if (window.QASelection) window.QASelection(progress);
+  {% if deferred.count %}
+  {
+    const deferredBox = document.getElementById('deferred-box');
+    const labels = {{ analysis_labels|tojson }};
+    const confirmBox = document.getElementById('deferred-confirm');
+    const dSince = document.getElementById('deferred-since'), dUntil = document.getElementById('deferred-until');
+    const dSummary = document.getElementById('deferred-summary'), dStart = document.getElementById('deferred-start');
+    const query = () => new URLSearchParams({product: deferredBox.dataset.product, since: dSince.value, until: dUntil.value});
+    async function refreshDeferred() {
+      dStart.disabled = true; dSummary.textContent = '확인하는 중입니다.';
+      try {
+        const response = await fetch('/qa-agent/deferred?' + query(), {cache: 'no-store'});
+        const data = await response.json();
+        if (!response.ok) { dSummary.textContent = data.detail || '확인하지 못했습니다.'; return; }
+        const kinds = Object.entries(data.by_analysis).map(([name, count]) => (labels[name] || name) + ' ' + count + '건').join(', ');
+        dSummary.textContent = data.count ? `밀린 변경 ${data.count}건 (${data.first} ~ ${data.last})${kinds ? ' · ' + kinds : ''} · Claude 사용량을 씁니다.` : '고른 기간에 밀린 변경이 없습니다.';
+        dStart.disabled = !data.count;
+      } catch (_) { dSummary.textContent = '확인하지 못했습니다. 다시 시도해 주세요.'; }
+    }
+    document.getElementById('deferred-open').addEventListener('click', () => { confirmBox.hidden = false; refreshDeferred(); });
+    document.getElementById('deferred-close').addEventListener('click', () => { confirmBox.hidden = true; });
+    dSince.addEventListener('change', refreshDeferred); dUntil.addEventListener('change', refreshDeferred);
+    dStart.addEventListener('click', () => {
+      const body = new FormData(); body.append('product', deferredBox.dataset.product);
+      body.append('since', dSince.value); body.append('until', dUntil.value);
+      confirmBox.hidden = true;
+      return progress.launch('/qa-agent/deferred', body, message);
+    });
+  }
+  {% endif %}
 })();
 </script>
 {% endblock %}

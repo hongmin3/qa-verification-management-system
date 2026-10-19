@@ -40,6 +40,49 @@ function visibleMarkdown(text) {
   return lines.map((line, i) => (fenced[i] ? ' '.repeat(line.length) : line)).join('\n');
 }
 
+// AGENTS.md 안에서 키트 migration이 소유하는 구역. migrate-project-readiness.js가 같은 값을 쓴다.
+const MANAGED_MARKERS = {
+  guidanceStart: '<!-- project-spec-guidance: start -->', guidanceEnd: '<!-- project-spec-guidance: end -->',
+  commandStart: '<!-- project-readiness-command: start -->', commandEnd: '<!-- project-readiness-command: end -->',
+};
+const WORKFLOW_MARKER_LINE = /^\s*<!--\s*spec-workflow:\s*(\S+)\s*-->\s*$/;
+const collapse = line => line.trim().replace(/\s+/g, ' ');
+
+// 템플릿이 다음 판으로 올라간 뒤 남은 옛 판 workflow 절을 찾는다. 옛 절 = 표시되는(주석·fence 밖) 템플릿 제목 줄
+// 바로 다음(빈 줄은 건너뜀)에 다른 판의 `spec-workflow` 표시가 오는 곳부터, 다음 1·2단계 제목이나 키트 관리 표시
+// 직전까지. 관리 구역(guidance start…end) 안은 migration이 통째로 바꾸므로 보지 않는다.
+// 각 줄을 공백만 정리해 현재 템플릿(줄바꿈을 공백으로 이은 본문)에 그대로 들어 있는지 본다 — 줄바꿈 위치가
+// 달라도 같은 문장은 같다. 들어 있지 않은 줄이 하나라도 있으면 사용자 내용이 있는 것으로 보고 지우지 않는다.
+// 반환하는 줄 번호는 0부터이며 text를 '\n'으로 나눈 위치다(CRLF의 '\r'은 비교할 때만 무시한다).
+function legacyWorkflowSections(text, template, expectedVersion) {
+  const lines = text.split('\n');
+  const visible = visibleMarkdown(text).split('\n');
+  const canonical = normalize(template).trim();
+  const heading = canonical.split('\n')[0];
+  const body = ' ' + canonical.split('\n').map(collapse).filter(Boolean).join(' ') + ' ';
+  const stops = new Set(Object.values(MANAGED_MARKERS));
+  const result = [];
+  let managed = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line === MANAGED_MARKERS.guidanceStart) managed = true;
+    if (line === MANAGED_MARKERS.guidanceEnd) { managed = false; continue; }
+    if (managed || lines[i].trimEnd() !== heading || (visible[i] || '').trimEnd() !== heading) continue;
+    let j = i + 1;
+    while (j < lines.length && !lines[j].trim()) j++;
+    const version = lines[j]?.match(WORKFLOW_MARKER_LINE)?.[1];
+    if (!version || version === expectedVersion) continue;
+    let end = j + 1;
+    while (end < lines.length && !/^#{1,2}\s/.test(visible[end] || '') && !stops.has(lines[end].trim())) end++;
+    let contentEnd = end;
+    while (contentEnd > j + 1 && !lines[contentEnd - 1].trim()) contentEnd--;
+    const unique = lines.slice(j + 1, contentEnd).map(collapse).filter(l => l && !body.includes(l));
+    result.push({ start: i, markerLine: j, contentEnd, end, version, unique, removable: unique.length === 0 });
+    i = end - 1;
+  }
+  return result;
+}
+
 function sections(text) {
   const result = new Map();
   const headings = [...text.matchAll(/^##\s+(\d+)\.\s*[^\n]*$/gm)];
@@ -124,8 +167,22 @@ function checkProject(projectRoot, options = {}) {
   for (const match of agents.matchAll(new RegExp('^' + template.split('\n')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'gm'))) {
     if (visibleAgents.slice(match.index, match.index + match[0].length) === match[0] && agents.slice(match.index, match.index + template.length) === template) canonicalPresent = true;
   }
-  if (canonicalPresent && version && version !== expectedVersion) warning('WORKFLOW_LEGACY_PRESERVED', `AGENTS.md: current canonical workflow present; legacy ${version} section preserved`);
-  else if (!canonicalPresent && version && version !== expectedVersion) error('WORKFLOW_OUTDATED', `AGENTS.md: workflow ${version}; expected ${expectedVersion}`);
+  if (canonicalPresent) {
+    // 현재 판이 있는데 다른 판 표시가 남아 있다. 옛 절이 현재 판에 없는 줄을 하나도 갖지 않으면 같은 규칙의 두 번째
+    // 사본일 뿐이고 어느 쪽이 이기는지 아무것도 말하지 않는다 — 오류로 두어 그 프로젝트의 완료 검사가 떠안게 한다.
+    // migration이 지우므로 워크스페이스 게이트는 다른 workflow 갱신처럼 PROJECT_UPDATE_PENDING으로 미룬다.
+    // 사용자 줄이 남은 옛 절은 지울 수 없으므로 예전처럼 경고하고, 처음 남은 줄을 보여 사람이 옮기게 한다.
+    const legacy = legacyWorkflowSections(agents, template, expectedVersion);
+    const covered = new Set(legacy.map(s => s.markerLine));
+    agents.split('\n').forEach((line, i) => {
+      const old = line.match(WORKFLOW_MARKER_LINE)?.[1];
+      if (old && old !== expectedVersion && !covered.has(i)) warning('WORKFLOW_LEGACY_PRESERVED', `AGENTS.md:${i + 1}: current canonical workflow present; legacy ${old} section preserved`);
+    });
+    for (const s of legacy) {
+      if (s.removable) error('WORKFLOW_LEGACY_DUPLICATE', `AGENTS.md:${s.start + 1}: legacy ${s.version} workflow section repeats the current ${expectedVersion} section and has no line of its own; the same rules appear twice with no precedence. Run node tools/migrate-project-readiness.js <project> --write from the kit (the request hook does this on the next prompt) to remove it; the original is backed up`);
+      else warning('WORKFLOW_LEGACY_PRESERVED', `AGENTS.md:${s.start + 1}: current canonical workflow present; legacy ${s.version} section preserved because it has ${s.unique.length} line(s) not in the current workflow (first: "${s.unique[0].slice(0, 80)}"); move what still applies outside the section, then delete it`);
+    }
+  } else if (!canonicalPresent && version && version !== expectedVersion) error('WORKFLOW_OUTDATED', `AGENTS.md: workflow ${version}; expected ${expectedVersion}`);
   else if (!canonicalPresent) error(version ? 'WORKFLOW_INCOMPLETE' : 'WORKFLOW_MISSING', 'AGENTS.md: full canonical SPEC workflow required; marker alone is insufficient');
   const claude = visibleMarkdown(docs['CLAUDE.md'] || '').replace(/`[^`\n]*`/g, '');
   if (!/^\s*@(?:\.\/)?AGENTS\.md\s*$/m.test(claude)) error('CLAUDE_IMPORT_MISSING', 'CLAUDE.md: active @AGENTS.md import missing');
@@ -334,4 +391,4 @@ function main(args) {
   }
 }
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { checkProject, visibleMarkdown, sections, testRef, STATUSES, SPEC_SECTIONS, FEATURE_SECTIONS };
+module.exports = { checkProject, visibleMarkdown, sections, testRef, legacyWorkflowSections, MANAGED_MARKERS, STATUSES, SPEC_SECTIONS, FEATURE_SECTIONS };

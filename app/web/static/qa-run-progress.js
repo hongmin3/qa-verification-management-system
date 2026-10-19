@@ -7,15 +7,16 @@ window.QARunProgress = function (product) {
   const link = document.getElementById('qa-progress-link');
   const cancelButton = document.getElementById('qa-cancel');
   const cancelMessage = document.getElementById('qa-cancel-message');
-  const buttons = [...document.querySelectorAll('#run-now,#audit-now,button.on-demand,#manual-check')];
+  const buttons = [...document.querySelectorAll('#run-now,#audit-now,#deferred-open,#deferred-start,button.on-demand,#manual-check')];
   let latest, pending = false, priorId, activeId, seen = false, pendingIdle = 0, elapsed = 0, fetched = Date.now(), timer, tick;
   let currentRunId = null, cancellingId = null, cancelPending = false;
   const started = () => { panel.hidden = false; spinner.hidden = false; step.textContent = '준비'; link.hidden = true; };
   const lock = value => buttons.forEach(button => {
     button.disabled = value;
-    if (button.id === 'run-now') button.textContent = value ? '실행 중…' : '변경사항 점검하기';
+    if (button.id === 'run-now') button.textContent = value ? '실행 중…' : button.dataset.idleLabel || '변경사항 점검하기';
   });
   function render(data) {
+    document.dispatchEvent(new CustomEvent('qa:status', {detail: data}));
     latest = data;
     const last = data.last_run, progress = data.progress || {};
     currentRunId = data.running ? data.current_run_id || (last && last.status === 'RUNNING' ? last.id : null) : null;
@@ -39,6 +40,7 @@ window.QARunProgress = function (product) {
       seen = false; activeId = null;
       step.textContent = abandoned ? '점검이 계속 실행되는지 확인하지 못했습니다. 점검 기록 보기를 확인해 주세요.' : '실행 시작 기록을 확인하지 못했습니다. 상태를 확인한 뒤 다시 눌러 주세요.';
       time.textContent = ''; link.hidden = !last;
+      link.textContent = '점검 기록 보기';
       if (last) link.href = '/qa-agent/runs/' + encodeURIComponent(last.id);
       return;
     }
@@ -57,7 +59,10 @@ window.QARunProgress = function (product) {
       cancellingId = null; cancelMessage.hidden = true;
       step.textContent = last.result || last.status_label;
       elapsed = progress.elapsed_seconds || 0; fetched = Date.now();
-      link.href = '/qa-agent/runs/' + encodeURIComponent(last.id); link.hidden = false;
+      // 대상 준비를 마친 실행은 다음 할 일인 대상 선택 화면으로 안내한다 (REQ-QAINTEL-042).
+      link.textContent = last.prepared_plan ? '상세 분석 열기' : '점검 기록 보기';
+      link.href = last.prepared_plan ? '/qa-agent/select?product=' + encodeURIComponent(product) : '/qa-agent/runs/' + encodeURIComponent(last.id);
+      link.hidden = false;
     }
     time.textContent = panel.hidden ? '' : `지난 시간 ${Math.floor(elapsed / 60)}분 ${elapsed % 60}초`;
   }

@@ -63,7 +63,8 @@ def schedule_settings(settings=None) -> dict:
 
 def launch_detached(product: str | None = None, *, trigger: str = "scheduled", today: datetime | None = None,
                     popen=subprocess.Popen, since: str = "", until: str = "", issue_audit: bool = False,
-                    on_demand: str = "", finding_id: int | None = None) -> dict:
+                    on_demand: str = "", finding_id: int | None = None, selection_id: str = "", analysis_scope: str = "all",
+                    deferred_since: str = "", deferred_until: str = "") -> dict:
     """점검 프로세스를 띄우고 바로 돌아온다. 돌려주는 `status` 로 화면·로그가 이유를 안다.
 
     `launched` 이외의 상태는 휴일·진행 중·설정 없음·자동 점검 정책 등으로 띄우지 않은 결과다.
@@ -82,15 +83,16 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         if not sched.get("enabled", True):
             logger.info("qa_agent_skipped reason=schedule_disabled product=%s", cfg.slug)
             return {"status": "schedule_disabled", "product": cfg.slug}
-        policy = automation_policy.get_policy(store, cfg.slug)
-        if policy["mode"] == "off":
-            logger.info("qa_agent_skipped reason=policy_off product=%s", cfg.slug)
-            return {"status": "policy_off", "product": cfg.slug}
-        if trigger == "catchup" and not automation_policy.catchup_allowed(cfg, store, sched):
-            logger.info("qa_agent_skipped reason=weekly_catchup_disabled product=%s", cfg.slug)
-            return {"status": "not_due", "product": cfg.slug}
+        if trigger == "catchup":
+            policy = automation_policy.get_policy(store, cfg.slug)
+            if policy["mode"] == "off":
+                logger.info("qa_agent_skipped reason=policy_off product=%s", cfg.slug)
+                return {"status": "policy_off", "product": cfg.slug}
+            if not automation_policy.catchup_allowed(cfg, store, sched):
+                logger.info("qa_agent_skipped reason=weekly_catchup_disabled product=%s", cfg.slug)
+                return {"status": "not_due", "product": cfg.slug}
     # 종료일이 지난 날인 기간 실행과 버튼 요청 실행은 저장 스냅샷만 쓰므로 Polarion 이 없어도 된다 (REQ-QAINTEL-021, 027).
-    if not cfg.polarion.configured and not until and not on_demand:
+    if not cfg.polarion.configured and not until and not on_demand and not selection_id and trigger != "deferred":
         logger.info("qa_agent_skipped reason=polarion_설정_없음 product=%s", cfg.slug)
         return {"status": "not_configured", "product": cfg.slug}
     if trigger == "scheduled":
@@ -102,9 +104,11 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         if sched["skip_holidays"] and check.holiday:
             logger.info("qa_agent_skipped reason=holiday product=%s date=%s name=%s", cfg.slug, day.isoformat(), check.name)
             return {"status": "holiday", "product": cfg.slug, "date": day.isoformat(), "name": check.name}
-        if not automation_policy.is_schedule_day(cfg, store, sched, day):
+        if not automation_policy.is_business_day(cfg, sched, day):
             logger.info("qa_agent_skipped reason=not_due product=%s date=%s", cfg.slug, day.isoformat())
             return {"status": "not_due", "product": cfg.slug}
+        # AI 분석일이 아니어도 수집은 한다. 꺼짐·주간 모드의 비분석일은 collect (REQ-ALMCHG-001).
+        trigger = automation_policy.scheduled_trigger(cfg, store, sched, day)
     if is_running(cfg):
         logger.info("qa_agent_skipped reason=running product=%s", cfg.slug)
         return {"status": "running", "product": cfg.slug}
@@ -124,6 +128,15 @@ def launch_detached(product: str | None = None, *, trigger: str = "scheduled", t
         command += ["--until", until]
     if issue_audit:
         command += ["--issue-audit"]
+    if selection_id:
+        command += ['--selection-id', selection_id, '--no-email']
+    if trigger == "deferred":
+        if deferred_since:
+            command += ["--deferred-since", deferred_since]
+        if deferred_until:
+            command += ["--deferred-until", deferred_until]
+    if analysis_scope != 'all':
+        command += ['--analysis-scope', analysis_scope]
     if on_demand:
         command += ["--on-demand", on_demand, "--no-email"]
         if finding_id is not None:
@@ -174,8 +187,8 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
     for product in configured_products():
         cfg = load(product=product)
         store = DailyQaStore(cfg.db_path)
-        policy = automation_policy.get_policy(store, cfg.slug)
-        if policy["mode"] == "off" or (policy["mode"] == "weekly" and not automation_policy.is_schedule_day(cfg, store, sched, local.date())):
+        # 자동 분석 정책과 상관없이 업무일마다 띄운다(REQ-ALMCHG-001). 공휴일은 launch_detached 가 판정하고 그날을 처리한 것으로 남긴다.
+        if not cfg.enabled:
             continue
         if store.get_state(cfg.state_key(STATE_SCHEDULED_DATE)) == today:
             continue
@@ -187,7 +200,7 @@ def run_missed_schedules(now: datetime | None = None, popen=subprocess.Popen) ->
 
 
 def catchup_due_products(now: datetime | None = None, clear: bool = True) -> list[str]:
-    """일일 모드에서 세션 한도가 풀린 제품. `clear` 면 실행할 차례 기록만 지운다 (REQ-QAINTEL-025·038)."""
+    """일일 모드에서 한도(세션·주간)나 사용률 기준 멈춤이 풀린 제품. `clear` 면 실행할 차례 기록만 지운다 (REQ-QAINTEL-025·038)."""
     from app.modules.daily_qa.pipeline import STATE_CATCHUP_AFTER
     from app.modules.daily_qa.store import DailyQaStore
 

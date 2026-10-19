@@ -51,7 +51,7 @@ def test_preview_rejects_invalid_period_or_product(world, params, code):
     assert world['client'].get('/qa-agent/run-preview', params=params).status_code == code
 
 
-@pytest.mark.parametrize('width', [390, 1920])
+@pytest.mark.parametrize('width', [1366, 1920])
 def test_preview_in_browser_updates_dates_and_reports_failure(cancel_site, width, tmp_path):
     from playwright.sync_api import sync_playwright, expect
     with sync_playwright() as p:

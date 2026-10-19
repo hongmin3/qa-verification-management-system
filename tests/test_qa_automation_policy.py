@@ -41,21 +41,27 @@ def launcher(tmp_path, monkeypatch):
     return cfg, store, launched, Popen
 
 
-def test_off_blocks_scheduled_but_manual_still_launches(launcher):
+def trigger_of(args):
+    return args[args.index("--trigger") + 1]
+
+
+def test_off_launches_collect_only_and_manual_still_launches(launcher):
+    # 2026-10-16 변경(REQ-ALMCHG-001): 꺼짐이어도 예약은 수집만 하는 collect 로 띄운다.
     cfg, store, launched, popen = launcher
     set_flags(store, cfg, enabled=False)
     now = datetime(2026, 10, 13, 7, 30, tzinfo=KST)
-    assert scheduled_jobs.launch_detached(today=now, popen=popen)["status"] == "policy_off"
-    assert launched == []
+    assert scheduled_jobs.launch_detached(today=now, popen=popen)["status"] == "launched"
+    assert [trigger_of(args) for args in launched] == ["collect"]
     assert scheduled_jobs.launch_detached(trigger="manual", today=now, popen=popen)["status"] == "launched"
-    assert len(launched) == 1
+    assert len(launched) == 2
 
 
-def test_weekly_skips_a_later_business_day(launcher):
+def test_weekly_later_business_day_launches_collect_only(launcher):
+    # 2026-10-16 변경(REQ-ALMCHG-001): 첫 업무일이 아닌 날은 띄우지 않던 것을 collect 로 띄운다.
     cfg, store, launched, popen = launcher
     set_flags(store, cfg, validation_period=False)
-    assert scheduled_jobs.launch_detached(today=datetime(2026, 10, 13, 7, 30, tzinfo=KST), popen=popen)["status"] == "not_due"
-    assert launched == []
+    assert scheduled_jobs.launch_detached(today=datetime(2026, 10, 13, 7, 30, tzinfo=KST), popen=popen)["status"] == "launched"
+    assert [trigger_of(args) for args in launched] == ["collect"]
 
 
 def test_weekly_holiday_monday_runs_tuesday_and_only_today_is_caught_up(launcher):
@@ -64,8 +70,9 @@ def test_weekly_holiday_monday_runs_tuesday_and_only_today_is_caught_up(launcher
     tuesday = datetime(2026, 10, 6, 8, 1, tzinfo=KST)  # 월요일 10/5 대체공휴일
     assert [r["status"] for r in scheduled_jobs.run_missed_schedules(tuesday, popen)] == ["launched"]
     assert scheduled_jobs.run_missed_schedules(tuesday + timedelta(minutes=10), popen) == []
-    assert scheduled_jobs.run_missed_schedules(tuesday + timedelta(days=1), popen) == []
-    assert len(launched) == 1
+    # 2026-10-16 변경(REQ-ALMCHG-001): 다음 날(수)은 분석일이 아니어도 수집(collect)을 만회한다.
+    assert [r["status"] for r in scheduled_jobs.run_missed_schedules(tuesday + timedelta(days=1), popen)] == ["launched"]
+    assert [trigger_of(args) for args in launched] == ["scheduled", "collect"]
 
 
 def test_host_schedule_switch_blocks_every_automatic_entry_point(launcher, monkeypatch):
@@ -123,15 +130,16 @@ def test_policy_and_history_rollback_together_if_history_write_fails(launcher):
     assert (policy.get_policy(store, cfg.slug), policy.history(store, cfg.slug)) == before
 
 
-def test_off_does_not_consume_todays_schedule_before_being_enabled_again(launcher):
+def test_off_collect_consumes_todays_schedule(launcher):
+    # 2026-10-16 변경(REQ-ALMCHG-001): 꺼짐이어도 collect 를 띄우므로 오늘 몫을 처리한 것으로 남긴다.
     cfg, store, launched, popen = launcher
     set_flags(store, cfg, enabled=False)
     now = datetime(2026, 10, 13, 8, 1, tzinfo=KST)
-    assert scheduled_jobs.launch_scheduled(now=now, popen=popen)["status"] == "policy_off"
-    assert not store.get_state(cfg.state_key(scheduled_jobs.STATE_SCHEDULED_DATE))
+    assert scheduled_jobs.launch_scheduled(now=now, popen=popen)["status"] == "launched"
+    assert store.get_state(cfg.state_key(scheduled_jobs.STATE_SCHEDULED_DATE)) == "2026-10-13"
     set_flags(store, cfg)
-    assert [r["status"] for r in scheduled_jobs.run_missed_schedules(now, popen)] == ["launched"]
-    assert len(launched) == 1
+    assert scheduled_jobs.run_missed_schedules(now, popen) == []
+    assert [trigger_of(args) for args in launched] == ["collect"]
 
 
 @pytest.mark.parametrize("now,extra,expected", [
@@ -174,6 +182,6 @@ def test_off_is_read_again_immediately_before_sender(tmp_path, monkeypatch):
 
     monkeypatch.setattr(report, "build_email", switch_off)
     result = h.run(DAY1)
-    assert not h.sent
+    assert not h.summary_sent
     assert result["status"] not in ("RUNNING", "CANCELLED")
     assert result["email"]["status"] == "skipped"

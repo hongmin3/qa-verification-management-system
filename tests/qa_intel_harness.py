@@ -20,6 +20,22 @@ DAY2 = DAY1 + timedelta(days=1)
 DAY3 = DAY1 + timedelta(days=2)
 
 
+def complete_rules(tmp):
+    """Synthetic numbered source for strict savings-mode rule checks."""
+    state = rules_ok(tmp)
+    mapping = Path(__file__).resolve().parents[1] / 'config/products/vxvue/skills/vxvue-qa-rules/guide-sections.json'
+    numbers = sorted({number for values in json.loads(mapping.read_text(encoding='utf-8')).values() for number in values})
+    state.guide_path.write_text('\n'.join(f'# §{number} 테스트 규칙\n규칙 원문 {number}\n' for number in numbers), encoding='utf-8')
+    state.prompt_path = tmp / 'instructions.txt'
+    state.prompt_path.write_text('원문 지침을 보존한다.', encoding='utf-8')
+    return state
+
+
+def without_change_mails(sent: list) -> list:
+    """변경 리포트 메일(REQ-ALMCHG-004)을 뺀 발송 기록. AI 요약 메일만 센다."""
+    return [mail for mail in sent if "변경 리포트" not in mail[0]]
+
+
 class Harness:
     def __init__(self, tmp: Path, tc_paths: list[Path] | None = None, manuals: dict | None = None, **settings) -> None:
         self.tmp = tmp
@@ -59,18 +75,25 @@ class Harness:
             finding.update({key: value for key, value in scripted.items() if key not in ("summary", "evidence")})
             findings.append(finding)
         (run.out_dir / f"{task.task_id}.json").write_text(json.dumps({
-            "skill": task.skill, "task_id": task.task_id, "gate_status": {"G1": "PASS"}, "findings": findings,
+            "skill": task.skill, "task_id": task.task_id, "gate_status": getattr(self, 'gate_status', {"G1": "PASS"}), "findings": findings,
             "open_questions": [], "human_review_required": True}, ensure_ascii=False), encoding="utf-8")
         meta = {"usage": self.usage, "total_cost_usd": 0.01} if self.usage else {}
+        if getattr(self, "rate_limit", None):
+            meta["rate_limit"] = self.rate_limit
         return RunnerOutcome(True, 0, 0.0, meta=meta)
 
     def run(self, day: datetime, **kwargs) -> dict:
         self.polarion = FakePolarion(self.srs, self.issues, self.comments, self.fail_comments)
         kwargs.setdefault("runner", FakeRunner(self._produce))
-        kwargs.setdefault("rules_state", rules_ok(self.tmp))
+        if 'rules_state' not in kwargs:
+            kwargs['rules_state'] = rules_ok(self.tmp)
         kwargs.setdefault("spec_chunks_loader", lambda: ([], {}, []))
         return run_daily(self.cfg, today=day, polarion_factory=lambda: self.polarion, inputs=self.inputs, store=self.store,
                          send_email=lambda *args: self.sent.append(args) or {"status": "sent"}, **kwargs)
+
+    @property
+    def summary_sent(self) -> list:
+        return without_change_mails(self.sent)
 
     def events(self, run_id: str | None = None, **filters) -> list[dict]:
         return self.store.list_events(product=self.cfg.slug, run_id=run_id, **filters)

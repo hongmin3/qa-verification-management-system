@@ -1,4 +1,4 @@
-/* Validates: REQ-QAINTEL-021, REQ-QAINTEL-036. 실제 공용 JS를 DOM·HTTP 경계에서 실행한다. */
+/* Validates: REQ-QAINTEL-021, REQ-QAINTEL-036, REQ-QAINTEL-042. 실제 공용 JS를 DOM·HTTP 경계에서 실행한다. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const scenario = process.argv[2];
 const elements = Object.fromEntries(['qa-progress', 'qa-spinner', 'qa-progress-step', 'qa-progress-time',
   'qa-progress-link', 'qa-cancel', 'qa-cancel-message', 'run-now', 'audit-now', 'last-run', 'last-status'].map(id => [id, {
-    id, hidden: id.startsWith('qa-'), _disabled: false, textContent: '', href: '', listeners: {},
+    id, hidden: id.startsWith('qa-'), _disabled: false, textContent: '', href: '', listeners: {}, dataset: {},
     get disabled() { return this._disabled; }, set disabled(value) { this._disabled = !!value; },
     addEventListener(name, callback) { this.listeners[name] = callback; }
   }]));
@@ -19,9 +19,11 @@ if (scenario === 'shared') state.cancel_requested = true;
 if (scenario === 'email') state.progress = {...state.progress, phase: 'email', label: '메일'};
 let requested = [], resolveCancel, timerId = 0;
 const timers = new Map();
+const statusEvents = [];
 const context = {window: {addEventListener() {}}, document: {
+  dispatchEvent(event) { statusEvents.push(event); },
   getElementById: id => elements[id], querySelectorAll: () => startButtons
-}, AbortController, Date, Promise, encodeURIComponent,
+}, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }, AbortController, Date, Promise, encodeURIComponent,
   setTimeout(callback, delay) { const id = ++timerId; timers.set(id, {callback, delay}); return id; },
   clearTimeout(id) { timers.delete(id); }, setInterval() { return 1; }, clearInterval() {},
   fetch: async (url, options = {}) => {
@@ -41,6 +43,8 @@ async function poll() {
 }
 (async () => {
   await settle();
+  assert.equal(statusEvents[0].type, 'qa:status');
+  assert.equal(statusEvents[0].detail.running, true);
   const cancel = elements['qa-cancel'];
   assert.equal(cancel.hidden, false, '진행 중 실행의 중단 버튼이 보여야 한다');
   assert.ok(startButtons.every(button => button.disabled));
@@ -51,6 +55,19 @@ async function poll() {
     cancel.listeners.click(); await settle();
     assert.equal(requested.length, 0);
     console.log('메일 단계 중단 비활성화 통과');
+    return;
+  }
+  if (scenario === 'prepared') {
+    // 대상 준비를 마친 실행은 기록이 아니라 대상 선택 화면(`상세 분석`)으로 안내한다.
+    state = {...state, running: false, current_run_id: null,
+      last_run: {...state.last_run, status: 'SUCCESS', status_label: '완료', result: '완료 · 대상 14건 준비', prepared_plan: true},
+      progress: {...state.progress, phase: 'done', label: '완료', elapsed_seconds: 70}};
+    await poll();
+    assert.equal(elements['qa-spinner'].hidden, true);
+    assert.equal(elements['qa-progress-link'].hidden, false);
+    assert.equal(elements['qa-progress-link'].textContent, '상세 분석 열기');
+    assert.equal(elements['qa-progress-link'].href, '/qa-agent/select?product=VXvue');
+    console.log('준비 완료 뒤 상세 분석 열기 링크 통과');
     return;
   }
   if (scenario === 'shared') {
@@ -90,5 +107,6 @@ async function poll() {
   assert.match(elements['qa-progress-step'].textContent, /사용자 중단/);
   assert.equal(elements['qa-progress-link'].hidden, false);
   assert.equal(elements['qa-progress-link'].href, '/qa-agent/runs/fixture-run');
+  assert.equal(elements['qa-progress-link'].textContent, '점검 기록 보기', '준비 실행이 아니면 점검 기록으로 안내한다');
   console.log('진행 화면 중단 시나리오 통과: ' + scenario);
 })().catch(error => { console.error(error); process.exitCode = 1; });

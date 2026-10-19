@@ -137,17 +137,20 @@ def test_runner_hides_token_in_errors_and_records_usage(tmp_path, monkeypatch):
     assert log["total_cost_usd"] == 0.1 and "result" not in log
 
 
-def test_rules_revision_mismatch_blocks(tmp_path, monkeypatch):
-    guide = tmp_path / "[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev1.12.md"
-    guide.write_text("x", encoding="utf-8")
-    monkeypatch.setattr(rules, "collected_assets", lambda product, kind, root=None: [{"file_name": guide.name}] if kind == rules.KIND_QA_RULES else [])
-    monkeypatch.setattr(rules, "collected_path", lambda product, asset, root=None: tmp_path / asset["file_name"])
-    state = rules.check("VXvue", supported_rev="1.17")
-    assert not state.ok and state.found_rev == "1.12" and "1.17" in state.reason
-    guide.rename(tmp_path / guide.name.replace("1.12", "1.17"))
-    monkeypatch.setattr(rules, "collected_assets", lambda product, kind, root=None: [{"file_name": guide.name.replace("1.12", "1.17")}] if kind == rules.KIND_QA_RULES else [])
-    assert rules.check("VXvue", supported_rev="1.17").ok
-    assert rules.check("VXvue").ok                     # 기준 판이 없는 제품은 판을 검사하지 않는다
+def test_rules_revision_mismatch_blocks(tmp_path):
+    from app.core.product_knowledge import product_dir
+    import json
+    base = product_dir("Acme", tmp_path)
+    folder = base / "original/qa_rules"
+    folder.mkdir(parents=True)
+    for rev in ("1.12", "1.17"):
+        name = f"guide_Rev{rev}.md"
+        (folder / name).write_text("# Rules\nContent", encoding="utf-8")
+        (base / "manifest.json").write_text(json.dumps({"assets": [{"kind": "qa_rules", "file_name": name}]}), encoding="utf-8")
+        state = rules.check("Acme", tmp_path, supported_rev="1.17")
+        assert state.found_rev == rev
+        assert state.ok == (rev == "1.17")
+        assert rules.check("Acme", tmp_path).ok
 
 
 def test_email_contains_counts_and_link_but_no_spec_text():

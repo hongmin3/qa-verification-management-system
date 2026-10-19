@@ -115,7 +115,7 @@ def test_pipeline_cancel_preserves_results_counts_and_pending_events(env, monkey
     original_run = pipeline.run_daily
     mails = []
     def execute(cfg, **kwargs):
-        kwargs['send_email'] = lambda *_: mails.append('sent') or {'status': 'sent'}
+        kwargs['send_email'] = lambda subject, *_: ("변경 리포트" in subject or mails.append('sent')) or {'status': 'sent'}
         return original_run(replace(cfg, batch_size=1), **kwargs)
     monkeypatch.setattr('tests.test_qa_intel_pipeline.run_daily', execute)
     env['state']['issues'] += [issue_item(f'VP-{n}', '2026-09-29T09:00:00Z', ['VP-10'], review='', status='open') for n in (201, 202, 203)]

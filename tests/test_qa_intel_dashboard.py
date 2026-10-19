@@ -110,7 +110,7 @@ def test_dashboard_renders_summary_cards_and_recent_runs(world):
     response = world["client"].get("/qa-agent")
     assert response.status_code == 200
     page = response.text
-    for heading in ("등록 자료와 최신 상태", "점검 실행 <span class=\"hint\">· VXvue</span>", "최신 분석 결과", "최근 실행"):
+    for heading in ("등록 자료와 최신 상태", "점검 실행 <span class=\"hint\">· VXvue</span>", "분석결과", "최근 실행"):
         assert heading in page
     assert "[VP-200]" in page and "[VP-100]" in page
     assert f"/qa-agent/runs/{world['changed']['run_id']}" in page
@@ -572,18 +572,20 @@ def test_card_has_at_most_three_todos_and_no_badge_row(world):
     card = dash.card(finding)
     assert card["todos"] == ["첫째", "둘째", "셋째"] and card["level"] == "검토 필요"
     page = world["client"].get("/qa-agent").text
-    cards = page[page.index("최신 분석 결과"):page.index("최근 실행")]
+    cards = page[page.index("분석결과"):page.index("최근 실행")]
     assert 'class="tags"' not in cards and "기존 Issue" not in cards        # 칩 줄이 없다
     assert 'class="level ' in cards
 
 
-def test_dashboard_orders_by_level_and_folds_no_problem(world):
-    cards = dash.dashboard(dash.choose(""))["cards"]
-    order = [dash.LEVEL_ORDER.index(item["level"]) for item in cards]
-    assert order == sorted(order)
+def test_dashboard_lists_latest_result_per_issue_without_folding(world):
+    """REQ-QAINTEL-019·046: 결과 구역은 결과 페이지와 같은 목록이다. 이슈마다 최신 결과 한 장이고 판정별 정렬·`문제 없음` 접기는 없다."""
+    data = dash.dashboard(dash.choose(""))
+    subjects = [item["subject"] for item in data["cards"]]
+    assert subjects and len(subjects) == len(set(subjects)) and data["listing"]["view"] == "issue"
     page = world["client"].get("/qa-agent").text
-    if any(item["level"] == "문제 없음" for item in cards):
-        assert '<details class="qa-ok-cards"><summary>문제 없음' in page
+    assert '<details class="qa-ok-cards"' not in page and 'name="q"' in page
+    for item in data["cards"]:
+        assert f"/qa-agent/findings/{item['id']}" in page
 
 
 def test_old_coverage_finding_renders_key_block_and_details(world):
@@ -596,10 +598,10 @@ def test_old_coverage_finding_renders_key_block_and_details(world):
            "draft_tcs": [], "confidence": "Review Needed", "action": "TC_2 Expected 수정"}
     finding_id = store.add_finding(world["changed"]["run_id"], "qa-spec-coverage-analysis", "COV-001", old, product="vxvue")
     page = world["client"].get(f"/qa-agent/findings/{finding_id}").text
-    key = page[page.index('id="key-result"'):page.index('<details class="qa-more">')]
+    key = page[page.index('id="key-result"'):page.index('id="evidence-panel"')]
     assert "검토 필요" in key and "옛 Coverage 요약" in key and "정렬 바뀜" in key and "TC_2 Expected 수정" in key
     assert 'data-action="tc-check"' in key
-    assert "<h3>Checklist의 검증 범위" in page[page.index('<details class="qa-more">'):]
+    assert "<h3>Checklist의 검증 범위" in page[page.index('id="evidence-panel"'):]
 
 
 def test_detail_shows_on_demand_buttons_only_for_their_analysis(world):
@@ -640,3 +642,89 @@ def test_on_demand_is_refused_for_wrong_analysis_unknown_action_and_while_locked
     world["cfg"].lock_path.write_text(json.dumps({"pid": 1, "started_at": datetime.now(timezone.utc).isoformat()}), encoding="utf-8")
     locked = world["client"].post(f"/qa-agent/findings/{spec_id}/tc-check")
     assert locked.status_code == 409 and locked.json()["detail"] == "점검이 이미 실행 중입니다."
+
+
+# -- 상세 분석 화면 (REQ-QAINTEL-042) -------------------------------------------------
+
+
+def _save_plan(world, *, created: datetime, savings: bool = True):
+    """선택 화면에 보일 준비 목록을 저장한다. 외부 서비스는 부르지 않는다."""
+    from dataclasses import replace
+    from app.modules.daily_qa import execution_plan
+    choice = dash.choose("")
+    choice.cfg = replace(choice.cfg, savings_enabled=savings)
+    targets = [{"key": "FIXED_ISSUE:VP-100", "kind": "FIXED_ISSUE", "subject": "VP-100", "title": "목록 오류",
+                "state": "pending", "source": None}]
+    issues = [{"id": "VP-100", "updated": "2026-09-29T09:00:00Z", "reporter_id": "u1", "reporter_name": "홍길동"}]
+    events = [{"entity_id": "VP-100", "event_type": "ISSUE_RD_RESULT_CHANGED", "analysis_required": True,
+               "analyses": ["FIXED_ISSUE"]}]
+    return execution_plan.create(world["store"].storage, choice.cfg.slug, targets,
+                                 {"events": events, "srs": [], "issues": issues}, [], {}, now=created)
+
+
+@pytest.fixture
+def prepared_plan(world):
+    return _save_plan(world, created=datetime.now(timezone.utc))
+
+
+def test_dashboard_has_no_selection_list_only_link(world, prepared_plan):
+    html = world["client"].get("/qa-agent?product=VXvue").text
+    assert 'id="qa-selection-targets"' not in html and 'id="qa-selected-run"' not in html
+    assert "/qa-agent/select?product=VXvue" in html
+    assert "준비된 대상 1건 · 상세 분석 열기" in re.sub(r"<[^>]+>", "", html)
+
+
+def test_dashboard_notice_says_expired_without_link_to_stale_list(world):
+    _save_plan(world, created=datetime.now(timezone.utc) - timedelta(minutes=31))
+    html = world["client"].get("/qa-agent?product=VXvue").text
+    assert "준비 목록 만료 · 다시 준비하세요" in html
+    assert "준비된 대상 1건" not in html
+
+
+def test_select_page_renders_selection_controls(world, prepared_plan):
+    html = world["client"].get("/qa-agent/select?product=VXvue").text
+    assert "상세 분석" in html and 'id="qa-selected-run"' in html and 'id="qa-selected-review"' in html
+    assert 'id="qa-selection-targets"' in html
+    assert 'class="active" aria-current="page">사양·이슈 변경 점검' in html
+
+
+def test_latest_plan_api_marks_expired_and_adds_row_fields(world):
+    _save_plan(world, created=datetime.now(timezone.utc) - timedelta(minutes=31))
+    plan = world["client"].get("/qa-agent/plans/latest?product=VXvue").json()["plan"]
+    assert plan["expired"] is True
+    row = plan["targets"][0]
+    assert (row["kind_label"], row["reporter_name"], row["reason"]) == ("수정 완료 이슈", "홍길동", "연구소 결과 변경")
+    assert row["issue_updated_kst"] == "2026-09-29 18:00 (한국 시간)"
+
+
+def test_select_page_without_savings_mode_explains_and_has_no_controls(world):
+    _save_plan(world, created=datetime.now(timezone.utc), savings=False)
+    html = world["client"].get("/qa-agent/select?product=VXvue").text
+    assert "절약 모드가 꺼져 있어" in html and 'id="qa-selected-run"' not in html
+
+
+def test_latest_plan_api_fills_missing_reporter_from_saved_reporters(world):
+    plan = _save_plan(world, created=datetime.now(timezone.utc))
+    plan["data"]["issues"] = [{"id": "VP-100", "updated": "", "reporter_id": "", "reporter_name": ""}]
+    world["store"].storage.qa_save_plan({**plan, "id": "second-plan", "created_at": datetime.now(timezone.utc).isoformat()})
+    world["store"].storage.qa_save_reporters(plan["product"], [
+        {"id": "VP-100", "reporter_id": "u9", "reporter_name": "김철수", "updated": "2026-09-30T00:00:00Z"}])
+    row = world["client"].get("/qa-agent/plans/latest?product=VXvue").json()["plan"]["targets"][0]
+    assert (row["reporter_name"], row["issue_updated_kst"]) == ("김철수", "2026-09-30 09:00 (한국 시간)")
+
+
+def test_dashboard_with_malformed_prepared_plan_still_renders(world, monkeypatch):
+    """깨진 준비 목록 한 줄이 첫 화면을 500 으로 만들지 않는다(목록 없이 화면이 열린다)."""
+    from dataclasses import replace
+    cfg = replace(world["cfg"], savings_enabled=True)
+    choice = dash.ProductChoice(cfg, world["store"], [cfg.product])
+    monkeypatch.setattr(dash, "choose", lambda product="": choice)
+    documents = world["documents"]
+    with documents.connect() as db:
+        db.execute("INSERT INTO qa_execution_plans VALUES(?,?,?,?)", ("bad", cfg.slug, "2099-01-01T00:00:00+00:00", "{not json"))
+    assert dash.prepared_plan(choice) is None
+    assert world["client"].get("/qa-agent").status_code == 200
+    with documents.connect() as db:
+        db.execute("UPDATE qa_execution_plans SET payload_json=? WHERE id='bad'", ('{"id": "bad"}',))
+    assert dash.prepared_plan(choice) is None
+    assert world["client"].get("/qa-agent").status_code == 200

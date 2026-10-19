@@ -38,6 +38,12 @@
     {% if view.dry_run %}<span class="pill">시험 실행</span>{% endif %}
   </div>
   <p class="rv-headline rv-outcome rv-{{ view.tone }}">{{ view.headline }}</p>
+  {% if view.change_mail %}<p class="hint" id="run-change-mail">{{ view.change_mail }}</p>{% endif %}
+  {% set period = run.summary.period|default({}) %}
+  {% if period.since and period.until %}<p><a href="/qa-agent/changes?product={{ (run.product or "")|urlencode }}&amp;since={{ period.since }}&amp;until={{ period.until }}">이 기간({{ period.since }} ~ {{ period.until }})의 변경 리포트 보기</a></p>{% endif %}
+  {% for kind, coverage in (run.summary.coverage|default({})).items() %}
+  <p class="hint">{{ '사양' if kind == 'srs' else '이슈' }} 자료: {{ coverage.start or '기준 없음' }} ~ {{ coverage.end or '자료 없음' }}{% for warning in coverage.warnings %}<br>{{ warning }}{% endfor %}</p>
+  {% endfor %}
   {% if view.actions %}
   <aside class="rv-actions"><h3>QA 담당자 할 일</h3><ul>{% for action in view.actions %}<li>{{ action.todo }}</li>{% endfor %}</ul></aside>
   {% endif %}
@@ -45,6 +51,7 @@
     {% for tile in view.key_tiles %}<div class="rv-tile"><span>{{ tile.label }}</span><b>{{ tile.value }}</b>{% if tile.hint %}<span>{{ tile.hint }}</span>{% endif %}</div>{% endfor %}
   </div>
   {% set cache = view.cache|default({}) %}
+  {% if run.summary.target_reused %}<aside class="qa-banner">기존 분석 결과 {{ run.summary.target_reused|length }}항목을 재사용했습니다. 원래 분석 시각과 QA 처리 상태를 유지합니다.</aside>{% endif %}
   {% if cache.hits %}
   <aside class="qa-banner" id="run-cache-summary">기존 분석 {{ cache.hits }}묶음에서 결과 {{ cache.reused_findings }}건을 재사용했습니다. 현재 자료로 근거를 다시 확인했습니다.
     <details><summary>원본 실행 보기</summary><ul>{% for source in cache.sources %}<li><a href="{{ source.url }}">{{ source.run_id }}</a> · {{ source.task_id }}</li>{% endfor %}</ul></details>

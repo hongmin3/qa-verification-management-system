@@ -171,7 +171,18 @@ def record_rate_limit_event(info: dict, settings=None, now: datetime | None = No
     settings = _settings(settings)
     now = now or datetime.now(timezone.utc)
     state = _load_state(settings)
-    windows = dict(state.get("windows") or {})
+    windows = {**(state.get("windows") or {}), **windows_from_rate_limit(info)}
+    if not windows:
+        return
+    _write_state(settings, {**state, "windows": windows, "measured_at": _kst(now)})
+    reset_cache()      # 120초 안에 다시 불러도 새로 받은 값을 보이게 한다
+
+
+def windows_from_rate_limit(info: dict) -> dict:
+    """`rate_limit_info` 에서 읽을 수 있는 창만 0~100 사용률로 바꿔 돌려준다. 못 읽으면 빈 딕셔너리."""
+    windows: dict = {}
+    if not isinstance(info, dict):
+        return windows
     unified = info.get("unifiedWindows")
     if isinstance(unified, dict):
         for name in WINDOWS:
@@ -185,10 +196,57 @@ def record_rate_limit_event(info: dict, settings=None, now: datetime | None = No
         window = _window(info.get("utilization"), info.get("resetsAt"), fraction=True)
         if window:
             windows[kind] = window
-    if not windows:
-        return
-    _write_state(settings, {**state, "windows": windows, "measured_at": _kst(now)})
-    reset_cache()      # 120초 안에 다시 불러도 새로 받은 값을 보이게 한다
+    return windows
+
+
+def saved_reading(settings=None) -> dict:
+    """마지막으로 저장한 사용률(`data/claude_usage.json`). 점검이 시작될 때 "실행 전 값"으로 남긴다.
+
+    값이 없으면 `None` 과 빈 시각이다. 지어내지 않는다. 초기화 시각(`*_resets_kst`)은 메일이 같은 창인지 가리는 데 쓴다.
+    """
+    state = _load_state(_settings(settings))
+    windows = state.get("windows") or {}
+    return {name: (windows.get(name) or {}).get("used_percent") for name in WINDOWS} | {
+        "measured_at": str(state.get("measured_at") or ""),
+        "five_hour_resets_kst": str((windows.get("five_hour") or {}).get("resets_at") or ""),
+        "seven_day_resets_kst": str((windows.get("seven_day") or {}).get("resets_at") or "")}
+
+
+def _call_tokens(usage: Any) -> int:
+    if not isinstance(usage, dict):
+        return 0
+    return sum(int(usage.get(key) or 0) for key in ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+
+
+def reading_for_run(run_id: str, storage, before: dict | None = None) -> dict:
+    """이번 실행의 Claude 사용량 (Contract: UsageReading). 값이 없으면 `None`·빈 문자열이고 지어내지 않는다.
+
+    `after` 는 이 실행의 호출들이 돌려준 마지막 `rate_limit` 값(`qa_call_reservations.outcome_json`)이다.
+    `before` 는 실행을 시작할 때 `saved_reading()` 으로 저장해 둔 값이며 호출한 쪽이 넘긴다.
+    """
+    reading: dict = {
+        "before": {"five_hour": None, "seven_day": None, "measured_at": "", **(before or {})},
+        "after": {"five_hour": None, "seven_day": None, "five_hour_resets_kst": "", "seven_day_resets_kst": ""},
+        "calls": 0, "total_tokens": 0, "model": "", "by_target": [],
+    }
+    targets: dict[tuple[str, str], int] = {}
+    for call in storage.qa_run_calls(run_id):
+        if call["state"] == "not_started":
+            continue
+        outcome = call["outcome"]
+        tokens = _call_tokens(outcome.get("usage"))
+        reading["calls"] += 1
+        reading["total_tokens"] += tokens
+        reading["model"] = str(outcome.get("model") or reading["model"])
+        for name, window in windows_from_rate_limit(outcome.get("rate_limit")).items():
+            reading["after"][name] = window["used_percent"]
+            reading["after"][f"{name}_resets_kst"] = window["resets_at"] or ""
+        subjects = [str(item) for item in outcome.get("targets") or [] if item]
+        if subjects:
+            key = (" + ".join(subjects), str(outcome.get("kind") or ""))
+            targets[key] = targets.get(key, 0) + tokens
+    reading["by_target"] = [{"subject": subject, "kind": kind, "tokens": tokens} for (subject, kind), tokens in targets.items()]
+    return reading
 
 
 def _maybe_refresh(settings, now: datetime, refresh) -> bool:
@@ -214,7 +272,7 @@ def _maybe_refresh(settings, now: datetime, refresh) -> bool:
     return True
 
 
-def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet | None = None, refresh=None) -> dict:
+def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet | None = None, refresh=None, allow_refresh: bool = True) -> dict:
     """`GET /claude/usage` 의 응답 (REQ-AICALL-006 결과 표)."""
     settings = _settings(settings)
     now = now or datetime.now(timezone.utc)
@@ -228,7 +286,7 @@ def get_usage(settings=None, *, now: datetime | None = None, http_get: HttpGet |
             return dict(cached)
     http_get = http_get or _default_http_get
     windows, error = _fetch_live(settings, http_get)
-    if windows is None and error == "로그인 토큰 만료" and _maybe_refresh(settings, now, refresh):
+    if allow_refresh and windows is None and error == "로그인 토큰 만료" and _maybe_refresh(settings, now, refresh):
         windows, error = _fetch_live(settings, http_get)
     if windows is not None:
         result = {"source": "live", **windows, "measured_at": _kst(now), "error": ""}

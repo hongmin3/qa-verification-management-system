@@ -55,6 +55,21 @@ def is_schedule_day(cfg, store, schedule: dict, day: date) -> bool:
         day, cfg.root, schedule.get("calendar", "kr"), schedule.get("extra", ())).holiday)
 
 
+def is_business_day(cfg, schedule: dict, day: date) -> bool:
+    """수집 실행을 띄우는 날. 자동 분석 정책과 상관없다 (REQ-ALMCHG-001)."""
+    if not schedule.get("enabled", True) or not cfg.enabled:
+        return False
+    if day.weekday() not in holidays.parse_days(schedule.get("day_of_week", "mon-fri")):
+        return False
+    return not (schedule.get("skip_holidays", True) and holidays.check(
+        day, cfg.root, schedule.get("calendar", "kr"), schedule.get("extra", ())).holiday)
+
+
+def scheduled_trigger(cfg, store, schedule: dict, day: date) -> str:
+    """업무일에 띄울 실행 종류. AI 분석일이면 `scheduled`, 아니면 수집만 하는 `collect`."""
+    return "scheduled" if is_schedule_day(cfg, store, schedule, day) else "collect"
+
+
 def catchup_allowed(cfg, store, schedule: dict) -> bool:
     return bool(cfg.enabled and schedule.get("enabled", True) and get_policy(store, cfg.slug)["mode"] == "daily")
 

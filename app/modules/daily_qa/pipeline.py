@@ -53,6 +53,9 @@ from app.modules.daily_qa.collector import CollectionError, collect_issues, coll
 from app.modules.daily_qa.evidence_validation import draft_key, validate_finding
 from app.modules.daily_qa.intelligence import ANALYSIS_SKILLS, ON_DEMAND_SKILLS, AnalysisTarget, Corpus, build_item, build_tasks
 from app.modules.daily_qa.input_budget import select_backlog, split_tasks
+from app.core import claude_usage
+from app.core.notifier import mask_address
+from app.modules.daily_qa import execution_budget
 from app.modules.daily_qa.polarion import PolarionError, ReadOnlyPolarionClient
 from app.modules.daily_qa.schema import (
     ANALYSIS_SKILL_NAMES,
@@ -176,6 +179,33 @@ def default_spec_chunks(product: str, cfg: DailyQaSettings) -> tuple[list, dict,
     return chunks, labels, [str(item.get("name") or item.get("id") or "") for item in failures]
 
 
+def _usage_lines(reading: dict) -> dict:
+    """`Contract: UsageReading` 값을 메일 본문 줄로 바꾼다. 값을 모르면 `사용률 미확인`이다."""
+    def percent(value) -> str:
+        return "사용률 미확인" if value is None else f"{value:g}%"
+    before, after = reading.get("before") or {}, reading.get("after") or {}
+    return {
+        "5시간 사용률": f"실행 전 {percent(before.get('five_hour'))} → 실행 후 {percent(after.get('five_hour'))}"
+                      + (f" · 초기화 {after.get('five_hour_resets_kst') or before.get('five_hour_resets_kst')}" if (after.get('five_hour_resets_kst') or before.get('five_hour_resets_kst')) else ""),
+        "주간 사용률": f"실행 전 {percent(before.get('seven_day'))} → 실행 후 {percent(after.get('seven_day'))}"
+                      + (f" · 초기화 {after.get('seven_day_resets_kst') or before.get('seven_day_resets_kst')}" if (after.get('seven_day_resets_kst') or before.get('seven_day_resets_kst')) else ""),
+    }
+
+
+def _saved_usage_reading() -> dict:
+    try:
+        return claude_usage.saved_reading()
+    except Exception:  # noqa: BLE001 - 사용량 기록을 못 읽어도 점검은 계속한다
+        return {"five_hour": None, "seven_day": None, "measured_at": ""}
+
+
+def _mail_note(email: dict, recipients: tuple[str, ...], now: datetime) -> str:
+    """메일 단계 비고: `발송 <한국 시간> · 수신 <가린 주소> · Message-ID <값>` (REQ-MAIL-002). 주소 원문은 쓰지 않는다."""
+    masks = list(email.get("recipient_masks") or []) or [mask_address(item) for item in recipients]
+    stamp = now.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M")
+    return f"발송 {stamp} · 수신 {', '.join(masks) or '기본 수신자'} · Message-ID {email.get('message_id') or '확인 못 함'}"
+
+
 def _stage(status: str, note: str = "", **counts) -> dict:
     return {"status": status, "note": note, **({"counts": counts} if counts else {})}
 
@@ -204,6 +234,10 @@ def run_daily(
     issue_audit: bool = False,
     on_demand: str = "",
     finding_id: int | None = None,
+    selection_id: str = "",
+    analysis_scope: str = "all",
+    deferred_since: date | None = None,
+    deferred_until: date | None = None,
 ) -> dict:
     """`since`·`until` 을 주면 그 기간의 변경을 분석한다 (REQ-QAINTEL-027).
 
@@ -220,7 +254,8 @@ def run_daily(
         try:
             run = _Run(cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs,
                        rules_state, spec_chunks_loader, trigger, since, until, issue_audit=issue_audit,
-                       on_demand=on_demand, finding_id=finding_id)
+                       on_demand=on_demand, finding_id=finding_id, selection_id=selection_id, analysis_scope=analysis_scope,
+                       sender=send_email, deferred_since=deferred_since, deferred_until=deferred_until)
             outcome = run.execute()
             run._check_cancel()
         except RunCancelled:
@@ -235,7 +270,9 @@ def run_daily(
                                 "result_cache": run.result_cache})
             outcome = {"stages": {"preflight": _stage("failed", f"예상 못 한 오류: {type(exc).__name__}")},
                        "status": "FAILED", "summary": summary, "rules_warning": ""}
-        if on_demand or outcome["status"] == "CANCELLED":
+        if run is not None:
+            run.restore_deferred()   # 성공·한도·중단·실패 어느 쪽이든 끝나지 않은 밀린 변경은 되돌린다 (REQ-ALMCHG-005 6번)
+        if on_demand or selection_id or trigger in ('prepare', 'collect') or (cfg.savings_enabled and trigger.startswith("manual")) or outcome["status"] == "CANCELLED":
             # 버튼으로 요청한 실행은 누른 사람이 화면에서 결과를 본다. 메일을 보내지 않는다.
             store.set_email_status(run_id, "skipped")
             outcome["status"] = store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
@@ -259,11 +296,23 @@ def run_daily(
         try:
             from app.modules.daily_qa.scheduled_jobs import schedule_settings
             outcome["summary"]["automation_policy"] = automation_policy.get_policy(store, cfg.slug)
-            outcome["summary"]["automatic_resume_enabled"] = bool(cfg.enabled and schedule_settings()["enabled"])
+            outcome["summary"]["automatic_resume_enabled"] = bool(not cfg.savings_enabled and cfg.enabled and schedule_settings()["enabled"])
             outcome["summary"]["pending_analysis_events"] = len(store.list_events(product=cfg.slug, statuses=("pending", "failed")))
+            usage = None
+            if cfg.savings_enabled:
+                # 보조 정보(다음 실행 시각·사용량)를 못 읽어도 요약 메일은 나간다. 그 줄만 빠진다.
+                try:
+                    next_run = automation_policy.next_run(cfg, store, schedule_settings(), today)
+                    outcome["summary"]["next_run"] = next_run.astimezone(claude_limits.KST).strftime("%Y-%m-%d %H:%M") if next_run else ""
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("daily_qa_mail_next_run_failed run=%s error_type=%s", run_id, type(exc).__name__)
+                try:
+                    usage = claude_usage.reading_for_run(run_id, store.storage, before=outcome["summary"].get("usage_before"))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("daily_qa_mail_usage_failed run=%s error_type=%s", run_id, type(exc).__name__)
             subject, text, body = report.build_email(
                 run_id, RUN_STATUSES[outcome["status"]], outcome["stages"], outcome["summary"], review_url, outcome["rules_warning"],
-                product=cfg.product,
+                product=cfg.product, usage=usage,
             )
             # 진행 중인 분석은 끝내고, 발송 직전에 현재 제품 설정을 다시 읽는다 (REQ-QAINTEL-038).
             if automation_policy.get_policy(store, cfg.slug)["mode"] == "off":
@@ -274,8 +323,10 @@ def run_daily(
             # 사용자 제공 발송기도 실행 잠금과 종료 기록을 남긴다.
             email = {"status": "failed", "error": type(exc).__name__}
         store.set_email_status(run_id, str(email.get("status", "")))
-        outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok"
-                                            if email.get("status") == "sent" else "skipped", str(email.get("error") or email.get("reason") or ""))
+        sent = email.get("status") == "sent"
+        outcome["stages"]["email"] = _stage("failed" if email.get("status") == "failed" else "ok" if sent else "skipped",
+                                            _mail_note(email, cfg.email_to, datetime.now(timezone.utc)) if sent
+                                            else str(email.get("error") or email.get("reason") or ""))
         if email.get("status") == "failed" and outcome["status"] != "FAILED":
             outcome["status"] = "PARTIAL"
         store.finish_run(run_id, outcome["status"], outcome["stages"], outcome["summary"])
@@ -302,9 +353,10 @@ def _load_json_state(store: DailyQaStore, key: str, default):
     return value if isinstance(value, type(default)) else default
 
 
-def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> None:
-    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다."""
-    limit_evidence.capture(limit, claude_command=cfg.claude_command, claude_token=cfg.claude_token)
+def capture_limit_evidence(limit: claude_limits.LimitInfo, cfg: DailyQaSettings) -> list[str]:
+    """한도에 걸린 순간의 Claude `/usage` 화면을 증거로 찍는다 (REQ-QAINTEL-039). 실패해도 예외를 내지 않는다. 저장한 파일 이름을 돌려준다."""
+    result = limit_evidence.capture(limit, claude_command=cfg.claude_command, claude_token=cfg.claude_token)
+    return list(getattr(result, "files", None) or [])
 
 
 def active_limit(store: DailyQaStore, cfg: DailyQaSettings, now: datetime | None = None) -> claude_limits.LimitInfo | None:
@@ -387,7 +439,37 @@ class _TaskOutcome:
 
 class _Run:
     def __init__(self, cfg, store, run_id, today, dry_run, force_weekly, polarion_factory, runner, inputs, rules_state,
-                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None):
+                 spec_chunks_loader, trigger, since=None, until=None, issue_audit=False, on_demand="", finding_id=None, selection_id="", analysis_scope="all", sender=None,
+                 deferred_since=None, deferred_until=None):
+        self.selection_id = selection_id
+        #: [밀린 변경 분석]이 고른 기간(한국 날짜)과, 이번 실행이 밀린 변경에서 꺼낸 이벤트 번호 (REQ-ALMCHG-005).
+        self.deferred_since = deferred_since
+        self.deferred_until = deferred_until
+        self.deferred_chosen: list[int] = []
+        self.mail_sender = sender
+        #: 자동 변경 리포트 메일 결과 (REQ-ALMCHG-004). 보내지 않는 실행은 None.
+        self.change_mail: dict | None = None
+        #: 실행을 시작할 때 저장해 둔 가장 최근 사용률. 메일의 "실행 전 값"이다 (REQ-QAINTEL-048). 못 읽으면 값 없음.
+        self.usage_before = _saved_usage_reading()
+        self.collection_only = (cfg.savings_enabled and trigger == 'prepare' and not on_demand) or trigger == 'collect'
+        #: 수집만 하는 실행(REQ-ALMCHG-001)이 AI 분석을 하지 않는 까닭. 분석 실행이면 빈 값.
+        self.collect_reason = ''
+        self.deferred_events = 0
+        if trigger == 'collect':
+            self.collect_reason = 'policy_off' if automation_policy.get_policy(store, cfg.slug)['mode'] == 'off' else 'weekly_not_due'
+        if analysis_scope not in ('all', 'spec', 'issues'):
+            raise ValueError('알 수 없는 분석 범위입니다.')
+        self.analysis_scope = analysis_scope
+        self.verification_sheet = None
+        self.selection_review = False
+        self.plan_id = ''
+        self.target_keys = {}
+        self.target_reused = []
+        self.scope_targets = {'spec': 0, 'issues': 0}
+        self.selected_keys = None
+        self.call_budget_exhausted = False
+        self.guard_stop: dict | None = None      # 호출 직전 사용률 확인에서 멈춘 기록 (REQ-QAINTEL-043)
+        self.evidence_files: list[str] = []      # 한도 증거 파일 이름 (REQ-QAINTEL-039·049)
         self.cfg: DailyQaSettings = cfg
         self.store: DailyQaStore = store
         self.run_id = run_id
@@ -468,6 +550,10 @@ class _Run:
             raise RunCancelled("사용자 중단")
 
     def execute(self) -> dict:
+        if self.trigger == "deferred":
+            return self._execute_deferred()
+        if self.selection_id:
+            return self._execute_selection()
         if self.on_demand:
             return self._execute_on_demand()
         if self.issue_audit:
@@ -479,13 +565,59 @@ class _Run:
         issues = self._collect_issues(client)
         tc_rows = self._tc_index()
         self._persist(srs, issues)
+        self._send_change_mail()
         srs_items = srs.items if srs else self._saved_srs()
         issue_items = issues.items if issues else self._saved_issues()
+        if not self.dry_run:
+            self.store.storage.qa_save_reporters(self.cfg.slug, issue_items)
         self._deterministic(srs, srs_items, tc_rows)
         self._analyses(client, srs_items, issue_items, tc_rows)
         self.stages["F"] = _stage("not_due", "매뉴얼 점검은 자동으로 돌지 않습니다. 사람이 요청할 때만 돕니다(`--on-demand manual-check`).")
         self._draft_excel()
         return self._finish()
+
+    def _execute_deferred(self) -> dict:
+        """[밀린 변경 분석]. 새로 수집하지 않고 저장된 최신 스냅샷으로 고른 밀린 변경만 분석한다 (REQ-ALMCHG-005)."""
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        self._preflight()
+        note = "밀린 변경 분석: 저장된 최신 스냅샷을 씁니다(Polarion 을 새로 읽지 않음)"
+        self.stages["collect_srs"] = _stage("ok", note)
+        self.stages["collect_issues"] = _stage("ok", note)
+        tc_rows = self._tc_index()
+        srs_items, issue_items = self._saved_srs(), self._saved_issues()
+        self._analyses(None, srs_items, issue_items, tc_rows)
+        self._draft_excel()
+        return self._finish()
+
+    def _deferred_bounds(self) -> tuple[str | None, str | None]:
+        """고른 한국 날짜 기간을 저장 시각(UTC) 범위로 바꾼다. 비워 둔 쪽은 제한이 없다."""
+        since = until = None
+        if self.deferred_since is not None:
+            since = datetime.combine(self.deferred_since, datetime.min.time(), tzinfo=claude_limits.KST).astimezone(timezone.utc).isoformat(timespec="seconds")
+        if self.deferred_until is not None:
+            until = datetime.combine(self.deferred_until + timedelta(days=1), datetime.min.time(), tzinfo=claude_limits.KST).astimezone(timezone.utc).isoformat(timespec="seconds")
+        return since, until
+
+    def _take_deferred(self) -> list[dict]:
+        since, until = self._deferred_bounds()
+        events = self.store.list_events(product=self.cfg.slug, statuses=("deferred",), since=since, until=until)
+        if self.dry_run or not events:
+            return events
+        ids = [event["id"] for event in events]
+        self.store.update_events(ids, "pending")   # 남은 분석(`remaining_analyses`)은 저장 때부터 있어 그대로다
+        self.deferred_chosen = ids
+        return self.store.list_events(ids=ids)
+
+    def restore_deferred(self) -> None:
+        """이번 실행이 꺼낸 밀린 변경 가운데 아직 끝나지 않은 것(대기·실패)을 밀린 변경으로 되돌린다."""
+        if not self.deferred_chosen:
+            return
+        try:
+            left = [event["id"] for event in self.store.list_events(ids=self.deferred_chosen)
+                    if event["analysis_status"] in ("pending", "failed")]
+            self.store.update_events(left, "deferred", error="")
+        except Exception as exc:  # noqa: BLE001 - 되돌리기 실패가 실행 결과를 바꾸지 않는다
+            logger.warning("deferred_restore_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
 
     def _preflight(self) -> None:
         self._progress("preflight", "준비")
@@ -494,10 +626,25 @@ class _Run:
         marker = (self.profile.checklist or {}).get("template_name_contains") or ""
         self.inputs = self.inputs or default_inputs(cfg.product, cfg.root, marker)
         self.ai_block = ""
-        if not self.rules_state.ok:
+        if cfg.savings_enabled and not self.on_demand and (not self.rules_state.prompt_path or not self.rules_state.prompt_path.is_file()):
+            self.rules_state.ok = False
+            self.rules_state.reason = "사용자 지침 프롬프트 원문이 없습니다. 지식 동기화를 확인하세요."
+        if cfg.savings_enabled and not self.on_demand:
+            from app.modules.daily_qa.execution_plan import _hash
+            self.audit['rule_files'] = {}
+            for name, path in [('guide', self.rules_state.guide_path), ('instruction', self.rules_state.prompt_path)]:
+                try:
+                    if not path or not path.read_text(encoding='utf-8-sig').strip():
+                        raise ValueError('empty')
+                    self.audit['rule_files'][name] = _hash(path)
+                except (OSError, UnicodeError, ValueError):
+                    self.rules_state.ok = False
+                    self.rules_state.reason = '사용자 지침 또는 QA 규칙 원문을 읽지 못했습니다.'
+        collect = self.trigger == 'collect'   # 수집만 하는 실행은 AI 전용 점검(규칙·한도·작업 폴더)을 보지 않는다 (REQ-ALMCHG-001)
+        if not self.rules_state.ok and not collect:
             self.ai_block = "rules"
         self.claude_login = None
-        if not self.dry_run and not cfg.claude_token and self.runner is None:
+        if not self.collection_only and not self.dry_run and not cfg.claude_token and self.runner is None:
             # 토큰이 없으면 이 PC 의 Claude CLI 로그인을 쓴다(담당자 PC). 서버처럼 로그인이 없으면 AI 를 막는다.
             login = claude_login_status(cfg.claude_command)
             if login["logged_in"]:
@@ -505,7 +652,7 @@ class _Run:
                 self.audit["claude_auth"] = {"mode": "login", "method": login["method"], "subscription": login["subscription"]}
             else:
                 self.ai_block = self.ai_block or "token"
-        if not self.dry_run:
+        if not self.dry_run and not collect:
             self.limit = active_limit(self.store, cfg, self.today)
             if self.limit is not None and self.limit.kind == claude_limits.KIND_AUTH and self.claude_login:
                 # 로그인 방식은 토큰 지문이 늘 같아 인증 실패 기록이 풀리지 않는다. 로그인이 다시 확인되면 푼다.
@@ -514,8 +661,9 @@ class _Run:
             if self.limit is not None:
                 self.ai_block = self.ai_block or "limit"
         try:
-            self.workspace = prepare(cfg.product_workspace_dir, cfg.root, self.run_id, self.rules_state.guide_path,
-                                     self.rules_state.prompt_path, cfg.product, self.profile.skills_dir, self.profile.product_skill)
+            if not collect:
+                self.workspace = prepare(cfg.product_workspace_dir, cfg.root, self.run_id, self.rules_state.guide_path,
+                                         self.rules_state.prompt_path, cfg.product, self.profile.skills_dir, self.profile.product_skill)
         except WorkspaceError as exc:
             self.ai_block = self.ai_block or "workspace"
             self.stages["preflight"] = _stage("failed", str(exc))
@@ -524,19 +672,21 @@ class _Run:
                      "token": "CLAUDE_CODE_OAUTH_TOKEN 이 없고 Claude CLI 도 로그인돼 있지 않아 AI 단계를 건너뜁니다.",
                      "limit": self.limit.describe() + (" 한도가 풀린 뒤 다시 요청하세요." if self.on_demand else
                                                        " AI 분석은 대기로 남깁니다.") if self.limit else ""}
-            note = notes.get(self.ai_block, "")
+            note = "수집만 실행 · Claude 점검 없음" if collect else notes.get(self.ai_block, "")
             if not self.ai_block and self.claude_login:
                 note = f"Claude CLI 로그인({self.claude_login['method'] or '로그인'})으로 부릅니다."
             self.stages["preflight"] = _stage("ok" if not self.ai_block else "partial", note)
+        if cfg.savings_enabled and not self.on_demand:
+            self.audit["ai_settings"].update(analysis_model=cfg.review_model if self.selection_review else cfg.analysis_model, effort="medium")
         if self.runner is None:
             self.runner = FakeRunner() if self.dry_run else ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                                                  model=cfg.claude_model, effort=cfg.claude_effort,
+                                                                                  model=(cfg.review_model if self.selection_review else cfg.analysis_model) if cfg.savings_enabled and not self.on_demand else cfg.claude_model, effort="medium" if cfg.savings_enabled and not self.on_demand else cfg.claude_effort,
                                                                                   cancel_check=self._check_cancel)
             if not self.dry_run:
                 # 이슈 정합성 점검·새 댓글 분석은 입력이 작아 따로 정한 모델로 부른다 (REQ-QAINTEL-030 순서 6, REQ-DAILY-016 5번).
                 for kind, model in ((ISSUE_AUDIT, cfg.intelligence.audit_model), (COMMENT, cfg.intelligence.comment_model)):
                     self.kind_runners[kind] = ClaudeRunner(cfg.claude_command, cfg.claude_token, cfg.task_timeout_seconds,
-                                                           model=model, effort=cfg.claude_effort, cancel_check=self._check_cancel)
+                                                           model=cfg.review_model if self.selection_review else model, effort="medium" if cfg.savings_enabled else cfg.claude_effort, cancel_check=self._check_cancel)
                 self.audit["audit_model"] = cfg.intelligence.audit_model
                 self.audit["comment_model"] = cfg.intelligence.comment_model
 
@@ -588,9 +738,29 @@ class _Run:
             base_path = self.snapshots.previous(kind, current.stem)
         previous = self.snapshots.load(base_path)
         self.basis[kind] = base_path.stem if base_path is not None else ""
+        self._record_coverage(kind, self.basis[kind], current.stem)
         if kind == snapshots.KIND_SRS:
             return SrsCollection(items=items, previous=previous, diff=diff_snapshots(previous, items))
         return IssueCollection(items=items, previous=previous, previous_collected_at=self.snapshots.meta(base_path).get("collected_at", ""))
+
+    def _record_coverage(self, kind, start, end):
+        if not self.cfg.savings_enabled or self.on_demand:
+            return
+        requested_start = self.since.isoformat() if self.since else start
+        requested_end = self.until.isoformat() if self.until else self.run_date
+        warnings = []
+        if not start:
+            warnings.append('비교 기준 자료가 없어 이전 변경을 확인할 수 없습니다.')
+        elif requested_start and start > requested_start:
+            warnings.append(f'{requested_start} ~ {start} 사이의 변경을 확인할 기준 자료가 없습니다.')
+        if end < requested_end:
+            warnings.append(f'{end} 이후 ~ {requested_end} 자료가 없어 해당 기간 변경을 확인하지 못했습니다.')
+        self.audit.setdefault('coverage', {})[kind] = dict(start=start, end=end,
+            requested_start=requested_start, requested_end=requested_end, warnings=warnings)
+        key = 'collect_srs' if kind == snapshots.KIND_SRS else 'collect_issues'
+        stage = self.stages.setdefault(key, _stage('ok', '저장 자료 비교'))
+        if warnings:
+            stage.update(status='partial', note=' '.join(warnings))
 
     def _collect_srs(self, client):
         self._progress("collect_srs", "SRS 수집")
@@ -612,6 +782,7 @@ class _Run:
             note = "dry-run: 스냅샷을 저장하지 않았습니다"
         self.stages["collect_srs"] = _stage("ok", note, total=len(result.items), added=len(diff.added),
                                             removed=len(diff.removed), modified=len(diff.modified))
+        self._record_coverage(snapshots.KIND_SRS, self.basis[snapshots.KIND_SRS], self.run_date)
         return result
 
     def _collect_issues(self, client):
@@ -640,10 +811,29 @@ class _Run:
             notes.append("dry-run: 스냅샷을 저장하지 않았습니다")
         self.stages["collect_issues"] = _stage("ok", " · ".join(notes), total=len(result.items),
                                                comments_fetched=result.comments_fetched, comments_failed=len(result.comments_failed))
+        self._record_coverage(snapshots.KIND_ISSUES, self.basis[snapshots.KIND_ISSUES], self.run_date)
         return result
 
     def _tc_index(self):
         self._progress("tc_index", "TC 색인")
+        if self.cfg.savings_enabled and not self.on_demand:
+            from app.modules.daily_qa import workflow_settings
+            paths = workflow_settings.checklist_paths(self.inputs, self.profile)
+            options, errors = workflow_settings.versions(paths)
+            self.verification_sheet = workflow_settings.selected(self.store, self.cfg.slug, options)
+            rows, row_errors = workflow_settings.selected_rows(paths, self.verification_sheet)
+            errors += row_errors
+            self.audit['verification_sheet'] = self.verification_sheet
+            if errors and self.trigger == 'collect':
+                # 수집만 하는 실행은 시트를 못 읽어도 부분 실패가 아니다. AI 차단·preflight 변경 없이 읽은 행만 쓴다 (REQ-ALMCHG-001).
+                # 읽은 행은 SRS 삭제 결과(REQ-QAINTEL-028)에 필요하므로 계속 돌려준다.
+                self.stages['tc_index'] = _stage('skipped', '; '.join(errors), rows=len(rows))
+                return rows
+            self.stages['tc_index'] = _stage('failed' if errors else 'ok', '; '.join(errors), rows=len(rows))
+            if errors:
+                self.ai_block = self.ai_block or 'tc_version'
+                self.stages['preflight'] = _stage('partial', '; '.join(errors))
+            return rows
         tc_rows, tc_errors = build_index(self.inputs.tc_paths)
         if not self.inputs.tc_paths:
             self.stages["tc_index"] = _stage("failed", "수집된 TC 파일이 없습니다. 지식 폴더 동기화를 확인하세요.")
@@ -713,6 +903,7 @@ class _Run:
             self.detected_events.extend(kind_events)
             stored[kind] = len(ids)
             self.stored_event_ids.extend(ids)
+            self._defer_while_off(rows)
             # 이미 있던 이벤트(같은 기준으로 다시 돈 실행, 기간 실행이 이미 아는 끝 상태)는 새 이벤트로 세지 않는다.
             self.new_events.extend(event for event, row in zip(kind_events, rows) if row.get("id"))
         if not self.dry_run:
@@ -731,6 +922,77 @@ class _Run:
                                        stored=sum(stored.values()), detected=len(self.detected_events),
                                        **{f"type_{key}": value for key, value in by_type.items()})
         self.audit["events"] = by_type
+
+    def _send_change_mail(self) -> None:
+        """수집·저장 직후 변경 리포트 메일을 보낸다. AI 분석을 기다리지 않고, 실패해도 실행 결과를 바꾸지 않는다 (REQ-ALMCHG-004)."""
+        if (self.trigger not in ("scheduled", "collect") or self.dry_run or self.since is not None or self.until is not None
+                or not self.cfg.change_report.enabled):
+            return
+        from app.modules.daily_qa import change_mail
+
+        from app.modules.daily_qa.scheduled_jobs import schedule_settings
+
+        cfg, key = self.cfg, self.cfg.state_key("change_mail_date")
+        since = self.basis.get(snapshots.KIND_ISSUES) or self.basis.get(snapshots.KIND_SRS) or ""
+        self.change_mail = {"status": "skipped", "reason": "", "since": since, "until": self.run_date}
+        compared = False     # 기록을 비교했는가. 비교한 메일만 오늘 기록을 메일 기준 기록으로 남긴다
+        try:
+            if not schedule_settings().get("enabled", True):
+                self.change_mail["reason"] = "자동 실행이 꺼져 있어 보내지 않았습니다."
+                return
+            if self.store.get_state(key, "") == self.run_date:
+                self.change_mail["reason"] = "오늘 이미 변경 리포트 메일을 보냈습니다."
+                return
+            url = change_mail.page_url(cfg, cfg.product, since or self.run_date, self.run_date)
+            failed = any((self.stages.get(name) or {}).get("status") in ("failed", "skipped") for name in ("collect_srs", "collect_issues"))
+            if failed:
+                subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="collect_failed", url=url)
+            elif not since:
+                subject, text, body = change_mail.build_change_failure_email(cfg.product, self.stages, kind="baseline", url=url)
+            else:
+                subject, text, body, built = change_mail.compose_for_period(
+                    cfg, self.store, self.snapshots, since, self.run_date, mail_base=change_mail.mail_base_paths(cfg))
+                if not built.issues and not built.srs and not cfg.change_report.send_when_empty:
+                    self.change_mail["reason"] = "변경이 없어 보내지 않았습니다."
+                    self._keep_mail_base()
+                    return
+            compared = not failed
+            result = (self.mail_sender or _default_sender)(subject, text, body, cfg.email_to)
+            status = str(result.get("status", "")) if isinstance(result, dict) else ""
+            if status == "disabled":   # --no-email 처럼 발송을 끈 실행: 실패가 아니고 그날의 진짜 메일을 막지도 않는다
+                self.change_mail["reason"] = "메일 끔"
+                return
+            self.change_mail["status"] = status if status in ("sent", "failed", "not_configured") else "failed"
+            if status == "failed" and isinstance(result, dict):
+                self.change_mail["reason"] = str(result.get("error", ""))
+        except Exception as exc:  # noqa: BLE001 - 메일 실패가 수집·분석을 막지 않는다
+            logger.warning("change_mail_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+            self.change_mail.update(status="failed", reason=type(exc).__name__)
+        try:
+            self.store.set_state(key, self.run_date)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("change_mail_state_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+        if compared:
+            self._keep_mail_base()
+
+    def _keep_mail_base(self) -> None:
+        """다음 자동 메일이 이어서 비교할 기록을 남긴다. 같은 날 다시 수집해 그날 기록이 덮어써져도
+        아침 메일 뒤의 변경이 다음 메일에 실린다 (REQ-ALMCHG-004). 실패해도 실행 결과를 바꾸지 않는다."""
+        from app.modules.daily_qa import change_mail
+
+        try:
+            change_mail.keep_mail_base(self.cfg, self.snapshots, self.run_date)
+        except OSError as exc:
+            logger.warning("change_mail_base_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+
+    def _defer_while_off(self, rows) -> None:
+        """자동 분석이 꺼진 동안 자동 실행이 저장한 새 이벤트는 밀린 변경으로 둔다 (REQ-ALMCHG-005)."""
+        if self.trigger not in ("scheduled", "collect") or automation_policy.get_policy(self.store, self.cfg.slug)["mode"] != "off":
+            return
+        deferred = [row["id"] for row in rows if row.get("id") and row.get("analysis_required")]
+        if deferred:
+            self.store.update_events(deferred, "deferred")
+            self.deferred_events += len(deferred)
 
     def _import_legacy_pending(self) -> None:
         """개편 전에 미뤄 둔 사양 변경(`spec_change_pending`)을 대기 이벤트로 바꾼다 (REQ-QAINTEL-006 참고)."""
@@ -782,6 +1044,8 @@ class _Run:
 
     # -- AI 분석 -----------------------------------------------------------------
     def _target_events(self) -> list[dict]:
+        if self.trigger == "deferred":
+            return self._take_deferred()
         if self.on_demand_events is not None:
             return self.on_demand_events
         if self.dry_run:
@@ -809,11 +1073,27 @@ class _Run:
 
     def _analyses(self, client, srs_items, issue_items, tc_rows) -> None:
         self._progress("prepare_ai", "AI 분석 준비")
+        if self.trigger == 'collect':
+            reason = '자동 분석 꺼짐' if self.collect_reason == 'policy_off' else '주간 모드의 분석일 아님'
+            self.stages["AI"] = _stage("skipped", f"수집만 실행 · AI 분석 없음 ({reason})")
+            return
+        if self.collection_only:
+            self._prepare_plan(srs_items, issue_items, tc_rows)
+            self.stages["AI"] = _stage("skipped", "수집 완료 · AI 미분석. 대상 목록에서 선택하세요.")
+            return
         events = self._target_events()
+        if self.cfg.savings_enabled and not self.on_demand and self.selected_keys is None:
+            events = self._events_with_completed(events)
         self._active_event_ids = [event["id"] for event in events if event.get("id")]
         grouped = group_targets(events)
         if not self.on_demand:
             self.merged_comments = merge_comment_targets(grouped)
+        for kind in grouped:
+            if (self.analysis_scope == 'spec' and kind != SPEC_COVERAGE) or (self.analysis_scope == 'issues' and kind == SPEC_COVERAGE):
+                grouped[kind] = {}
+            if self.selected_keys is not None:
+                grouped[kind] = {subject: values for subject, values in grouped[kind].items()
+                                 if f'{kind}:{subject}' in self.selected_keys}
         self.targets_found = sum(len(targets) for targets in grouped.values())
         if not self.targets_found:
             for kind in ANALYSIS_ORDER:
@@ -821,6 +1101,10 @@ class _Run:
             return
         corpus = self._corpus(srs_items, issue_items, tc_rows)
         known = corpus.known()
+        from app.modules.daily_qa import target_reuse
+        if self.cfg.savings_enabled and self.workspace is not None:
+            self.reuse_context = target_reuse.context(corpus, self.workspace, self.cfg, self.verification_sheet,
+                                                     {kind: self._answers(self._skill(kind)) for kind in ANALYSIS_ORDER})
         self.audit["result_cache_corpus"] = result_cache.corpus_digest(corpus)
         if any(item.get("comments_error") or item.get("comments_deferred") for item in issue_items):
             self.audit["result_cache_unreadable"] = True
@@ -836,6 +1120,8 @@ class _Run:
                         self.audit["result_cache_unreadable"] = True
                     saved = (issues_by_id.get(issue_id) or {}).get("comments") or []
                     comments = [comment for comment in saved if comment.get("text")][-20:]
+                elif target_reuse.digest(comments) != target_reuse.digest(((issues_by_id.get(issue_id) or {}).get('comments') or [])[-20:]):
+                    self.audit['result_cache_unreadable'] = True
                 comment_cache[issue_id] = comments
             return comment_cache[issue_id]
 
@@ -847,20 +1133,40 @@ class _Run:
                 self.stages[kind] = _stage("skipped", "대상 없음")
                 continue
             items, item_events = [], {}
+            self.scope_targets['spec' if kind == SPEC_COVERAGE else 'issues'] += len(targets)
             for entity_id, target_events in targets.items():
                 event_ids = [event["id"] for event in target_events if event.get("id")]
+                if self.cfg.savings_enabled and not self.on_demand and self.ai_block in ('', 'token', 'limit') and not corpus.unreadable_documents:
+                    key = target_reuse.key(self.cfg.slug, kind, entity_id, target_events, self.reuse_context)
+                    self.target_keys[(kind, entity_id)] = key
+                    cached = None if self.selection_review or self.audit.get('result_cache_unreadable') else target_reuse.load(
+                        self.store.storage, key, self.cfg.slug, kind, entity_id)
+                    if cached:
+                        self.target_reused.append({**cached, 'kind': kind, 'subject': entity_id})
+                        if not self.dry_run:
+                            self.store.storage.qa_link_results(self.run_id, cached['finding_ids'], kind, entity_id)
+                            self.store.mark_analysis(event_ids, kind, 'done', self.run_id, finding_ids=cached['finding_ids'])
+                            if kind == FIXED_ISSUE and self.merged_comments.get(entity_id):
+                                self.store.mark_analysis(self.merged_comments[entity_id], COMMENT, 'done', self.run_id,
+                                                         finding_ids=cached['finding_ids'])
+                        continue
                 item = build_item(AnalysisTarget(kind, entity_id, event_ids, target_events), corpus, known, self.cfg,
-                                  comments_loader=comments_loader, with_tc=bool(self.on_demand),
+                                  comments_loader=comments_loader, with_tc=self._tc_mode,
                                   latest_analysis_loader=lambda subject: self.store.latest_issue_analysis(
                                       subject, self.cfg.slug, exclude_run_id=self.run_id))
                 if item is None:
-                    if not self.dry_run and self.until is None and not self.on_demand:
+                    if not self.dry_run and self.until is None and not self.on_demand and self.trigger != "deferred":
+                        # 밀린 변경은 지우지 않는다. 대상이 스냅샷에 없어도 밀린 변경으로 남는다 (REQ-ALMCHG-005).
                         self.store.update_events(event_ids, "abandoned", self.run_id, error="대상이 오늘 스냅샷에 없습니다")
                     continue
+                if self.cfg.savings_enabled and not self.on_demand:
+                    item['verification_sheet'] = self.verification_sheet
+                    item['verification_mode'] = True
                 items.append(item)
                 item_events[entity_id] = event_ids
             if not items:
-                self.stages[kind] = _stage("skipped", "대상이 오늘 스냅샷에 없어 분석을 포기했습니다.")
+                reused = sum(item['kind'] == kind for item in self.target_reused)
+                self.stages[kind] = _stage("ok" if reused else "skipped", "기존 결과 사용" if reused else "분석할 대상 없음", reused=reused)
                 continue
             if self.ai_block or self.limit is not None:
                 self._blocked_stage(kind, len(items))
@@ -877,12 +1183,16 @@ class _Run:
             overflow = len(tasks) - len(selected)
             planned.append((kind, selected, item_events, overflow))
         self.ai_total = sum(len(selected) for _, selected, _, _ in planned)
+        if self.cfg.savings_enabled and not self.on_demand:
+            # Give both scopes a turn; older issue work must not starve behind daily new issues.
+            planned.sort(key=lambda item: (item[0] != SPEC_COVERAGE,
+                min((event_id for ids in item[2].values() for event_id in ids), default=0)))
         self._progress("ai", "AI 분석")
         for kind, selected, item_events, overflow in planned:
             if self.limit is not None:
                 self._blocked_stage(kind, len(selected))
                 continue
-            if self.on_demand:
+            if self._tc_mode:
                 self._write_context(srs_items, tc_rows, self.inputs.manuals)
             else:
                 self._write_context(srs_items, [], {})
@@ -905,7 +1215,88 @@ class _Run:
 
     def _skill(self, kind: str) -> str:
         """자동 실행은 가벼운 Skill, 버튼 요청은 TC 를 보는 Skill 이다."""
+        if self.cfg.savings_enabled and not self.on_demand and kind == SPEC_COVERAGE:
+            return ON_DEMAND_SKILLS[kind]
         return ON_DEMAND_SKILLS[kind] if self.on_demand and kind in ON_DEMAND_SKILLS else ANALYSIS_SKILLS[kind]
+
+    @property
+    def _tc_mode(self):
+        return bool(self.on_demand or self.cfg.savings_enabled)
+
+    def _events_with_completed(self, events):
+        existing = {event.get('fingerprint') for event in events}
+        # 이미 밀린 변경(deferred)이나 포기(abandoned)로 저장된 변경은 같은 날 다시 수집돼도 자동 분석에 다시 넣지 않는다.
+        # 같은 지문이 다시 만들어져도 저장 쪽이 무시하므로 id 없는 사본이 분석되는 일을 막는다 (REQ-ALMCHG-005).
+        held = {event.get('fingerprint') for event in self.store.list_events(product=self.cfg.slug, statuses=('deferred', 'abandoned'))}
+        return [*events, *[event.as_dict() for event in self.detected_events
+                          if event.analysis_required and event.fingerprint not in existing and event.fingerprint not in held]]
+
+    def _prepare_plan(self, srs_items, issue_items, tc_rows):
+        from app.modules.daily_qa import execution_plan, target_reuse
+        from app.modules.daily_qa.workspace import SKILLS_SOURCE
+        events = self._events_with_completed(self._target_events())
+        grouped = group_targets(events)
+        merge_comment_targets(grouped)
+        titles = {row['id']: row.get('title', '') for row in [*srs_items, *issue_items]}
+        targets = [{'key': f'{kind}:{subject}', 'kind': kind, 'subject': subject, 'title': titles.get(subject, '')}
+                   for kind, items in grouped.items() for subject in items
+                   if self.analysis_scope == 'all' or (kind == SPEC_COVERAGE) == (self.analysis_scope == 'spec')]
+        corpus = self._corpus(srs_items, issue_items, tc_rows)
+        context = target_reuse.context(corpus, self.workspace, self.cfg, self.verification_sheet,
+                                      {kind: self._answers(self._skill(kind)) for kind in ANALYSIS_ORDER}) if self.workspace else ''
+        for target in targets:
+            key = target_reuse.key(self.cfg.slug, target['kind'], target['subject'], grouped[target['kind']][target['subject']], context)
+            source = target_reuse.load(self.store.storage, key, self.cfg.slug, target['kind'], target['subject']) if context and self.ai_block in ('', 'token', 'limit') and not corpus.unreadable_documents else None
+            target.update(state='reused' if source else 'pending', source=source)
+        paths = [self.cfg.snapshot_dir, self.cfg.root / 'data/product_knowledge' / self.cfg.slug,
+                 self.cfg.root / 'config/products', SKILLS_SOURCE,
+                 self.rules_state.guide_path, self.rules_state.prompt_path, *self.inputs.tc_paths]
+        plan = execution_plan.create(self.store.storage, self.cfg.slug, targets,
+            {'events': events, 'srs': srs_items, 'issues': issue_items, 'context': context}, [path for path in paths if path],
+            execution_plan.policy(self.cfg, self.verification_sheet), scope=self.analysis_scope,
+            basis={**self.basis, **self.audit.get('period', {}), 'version': self.verification_sheet,
+                   'coverage': self.audit.get('coverage', {})})
+        self.plan_id = plan['id']
+        self.targets_found = len(targets)
+
+    def _execute_selection(self):
+        from app.modules.daily_qa import execution_plan
+        if not self.cfg.savings_enabled:
+            raise ValueError('대상 선택 실행은 절약 모드에서만 사용할 수 있습니다.')
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        selection = self.store.storage.qa_claim_selection(self.selection_id, self.cfg.slug)
+        if selection is None:
+            raise ValueError('이미 사용했거나 유효하지 않은 선택입니다.')
+        self.selection_review = selection.get('review', False)
+        self._preflight()
+        tc_rows = self._tc_index()
+        try:
+            plan = execution_plan.validate(self.store.storage.qa_get_plan(selection['plan_id'], self.cfg.slug),
+                                           self.cfg.slug, execution_plan.policy(self.cfg, self.verification_sheet))
+        except ValueError as exc:
+            self.stages['selection'] = _stage('failed', str(exc))
+            return self._finish()
+        self.selected_keys = set(selection['keys'])
+        self.plan_id = plan['id']
+        self.on_demand_events = plan['data']['events']
+        self.analysis_scope = plan['scope']
+        self.basis = plan['basis']
+        self.audit['coverage'] = plan['basis'].get('coverage', {})
+        self.audit['period'] = {key: plan['basis'][key] for key in ('since', 'until') if key in plan['basis']}
+        from app.modules.daily_qa import target_reuse
+        corpus = self._corpus(plan['data']['srs'], plan['data']['issues'], tc_rows)
+        current = target_reuse.context(corpus, self.workspace, self.cfg, self.verification_sheet,
+                                      {kind: self._answers(self._skill(kind)) for kind in ANALYSIS_ORDER}) if self.workspace else ''
+        if not current or current != plan['data'].get('context'):
+            self.stages['selection'] = _stage('failed', '자료·지침 또는 질문 답변이 바뀌었습니다. 대상을 다시 준비하세요.')
+            return self._finish()
+        self.stages['collect_srs'] = self.stages['collect_issues'] = _stage('ok', '준비한 동일 자료 사용')
+        for kind, coverage in self.audit['coverage'].items():
+            self.stages['collect_srs' if kind == snapshots.KIND_SRS else 'collect_issues'] = _stage(
+                'partial' if coverage['warnings'] else 'ok', ' '.join(coverage['warnings']) or '준비한 동일 자료 사용')
+        self._analyses(None, plan['data']['srs'], plan['data']['issues'], tc_rows)
+        self._draft_excel()
+        return self._finish()
 
     def _answers(self, skill: str) -> list[dict]:
         """이 제품 질문의 답변. 이름을 바꾼 Skill 의 옛 답변도 넣는다 (REQ-DAILY-009 4번, REQ-QAINTEL-023)."""
@@ -948,8 +1339,14 @@ class _Run:
         outcomes = []
         self._partial_outcomes = outcomes
         for task in self._until_limit(selected):
+            if self.call_budget_exhausted:
+                break
             self._progress("ai", "AI 분석")
-            outcome = self._run_task(task, known, kind)
+            try:
+                outcome = self._run_task(task, known, kind)
+            except execution_budget.BudgetExhausted:
+                self.call_budget_exhausted = True
+                break
             outcomes.append(outcome)
             if outcome.limit is None:
                 self.ai_done += 1
@@ -971,29 +1368,61 @@ class _Run:
         limit = None
         self._check_cancel()
         runner = self.kind_runners.get(kind) or self.runner
+        if self.cfg.savings_enabled and not self.on_demand:
+            from app.modules.daily_qa.rule_context import guide_context
+            try:
+                guide_context(task, workspace, strict=True)
+            except ValueError as exc:
+                entry.update(status='failed', rule_error=str(exc))
+                self.audit['tasks'].append(entry)
+                return _TaskOutcome(task, False, error=str(exc))
         kind_model = {ISSUE_AUDIT: self.cfg.intelligence.audit_model, COMMENT: self.cfg.intelligence.comment_model}.get(kind, "")
-        model = getattr(runner, "model", None) or kind_model or self.cfg.claude_model
-        effort = getattr(runner, "effort", None) or self.cfg.claude_effort
+        default_model = (self.cfg.review_model if self.selection_review else kind_model or self.cfg.analysis_model) if self.cfg.savings_enabled and not self.on_demand else kind_model or self.cfg.claude_model
+        model = getattr(runner, "model", None) or default_model
+        effort = getattr(runner, "effort", None) or ('medium' if self.cfg.savings_enabled and not self.on_demand else self.cfg.claude_effort)
         cache_key = None
         cache_source = None
-        if (self.cfg.result_cache_enabled and not self.dry_run and not self.audit.get("result_cache_unreadable")
+        if (self.cfg.result_cache_enabled and not self.selection_review and not self.dry_run and not self.audit.get("result_cache_unreadable")
                 and kind and task.skill in ANALYSIS_SKILL_NAMES and model and effort):
             try:
                 cache_key = result_cache.fingerprint(task, workspace, self.cfg.slug, kind, self.on_demand, model, effort,
                                                      {"axes": self.profile.regression_axes, "checklist": self.profile.checklist,
                                                       "corpus": self.audit.get("result_cache_corpus", "")})
                 hit = result_cache.load(self.store.storage, cache_key, result_path, task, kind, known,
-                                        tuple(self.profile.regression_axes), bool(self.on_demand), entry)
+                                        tuple(self.profile.regression_axes), self._tc_mode, entry)
                 if hit is not None:
                     checked, cache_source = hit
+                    if self.cfg.savings_enabled and not self.on_demand:
+                        from app.modules.daily_qa.completion import missing_reviews
+                        if missing_reviews(checked, kind, tuple(self.profile.regression_axes)):
+                            checked, cache_source = None, None
             except (OSError, ValueError, TypeError) as exc:
                 cache_key = None
                 entry["cache_error"] = f"input: {type(exc).__name__}"
         self._check_cancel()
-        for attempt in (() if checked is not None else (1, 2)):
+        attempts = (1,) if self.cfg.savings_enabled else (1, 2)
+        for attempt in (() if checked is not None else attempts):
             self._check_cancel()
             result_path.unlink(missing_ok=True)
-            outcome = runner.run(task, workspace)
+            ticket = None
+            if self.cfg.savings_enabled and not self.dry_run:
+                reading_now = self._usage_now()
+                allowed, reason = execution_budget.may_call(reading_now, self.cfg, datetime.now(timezone.utc))
+                if not allowed:
+                    self._stop_for_usage(reason, reading_now)
+                    raise execution_budget.BudgetExhausted()
+                ticket = execution_budget.reserve_call(self.store.storage, self.run_id, self.cfg.slug, datetime.now(claude_limits.KST))
+            try:
+                outcome = runner.run(task, workspace)
+            except BaseException:
+                if ticket:
+                    execution_budget.finish_call(self.store.storage, ticket, {})
+                raise
+            if ticket:
+                # 메일의 대상별 사용량(REQ-QAINTEL-048)이 읽도록 모델·분석 종류·대상 번호를 호출 기록에 함께 남긴다.
+                execution_budget.finish_call(self.store.storage, ticket, {
+                    **(outcome.meta or {}), "model": model, "kind": kind or "",
+                    "targets": [item.get("target") for item in task.payload.get("items") or [] if item.get("target")]})
             self.claude_calls += 0 if self.dry_run or (outcome.meta or {}).get("cli_started") is False else 1
             self._add_usage(outcome.meta)
             entry[f"attempt{attempt}"] = {"ok": outcome.ok, "seconds": round(outcome.seconds, 1), "error": outcome.error[:300], "meta": outcome.meta}
@@ -1038,7 +1467,7 @@ class _Run:
             data = finding.model_dump()
             if task.skill in ANALYSIS_SKILL_NAMES and kind:
                 validated, reason = validate_finding(data, kind, known, targets, tuple(self.profile.regression_axes),
-                                                     tc_mode=bool(self.on_demand))
+                                                     tc_mode=self._tc_mode)
                 if validated is None:
                     if reason == "not_significant":
                         not_significant += 1
@@ -1053,6 +1482,9 @@ class _Run:
                                           if item.get("target") == data["subject"]), [])
                 if cache_source is not None:
                     data["sections"]["result_cache"] = cache_source
+                if self.cfg.savings_enabled:
+                    data['sections']['analysis_provenance'] = {'model': model, 'effort': effort,
+                        'verification_sheet': self.verification_sheet, 'rule_files': self.audit.get('rule_files', {})}
             dedupe = task.skill in (SKILL_COVERAGE, SKILL_TC_DRAFT) or task.skill not in ANALYSIS_SKILL_NAMES
             finding_id = self.findings_box.save(self.run_id, task.skill, task.task_id, data, dedupe=dedupe)
             if finding_id:
@@ -1064,22 +1496,48 @@ class _Run:
             self.question_count += 1
         entry.update({"status": "ok", "accepted": sum(len(ids) for ids in saved.values()), "rejected": rejected,
                       "not_significant": not_significant, "gate_status": checked.result.gate_status})
+        from app.modules.daily_qa.completion import missing_reviews
+        missing = missing_reviews(checked, kind, tuple(self.profile.regression_axes)) if self.cfg.savings_enabled and not self.on_demand else []
         if cache_source is not None:
             entry["result_cache"] = cache_source
             self.result_cache["hits"] += 1
             self.result_cache["reused_findings"] += sum(len(ids) for ids in saved.values())
             if cache_source not in self.result_cache["sources"]:
                 self.result_cache["sources"].append(cache_source)
-        elif cache_key and outcome.ok and not rejected and saved and result_cache.eligible(
-                checked, task, kind, known, tuple(self.profile.regression_axes), bool(self.on_demand)):
+        elif cache_key and outcome.ok and not rejected and not missing and saved and result_cache.eligible(
+                checked, task, kind, known, tuple(self.profile.regression_axes), self._tc_mode):
             source = {"run_id": self.run_id, "task_id": task.task_id,
                       "finding_ids": [value for ids in saved.values() for value in ids]}
             result_cache.save(self.store.storage, cache_key, checked, source, entry)
         self.audit["tasks"].append(entry)
         outcome = _TaskOutcome(task, True, finding_ids=saved)
+        if self.cfg.savings_enabled and not self.on_demand:
+            complete = not missing and result_cache.eligible(checked, task, kind, known, tuple(self.profile.regression_axes), self._tc_mode)
+            entry['missing_reviews'] = missing
+            outcome.completed_targets = set(saved) if complete else set()
+            outcome.ok = complete
+            if not complete:
+                outcome.error = '필수 검토·근거·출력 확인이 남아 있습니다. 결과는 보존하고 완료로 처리하지 않습니다.' + (' ' + ', '.join(missing[:5]) if missing else '')
+            if complete and not self.audit.get('result_cache_unreadable'):
+                from app.modules.daily_qa import target_reuse
+                for subject, ids in saved.items():
+                    fingerprint = self.target_keys.get((kind, subject))
+                    if fingerprint:
+                        target_reuse.save(self.store.storage, fingerprint, ids, model)
         outcome.cache_hit = cache_source is not None  # type: ignore[attr-defined]
         outcome.rejected = len(rejected)  # type: ignore[attr-defined]
         return outcome
+
+    def _stored_results(self, category: str) -> list[dict]:
+        """이번 실행에 연결된 결과 목록(메일의 확인할 이슈·사양). 화면 검색과 같은 저장소 조회를 쓴다."""
+        results, page = [], 1
+        while True:
+            found = self.store.storage.qa_search_findings(self.cfg.slug, category=category, run_id=self.run_id, page=page)
+            results.extend({key: row.get(key) for key in ('id', 'subject', 'subject_title', 'reporter_id', 'reporter_name',
+                'issue_updated_at', 'verdict', 'analysis_type')} for row in found['items'])
+            if not found['items'] or len(results) >= found['total']:
+                return results
+            page += 1
 
     def _add_usage(self, meta: dict | None) -> None:
         """작업 한 번의 Claude 사용량을 더한다. 실패한 시도도 이미 쓴 토큰은 센다."""
@@ -1095,19 +1553,97 @@ class _Run:
         self.token_usage["cost_usd"] = round(self.token_usage["cost_usd"] + float((meta or {}).get("total_cost_usd") or 0), 6)
 
     def _hit_limit(self, limit: claude_limits.LimitInfo) -> None:
-        """한도를 기록하고, 세션 한도면 초기화 뒤 한 번 다시 돌도록 적는다 (REQ-QAINTEL-025)."""
+        """한도를 기록하고, 초기화 시각을 알면 그 뒤 이어 하도록 적는다 (REQ-QAINTEL-025·049)."""
         self.limit = limit
         limit.run_id = self.run_id
         self.store.set_state(self.cfg.state_key(STATE_CLAUDE_LIMIT), claude_limits.dump(limit))
         logger.warning("qa_agent_claude_limit product=%s kind=%s reset=%s", self.cfg.slug, limit.kind, limit.reset_at or "-")
         if not self.dry_run:
-            capture_limit_evidence(limit, self.cfg)
-        intel = self.cfg.intelligence
-        if limit.kind == claude_limits.KIND_SESSION and limit.reset_at:
-            reset = datetime.fromisoformat(limit.reset_at)
-            if reset - self.today.astimezone(timezone.utc) <= timedelta(hours=intel.catchup_max_hours):
-                after = reset + timedelta(minutes=intel.catchup_delay_minutes)
-                self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
+            self.evidence_files = list(capture_limit_evidence(limit, self.cfg) or [])
+        if limit.reset_at:
+            self._schedule_catchup(datetime.fromisoformat(limit.reset_at))
+
+    def _schedule_catchup(self, reset: datetime) -> None:
+        """한도가 풀린 뒤 대기분을 이어 하도록 시각(초기화 + 지연 분)을 적는다. 모든 멈춤에 적고 기간 제한은 없다(REQ-QAINTEL-049).
+
+        이어 하기 실행이 돌 대기분이 없으면 AI 호출은 0회다.
+        """
+        if self.trigger == "deferred":
+            return   # [밀린 변경 분석]은 한도에 걸려도 자동으로 이어 하지 않는다 (REQ-ALMCHG-005 6번)
+        if reset.tzinfo is None:
+            reset = reset.replace(tzinfo=timezone.utc)
+        after = reset + timedelta(minutes=self.cfg.intelligence.catchup_delay_minutes)
+        self.store.set_state(self.cfg.state_key(STATE_CATCHUP_AFTER), after.isoformat(timespec="seconds"))
+
+    def _usage_now(self) -> dict:
+        """호출 직전의 최신 사용률. 이번 실행의 마지막 호출이 돌려준 값을 먼저 쓰고, 없으면 실행 전 저장값을 쓴다."""
+        try:
+            reading = claude_usage.reading_for_run(self.run_id, self.store.storage, before=self.usage_before)
+        except Exception as exc:  # noqa: BLE001 - 사용률을 못 읽어도 호출은 막지 않는다
+            logger.warning("daily_qa_usage_unreadable run=%s error_type=%s", self.run_id, type(exc).__name__)
+            return {}
+        now: dict = {}
+        for window in claude_usage.WINDOWS:
+            source = reading["after"] if reading["after"].get(window) is not None else reading["before"]
+            now[window] = source.get(window)
+            now[f"{window}_resets_kst"] = source.get(f"{window}_resets_kst") or ""
+            # 이번 실행이 돌려받은 값(after)에는 측정 시각이 없다. 저장값(before)만 나이를 판단한다.
+            now[f"{window}_measured_at"] = source.get("measured_at") or "" if source is reading["before"] else ""
+        return now
+
+    def _alert_stop(self) -> None:
+        """한도나 사용률 기준으로 멈췄으면 관리자에게 한 통 알린다. 같은 한도 묶음에는 다시 보내지 않는다 (REQ-QAINTEL-049).
+
+        메일 설정이 없거나 발송이 실패해도 점검은 그대로 끝난다.
+        """
+        if self.dry_run:
+            return
+        limit, guard = self.limit, self.guard_stop
+        if limit is not None and limit.kind in (claude_limits.KIND_AUTH, claude_limits.KIND_CLI_MISSING):
+            limit = None
+        if limit is None and guard is None:
+            return
+        try:
+            from app.core import notifier
+            from app.core.config import get_settings
+
+            recipients = notifier.admin_recipients(get_settings())
+            if not recipients:
+                logger.info("daily_qa_limit_alert_skipped run=%s reason=관리자_주소_없음", self.run_id)
+                return
+            day = self.today.astimezone(claude_limits.KST).strftime("%Y%m%d")
+            if limit is not None:
+                title, reset = limit.label, limit.reset_kst()
+                episode = limit_evidence.episode_key(limit) + ("" if limit.reset_at else f":{day}")
+                detail = limit.describe()
+            else:
+                title, reset = f"Claude {guard['reason']}", guard["reset_kst"]
+                episode = f"USAGE:{guard['window']}:{reset or '-'}" + ("" if reset else f":{day}")
+                detail = f"{guard['reason']}로 새 호출을 멈췄습니다. 남은 대상은 대기로 남고 한도가 풀리면 자동으로 이어서 분석합니다."
+            reading = claude_usage.reading_for_run(self.run_id, self.store.storage, before=self.usage_before)
+            pending = len(self.store.list_events(product=self.cfg.slug, statuses=("pending", "failed", "limit")))
+            context = {"제품": self.cfg.product, "실행 번호": self.run_id, "남은 대기 건수": f"{pending}건",
+                       "증거 파일": ", ".join(self.evidence_files) or "없음",
+                       "이번 실행 호출": f"{reading['calls']}회", **_usage_lines(reading)}
+            notifier.notify(notifier.KIND_CLAUDE_USAGE_LIMIT, detail, context=context, storage=self.store.storage,
+                            recipients=recipients,
+                            subject=notifier.mail_subject(self.cfg.product, f"{title} · 초기화 {reset or '시각 미확인'}"),
+                            dedupe_key=episode)
+        except Exception as exc:  # noqa: BLE001 - 알림 실패가 점검을 멈추면 안 된다
+            logger.warning("daily_qa_limit_alert_failed run=%s error_type=%s", self.run_id, type(exc).__name__)
+
+    def _stop_for_usage(self, reason: str, reading_now: dict) -> None:
+        """사용률 기준에 닿아 새 호출을 멈춘다. 남은 대상은 대기로 남고, 초기화 뒤 이어 한다 (REQ-QAINTEL-043·049)."""
+        if self.guard_stop is not None:
+            return
+        window = "seven_day" if reason.startswith("주간") else "five_hour"
+        reset_kst = str(reading_now.get(f"{window}_resets_kst") or "")
+        self.guard_stop = {"reason": reason, "window": window, "five_hour": reading_now.get("five_hour"),
+                           "seven_day": reading_now.get("seven_day"), "reset_kst": reset_kst}
+        logger.warning("qa_agent_usage_guard product=%s reason=%s reset=%s", self.cfg.slug, reason, reset_kst or "-")
+        moment = report._kst_time(reset_kst)
+        if moment is not None:
+            self._schedule_catchup(moment.astimezone(timezone.utc))
 
     def _record_events(self, kind: str, outcomes: list[_TaskOutcome], item_events: dict[str, list[int]]) -> None:
         """분석 하나의 결과를 이벤트에 적는다. 한 이벤트의 분석이 여럿이면 분석마다 따로 끝난다 (REQ-QAINTEL-006).
@@ -1131,7 +1667,7 @@ class _Run:
                                                  error="합친 분석에서 이 이슈의 유효한 결과가 저장되지 않았습니다.", max_attempts=max_attempts)
                     elif outcome.ok:
                         self.store.mark_analysis(event_ids, analysis, "done", self.run_id, finding_ids=outcome.finding_ids.get(target, []))
-                    elif outcome.limit is not None:
+                    elif outcome.limit is not None or (self.cfg.savings_enabled and outcome.finding_ids):
                         # 한도는 이벤트 탓이 아니다. 실패 횟수를 올리지 않고 대기로 남긴다.
                         self.store.mark_analysis(event_ids, analysis, "limit", error=outcome.error)
                     else:
@@ -1159,6 +1695,8 @@ class _Run:
             note += f" · 첫 실패 이유: {first}"
         if overflow:
             note = (note + f" · 상한 초과로 {overflow}개 묶음 다음 실행으로 미룸").strip(" ·")
+            if self.cfg.savings_enabled and status == 'ok':
+                status = 'partial'
         if rejected:
             note = (note + f" · 규칙 위반으로 버린 Finding {rejected}건").strip(" ·")
         return _stage(status, note.strip(), tasks=len(selected), done=done, failed=failed, accepted=accepted, rejected=rejected,
@@ -1265,11 +1803,22 @@ class _Run:
             pending = [event["id"] for event in self.store.list_events(ids=self._active_event_ids)
                        if event["analysis_status"] in ("pending", "failed")]
             self.store.update_events(pending, "pending", error="사용자 중단으로 대기")
+        self.restore_deferred()   # 위에서 pending 으로 쓴 밀린 변경을 다시 밀린 변경으로 (순서에 기대지 않는다)
         summary = report.summarize(self.all_findings, self.question_count)
         summary.update({"product": self.cfg.slug, "trigger": self.trigger, "events": self.audit.get("events", {}),
                         "ai_settings": self.audit["ai_settings"], "claude_calls": self.claude_calls,
                         "token_usage": self.token_usage, "cancelled": cancellation,
                         "result_cache_hits": self.result_cache["hits"], "result_cache": self.result_cache})
+        summary["collection_only"] = self.collection_only
+        summary["run_kind"] = {"collect": "collect", "deferred": "deferred"}.get(self.trigger, "analysis")
+        summary["collect_reason"] = self.collect_reason
+        summary["deferred_events"] = self.deferred_events
+        if self.change_mail is not None:
+            summary["change_mail"] = self.change_mail
+        summary["call_budget_exhausted"] = self.call_budget_exhausted
+        summary['plan_id'] = self.plan_id
+        summary['prepared_targets'] = self.targets_found if self.collection_only else None
+        summary['verification_sheet'] = self.verification_sheet
         if self.rules_state is not None:
             summary["rules"] = self.rules_state.as_dict()
         self.audit["cancelled"] = cancellation
@@ -1345,8 +1894,29 @@ class _Run:
         else:
             status = "SUCCESS"
         summary = report.summarize(self.all_findings, self.question_count)
+        summary["collection_only"] = self.collection_only
+        summary["run_kind"] = {"collect": "collect", "deferred": "deferred"}.get(self.trigger, "analysis")
+        summary["collect_reason"] = self.collect_reason
+        summary["deferred_events"] = self.deferred_events
+        if self.change_mail is not None:
+            summary["change_mail"] = self.change_mail
+        summary["call_budget_exhausted"] = self.call_budget_exhausted
         summary["rules"] = self.rules_state.as_dict()
         summary["product"] = self.cfg.slug
+        summary['plan_id'] = self.plan_id
+        summary['verification_sheet'] = self.verification_sheet
+        summary['analysis_scope'] = self.analysis_scope
+        summary['savings_enabled'] = self.cfg.savings_enabled
+        summary['target_reused'] = self.target_reused
+        summary['scope_targets'] = self.scope_targets
+        summary['prepared_targets'] = self.targets_found if self.collection_only else None
+        summary['basis'] = self.basis
+        summary['period'] = self.audit.get('period', {})
+        summary['coverage'] = self.audit.get('coverage', {})
+        summary['usage_before'] = self.usage_before
+        if self.cfg.savings_enabled and not self.dry_run:
+            summary['issue_results'] = self._stored_results('issues')
+            summary['spec_results'] = self._stored_results('spec')
         summary["events"] = self.audit.get("events", {})
         summary["ai_settings"] = self.audit["ai_settings"]
         summary["claude_calls"] = self.claude_calls
@@ -1356,6 +1926,9 @@ class _Run:
         summary["trigger"] = self.trigger
         if self.limit is not None:
             summary["claude_limit"] = self.limit.as_dict()
+        if self.guard_stop is not None:
+            summary["usage_guard"] = dict(self.guard_stop)
+        self._alert_stop()
         if self.audit_summary is not None:
             summary["issue_audit"] = self.audit_summary
         remaining = self._remaining_audit(refresh=True)

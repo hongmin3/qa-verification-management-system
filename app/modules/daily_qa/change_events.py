@@ -80,7 +80,7 @@ ANALYSIS_LABELS = {
 
 CONTENT_FIELDS = ("title", "description")
 REPRODUCTION_FIELDS = ("reproduction_step",)
-METADATA_FIELDS = ("status", "severity", "occurred_versions", "target_versions", "linked_ids")
+METADATA_FIELDS = ("status", "severity", "occurred_versions", "target_versions", "linked_ids", "assignees")
 
 #: 진행 상태만 알리는 댓글. 제품 설정 `comment_noise_patterns` 는 이 목록에 더한다. 모양이 문장 전체와 맞아야 한다.
 DEFAULT_COMMENT_NOISE = (
@@ -222,8 +222,14 @@ def is_significant(comment: dict, min_chars: int, noise_patterns: tuple[str, ...
 # -- 이슈 --------------------------------------------------------------------
 
 
+#: 옛 스냅샷에는 없는 키. 양쪽에 다 있을 때만 비교한다(없던 값이 생긴 것을 변경으로 보지 않는다).
+COMPARE_WHEN_BOTH_HAVE = ("assignees",)
+
+
 def _changed(previous: dict, current: dict, names: tuple[str, ...]) -> list[str]:
-    return [name for name in names if collapse(previous.get(name)) != collapse(current.get(name))]
+    return [name for name in names
+            if not (name in COMPARE_WHEN_BOTH_HAVE and (name not in previous or name not in current))
+            and collapse(previous.get(name)) != collapse(current.get(name))]
 
 
 def _values(item: dict, names) -> dict:

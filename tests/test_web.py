@@ -19,7 +19,7 @@ def _nav_links(page: str) -> list[str]:
     return re.findall(r'href="([^"]+)"', match.group(1))
 
 
-FEATURE_MENU = ["/vxvue-chatbot", "/qa-agent", "/manual-review", "/knowledge", "/cost-dashboard", "/settings/ai"]
+FEATURE_MENU = ["/vxvue-chatbot", "/qa-agent", "/manual-review", "/knowledge", "/cost-dashboard", "/settings"]
 QA_AGENT_SUBSCREENS = ["/qa-agent/period", "/qa-agent/rules"]
 
 
@@ -27,7 +27,7 @@ def test_hub_links_to_qa_modules():
     response = TestClient(app).get("/")
     assert response.status_code == 200
     assert 'href="/manual-review"' in response.text
-    assert '<a class="app-card" href="/settings/ai">' in response.text
+    assert '<a class="app-card" href="/settings">' in response.text
 
 
 def test_hub_shows_top_menu_without_home_link():
@@ -51,7 +51,7 @@ def test_every_feature_page_shows_same_top_menu():
         "/cost-dashboard": ("/cost-dashboard", "/cost-dashboard/guide"),
         "/cost-dashboard/guide": ("/cost-dashboard", "/cost-dashboard/guide"),
         "/vxvue-chatbot/guide": ("/vxvue-chatbot", "/vxvue-chatbot/guide"),
-        "/settings/ai": ("/settings/ai", None),
+        "/settings": ("/settings", None),
     }
     for path, (active, guide) in pages.items():
         response = client.get(path)

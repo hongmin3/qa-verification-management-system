@@ -42,7 +42,9 @@ def test_mail_is_running_until_smtp_result_and_error_is_stored(env, monkeypatch)
     from app.modules.daily_qa import pipeline
     seen = []
 
-    def send(*_):
+    def send(subject, *_):
+        if "변경 리포트" in subject:      # 수집 직후 변경 리포트 메일은 AI 요약 메일 단계와 따로다
+            return {"status": "sent"}
         row = env["store"].list_runs(limit=1)[0]
         seen.append(row["status"])
         assert row["progress"]["phase"] == "email"

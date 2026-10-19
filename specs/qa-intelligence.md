@@ -7,7 +7,7 @@
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `qa-intelligence` |
 | Document Version | 0.1.0 |
-| Last Updated | 2026-09-30 |
+| Last Updated | 2026-10-16 |
 | Status | draft |
 
 이 문서는 `qa-verification-management-system`의 **QA Intelligence Agent** 기능이 어떻게 동작해야 하는가를 정의한다.
@@ -106,10 +106,11 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 - 사람이 요청할 때만: REQ-QAINTEL-016(기존 TC 검토), REQ-QAINTEL-032(검증 TC 초안), REQ-QAINTEL-034(매뉴얼 점검)
 - 결과 믿기: REQ-QAINTEL-017(근거 검증), REQ-QAINTEL-018(초안 Excel), REQ-QAINTEL-026(토큰 사용량 기록)
 - 결과 보기: REQ-QAINTEL-019(대시보드), REQ-QAINTEL-020(상세 화면), REQ-QAINTEL-033(결론 단계와 짧은 카드), REQ-QAINTEL-022(지식 문서 목록), REQ-QAINTEL-024(기간별 결과)
+- 변경 기록 받아 보기: AI 와 나눈 매일 수집, 기간 변경 목록, 변경 리포트 화면·메일, 밀린 변경 분석은 [ALM 변경 리포트 기능 사양](alm-change-report.md)(REQ-ALMCHG-001 ~ REQ-ALMCHG-005)에 있다
 
 ### REQ-QAINTEL-001 예약 실행과 공휴일 건너뛰기
 
-**하는 일** 제품별 자동 점검 모드(REQ-QAINTEL-038)에 맞춰 아침에 점검 프로세스를 띄운다. 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
+**하는 일** 매 업무일 아침 제품마다 점검 프로세스를 띄운다. 프로세스는 항상 수집까지 하고, AI 분석까지 할지는 자동 점검 모드(REQ-QAINTEL-038)가 정한다(REQ-ALMCHG-001). 주말과 대한민국 공휴일에는 띄우지 않고 로그만 남긴다.
 
 **언제** 앱 안의 예약 기능이 `config.yaml` 의 `daily_qa.schedule` 요일·시각(기본 `mon-fri`, `04:00`, 한국 시간)에 깨어난다.
 
@@ -157,7 +158,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 **순서**
 
 1. 제품 설정을 읽어 제품 프로필을 만든다. `alm` 절이 없으면 `config.yaml` 의 `daily_qa.polarion.project_id`·`srs_query`·`issue_query` 를 쓴다(예전 설정과 호환).
-2. 필드 이름을 적지 않은 항목은 Polarion 표준 필드 이름(`id`, `title`, `status`, `severity`, `description`, `created`, `updated`, `linkedWorkItems`, `comments`)을 쓴다. 제품 고유 필드(Legacy 번호, 연구소 결과, 재현 절차, 발생 원인, 조치 내용, 발생·목표 버전)는 제품 설정에 적은 것만 읽는다.
+2. 필드 이름을 적지 않은 항목은 Polarion 표준 필드 이름(`id`, `title`, `status`, `severity`, `description`, `created`, `updated`, `linkedWorkItems`, `comments`, `assignee`)을 쓴다. 제품 고유 필드(Legacy 번호, 연구소 결과, 재현 절차, 발생 원인, 조치 내용, 발생·목표 버전)는 제품 설정에 적은 것만 읽는다.
 3. 한 항목에 이름을 여러 개 적으면 앞에서부터 값이 있는 첫 필드를 쓴다.
 
    > **예시** VXvue 는 SRS 본문을 `[descriptionKR, description]` 으로 적는다. 한국어 본문이 없으면 `description` 을 쓴다.
@@ -178,8 +179,10 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 | 기록 | 필드 |
 |---|---|
 | SRS | `id`, `old_id`(Legacy 번호), `title`, `status`, `updated`, `is_category`, `text` |
-| 이슈 | `id`, `title`, `status`, `severity`, `rd_result`(공통 값), `rd_result_raw`, `description`, `reproduction_step`, `occurrence_cause`, `action_details`, `occurred_versions`, `target_versions`, `linked_ids`, `comment_ids`, `comments`, `created`, `updated` |
-| 댓글 | `id`, `created`, `text`(2000자까지) |
+| 이슈 | `id`, `title`, `status`, `severity`, `assignees`(담당자 사용자 번호 목록), `rd_result`(공통 값), `rd_result_raw`, `description`, `reproduction_step`, `occurrence_cause`, `action_details`, `occurred_versions`, `target_versions`, `linked_ids`, `comment_ids`, `comments`, `created`, `updated` |
+| 댓글 | `id`, `created`, `author`(작성자 사용자 번호), `text`(2000자까지) |
+
+> **참고** 담당자 관계가 응답에 아예 없으면 담당자를 모르는 것이라 `assignees` 키를 두지 않고, 그날은 담당자를 비교하지 않는다. 관계는 있는데 비어 있으면 담당자 없음(`[]`)이다.
 
 > **참고** SRS 기록의 필드 이름은 이전 스냅샷 파일과 같다. 그래서 개편 전에 저장한 스냅샷도 그대로 비교 기준으로 쓸 수 있다.
 
@@ -264,7 +267,7 @@ CATEGORY는 프로젝트 전체에서 이 문서만 쓴다. 한 번 부여한 ID
 | `ISSUE_ACTION_DETAILS_CHANGED` | 조치 내용이 바뀜 | 공통 값에 따라 다름 |
 | `ISSUE_COMMENT_ADDED` | 어제 없던 댓글이 생김 | 의미 있는 댓글이 있을 때만 |
 | `ISSUE_STATUS_ONLY_CHANGED` | 상태만 바뀌고 위 항목은 그대로 | 필요 없음 |
-| `ISSUE_METADATA_CHANGED` | 심각도·발생 버전·목표 버전·연결 항목이 바뀜 | 필요 없음 |
+| `ISSUE_METADATA_CHANGED` | 심각도·담당자·발생 버전·목표 버전·연결 항목이 바뀜 | 필요 없음 |
 | `ISSUE_REMOVED` | 어제 있었는데 오늘 조회되지 않음 | 필요 없음 |
 | `SRS_CREATED` | 새 SRS | 필요 |
 | `SRS_UPDATED` | SRS 비교 필드가 바뀜 | 필요 |
@@ -747,7 +750,7 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 1. 맨 위: 수동 업로드 지식 문서 목록(REQ-QAINTEL-022).
 2. 실행: 마지막 실행(시각·결과), 실행 결과 요약, 다음 자동 실행 시각(주말·공휴일 제외), [변경사항 점검하기] 버튼. 그 서버에서 예약을 껐으면(`daily_qa.schedule.enabled: false`) 다음 자동 실행 자리에 "예약 꺼짐 (이 서버는 자동 실행하지 않음)" 을 보인다.
 3. 오늘 변경 요약: 마지막 실행의 신규 이슈, Fixed(연구소 결과가 `FIXED` 로 바뀐 이슈), Spec(`SPEC`·`NOT_BUG` 로 바뀐 이슈), 댓글 추가, SRS 변경 수.
-4. 최신 분석 결과 카드: 결론 단계, 분석 종류, 대상 번호·제목, 한두 문장 요약, QA 할 일 3줄까지, [상세보기](REQ-QAINTEL-033). `문제 없음` 카드는 접어 둔다.
+4. 분석결과 구역: 검색·필터 한 줄과 결과 카드 목록. 필터와 카드 모양은 결과 페이지와 같고(REQ-QAINTEL-046), 이슈마다 가장 최근 결과 한 장씩 맨 위 50건만 보인다. 더 보려면 [전체 결과·검색]을 연다. 카드에는 결론 단계, 분석 종류, 대상 번호·제목, 두 줄 요약, QA 할 일 3줄까지, [상세보기](REQ-QAINTEL-033)가 있다. `문제 없음` 카드도 접지 않고 다른 카드와 같이 보인다. 설정(`daily_qa.savings.enabled`)이 켜져 있든 꺼져 있든 같은 목록이다.
 5. 최근 실행 목록: 실행마다 결과와 [점검 기록 보기] 링크.
 
 > **예시** `검토 필요 · 사양 변경 분석` / `[VP-516] Display X-ray Image` / "Reject 문구가 '영상 표시 마크' 표로 바뀌었다." / QA 할 일 ① Q/R 수신 영상 표시 확인 ② FTM 영상 확인
@@ -763,17 +766,80 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 
 ### REQ-QAINTEL-020 분석 상세 화면과 점검 기록 보기 화면
 
-**하는 일** Finding 하나의 결론과 할 일을 맨 위에 보이고, 분석 종류별 구획은 `자세히` 를 펼쳐야 보인다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
+**하는 일** 분석 결과 하나를 위에서 아래로 한 번에 읽는다. 이슈 원문과 분석 뒤에 바뀐 점을 먼저 보고, 그다음에 AI 판단과 QA 할 일을 본다. 탭은 없다. 실행 하나의 단계·이벤트·내려받을 파일도 본다.
 
-**화면 구성**
+> **예시** 수정 완료 이슈(VP-1000)의 화면은 이 순서로 읽힌다. 이름과 시각은 모두 지어낸 값이다.
 
-1. 맨 위 핵심 덩어리: 결론 단계, 판정 이름·신뢰도, 한두 문장 요약, 바뀐 사양(요구사항 5개까지), 근거 3개까지, QA 할 일 3줄까지.
-2. 같은 덩어리의 버튼: 사양 변경 분석이면 [기존 TC 검토], 수정 완료 이슈 분석이면 [검증 TC 초안 만들기]. 다른 분석에는 버튼이 없다.
-3. 맨 위의 `이 분석이 한 일`: 이슈 내용, 새로 생긴 일, 댓글별 해석, 확인한 자료·확인하지 못한 자료, 판단과 이유를 보인다. 댓글 원문·작성 시각·작성자 ID는 저장된 변경 이벤트에서 읽는다. 작성자가 없으면 `작성자 정보 없음`으로 보인다.
-4. 기존 결과에 확인 자료 구분이 없으면 그 사실과 분석 메모를 맨 위에 보인다. 옛 결과를 다시 분석하거나 저장 내용을 바꾸지 않는다.
-5. `자세히`: 아래 표의 구획, 칩, 근거 전체, 추가 확인사항, 근거 검증 기록, 변경 이벤트.
+```text
+[VP-1000] 동물용 Sequence 값이 그대로 전송됨                          원문 열기
+김예시 · 등록 2026-09-21 16:37 · 최근 업데이트 2026-10-14 18:09 · reviewed · 연구소 FIXED
+분석(2026-10-14 13:35) 이후 변경 1건 · 재분석 대기
+왜 분석했나: 2026-10-13 17:20 새 댓글
+이슈 본문: 재현 절차 ... / 발생 원인 ... / 조치 내용 ...
+AI 판단 (원인 설명과 수정이 사양에 맞는가): 요약 한 줄 · 판정 사양 미정의 · 신뢰도 확인 필요
+QA 할 일: 3개 이내
+댓글: 1) 2026-10-13 17:20 · 이예시 · 분석에 사용   2) 2026-10-14 18:09 · 이예시 · 분석 이후
+```
 
-| 분석 종류 | `자세히` 의 구획 |
+**화면 순서**
+
+| 순서 | 구획 | 내용 | 자료가 없을 때 |
+|---|---|---|---|
+| 1 | 머리 | `[번호] 제목`과 [원문 열기]. 둘째 줄을 크게 해서 작성자 이름, 등록일, 최근 업데이트, 상태, 연구소 결과를 보인다 | 이름이 없으면 `이름 미확인 (ID)`, ID도 없으면 `이슈 작성자 정보 없음` |
+| 2 | 최신성 | 분석 뒤에 바뀐 것이 있으면 `분석(<시각>) 이후 변경 <N>건 · 재분석 대기` 배너를 보인다. 화면에 표시만 하고 AI를 부르지 않는다 | 이슈 원문과 이벤트를 모두 알 수 없으면 배너를 보이지 않는다 |
+| 3 | 분석 이유 | `왜 분석했나: <한국 시각> 새 댓글`처럼 분석을 만든 이벤트를 같은 시각·같은 이름은 한 번만 적어 한 줄로 보인다 | 저장된 이벤트가 없으면 `변경 이벤트가 저장되지 않았습니다.` |
+| 4 | 이슈 본문 | 설명, 재현 절차, 발생 원인, 조치 내용, 발생 버전, 목표 버전. 8줄을 넘는 글은 8줄까지만 보이고 나머지는 [펼치기]에 둔다 | `원문 스냅샷 없음` |
+| 5 | AI 판단 | 분석 종류별 질문, 그 답을 담은 결론 한 줄, 판정, 신뢰도, 근거 3개까지 | 이전 형식 결과는 `이전 형식 결과`와 저장된 요약·상세만 보인다 |
+| 6 | QA 할 일 | 3개까지, 그 아래에 `확인하지 못한 자료` | 없으면 해당 줄을 두지 않는다 |
+| 7 | 댓글 | 이슈의 댓글 전체를 보인다. 시각을 아는 댓글은 시간순이고, 시각을 모르는 댓글은 그 뒤에 저장된 순서대로 놓는다. 분석에 쓴 댓글에는 `분석에 사용`과 해석·QA 영향을, 분석 뒤에 달린 댓글에는 `분석 이후`를 붙인다 | 이슈 원문이 없으면 변경 이벤트에 저장된 댓글만 보인다. 본문을 저장한 적이 없는 댓글은 `본문 미수집`이다 |
+| 8 | 근거 자료 | 판단 근거 전체, 관련 과거 이슈, 선택 버전 TC 비교, 회귀 축 표. 분석 종류별 구획은 아래 표와 같다 | 근거가 없으면 `근거 없음` |
+| 9 | 분석 기록 | 접혀 있다. 모델, 추론 정도, 실행 번호, 분석 메모 원문, 확인한 자료 구분, 근거 검증 기록(뺀 항목과 이유), 이 분석을 만든 변경 이벤트 | 확인 자료 구분이 없는 결과는 그 사실을 이 구획에 알린다 |
+| 10 | 처리 상태 | 상태·처리자·메모 저장과 처리 이력. 넓은 화면에서는 오른쪽에 붙어 있다 | |
+
+**분석 종류별 AI 판단**
+
+5번 구획의 질문과 보이는 값은 분석 종류마다 다르다. 판정 값은 이름만 바꿔 보이고, AI가 내놓는 결과 형식은 바꾸지 않는다.
+
+| 분석 종류 | 화면 질문 | 보이는 값 |
+|---|---|---|
+| 신규 이슈 | 사양으로 보면 이슈가 맞는가 | 아래 판정 이름 표. 중복 후보가 있으면 `중복 의심`을 덧붙인다 |
+| 수정 완료 이슈 | 원인 설명과 수정이 사양에 맞는가 | 원인 검토와 수정 검토 요약, 판정, 회귀 위험 축 중 `해당`인 축의 개수 |
+| 새 댓글 | 새 댓글이 QA 판단을 바꾸는가 | 댓글 분류와 QA 영향 |
+| Spec 판정 이슈 | 연구소 설명이 사양으로 뒷받침되는가 | 저장된 판정 |
+| 사양 변경 | 바뀐 사양을 TC가 덮는가 | 저장된 Checklist 범위 판정. TC 비교를 하지 않은 분석이면 그 사실 |
+| 종류가 비어 있는 이전 형식 | (질문 없음) | `이전 형식 결과`, 저장된 요약과 상세 |
+
+신규 이슈의 판정 이름은 다음과 같다. 왼쪽이 저장된 판정 값(`verdict`), 오른쪽이 화면에 보이는 이름이다.
+
+```text
+SPEC_VIOLATION        이슈로 보임
+CONSISTENT_WITH_SPEC  사양상 정상, 이슈 아닐 수 있음
+SPEC_UNDEFINED        사양 미정의, 기획 확인 필요
+SPEC_AMBIGUOUS        사양이 모호함, 기획 확인 필요
+INSUFFICIENT_EVIDENCE 근거 부족, 판단 보류
+위에 없는 값           저장된 값 그대로 + 검토 필요 표시
+```
+
+`중복 의심`은 중복 검토 판정이 `STRONG_DUPLICATE`·`POSSIBLE_DUPLICATE`이거나 과거 이슈 표시가 `HISTORICAL_SPEC_DUPLICATE`·`HISTORICAL_DUPLICATE_REREGISTERED`일 때 붙는다.
+
+**읽는 규칙**
+
+- 화면을 여는 일은 AI를 부르지 않는다.
+- 이슈 본문과 댓글은 제품의 가장 최근 이슈 스냅샷(`data/daily_qa/snapshots/<제품>/issues/<날짜>.json`)에서 읽는다. 파일 수정 시각이 같으면 다시 읽지 않는다.
+- 분석 뒤 변경은 같은 이슈의 대기 이벤트가 분석 시각 뒤에 생겼거나, 이슈의 최근 업데이트 시각이 분석 시각보다 늦을 때다.
+- 이슈 스냅샷은 댓글 본문을 읽지 않은 날에 댓글 번호만 남긴다. 그런 빈 댓글은 변경 이벤트에 저장된 같은 번호의 원문으로 시각·본문·작성자를 채운다. 원문도 없으면 `본문 미수집`으로 보이고, 시각을 모르는 댓글로 보아 시각을 아는 댓글 뒤에 놓는다. 이벤트에만 있거나 해석만 저장된 댓글도 줄로 남긴다.
+- 판정이 저장되지 않은 결과는 판정 자리에 `판정 저장 안 됨`을 보인다.
+- 이슈 본문 읽기 결과는 제품 폴더마다 가장 최근 스냅샷 파일 하나만 기억한다. 새 파일이 생기면 바꾼다.
+- 댓글 작성자 이름은 제품·이슈별 작성자 표(`qa_issue_reporters`)에서 같은 작성자 번호의 이름을 찾아 보인다. 표에 없으면 `이름 미확인 (ID)`다.
+- 이슈 작성자와 댓글 작성자의 번호·이름은 화면에 보이기만 한다. AI에 보내는 입력에는 넣지 않는다.
+- 분석 결과의 원문, 최초 분석 시각, 모델, QA 처리 이력은 바꾸지 않는다. 이 화면이 바꾸는 것은 배치뿐이다.
+- 사양에 근거가 없는 Expected나 판정을 화면이 만들어 내지 않는다. 판정이 아직 저장되지 않았으면 그렇다고 보인다.
+- 1366px와 1920px 폭에서 가로 넘침이 없어야 한다. 자바스크립트가 실패해도 이슈 본문과 AI 판단을 읽을 수 있어야 한다.
+- 이슈 번호가 아닌 사양 번호가 대상인 분석(사양 변경, 기존 TC 검토, 삭제된 SRS)은 4번 구획 이름이 `사양 내용`이고 이슈 원문과 댓글 구획을 두지 않는다.
+
+**근거 자료(8번)의 분석 종류별 구획**
+
+| 분석 종류 | 구획 |
 |---|---|
 | 신규 이슈 | Summary, Duplicate Analysis, Specification Analysis, Historical Analysis, QA Recommendation, Evidence |
 | 수정 완료 이슈 | Root Cause Review, Resolution Review, Specification Consistency, Regression Risk(초안이 있을 때만 Verification TC) |
@@ -783,8 +849,7 @@ Generator·Console 상태와 Viewer Actual이 제공되면 함께 비교한다. 
 | 사양 변경 | 관련 과거 이슈 |
 | 기존 TC 검토(요청)·개편 전 Coverage | Specification Change, Historical Issue Coverage, Checklist Coverage, Coverage Gap, Recommended TC Changes |
 
-- 모든 상세 화면 아래에 이 Finding 을 만든 이벤트와 근거 검증 기록(뺀 항목과 이유)이 있다.
-- 개편 전 Finding 은 판정·요약·근거·초안만 보인다.
+- 개편 전 Finding 은 판정·요약·근거·초안만 보인다. 옛 결과를 다시 분석하거나 저장 내용을 바꾸지 않는다.
 - 점검 기록 보기(`/qa-agent/runs/<실행 ID>`)는 처음 보는 사람이 위에서부터 읽으면 무슨 일이 있었는지 알 수 있게 아래 순서로 보인다.
 
   1. **결과 한 문장**: 상태 색과 결과 배지를 보인다. 실패가 있으면 실패한 일을 먼저 쓰고, 수집 실패를 변경 0건이나 성공으로 설명하지 않는다.
@@ -840,7 +905,7 @@ AI가 분석한 것
 7. 실행 잠금이 사라졌는데 시작 후 30초가 지난 기록이 계속 `RUNNING`이면 상태 조회 때 중단 실패로 기록한다. 이미 끝난 실행의 결과는 바꾸지 않는다. 시작 요청 뒤 정상 상태 조회 10회 동안 새 실행을 확인하지 못해도 진행 원을 멈추고 확인 안내를 보인다.
 8. [현재 이슈 전체 점검], [기존 TC 검토], [검증 TC 초안]도 제품별 같은 진행 표시를 쓴다. CLI로 요청한 매뉴얼 점검도 대시보드에서 같은 기록을 읽는다. 실행 중에는 그 제품의 요청 버튼을 잠근다. TC 요청은 메일을 보내지 않고 결과 저장 뒤 끝난다.
 
-**지킬 것** 진행 기록은 제품과 실행 번호별로 저장한다. 다른 제품의 진행을 섞지 않으며 결과·이벤트·스냅샷을 진행 기록으로 덮어쓰지 않는다. 390px 화면과 데스크톱에서 단계 문구·시간·링크를 읽을 수 있어야 한다.
+**지킬 것** 진행 기록은 제품과 실행 번호별로 저장한다. 다른 제품의 진행을 섞지 않으며 결과·이벤트·스냅샷을 진행 기록으로 덮어쓰지 않는다. 1366px·1920px 화면에서 단계 문구·시간·링크를 읽을 수 있어야 한다.
 
 **결과** 202 `{"status": "launched", "pid": <번호>}`.
 
@@ -977,7 +1042,7 @@ AI가 분석한 것
 
 4. 한도 정보를 상태 값 `<slug>:claude_limit` 에 저장한다. 다음 실행은 초기화 시각 전이면 Claude 를 부르지 않고 AI 단계를 `Claude 사용량 한도` 로 남긴다. 사전 점검 단계는 `일부 실패`(`partial`)이고 비고에 한도 설명이 들어간다. 인증 실패·CLI 없음은 토큰(또는 CLI)이 바뀔 때까지 같다. 초기화 시각을 모르면 다음 실행이 한 번 다시 시도한다.
 
-5. 일일 모드이고 세션 한도 초기화가 `daily_qa.intelligence.catchup_max_hours`(기본 12)시간 안이면, 초기화 `catchup_delay_minutes`(기본 5)분 뒤에 한 번 다시 돈다. 앱 안의 감시 예약(`qa_agent_limit_catchup`, 10분마다)이 시각이 지난 제품을 [변경사항 점검하기]과 같은 함수로 띄운다.
+5. 일일 모드에서 한도(세션·주간)의 초기화 시각을 알면, 초기화 `catchup_delay_minutes`(기본 5)분 뒤에 한 번 다시 돈다. 초기화가 며칠 뒤여도 같다. 대기 중인 분석이 없으면 AI를 부르지 않는다. 앱 안의 감시 예약(`qa_agent_limit_catchup`, 10분마다)이 시각이 지난 제품을 [변경사항 점검하기]과 같은 함수로 띄운다.
 
    - 주간 모드·자동 점검 중지·`daily_qa.schedule.enabled: false` 에서는 자동 재개를 하지 않는다(REQ-QAINTEL-038). 주간 모드의 대기 작업은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다.
 
@@ -1017,7 +1082,6 @@ AI가 분석한 것
 
 | 키 | 기본값 | 뜻 |
 |---|---|---|
-| `daily_qa.intelligence.catchup_max_hours` | `12` | 세션 한도 초기화가 이 시간 안이면 다시 돈다 |
 | `daily_qa.intelligence.catchup_delay_minutes` | `5` | 초기화 뒤 몇 분 뒤에 다시 돌지 |
 | `daily_qa.intelligence.event_max_attempts` | `3` | 이벤트 분석 실패를 몇 번까지 다시 시도할지 |
 | `daily_qa.intelligence.backlog_max_events` | `10` | 실행 한 번에 올리는 지난 날 대기 이벤트 수(REQ-QAINTEL-006 6번) |
@@ -1063,6 +1127,9 @@ AI가 분석한 것
    - 신규: 같은 대상의 신규 이벤트가 있으면 이미 안다. 그 뒤 상태가 바뀌었어도 같다.
    - 삭제: 그 대상의 마지막 신규·삭제 이벤트가 삭제면 이미 안다.
 5. 나머지는 예약 실행과 같다(같은 CLI, 같은 파이프라인, 같은 잠금).
+6. 실행 상세에는 이 기간의 변경 목록을 함께 보인다. 변경 목록은 기간 안의 기록을 하루씩 비교해 만든다(REQ-ALMCHG-002). 그래서 중간에 바뀌었다가 돌아온 변경도 날짜와 함께 보인다.
+
+   이유: AI 분석 대상은 위 1~4번처럼 끝 상태 비교로 골라 사용량을 아낀다. 사람이 읽는 목록은 중간 변경까지 보여야 한다.
 
 **안 될 때**
 
@@ -1298,11 +1365,11 @@ AI가 분석한 것
    | 문제 없음 | `CONSISTENT_WITH_SPEC`, `SUPPORTED_BY_SPEC`, `FULLY_COVERED`, `NO_QA_IMPACT`, `NOT_SIGNIFICANT` |
 
 2. QA 할 일은 권고(`sections.recommendation.actions`·`checks`) → 확인할 점(`sections.qa_analysis.checks`) → 조치 문장(`action`, 줄마다 하나) 순서로 찾아 3줄까지 보인다.
-3. 목록은 결론 단계 순서(사양과 다름 → 검토 필요 → 근거 부족 → 참고 → 문제 없음)로, 같은 단계는 최신이 먼저다. `문제 없음` 은 접어 둔다.
+3. 절약 모드가 꺼진 실행의 점검 기록 보기 결과 목록은 결론 단계 순서(사양과 다름 → 검토 필요 → 근거 부족 → 참고 → 문제 없음)로, 같은 단계는 최신이 먼저다. 접지는 않는다. 대시보드와 결과 페이지의 목록, 절약 모드 실행의 결과 목록은 이 순서를 쓰지 않고 REQ-QAINTEL-046의 정렬을 따른다.
 
 **지킬 것**
 
-- 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 `자세히` 에 있다.
+- 카드에 칩 줄(기존 Issue 수, 조치 수, 경고 이름 등)을 두지 않는다. 그 정보는 상세 화면의 근거 자료와 분석 기록에 있다.
 - 판정·신뢰도·댓글 분류는 한국어로 보이고 원래 코드는 도움말에 남긴다. 새 댓글 요약의 작성 기준은 REQ-QAINTEL-015를 따른다. 다른 분석 종류의 요약 규칙은 이번 변경에서 바꾸지 않는다.
 - 조치 문장(`action`)은 Finding 표에 칸이 없어 `sections.action` 에 함께 저장한다. 저장하지 않으면 카드의 할 일이 비어 보인다.
 
@@ -1326,10 +1393,10 @@ AI가 분석한 것
 
 **순서**
 
-1. 활성 제품마다 오늘(한국 시간)이 제품별 모드의 실행일(REQ-QAINTEL-038)인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다. 자동 점검 중지 또는 서버 예약 비활성화 상태에서도 실행하지 않는다.
+1. 활성 제품마다 오늘(한국 시간)이 업무일인지, 지금이 예약 시각보다 늦은지 본다. 둘 중 하나라도 아니면 아무것도 하지 않는다. 서버 예약 비활성화 상태에서도 실행하지 않는다. 자동 점검 중지나 주간 모드의 분석일이 아닌 날에는 수집만 만회한다(REQ-ALMCHG-001).
 2. 오늘 예약을 이미 처리했는지 제품별 상태 기록(`<slug>:scheduled_date`, 한국 시간 날짜)으로 본다. 오늘 날짜가 적혀 있으면 아무것도 하지 않는다.
 3. 처리하지 않았으면 REQ-QAINTEL-001 의 예약 실행과 같은 함수를 부른다. 공휴일 건너뛰기, 실행 잠금, Polarion 설정 확인이 그대로 적용된다. 앱 로그에 `qa_agent_missed_schedule product=<slug> date=<날짜> time=<예약 시각>` 을 남긴다.
-4. 실행을 띄웠거나 휴일·기존 필수 설정 확인으로 오늘 몫을 처리했으면 상태 기록에 오늘 날짜를 적는다. 다른 실행이 진행 중이거나 자동 점검 중지·선택한 모드의 실행일 아님·서버 예약 비활성화면 적지 않는다. 같은 날 다시 켰을 때 오늘 만회를 확인할 수 있다.
+4. 실행을 띄웠거나 휴일·기존 필수 설정 확인으로 오늘 몫을 처리했으면 상태 기록에 오늘 날짜를 적는다. 다른 실행이 진행 중이거나 서버 예약 비활성화면 적지 않는다. 같은 날 다시 켰을 때 오늘 만회를 확인할 수 있다.
 
 **지킬 것**
 
@@ -1406,23 +1473,26 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 
 **하는 일** 관리자가 QA Agent 화면의 [자동 분석·메일 사용]과 [현재 검증 진행 중]을 저장해 제품별 자동 분석과 요약 메일 주기를 정한다. 사내 웹 화면에서 변경할 수 있다.
 
+이 설정은 AI 분석과 요약 메일만 정한다. 이슈·SRS 수집과 변경 리포트 메일은 어느 설정에서도 매 업무일 돈다(REQ-ALMCHG-001, REQ-ALMCHG-004).
+
 | 자동 분석·메일 사용 | 현재 검증 진행 중 | 자동 분석과 메일 |
 |---|---|---|
 | 켜짐 | 켜짐 | 매 업무일 예약 시각에 실행한다 |
 | 켜짐 | 꺼짐 | 매주 첫 업무일 예약 시각에 한 번 실행한다 |
-| 꺼짐 | 어느 값이든 | 자동 분석과 메일 전송을 중지한다 |
+| 꺼짐 | 어느 값이든 | 자동 분석과 요약 메일 전송을 중지한다. 이때 찾은 변경은 밀린 변경으로 남는다(REQ-ALMCHG-005) |
 
 **입력** 제품과 두 참·거짓 값(`enabled`, `validation_period`)을 받는다. 처음 저장하기 전에는 둘 다 참으로 간주해 기존 일일 동작을 유지한다. 화면의 두 체크박스와 [저장]으로 적용한다.
 
 **순서**
 
 1. `GET /qa-agent/automation-policy?product=<제품>`은 현재 설정을 JSON으로 반환한다. `POST /qa-agent/automation-policy`는 제품과 두 값을 폼으로 받고 저장 후 해당 제품의 대시보드로 303 이동한다. 체크하지 않은 값은 거짓이다.
-2. 설정은 공용 DB에 제품별로 저장한다. 변경 시각·요청 위치·두 값을 변경 이력에 남긴다. 읽기와 변경 모두 일반 웹 접속을 허용한다. AI 분석 설정의 서버 안에서만 저장하는 제한(REQ-AICALL-007)은 그대로 유지한다.
+2. 설정은 공용 DB에 제품별로 저장한다. 변경 시각·요청 위치·두 값을 변경 이력에 남긴다. 읽기와 변경 모두 일반 웹 접속을 허용한다. 설정 탭의 저장 제한(관리자 로그인 또는 서버 직접 접속, REQ-AICALL-007·REQ-WEB-008)은 그대로 유지한다.
 3. 업무일은 한국 시간의 월~금에서 등록된 공휴일과 추가 휴일을 뺀 날짜다. 주간 모드는 월요일이 쉬는 날이면 같은 주의 다음 업무일에 실행한다. 그 주에 업무일이 없으면 실행하지 않는다.
 4. 다음 실행 시각·놓친 예약 만회·정시 실행이 같은 정책을 사용한다. 주간 만회는 그 주 첫 업무일의 놓친 예약만 당일에 한 번 처리한다. 지난 실행일의 예약은 만회하지 않는다(REQ-QAINTEL-035).
-5. 세션 한도 뒤 자동 재개는 일일 모드에서만 가능하다(REQ-QAINTEL-025). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.
-6. 서버의 `daily_qa.schedule.enabled: false`는 모든 자동 실행 경로에서 우선 적용한다. 제품 설정을 켜도 담당자 PC의 `config.local.yaml`에 저장된 예약 비활성화를 바꾸지 않는다.
+5. 한도(세션·주간) 뒤 자동 재개는 일일 모드에서만 가능하다(REQ-QAINTEL-025·049). 주간 모드의 대기 분석은 다음 주 첫 업무일 또는 사용자의 [변경사항 점검하기]에서 이어 간다. 중지 상태에서는 자동 재개를 하지 않는다.
+6. 서버의 `daily_qa.schedule.enabled: false`는 수집을 포함한 모든 자동 실행 경로에서 우선 적용한다. 제품 설정을 켜도 담당자 PC의 `config.local.yaml`에 저장된 예약 비활성화를 바꾸지 않는다.
 7. [변경사항 점검하기]은 자동 점검 중지 중에도 분석할 수 있다. 메일을 보내기 직전에 현재 설정을 다시 읽으며 중지 중에는 메일을 생략하고 이유를 실행 기록에 남긴다.
+8. 꺼짐에서 켜짐으로 바꾸면, 자동 분석은 다시 켠 뒤에 저장한 변경과 끄기 전부터 대기 중이던 변경만 다룬다. 저장할 때 설정이 꺼져 있던 변경은 [밀린 변경 분석]으로만 분석한다(REQ-ALMCHG-005).
 
 **결과** 화면에 저장한 두 값, 현재 모드, 다음 자동 실행 시각 또는 중지 이유를 표시한다. 주간 한도 대기는 다음 주 예약 또는 수동 실행에서 이어 간다는 안내를 표시한다.
 
@@ -1513,6 +1583,168 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 3. 현재 이슈 전체 점검은 저장된 미완료 전체 점검 이벤트를 별도로 안내한다. 새로 선정될 이슈 수는 실행 후 확정한다고 표시한다.
 4. 두 버튼 아래에 전체 대기 이벤트 수, 선택·보류 건수, 종류별 대상 수와 건수 기준 묶음 수를 표시한다. 입력 크기에 따른 추가 분할·작업 수 상한·새 변경 수집으로 달라질 수 있다고 알린다.
 5. 날짜 변경 때 갱신하고 늦게 도착한 이전 응답은 표시하지 않는다. 조회 실패를 0건으로 표시하지 않고 확인하지 못했다고 안내한다. 실행 버튼의 기존 동작은 유지한다.
+
+
+### REQ-QAINTEL-042 절약 모드와 선택 분석
+
+**하는 일** 기간을 고르면 AI 없이 대상부터 준비하고, 사용자가 선택한 대상만 분석한다.
+
+- `daily_qa.savings.enabled`가 true이면 수동 준비는 AI 없이 수집·대상 확인만 한다. 예약 실행은 REQ-QAINTEL-048에 따라 두 분석을 모두 수행하고, 호출 직전 사용률이 기준에 닿으면 REQ-QAINTEL-043에 따라 멈춘다. 기본은 false로 기존 설치를 보존한다.
+- 목적은 `spec`(사양 변경과 검증 범위), `issues`(신규·업데이트 이슈와 QA 대응), `all`(둘 다)이다. 수동 준비 화면은 자동 전체 선택을 하지 않는다.
+- 준비한 대상은 제품·기간·자료/규칙/설정 지문과 함께 저장한다. 생성 30분 경과, 제품 불일치, 자료 변경, 선택 밖 대상은 실행 전에 거절한다.
+- 대상 선택은 `상세 분석` 화면(`/qa-agent/select?product=<제품>`)에서 한다. 점검 화면(`/qa-agent`)에는 준비 버튼과 한 줄 안내만 둔다. 안내는 `준비된 대상 <N>건 · 상세 분석 열기` 또는 `준비 목록 만료 · 다시 준비하세요`이고, 자바스크립트 없이도 보인다. 준비가 끝나면 진행 표시에 `상세 분석 열기` 링크가 나온다. 상단 메뉴에서는 `사양·이슈 변경 점검`이 켜진 채로 둔다.
+- `상세 분석` 화면은 선택 목록, `선택 대상 분석`, `선택 1건 Opus 재검토`, 오늘 호출 횟수와 호출을 멈추는 사용률 기준 안내를 보인다. 목록의 각 행은 체크박스(행 왼쪽)·번호·제목·분석 종류·작성자·이슈 업데이트(한국 시간)·분석 이유를 담고, 행 어디를 눌러도 선택된다. 분석 이유는 그 대상을 고른 변경 이벤트 이름(예: `신규 이슈`, `SRS 변경`)이다.
+
+> **예시** 이슈 VP-200 행은 `[ ] VP-200 · 검색 오류 · 수정 완료 이슈 · 홍길동 · 2026-10-14 17:42 (한국 시간) · 연구소 결과 변경`처럼 보인다. 사양 변경 대상은 작성자가 없으므로 작성자 칸을 비운다.
+
+- 준비 후 30분이 지난 목록은 체크박스 없이 `준비 목록 만료 (준비 2026-10-14 17:41 한국 시간) · 다시 준비하세요`로 보이고, 분석 버튼은 누를 수 없다. 서버는 30분이 지난 선택을 지금처럼 거절한다.
+- 선택하지 않은 대상과 사용률 기준 때문에 실행하지 못한 대상은 미분석으로 남긴다. 사양·이슈별 저장 자료의 실제 비교 시작일과 종료일, 요청 기간 중 확인하지 못한 범위를 준비 화면·실행 기록·메일에 표시한다. 자료가 부족하면 전체 기간 완료로 표시하지 않는다.
+- 절약 모드에서도 한도가 풀리면 대기 중인 분석을 자동으로 이어서 한다(REQ-QAINTEL-049). 형식 실패의 자동 AI 재시도는 하지 않는다. 메일은 기존 수신자·주기를 쓰며 미분석·대기를 완료와 구분한다.
+- 화면 조회·검색·필터·설정·준비 목록은 Claude를 호출하지 않는다(호출 0회).
+
+### REQ-QAINTEL-043 사용률 기준 호출 제어와 모델
+
+**하는 일** 호출 횟수 대신 Claude 계정의 실제 사용률을 보고 새 호출을 할지 정한다. 사용률이 낮으면 필요한 분석을 끝까지 호출한다.
+
+**언제** 절약 모드의 분석 호출 직전마다 확인한다.
+
+**순서**
+
+1. 직전 호출이 돌려준 사용률(이번 실행의 마지막 `rate_limit` 값)을 본다. 이번 실행에 호출이 아직 없으면 마지막으로 저장한 측정값(REQ-AICALL-006)을 쓴다.
+2. 5시간 사용률이 `daily_qa.usage_guard.five_hour_percent`(기본 80) 이상이거나 주간 사용률이 `daily_qa.usage_guard.seven_day_percent`(기본 90) 이상이면 새 호출을 하지 않는다. 남은 대상은 대기로 둔다.
+3. 멈추면 REQ-QAINTEL-049의 알림과 이어 하기가 이어진다.
+
+**설정** 두 기준은 모두 50~100의 정수다. 범위 밖이거나 숫자가 아니면 기본값을 쓴다. 한 실행에서 다루는 작업 수는 `daily_qa.max_tasks_per_run`(기본 30)이 계속 정한다. 호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 읽지 않는다.
+
+**안 될 때** 사용률을 읽지 못하거나, 저장값의 초기화 시각이 이미 지났으면(그 창은 새로 시작됐다) 그 값은 없는 것으로 본다. 사용률을 모르는 것만으로 호출을 막지 않고, 요약 메일에는 `사용률 미확인`이라고 쓴다.
+
+초기화 시각이 없는 저장값은 측정한 지 5시간(주간은 7일)이 지났으면 없는 것으로 본다. 오래된 값 하나가 호출을 계속 막지 않게 하려는 것이다. 이번 실행이 받은 값이나 5시간 안에 측정한 값은 80% 이상이면 그대로 멈춘다.
+
+> **예시** 5시간 사용률이 7%, 7%, 7%로 돌려받으면 대상 8건을 모두 호출한다. 40%, 79%, 80%로 돌려받으면 세 번째 호출 뒤에 멈추고 나머지 5건은 대기로 남는다.
+
+- 캐시 재사용은 호출 0회다. 시작한 CLI의 실패·취소·사용량 불명은 호출 기록에 남기고, 시작하지 않은 것이 확인된 호출만 기록에서 뺀다. 호출 기록은 메일의 사용량(REQ-QAINTEL-048)이 읽는다.
+- 호출당 두 턴의 단일 응답 방식은 그대로다.
+- 일반 분석은 이 기능 전용 Sonnet 5.5·medium 설정을 사용한다. 댓글·이슈 점검 모델 배정은 유지한다. Opus 상세 재검토는 사용자가 선택한 대상만 실행한다.
+- 이 정책은 챗봇·매뉴얼·TC 별도 요청의 모델 설정을 바꾸지 않는다. 사용량 조회에서는 인증 갱신용 AI 호출을 하지 않는다.
+
+### REQ-QAINTEL-044 사용자 지침과 분석 품질 보존
+
+**하는 일** 비용 최적화 뒤에도 사용자 지침 프롬프트와 QA 규칙 MD를 분석 기준으로 사용한다.
+
+- 지침 프롬프트는 마스킹 후 전문을 전달한다. QA 규칙은 요구되는 절과 하위 절 원문을 보존하고, 필요하면 원문 전체를 추가 확인할 수 있어야 한다.
+- 지침을 임의 요약해 대체하거나 필수 검토 항목·근거·Regression 축을 비용 때문에 삭제하지 않는다.
+- 지침 파일 또는 필수 규칙을 확인할 수 없으면 분석 완료로 처리하지 않는다. 사용된 파일 해시를 실행 기록에 남긴다. 필수 검토 항목·Gate 판정·회귀 축 판단·선택 TC 비교가 빠진 결과는 보존하되 완료나 재사용 대상으로 처리하지 않는다. 관련 TC가 없으면 확인 범위와 보완 방법을 남긴다.
+- 단일 구조화 응답 경로는 초기 기본값에서 끈다. 같은 자료의 필수 근거·충돌·예외 누락 검증을 통과한 경우에만 사용한다.
+- 토큰 합계는 입력·캐시 생성·캐시 읽기·출력 합이다. 추론은 출력에 포함하므로 다시 더하지 않는다.
+
+### REQ-QAINTEL-045 검증 버전과 두 분석의 역할
+
+**하는 일** 사양 변경 분석과 이슈 분석을 선택한 검증 버전의 Checklist TC와 함께 검토한다. 절약 모드에서 적용하며 REQ-QAINTEL-012·013·014·015·016·031·032의 TC 제외·별도 요청 제한보다 이 요구사항을 우선한다. 절약 모드를 끈 설치는 기존 제한을 유지한다.
+
+1. 자동 점검과 메일 설정에서 등록된 변경사항 Checklist의 실제 시트 이름을 선택한다. 파일과 시트를 함께 저장하며, `V1.1.0`이 하나일 때 처음 선택한다. 없거나 중복이면 선택 필요로 표시한다.
+2. 사양 분석은 기간의 SRS 변경을 관련 이슈·선택한 TC와 비교한다. 검증이 빠졌으면 기존 TC 보완 또는 체크리스트 초안을 제안한다. 관련 이슈 존재만으로 검증됐다고 판단하지 않는다.
+3. 이슈 분석은 기간의 신규·내용·원인·조치·연구소 결과·중요 댓글 변경을 검토한다. 연구소의 사양 주장과 문서 수정 주장을 원문과 대조하고 QA 대응·수정 확인 방법·TC 보완점을 제안한다.
+4. 선택 시트가 없거나 읽지 못하면 다른 버전으로 대신하지 않는다. TC 확인 불가를 표시하고 전체 검토 완료로 처리하지 않는다.
+5. 초안은 원문 사양을 근거로 작성하고 Step과 Expected 번호를 맞춘다. 사양이 불명확하면 확인할 질문을 남긴다. 원본 Excel과 이슈 상태는 바꾸지 않는다.
+
+### REQ-QAINTEL-046 대상별 결과 연결과 결과 탐색
+
+> **예외** 대시보드와 결과 페이지의 목록은 REQ-QAINTEL-033의 판정별 카드 정렬보다 이 요구사항의 정렬을 우선한다. 설정에 따라 달라지지 않는다.
+
+**하는 일** 기간을 넓혀도 유효한 기존 분석을 AI 호출 없이 표시하고 이슈·사양 결과를 검색한다.
+
+- 제품·분석 종류·원문·검색 가능한 근거·지침·선택한 TC 버전이 같으면 대상별 기존 결과를 연결한다. 기간·묶음·실행 번호만 달라진 경우는 새 분석 이유가 아니다. 다른 변경 전후 비교와 과거 자료 기준은 구분한다.
+- 실패·부분 결과·미확인 자료·미해결 질문은 검증 완료 결과로 재사용하지 않는다. 비교 기록이 없는 과거 결과는 이력으로 표시하며 최신 여부 미확인으로 구분한다.
+- 분석결과 목록을 전체·이슈 분석·사양 분석으로 나눈다. 제품·기간·작성자·이슈/사양 번호·내용 검색·판정·처리 상태로 필터하고 50개씩 나눈다. 조건은 결과 수와 페이지를 계산하기 전에 적용한다.
+- 조건은 두 묶음이고 적용 순서가 다르다.
+  1. 어느 분석을 볼지 고르는 조건(분석 기간, 검색어, 분석 종류와 `이전 형식`, 작성자, 번호, 실행 번호)을 먼저 적용한다. 그 안에서 이슈마다 가장 최근 분석 한 건을 고른다.
+  2. 이슈의 지금 상태를 말하는 조건(AI 판정과 `검토 필요` 칩, 처리 상태와 `미처리` 칩, `분석 이후 변경` 칩)을 고른 한 건에 적용한다. 새 분석에 덮인 옛 결과가 이 조건으로 되살아나지 않는다.
+
+> **예시** 이슈 VP-1에 지난주 분석(`검토 필요`)과 어제 분석(`문제 없음`)이 있다. 기간을 지난주로 좁히면 지난주 분석이 보인다. `검토 필요` 칩을 누르면 VP-1은 목록에서 빠진다. 가장 최근 분석이 `문제 없음`이기 때문이다.
+
+- `이전 분석 N건`의 N은 그 이슈(번호가 정확히 같은 것)의 분석 전체에서 지금 카드를 뺀 수다. 링크는 번호가 정확히 같은 결과만 조건 없이 모두 연다. `VP-728` 링크에 `VP-7287` 결과는 섞이지 않는다. 검색창과 번호 입력은 번호의 일부만 맞아도 찾는다.
+- 목록은 이슈 하나에 카드 한 장이다. 같은 이슈의 분석이 여러 건이면 가장 최근 분석을 보이고 `이전 분석 N건` 링크가 같은 이슈의 모든 결과를 연다. `모든 결과 보기`로 바꾸면 분석 한 건이 카드 한 장이다. 실행 번호로 연 목록은 처음부터 모든 결과를 보인다.
+- 카드 첫 줄은 이슈 작성자 이름(`qa-reporter`)과 이슈 업데이트 시각(`qa-updated`, 한국 시간과 `N시간 전`)을 굵게 보인다. 사양 분석 카드에는 작성자와 이슈 업데이트가 없다. 둘째 줄은 분석 종류 태그, 판정 색, 처리 상태를 한 줄로 보인다. 종류가 비어 있는 옛 결과는 `이전 형식` 태그를 달고 기본 목록에도 들어간다.
+- 분석한 뒤 이슈가 바뀌었으면 `분석 이후 변경` 배지를 단다. 판정 기준은 분석 상세 화면(REQ-QAINTEL-020)과 같다. 분석 시각 뒤에 생긴 대기 이벤트가 있거나 이슈 업데이트 시각이 분석 시각보다 늦으면 바뀐 것이다. 비교할 자료가 없으면 배지를 달지 않는다.
+- 카드에 `왜 분석했나` 한 줄(새 댓글·신규 이슈 등록·상태 변경)을 보인다. 저장된 변경 이벤트에서 읽으며 이벤트가 없으면 줄을 만들지 않는다. 요약은 두 줄까지만 보이고 QA 할 일은 3개까지다. 전체 글은 상세 화면에서 읽는다.
+- 대시보드와 결과 페이지는 같은 조회 조건을 쓴다. 검색창 하나(이슈·사양 번호, 제목, 작성자 이름·ID, 요약, 분석 메모)와 빠른 칩(`검토 필요`·`미처리`·`분석 이후 변경`·`이슈`·`사양`·`이전 형식`), 정렬, `자세한 조건`(기간·작성자·판정·처리 상태)이다. 빠른 칩은 같은 칩을 다시 누르면 풀린다.
+- `분석 이후 변경` 칩은 이슈 스냅샷을 읽어야 판정되므로 SQL 조건으로 쓰지 못한다. 나머지 조건을 DB에서 먼저 적용한 뒤 그 행을 파이썬에서 판정하고 50개씩 나눈다. 결과 수와 페이지 수도 판정을 거친 뒤의 값이다.
+- `작성자별로 묶기`는 카드를 작성자 이름 아래에 묶는다. 순서는 예약 점검 메일(REQ-QAINTEL-048)의 확인할 이슈와 같다. 작성자는 이름순(ID가 없는 쪽이 맨 뒤)이고 같은 작성자 안에서는 이슈 업데이트가 최신인 이슈가 앞이다.
+- 목록을 보는 일은 Claude 를 호출하지 않는다(REQ-QAINTEL-042).
+- 이슈 최초 작성자 ID와 표시 이름을 원본에서 읽는다. 담당자·댓글 작성자와 구분한다. 이름이 없으면 이름 미확인과 ID를 보이고, 작성자 정보 갱신은 AI 재분석을 만들지 않는다.
+- 원본 분석 시각·모델·결과 ID를 보존한다. 재사용을 새 분석으로 표시하지 않는다.
+- 기본 정렬은 이슈의 최신 업데이트 순이다. 작성자별·이슈 번호별·분석 시각순 정렬을 선택할 수 있다. 이슈 업데이트 일시와 AI 분석 일시를 구분해 한국 시간으로 표시하며 업데이트 정보가 없는 항목은 미확인으로 표시한다.
+
+### REQ-QAINTEL-047 분석 판정과 QA 처리 상태
+
+> **예외** REQ-QAINTEL-019·020의 기존 승인·거절 양식은 추가하지 않는다. 이 요구사항의 QA 처리자 이름과 상태 기록을 별도로 제공한다.
+
+**하는 일** AI가 무엇을 판단했는지와 사람이 업무를 마쳤는지를 구분한다.
+
+- 분석 판정은 `사양과 다름`, `검토 필요`, `근거 부족`, `참고`, `문제 없음`이다. REQ-QAINTEL-033의 판정 연결을 유지하고 설명을 화면에 제공한다.
+- 처리 상태는 `미처리`, `진행 중`, `확인 완료`, `보류`다. 사람이 변경하며 변경 시각·담당자·메모를 이력으로 남긴다. 참고하거나 조치할 것이 없는 결과도 확인 후 완료로 둘 수 있다.
+- 완료는 해당 분석의 QA 처리 완료다. 이슈 종료·실제 장비 검증 PASS·사양 적합성을 대신하지 않는다. AI 판정과 과거 처리 이력은 바꾸지 않는다.
+- 새로운 근거로 분석 결과가 생기면 새 결과는 미처리이며 과거 결과의 완료 상태를 자동 복사하지 않는다. 유효 결과 재사용은 원본의 처리 상태를 보여준다.
+- 상세는 REQ-QAINTEL-020의 순서(이슈 본문 → AI 판단 → QA 할 일 → 댓글 → 근거 자료 → 분석 기록 → 처리 상태)로 위에서 아래로 읽는다. 미확인 자료는 QA 할 일 아래에 보이고 필수 검토 항목과 회귀 축은 보존한다.
+
+### REQ-QAINTEL-048 두 분석의 예약 실행과 요약 메일
+
+**하는 일** 예약 주기에 수집한 사양 변경과 이슈 변경을 한 번씩 검토하고 한 통으로 알린다.
+
+- 수집·비교를 한 번 수행하고 사양 분석과 이슈 분석이 자료를 공유한다. 매일 전체 이슈를 새로 AI 분석하지 않는다. 유효 결과를 먼저 재사용하며 새 호출은 REQ-QAINTEL-043의 사용률 확인을 거친다.
+- 일일 모드는 직전 정상 수집 이후의 변경, 주간 모드는 그동안의 변경을 대상으로 한다. 실제 비교 기간·버전·완료·재사용·미분석·실패를 구분한다. 사용률 기준 때문에 끝내지 못한 대상은 대기로 보존한다.
+- 메일은 아래 표의 순서로 구성한다. 기존 수신자와 주기를 유지한다. 제목은 REQ-MAIL-001이 정한다.
+
+| 순서 | 구획 | 내용 |
+|---|---|---|
+| 1 | 상태 띠 | 완료(초록)·일부 실패(주황)·실패(빨강)와 한 줄 요약 |
+| 2 | 숫자 네 칸 | 새 결과 · 검토 필요 · 대기 · AI 호출 |
+| 3 | 확인할 이슈 | 작성자별로 묶고 각 작성자 안에서 최신 업데이트 순. 번호·제목·분석 종류·판정, 이슈 업데이트(한국 시간), `결과 열기` |
+| 4 | 확인할 사양 | 번호·제목·분석 종류·판정, `결과 열기` |
+| 5 | 남은 일 | 대기 건수와 다음 자동 실행 시각, `상세 분석` 링크, 실패 이유를 쉬운 말로 한 줄씩, 자료 누락 기간 |
+| 6 | 이번 예약 실행의 Claude 사용량 | 호출 수·총 토큰·모델·5시간 사용량·주간 사용량·대상별 토큰 |
+| 7 | 바닥글 | 비교 기준일·확인 가능한 자료 기간·검증 버전·실행 번호·`점검 기록 열기`·AI 초안 안내 |
+
+> **예시** 제목: `[QA Agent] VXvue 10/15 점검 · 검토 필요 2건 · 대기 12건 · 일부 실패`
+
+- 숫자 네 칸의 `새 결과`는 이번 실행이 새로 저장한 결과 수다. `검토 필요`는 그 가운데 결론 단계가 `문제 없음`·`참고`가 아닌 것(`사양과 다름`·`검토 필요`·`근거 부족`)의 수다.
+- 사용량이나 다음 실행 시각을 읽지 못해도 요약 메일은 나간다. 그 줄만 `사용량 기록 없음`으로 쓰거나 빠진다.
+- AI를 돌리지 않고 대상 목록만 만든 실행의 메일은 제목에 `변경 목록 · AI 미분석`이 들어가고 본문 위쪽에 같은 안내가 보인다. 제목은 이때도 `[QA Agent] <제품>`으로 시작한다.
+- 본문에 `audit.json`, `Gate G1` 같은 파일 이름·점검 코드와 `묶음`, `상한 초과로 미룸` 같은 내부 표현을 쓰지 않는다. 그런 내용은 점검 기록 화면에서 본다.
+- 링크는 모두 설정 `daily_qa.review_base_url`로 만든 절대 주소다. 이 값이 비어 있으면 링크 대신 `서버 주소 미설정 · 설정 탭에서 입력`을 쓴다. 이유: 메일 프로그램은 `/qa-agent/…` 같은 상대 주소를 열 수 없다.
+- HTML 본문은 표 기반 배치와 인라인 스타일만 쓴다(Outlook이 스타일 시트와 새 배치 방식을 무시하기 때문이다). 글 본문도 같은 순서로 쓴다.
+- Claude 사용량 구획은 아래 "사용량 표시 규칙"을 따른다.
+- 사내 원문과 상세 AI 판단 문장은 메일에 넣지 않는 REQ-DAILY-008의 원칙을 유지한다. 전체 결과는 제품·실행·종류 조건이 있는 웹 링크에서 확인한다.
+- 변경 없음·기존 결과만 재사용·사용률 기준으로 멈춤을 구분한다. 미분석이 있으면 검토 완료로 보이지 않게 한다. 한도가 풀리면 대기분은 REQ-QAINTEL-049에 따라 자동으로 이어서 분석한다.
+- 이슈 분석은 최초 작성자 ID별로 묶고 이름을 섹션 제목에 표시한다. 같은 이름의 서로 다른 사람은 ID로 구분한다. 각 작성자 안에서는 이슈 업데이트가 최신인 순서로 번호·업데이트 일시·판정·결과 링크를 보여준다. 이름이 없으면 이름 미확인과 ID를 표시한다.
+
+**사용량 표시 규칙** 이번 실행의 호출 기록과 REQ-AICALL-006의 저장 값에서 읽는다(`reading_for_run`).
+
+1. 5시간 사용량 줄: `실행 전 <a>% (<측정 시각> 측정) → 실행 후 <b>% (+<b-a>%p) · 초기화 <시각>`. 실행 전 값은 점검이 시작될 때 저장해 둔 가장 최근 측정값이고 측정 시각(한국 시간)을 함께 쓴다.
+2. 실행 전 값이 없으면 `실행 전 값 미확인`이라고 쓰고 증가량은 쓰지 않는다. 값은 지어내지 않는다.
+3. 증가량(`+<b-a>%p`)은 실행 전 값이 실행 시작 5시간 안에 측정됐고 같은 5시간 창일 때만 쓴다. 측정이 5시간보다 오래됐으면 측정 시각만 쓰고 증가량은 쓰지 않는다. 그 사이 창이 초기화됐으면 `(그 사이 초기화됨)`만 쓴다.
+4. 주간 사용량 줄: `실행 후 <c>% · 초기화 <시각>`.
+5. 이번 실행이 AI를 호출하지 않았으면 `이번 실행은 AI를 호출하지 않았습니다.`를 함께 쓴다. 호출 기록 자체를 읽지 못했으면 `사용량 기록 없음`이라고 쓴다.
+
+### REQ-QAINTEL-049 한도 알림과 풀린 뒤 이어 하기
+
+**하는 일** Claude 한도에 걸리거나 사용률 기준에 닿아 분석이 멈추면 관리자에게 메일 한 통을 보내고, 한도가 풀리면 대기 중인 분석을 자동으로 이어서 한다.
+
+**언제** 분석 중 Claude 한도(세션·주간)에 걸렸을 때, 또는 호출 직전 확인(REQ-QAINTEL-043)에서 사용률 기준에 닿아 멈췄을 때.
+
+**받는 사람** 설정 `notifications.admin_email`의 주소 1개다. 비어 있으면 `NOTIFY_EMAIL_TO`의 첫 주소를 쓴다. 둘 다 없으면 메일을 보내지 않고 점검은 그대로 이어진다.
+
+**메일**
+
+- 제목: `[QA Agent] <제품> Claude <한도 종류 또는 '사용률 <N>% 도달'> · 초기화 <KST 시각>`. 예: `[QA Agent] VXvue Claude 세션(5시간) 사용량 한도 · 초기화 2026-10-15 15:00`.
+- 본문: 실행 번호, 남은 대기 건수, 증거 파일 이름(있을 때), 이번 실행의 사용량(실행 전·후 5시간·주간 사용률, 호출 수, 초기화 시각). 값을 읽지 못한 칸은 `사용률 미확인`으로 쓴다.
+- 같은 한도 묶음(`limit_evidence.episode_key`가 같은 한도, 즉 종류와 초기화 시각이 같은 한도)에는 다시 보내지 않는다. 보낸 묶음은 `notifications` 표에 남겨 프로세스가 달라도 지켜진다.
+- 사용률 기준으로 멈춘 경우의 묶음은 `USAGE:<창>:<초기화 시각>`이다. 같은 창이 초기화되기 전에는 한 번만 보낸다.
+- 메일을 못 보내도 점검은 멈추지 않는다.
+
+**이어 하기** 한도가 풀릴 초기화 시각 5분 뒤(`daily_qa.intelligence.catchup_delay_minutes`)에 이어 하도록 기록하고, 10분마다 도는 `qa_agent_limit_catchup`이 그 시각이 지난 제품의 점검을 다시 띄운다. 절약 모드에서도 동작한다. 자동 점검이 꺼졌거나(`off`), 주간 모드이거나, 예약 자체를 끈 서버에서는 이어 하지 않는다. 초기화 시각을 모르는 한도는 이어 하기 기록을 남기지 않는다.
+
+> **주의** 이어 하기도 호출 직전 사용률 확인을 똑같이 거친다. 초기화 뒤에도 사용률이 기준 이상이면 다시 멈추고, 같은 묶음이라 메일은 다시 가지 않는다.
 
 
 ## 11. 테스트 사양
@@ -1676,7 +1908,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 1. 스냅샷을 쓰지 못하면 이벤트가 없고 기준이 앞으로 가지 않는다. 이벤트를 저장하지 못하면 오늘 스냅샷을 되돌린다.
 2. 읽지 못한 댓글은 전날 값을 옮겨 적고, 다음 실행이 다시 읽어 새 댓글을 한 번만 이벤트로 만든다. 미룬 이슈도 다음 실행에 한 번 읽는다.
 3. 상한에 닿은 이벤트와 대상이 사라진 이벤트는 `abandoned` 가 된다.
-4. 인증 실패는 토큰이 바뀔 때까지 AI 를 막는다. 주간 한도는 catch-up 을 잡지 않고 초기화 뒤 이어서 분석한다. 상한을 넘은 이벤트는 `pending` 으로 남아 다음 실행이 처리한다. 옛 대기 상태는 대기 SRS 이벤트가 된다. 매뉴얼 점검은 다음 변경 실행으로 미뤄진다.
+4. 인증 실패는 토큰이 바뀔 때까지 AI 를 막는다. 주간 한도도 초기화 5분 뒤에 이어 하도록 catch-up 을 잡는다. 상한을 넘은 이벤트는 `pending` 으로 남아 다음 실행이 처리한다. 옛 대기 상태는 대기 SRS 이벤트가 된다. 매뉴얼 점검은 다음 변경 실행으로 미뤄진다.
 
 ### TEST-QAINTEL-015 과거 SRS 가져오기와 본문 링크
 
@@ -1774,7 +2006,7 @@ REQ-QAINTEL-004, REQ-QAINTEL-006, REQ-QAINTEL-009, REQ-QAINTEL-025
 1. 수집·이벤트·AI 실행·메일 중 기록을 다른 저장소 연결로 읽는다. AI 작업은 재시도를 포함해 작업당 한 번 세고 한도로 남은 작업을 완료로 세지 않는다.
 2. 메일 발송 중에는 실행이 `RUNNING`이고 메일 실패 응답 문장이 가려져 저장된다. 구형 실행의 진행 기록 결측도 읽을 수 있다.
 3. [변경사항 점검하기] 뒤 진행 원과 단계·시간이 보인다. 다른 사용자가 새로 연 화면도 같다. 첫 조회 전에 끝난 실행도 종료 결과를 보인다. 접속 오류 뒤 다시 연결해 완료 결과를 읽는다.
-4. [현재 이슈 전체 점검]·[기존 TC 검토]·[검증 TC 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 390px·1920px 화면에서 시간·링크를 읽는다.
+4. [현재 이슈 전체 점검]·[기존 TC 검토]·[검증 TC 초안]도 같은 표시를 쓰며 완료 뒤 요청 버튼이 다시 켜진다. 1366px·1920px 화면에서 시간·링크를 읽는다.
 
 **기대 결과** 실행이 끝날 때 진행 원이 멈추고 결과 한 줄과 점검 기록 보기 링크가 남는다. 수집된 운영 결과와 합성 브라우저 경계 시험은 구분해 기록한다.
 
@@ -1842,7 +2074,7 @@ REQ-QAINTEL-039
 2. 같은 제품·이슈의 직전 요약만 새 댓글 입력에 들어가는지 확인한다. 이번 실행·다른 제품·다른 이슈·옛 비분석 결과는 제외한다.
 3. 새 댓글에 나온 정확한 번호를 먼저 찾아 연결 사양을 2건·1,500자까지 넣고, 누락·잘림·상한 제외를 표시한다. 한국어 조사 뒤 번호와 비슷한 번호를 구별한다.
 4. 원본 이벤트에는 작성자 ID가 남고, AI 입력의 새 댓글·이전 댓글·중첩 이벤트에는 없는지 확인한다.
-5. 390px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.
+5. 1366px·1920px 브라우저에서 상단 설명과 댓글 원문 펼치기, 가로 넘침과 JavaScript 오류를 확인한다.
 
 ### TEST-QAINTEL-026 입력 보존과 묶음 분할
 
@@ -1860,17 +2092,33 @@ REQ-QAINTEL-039
 
 **기대 결과** 실제 대기 선택과 같은 건수가 보이고, 조회로 실행·이벤트가 생기지 않는다. 새 변경은 미확정으로 표시하며 오래된 응답과 조회 오류를 0건으로 표시하지 않는다.
 
+### TEST-QAINTEL-028 분석 상세 화면의 순서와 이슈 본문
+
+**대상** REQ-QAINTEL-020
+
+**절차** 이슈 스냅샷(설명이 빈 수정 완료 이슈, 새 댓글 이슈, 사양 변경)과 작성자 표를 합성해 둔다. 분석 뒤에 댓글이 달린 결과, 같은 댓글 이벤트가 둘인 결과, 이슈가 스냅샷에 없는 이전 형식 결과를 각각 연다. 1366px·1920px 브라우저에서 같은 화면을 연다.
+
+**기대 결과** 이슈 본문이 AI 판단보다 위에 있고 설명이 비면 재현 절차를 보인다. 분석 뒤 변경 배너, `분석 이후` 댓글, 작성자 이름이 보인다. 분석 이유 한 줄에 같은 이벤트 이름이 반복되지 않는다. 신규 이슈에는 `사양으로 보면 이슈가 맞는가`와 판정 이름이 보인다. 스냅샷이 없으면 `원문 스냅샷 없음`, 종류가 빈 결과는 `이전 형식 결과`로 보인다. 가로 넘침과 자바스크립트 오류가 없다.
+
+### TEST-QAINTEL-029 분석결과 목록의 카드·필터·묶기
+
+**대상** REQ-QAINTEL-019, REQ-QAINTEL-046
+
+**절차** 합성 이슈로 다음 모양을 모두 만든다. 같은 이슈의 분석이 두 건인 이슈, 종류가 빈 이전 형식 결과, 분석 뒤에 댓글이 달린 이슈, 번호만 남은 빈 댓글이 대부분인 이슈 스냅샷, 작성자가 둘 이상이고 이름이 없는 작성자도 있는 이슈, 51건 넘는 결과. 대시보드와 결과 페이지를 열고 검색어(작성자 이름 일부)·빠른 칩·`모든 결과 보기`·`작성자별로 묶기`를 바꿔 본다. 1366px·1920px 브라우저에서 같은 화면을 열고 자바스크립트를 끈 채로도 본문을 읽는다.
+
+**기대 결과** 이슈마다 카드가 한 장이고 `이전 분석 N건`이 보인다. 작성자 이름 검색이 맞는 이슈만 남긴다. `분석 이후 변경` 칩의 결과 수와 페이지 수가 판정을 거친 값이다. 이전 형식 결과가 기본 목록에 있다. 작성자별 순서가 요약 메일과 같다. 목록을 여는 동안 Claude 호출이 없다. 가로 넘침과 자바스크립트 오류가 없다.
+
 ## 12. 요구사항 추적성
 
 이 표는 이 문서가 정의한 ID만 담는다. 상위 `SPEC.md`의 비기능 요구사항은 그 문서의 12절이 추적한다.
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
-| REQ-QAINTEL-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/holidays.py`, `config/holidays/kr.yaml` | TEST-QAINTEL-001: `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_token_saving.py` | verified |
-| REQ-QAINTEL-002 | `app/core/product_config.py`, `app/modules/daily_qa/product_adapter.py`, `config/products/vxvue.yaml` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
+| REQ-QAINTEL-001 | `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/holidays.py`, `config/holidays/kr.yaml` | TEST-QAINTEL-001: `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_token_saving.py`, TEST-ALMCHG-001: `tests/test_alm_change_collect.py` | verified |
+| REQ-QAINTEL-002 | `app/core/product_config.py`, `app/modules/daily_qa/product_adapter.py`, `config/products/vxvue.yaml` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py`, TEST-ALMCHG-002: `tests/test_alm_assignee.py` | verified |
 | REQ-QAINTEL-003 | `app/modules/daily_qa/srs_snapshot.py`, `app/modules/daily_qa/snapshots.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/product_adapter.py`, `app/modules/daily_qa/collector.py` | TEST-QAINTEL-010: `tests/test_qa_intel_events.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-004 | `app/modules/daily_qa/collector.py`, `app/modules/daily_qa/snapshots.py` | TEST-QAINTEL-003: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py` | verified |
-| REQ-QAINTEL-005 | `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-004: `tests/test_qa_intel_events.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
+| REQ-QAINTEL-005 | `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-004: `tests/test_qa_intel_events.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-ALMCHG-002: `tests/test_alm_assignee.py` | verified |
 | REQ-QAINTEL-006 | `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/change_events.py` | TEST-QAINTEL-006: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, `tests/test_qa_intel_token_saving.py` | verified |
 | REQ-QAINTEL-007 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py` | verified |
 | REQ-QAINTEL-008 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/collector.py` | TEST-QAINTEL-003: `tests/test_qa_intel_pipeline.py` | verified |
@@ -1884,15 +2132,15 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-016 | `app/modules/daily_qa/intelligence.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/daily_qa/schema.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/daily_qa/skills/qa-spec-coverage-analysis/SKILL.md` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py` | verified |
 | REQ-QAINTEL-017 | `app/modules/daily_qa/evidence_validation.py`, `app/modules/daily_qa/schema.py` | TEST-QAINTEL-007: `tests/test_qa_intel_validation.py`, `tests/test_qa_intel_tc_conflicts.py` | verified |
 | REQ-QAINTEL-018 | `app/modules/daily_qa/checklist_xlsx.py`, `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-008: `tests/test_qa_intel_coverage.py` | verified |
-| REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
-| REQ-QAINTEL-020 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-025: `tests/test_qa_finding_explanation.py` | verified |
+| REQ-QAINTEL-019 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/_result_card.html`, `app/modules/qa_agent/templates/_result_filters.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-029: `tests/test_qa_results_reader.py` | verified |
+| REQ-QAINTEL-020 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/finding_detail.html`, `app/modules/qa_agent/issue_body.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/run_findings.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_tc_conflicts.py`, TEST-QAINTEL-025: `tests/test_qa_finding_explanation.py`, TEST-QAINTEL-028: `tests/test_qa_finding_detail_layout.py`, `tests/test_qa_issue_body.py` | verified |
 | REQ-QAINTEL-021 | `app/modules/qa_agent/router.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/core/daily_qa_storage.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py`, TEST-QAINTEL-020: `tests/test_qa_run_progress.py` | verified |
 | REQ-QAINTEL-022 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-024 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/period.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-009: `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-023 | `app/modules/daily_qa/settings.py`, `app/core/daily_qa_storage.py`, `app/modules/daily_qa/snapshots.py` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 | REQ-QAINTEL-025 | `app/modules/daily_qa/claude_limits.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/core/claude_cli.py` | TEST-QAINTEL-011: `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_pipeline.py`, TEST-QAINTEL-013: `tests/test_qa_intel_failures.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-016: `tests/test_qa_intel_login.py` | verified |
 | REQ-QAINTEL-026 | `app/modules/daily_qa/pipeline.py`, `app/core/storage.py`, `app/modules/cost_dashboard/router.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py` | verified |
-| REQ-QAINTEL-027 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/snapshots.py`, `scripts/run_daily_qa.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/dashboard.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
+| REQ-QAINTEL-027 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/snapshots.py`, `scripts/run_daily_qa.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/dashboard.py` | TEST-QAINTEL-012: `tests/test_qa_intel_period.py`, TEST-QAINTEL-014: `tests/test_qa_intel_review_fixes.py`, TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py`, TEST-ALMCHG-003: `tests/test_alm_change_page.py` | verified |
 | REQ-QAINTEL-029 | `app/modules/daily_qa/alm_history.py`, `scripts/import_alm_srs_history.py`, `app/modules/daily_qa/product_adapter.py` | TEST-QAINTEL-015: `tests/test_qa_intel_alm_history.py` | verified |
 | REQ-QAINTEL-030 | `app/modules/daily_qa/issue_audit.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/evidence_validation.py`, `app/modules/qa_agent/run_view.py`, `app/modules/daily_qa/skills/qa-issue-spec-audit/SKILL.md`, `app/modules/qa_agent/router.py` | TEST-QAINTEL-017: `tests/test_qa_intel_issue_audit.py`, `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-028 | `app/modules/daily_qa/packages.py`, `app/modules/daily_qa/pipeline.py` | `tests/test_daily_qa_packages.py`, `tests/test_daily_qa_fixes.py` | verified |
@@ -1900,13 +2148,21 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-032 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/qa_agent/router.py`, `scripts/run_daily_qa.py`, `app/modules/daily_qa/skills/qa-verification-tc-draft/SKILL.md` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_pipeline.py`, `tests/test_qa_intel_dashboard.py` | verified |
 | REQ-QAINTEL-033 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/finding_detail.html`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-018: `tests/test_qa_intel_dashboard.py`, `tests/test_qa_intel_core_mode.py`, TEST-QAINTEL-025: `tests/test_qa_finding_explanation.py` | verified |
 | REQ-QAINTEL-034 | `app/modules/daily_qa/pipeline.py`, `scripts/run_daily_qa.py` | TEST-QAINTEL-018: `tests/test_qa_intel_core_mode.py`, `tests/test_qa_intel_failures.py`, `tests/test_daily_qa_pipeline.py` | verified |
-| REQ-QAINTEL-035 | `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-019: `tests/test_qa_intel_schedule.py` | verified |
+| REQ-QAINTEL-035 | `app/modules/daily_qa/scheduled_jobs.py` | TEST-QAINTEL-019: `tests/test_qa_intel_schedule.py`, TEST-ALMCHG-001: `tests/test_alm_change_collect.py` | verified |
 | REQ-QAINTEL-036 | `app/core/daily_qa_storage.py`, `app/modules/daily_qa/cancellation.py`, `app/modules/daily_qa/windows_job.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/web/static/qa-run-progress.js` | TEST-QAINTEL-021: `tests/test_qa_run_cancel.py`, `tests/test_qa_run_progress_ui.py`, `tests/qa_run_progress_ui.cjs`, `tests/test_qa_run_progress_browser.py` | implemented |
 | REQ-QAINTEL-037 | `app/modules/daily_qa/result_cache.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/settings.py`, `app/modules/qa_agent/run_view.py`, `app/modules/qa_agent/templates/run_detail.html`, `app/modules/qa_agent/templates/finding_detail.html` | TEST-QAINTEL-022: `tests/test_daily_qa_result_cache.py`, `tests/test_qa_intel_run_view.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_run_progress_browser.py` | implemented |
-| REQ-QAINTEL-038 | `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-023: `tests/test_qa_automation_policy.py`, `tests/test_qa_automation_ui.py`, `tests/test_qa_run_progress_browser.py`, `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_dashboard.py` | implemented |
+| REQ-QAINTEL-038 | `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/core/daily_qa_storage.py` | TEST-QAINTEL-023: `tests/test_qa_automation_policy.py`, `tests/test_qa_automation_ui.py`, `tests/test_qa_run_progress_browser.py`, `tests/test_qa_intel_schedule.py`, `tests/test_qa_intel_dashboard.py`, TEST-ALMCHG-001: `tests/test_alm_change_collect.py`, TEST-ALMCHG-005: `tests/test_alm_deferred.py` | implemented |
 | REQ-QAINTEL-039 | `app/modules/daily_qa/limit_evidence.py`, `app/modules/daily_qa/pipeline.py`, `app/main.py`, `scripts/capture_limit_evidence.py`, `scripts/sync_limit_evidence.ps1` | TEST-QAINTEL-024: `tests/test_limit_evidence.py` | verified |
 | REQ-QAINTEL-040 | `app/modules/daily_qa/input_budget.py`, `app/modules/daily_qa/rule_context.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-QAINTEL-026: `tests/test_qa_input_budget.py` | implemented |
 | REQ-QAINTEL-041 | `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/router.py`, `app/web/static/qa-run-preview.js` | TEST-QAINTEL-027: `tests/test_qa_run_preview.py` | implemented |
+| REQ-QAINTEL-042 | `app/modules/daily_qa/execution_plan.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/router.py`, `app/modules/qa_agent/dashboard.py`, `app/modules/qa_agent/templates/dashboard.html`, `app/modules/qa_agent/templates/select.html`, `app/web/static/qa-selection.js`, `app/web/static/qa-run-progress.js` | `tests/test_qa_execution_plan.py`, `tests/test_qa_savings_review.py`, `tests/test_qa_intel_dashboard.py`, `tests/test_qa_select_page_browser.py`, `tests/qa_run_progress_ui.cjs` | implemented |
+| REQ-QAINTEL-043 | `app/modules/daily_qa/execution_budget.py`, `app/modules/daily_qa/settings.py`, `app/modules/daily_qa/pipeline.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_execution_budget.py`, `tests/test_qa_limit_alert.py`, `tests/test_qa_model_policy.py` | implemented |
+| REQ-QAINTEL-044 | `app/modules/daily_qa/agent_runner.py`, `scripts/measure_qa_usage.py` | `tests/test_qa_usage_measurement.py`, `tests/test_qa_input_budget.py`, `tests/test_qa_savings_review.py` | implemented |
+| REQ-QAINTEL-045 | `app/modules/daily_qa/workflow_settings.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/intelligence.py` | `tests/test_qa_workflow_settings.py`, `tests/test_qa_savings_workflow.py` | implemented |
+| REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py`, `app/modules/qa_agent/templates/results.html`, `app/modules/qa_agent/templates/_result_card.html`, `app/modules/qa_agent/templates/_result_filters.html` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, TEST-QAINTEL-029: `tests/test_qa_results_reader.py` | implemented |
+| REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
+| REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/modules/daily_qa/templates/report_email.html`, `app/core/claude_usage.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py` | implemented |
+| REQ-QAINTEL-049 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py` | `tests/test_qa_limit_alert.py`, `tests/test_notifier.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

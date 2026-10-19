@@ -7,7 +7,8 @@
 
 | 대상 | 이름 형식 | 설정 키 | 기본 |
 |---|---|---|---|
-| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 30 |
+| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 7 |
+| 배포 전 백업 | `deploy-<이름>-YYYYMMDDTHHMMSSZ` 폴더 또는 `.tgz`·`.tar`·`.tar.gz`·`.zip` 파일 | `retention.deploy_backup_days` | 14 |
 | AI 응답 저장본 | `ai_cache.created_at` | `retention.ai_cache_days` | 180 |
 | 일일 QA 실행 폴더 | `output/daily_qa/YYYYMMDD-HHMMSS/` | `retention.daily_qa_run_days` | 365 |
 | 일일 QA 작업 폴더의 실행 입력 | `<작업 폴더>/runs/YYYYMMDD-HHMMSS/` | `retention.daily_qa_workspace_run_days` | 30 |
@@ -23,7 +24,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DEFAULT_DAYS = {
-    "backup_days": 30,
+    "backup_days": 7,
+    # 배포 전 백업은 코드를 되돌릴 때 쓴다. 데이터는 매일 백업 ZIP 이 따로 남긴다.
+    "deploy_backup_days": 14,
     "ai_cache_days": 180,
     # 실행 폴더는 감사 목적이라 길게 둔다. 작업 폴더의 입력은 실행 폴더에 사본(sent/)이 있어 짧게 둔다.
     "daily_qa_run_days": 365,
@@ -31,6 +34,7 @@ DEFAULT_DAYS = {
 }
 
 _BACKUP_NAME = re.compile(r"^qa-backup-(\d{8}T\d{6}Z)\.zip$")
+_DEPLOY_BACKUP_NAME = re.compile(r"^deploy-[A-Za-z0-9._-]+-(\d{8}T\d{6}Z)(?:\.tgz|\.tar|\.tar\.gz|\.zip)?$")
 _RUN_NAME = re.compile(r"^(\d{8}-\d{6})$")
 
 
@@ -71,6 +75,30 @@ def prune_backups(directory: Path, keep_days: int, now: datetime | None = None) 
     return removed
 
 
+def prune_deploy_backups(directory: Path, keep_days: int, now: datetime | None = None) -> list[Path]:
+    """보관 일수를 넘은 배포 전 백업(폴더·묶음 파일)을 지운다. 가장 새 것 하나는 날짜와 관계없이 남긴다."""
+    if keep_days <= 0 or not directory.is_dir():
+        return []
+    backups: list[tuple[datetime, Path]] = []
+    for path in directory.iterdir():
+        match = _DEPLOY_BACKUP_NAME.match(path.name)
+        if not match or path.is_symlink() or not (path.is_file() or path.is_dir()):
+            continue
+        created = datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+        backups.append((created, path))
+    backups.sort()
+    cutoff = _cutoff(keep_days, now)
+    removed = []
+    for created, path in backups[:-1]:
+        if created < cutoff:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink(missing_ok=True)
+            removed.append(path)
+    return removed
+
+
 def prune_run_folders(base: Path, keep_days: int, now: datetime | None = None) -> list[Path]:
     """`YYYYMMDD-HHMMSS` 이름의 실행 폴더 가운데 보관 일수를 넘은 것을 통째로 지운다."""
     if keep_days <= 0 or not base.is_dir():
@@ -102,12 +130,13 @@ def _daily_qa_workspace(settings) -> Path:
 
 
 def run_retention(settings, backup_dir: Path, storage=None, now: datetime | None = None) -> dict:
-    """설정된 보관 일수로 네 가지를 정리하고 무엇을 지웠는지 돌려준다."""
+    """설정된 보관 일수로 다섯 가지를 정리하고 무엇을 지웠는지 돌려준다."""
     from app.core.storage import Storage
 
     days = retention_days(settings)
     result = {
         "backups": [path.name for path in prune_backups(backup_dir, days["backup_days"], now)],
+        "deploy_backups": [path.name for path in prune_deploy_backups(backup_dir, days["deploy_backup_days"], now)],
         "daily_qa_runs": [path.name for path in prune_run_folders(settings.root / "output" / "daily_qa", days["daily_qa_run_days"], now)],
         "daily_qa_workspace_runs": [
             path.name for path in prune_run_folders(_daily_qa_workspace(settings) / "runs", days["daily_qa_workspace_run_days"], now)

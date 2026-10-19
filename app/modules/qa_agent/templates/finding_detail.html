@@ -4,11 +4,10 @@
 {% include "_run_progress.html" %}
 {% set s = finding.sections or {} %}
 {% set kind = finding.analysis_type %}
-{# 요청 실행 결과는 원래 분석의 구획 모양을 쓴다. 자동 사양 변경 분석은 TC 구획이 없다 (REQ-QAINTEL-031·033). #}
-{% if kind == 'TC_CHECK' or (kind == 'SPEC_COVERAGE' and finding.skill == 'qa-spec-coverage-analysis') %}{% set view = 'COVERAGE' %}
-{% elif kind == 'SPEC_COVERAGE' %}{% set view = 'SPEC_SUMMARY' %}
-{% elif kind == 'TC_DRAFT' %}{% set view = 'FIXED_ISSUE' %}
-{% else %}{% set view = kind %}{% endif %}
+{% set iv = issue_view %}
+{% set vv = verdict_view %}
+{# 화면 순서(REQ-QAINTEL-020): 머리 → 최신성 → 분석 이유 → 이슈 본문 → AI 판단 → QA 할 일 → 댓글 → 근거 자료 → 분석 기록 → 처리 상태.
+   탭 없이 한 흐름이다. 요청 실행 결과는 원래 분석의 구획 모양(`view`)을 쓴다 (REQ-QAINTEL-031·033). #}
 
 {% macro issue_list(entries, extra_key='') %}
   {% if entries %}<ul>{% for entry in entries %}
@@ -23,66 +22,108 @@
 
 {% macro text_block(value) %}{% if value %}<div class="qa-pre">{{ value }}</div>{% else %}<p class="hint">없음</p>{% endif %}{% endmacro %}
 
+{% macro folded(text) %}<div class="qa-pre">{{ text.head }}</div>{% if text.rest %}<details><summary>펼치기 ({{ text.extra }}줄 더)</summary><div class="qa-pre">{{ text.rest }}</div></details>{% endif %}{% endmacro %}
+
 <section>
-  <h2>[{{ finding.subject }}] {{ finding.subject_title }}</h2>
-  <p class="hint">{{ card.kind }} · 실행 <a href="/qa-agent/runs/{{ finding.run_id }}">{{ finding.run_id }}</a> · {{ kst(finding.created_at) }}
-    {% if s.source_finding %} · <a href="/qa-agent/findings/{{ s.source_finding }}">원래 분석 보기</a>{% endif %}</p>
+<div class="qa-detail-layout">
+<div class="qa-flow">
+
+  <div id="issue-head">
+    <h2>[{{ finding.subject }}] {{ finding.subject_title }}{% if iv.url %} <a class="qa-open" href="{{ iv.url }}" target="_blank" rel="noopener noreferrer">원문 열기</a>{% endif %}</h2>
+    {% if not iv.srs %}<p class="qa-meta-line"><b>{{ iv.author }}</b> · 등록 {{ iv.created or '미확인' }} · <b>최근 업데이트 {{ iv.updated }}</b>{% if iv.status %} · {{ iv.status }}{% endif %}{% if iv.rd_result %} · 연구소 {{ iv.rd_result }}{% endif %}</p>{% endif %}
+    <p class="hint">{{ card.kind }} · 분석 {{ kst(finding.created_at) }} · 실행 <a href="/qa-agent/runs/{{ finding.run_id }}">{{ finding.run_id }}</a>
+      · <span class="pill">{{ processing_states.get(card.processing_state, '미처리') }}</span> <a href="#processing">처리 상태 변경</a>
+      {% if s.source_finding %} · <a href="/qa-agent/findings/{{ s.source_finding }}">원래 분석 보기</a>{% endif %}</p>
+  </div>
   {% if s.result_cache %}<p class="qa-banner">기존 분석 결과를 재사용하고 현재 근거를 다시 확인했습니다.
     원본 실행 <a href="/qa-agent/runs/{{ s.result_cache.run_id|urlencode }}">{{ s.result_cache.run_id }}</a> · {{ s.result_cache.task_id }}
   </p>{% endif %}
 
-  <div class="qa-key" id="key-result">
-    <div class="qa-card-head"><span class="level {{ card.level_class }}">{{ card.level }}</span>
-      <span class="hint" style="margin:0">판정 {{ card.verdict_label }} · 신뢰도 <span title="{{ finding.confidence or '' }}">{{ label(finding.confidence or '-') }}</span></span></div>
-    <div class="qa-summary">{{ finding.summary }}</div>
-    {% set change = s.change or {} %}
-    {% if change.summary or change.changed_requirements %}
-    <div><b>바뀐 사양</b>{% if change.summary %}<div>{{ change.summary }}</div>{% endif %}
-      {% if change.changed_requirements %}<ul>{% for r in change.changed_requirements[:5] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}</div>
+  {% if freshness.state == 'changed_after' %}
+  <p class="qa-banner" id="freshness">{% if freshness.after_events %}분석({{ kst(finding.created_at) }}) 이후 변경 {{ freshness.after_events }}건 · 재분석 대기{% else %}분석({{ kst(finding.created_at) }}) 뒤에 이슈가 업데이트되었습니다 ({{ kst(freshness.latest_update) }}){% endif %}
+    <span class="hint">화면에 표시만 합니다. AI 를 자동으로 부르지 않습니다.</span></p>
+  {% endif %}
+
+  <p class="qa-trigger" id="trigger"><b>왜 분석했나:</b> {% for item in trigger %}{{ item.time }} {{ item.label }}{% if not loop.last %} · {% endif %}{% else %}변경 이벤트가 저장되지 않았습니다.{% endfor %}</p>
+
+  <div class="qa-section" id="issue-body">
+    {% if iv.srs %}
+    <h3>사양 내용</h3>
+    <p>{{ iv.text }}</p>
+    {% else %}
+    <h3>이슈 본문</h3>
+    {% if iv.available %}
+      {% for field in iv.fields %}<h4>{{ field.name }}</h4>{{ folded(field.text) }}{% else %}<p class="hint">저장된 설명·재현 절차·원인·조치 내용이 비어 있습니다.</p>{% endfor %}
+      {% if iv.occurred or iv.target %}<p class="hint">발생 버전 {{ iv.occurred or '-' }} · 목표 버전 {{ iv.target or '-' }}</p>{% endif %}
+    {% else %}
+      <p><span class="pill">원문 스냅샷 없음</span> <span class="hint">이 이슈가 저장된 이슈 스냅샷에 없어 본문을 보일 수 없습니다.</span></p>
     {% endif %}
-    {% if finding.evidence %}
-    <div><b>근거</b><ul>{% for ev in finding.evidence[:3] %}<li><b title="{{ ev.location }}">{{ explanation.comment_locations.get(ev.ref or ev.location, ev.location) if ev.source_type == 'comment' else ev.location }}</b> {{ ev.summary }}</li>{% endfor %}</ul></div>
-    {% endif %}
-    {% if card.todos %}<div class="qa-todo"><b>QA 할 일</b><ol>{% for todo in card.todos %}<li>{{ todo }}</li>{% endfor %}</ol></div>{% endif %}
-    {% if kind in ('SPEC_COVERAGE', 'FIXED_ISSUE') %}
-    <div class="qa-actions">
-      {% if kind == 'SPEC_COVERAGE' %}<button type="button" class="on-demand" data-action="tc-check"
-        title="이 변경을 기존 TC·Checklist 와 비교합니다. 누를 때만 AI 를 부릅니다">기존 TC 검토</button>{% endif %}
-      {% if kind == 'FIXED_ISSUE' %}<button type="button" class="on-demand" data-action="tc-draft"
-        title="기존 TC 와 비교해 검증 TC 초안을 만듭니다. 누를 때만 AI 를 부릅니다">검증 TC 초안 만들기</button>{% endif %}
-      <span class="hint" id="on-demand-message" style="margin:0">TC 는 사람이 넣는 자료라 자동 분석에서는 보지 않습니다.</span>
-    </div>
     {% endif %}
   </div>
 
-  <div class="qa-section" id="analysis-explanation">
-    <h3>이 분석이 한 일</h3>
-    <p><b>{% if kind == 'SPEC_COVERAGE' or kind == 'TC_CHECK' %}사양 내용{% else %}이슈 내용{% endif %}</b> {{ explanation.issue }}</p>
-    <p><b>새로 생긴 일</b> {{ explanation.events|join(' · ') or '변경 이벤트가 저장되지 않았습니다.' }}</p>
-    {% for c in explanation.comments %}
-    <div class="qa-section">
-      <p><b>댓글 {{ loop.index }}</b> · {{ c.created or '작성 시각 정보 없음' }} · {{ c.author }}</p>
-      <details class="comment-original"><summary>댓글 원문 보기</summary>{{ text_block(c.text) }}</details>
-      <p><b>댓글 해석</b> {{ c.summary }}</p>
-      {% if c.classification %}<p><span class="pill" title="{{ c.classification }}">{{ label(c.classification) }}</span></p>{% endif %}
+  <div class="qa-key" id="key-result">
+    <div id="ai-judgement">
+      <h3>AI 판단</h3>
+      {% if vv.legacy %}
+      <p><span class="pill">이전 형식 결과</span></p>
+      <div class="qa-summary">{{ finding.summary }}</div>
+      {% if finding.detail %}{{ text_block(finding.detail) }}{% endif %}
+      {% else %}
+      {% if vv.question %}<p class="qa-question">{{ vv.question }}</p>{% endif %}
+      <div class="qa-card-head"><span class="level {{ card.level_class }}">{{ card.level }}</span>
+        <span class="hint" style="margin:0">{% if finding.verdict %}판정 {% endif %}<b title="{{ finding.verdict }}">{{ vv.verdict }}</b>{% if vv.needs_review %} <span class="pill qa-review-needed">검토 필요</span>{% endif %}
+          · 신뢰도 <span title="{{ finding.confidence or '' }}">{{ label(finding.confidence or '-') }}</span></span>
+        {% for mark in vv.marks %}<span class="pill">{{ mark }}</span>{% endfor %}</div>
+      <div class="qa-summary">{{ finding.summary }}</div>
+      {% for line in vv.lines %}<p>{{ line }}</p>{% endfor %}
+      {% if vv.note %}<p class="hint">{{ vv.note }}</p>{% endif %}
+      <p class="hint">{{ level_help.get(card.level, '') }}</p>
+      {% endif %}
+      {% if s.tc_hold %}<p class="qa-banner">TC 작성 보류: {{ s.tc_hold.reason }}</p>{% endif %}
+      {% set change = s.change or {} %}
+      {% if change.summary or change.changed_requirements %}
+      <div><b>바뀐 사양</b>{% if change.summary %}<div>{{ change.summary }}</div>{% endif %}
+        {% if change.changed_requirements %}<ul>{% for r in change.changed_requirements[:5] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}</div>
+      {% endif %}
+      {% if finding.evidence %}
+      <div><b>근거 사양</b><ul>{% for ev in finding.evidence[:3] %}<li><b title="{{ ev.location }}">{{ explanation.comment_locations.get(ev.ref or ev.location, ev.location) if ev.source_type == 'comment' else ev.location }}</b> {{ ev.summary }}</li>{% endfor %}</ul></div>
+      {% endif %}
+      {% if kind in ('SPEC_COVERAGE', 'FIXED_ISSUE') %}
+      <div class="qa-actions">
+        {% if kind == 'SPEC_COVERAGE' %}<button type="button" class="on-demand" data-action="tc-check"
+          title="이 변경을 기존 TC·Checklist 와 비교합니다. 누를 때만 AI 를 부릅니다">기존 TC 검토</button>{% endif %}
+        {% if kind == 'FIXED_ISSUE' %}<button type="button" class="on-demand" data-action="tc-draft"
+          title="기존 TC 와 비교해 검증 TC 초안을 만듭니다. 누를 때만 AI 를 부릅니다">검증 TC 초안 만들기</button>{% endif %}
+        <span class="hint" id="on-demand-message" style="margin:0">{% if integrated_tc %}선택한 검증 버전 TC를 기본 분석에서 비교합니다. 이 버튼은 추가 AI 분석을 요청합니다.{% else %}TC 는 사람이 넣는 자료라 자동 분석에서는 보지 않습니다.{% endif %}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="qa-todo" id="qa-todos">
+      {% if card.todos %}<h3>QA 할 일</h3><ol>{% for todo in card.todos %}<li>{{ todo }}</li>{% endfor %}</ol>{% endif %}
+      {% if explanation.unconfirmed %}<h4>확인하지 못한 자료</h4><ul>{% for item in explanation.unconfirmed %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  </div>
+
+  {% if not iv.srs %}
+  <div class="qa-section" id="comments">
+    <h3>댓글{% if explanation.comment_rows %} {{ explanation.comment_rows|length }}건{% endif %}</h3>
+    {% for c in explanation.comment_rows %}
+    <div class="qa-comment">
+      <p><b>{{ loop.index }})</b> {{ c.created or '작성 시각 정보 없음' }} · {{ c.author }}
+        {% if c.used %}<span class="pill">분석에 사용</span>{% elif c.after %}<span class="pill qa-after">분석 이후</span>{% endif %}</p>
+      {% if c.body_missing %}<p class="hint">본문 미수집</p>{% else %}{{ text_block(c.text) }}{% endif %}
+      {% if c.used and c.interpreted %}
+      <p><b>댓글 해석</b> {{ c.summary }}{% if c.classification %} <span class="pill" title="{{ c.classification }}">{{ label(c.classification) }}</span>{% endif %}</p>
       {% if c.impact %}<p><b>QA 판단에 주는 영향</b> {{ c.impact }}</p>{% endif %}
       {% if c.follow_up %}<p><b>추가로 확인할 점</b> {{ c.follow_up }}</p>{% endif %}
+      {% elif c.used and explanation.interprets_comments %}<p class="hint">해석 없음</p>{% endif %}
     </div>
-    {% endfor %}
-    {% if explanation.has_checked %}
-    <p><b>AI가 확인했다고 기록한 자료</b></p>
-    <ul>{% for item in explanation.confirmed %}<li>{{ item }}</li>{% else %}<li>확인한 자료가 기록되지 않았습니다.</li>{% endfor %}</ul>
-    <p><b>확인하지 못한 자료</b></p>
-    <ul>{% for item in explanation.unconfirmed %}<li>{{ item }}</li>{% else %}<li>미확인 자료가 기록되지 않았습니다.</li>{% endfor %}</ul>
-    {% else %}<p class="qa-banner">확인 자료 구분이 저장되지 않은 결과입니다. 분석 메모에서 확인 범위를 확인하세요.</p>{% endif %}
-    <p><b>확인 범위와 한계 · 분석 메모</b></p>{{ text_block(explanation.memo) }}
-    {% if explanation.srs_links %}<p><b>댓글·분석에서 언급한 번호의 원문</b>
-      {% for link in explanation.srs_links %}<a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.id }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
-    <p><b>판단과 이유</b> <span title="{{ finding.verdict }}">{{ card.verdict_label }}</span> · {{ finding.summary }}</p>
+    {% else %}<p class="hint">저장된 댓글이 없습니다.</p>{% endfor %}
   </div>
+  {% endif %}
 
-  <details class="qa-more"><summary>자세히</summary>
-  {% if finding.detail %}<div class="qa-section"><h3>분석 메모</h3>{{ text_block(finding.detail) }}</div>{% endif %}
+  <div class="qa-more" id="evidence-panel"><h3>근거 자료</h3>
   {% if card.badges %}<div class="tags">{% for badge in card.badges %}<span class="pill">{{ badge }}</span>{% endfor %}</div>{% endif %}
 
   {% if view == 'SPEC_SUMMARY' %}
@@ -161,23 +202,52 @@
     {% if finding.evidence %}<ul>{% for ev in finding.evidence %}<li><span class="pill">{{ ev.source_type }}</span> <b>{{ ev.location }}</b> {{ ev.summary }} {% if ev.validity and ev.validity != 'Current' %}({{ ev.validity }}){% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="hint">근거 없음 — 근거가 없음을 뜻하는 판정이라 신뢰도를 올리지 않았습니다.</p>{% endif %}</div>
 
-  {% if questions %}<div class="qa-section"><h3>추가 확인사항</h3><ul>{% for q in questions %}<li>{{ q.question }}{% if q.why %} <span class="hint">({{ q.why }})</span>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+  {% if s.tc_coverage and kind not in ('FIXED_ISSUE','TC_DRAFT') %}<div class="qa-section"><h3>선택 버전 TC 비교</h3><ul>{% for tc in s.tc_coverage %}<li>{{ tc.tc_id or tc.location }} · {{ tc.reason }}</li>{% endfor %}</ul></div>{% endif %}
+  </div>
 
-  {% set validation = s.validation or {} %}
-  {% if validation.removed or validation.notes %}
-  <div class="qa-section"><h3>근거 검증 기록</h3>
-    {% for note in validation.notes or [] %}<p class="hint">{{ note }}</p>{% endfor %}
-    {% if validation.removed %}<ul>{% for item in validation.removed %}<li>뺀 항목 <b>{{ item.value }}</b> ({{ item.kind }}) — {{ item.reason }}</li>{% endfor %}</ul>{% endif %}</div>
-  {% endif %}
+  <details id="analysis-record" class="qa-record"><summary>분석 기록 (모델·분석 메모·근거 검증·변경 이벤트)</summary>
+    {% if s.analysis_provenance %}<p class="hint">분석 모델 {{ s.analysis_provenance.model }} · 추론 {{ s.analysis_provenance.effort }}{% if s.analysis_provenance.verification_sheet %} · 검증 버전 {{ s.analysis_provenance.verification_sheet.sheet }}{% endif %}</p>{% endif %}
+    <p class="hint">실행 <a href="/qa-agent/runs/{{ finding.run_id }}">{{ finding.run_id }}</a> · {{ kst(finding.created_at) }} (한국 시간)</p>
+    <div class="qa-section"><h3>확인 범위와 한계 · 분석 메모</h3>{{ text_block(explanation.memo) }}</div>
+    {% if explanation.has_checked %}
+    <div class="qa-section"><h3>AI가 확인했다고 기록한 자료</h3>
+    <ul>{% for item in explanation.confirmed %}<li>{{ item }}</li>{% else %}<li>확인한 자료가 기록되지 않았습니다.</li>{% endfor %}</ul>
+    <h3>확인하지 못한 자료</h3>
+    <ul>{% for item in explanation.unconfirmed %}<li>{{ item }}</li>{% else %}<li>미확인 자료가 기록되지 않았습니다.</li>{% endfor %}</ul></div>
+    {% else %}<p class="qa-banner">확인 자료 구분이 저장되지 않은 결과입니다. 분석 메모에서 확인 범위를 확인하세요.</p>{% endif %}
+    {% if explanation.srs_links %}<p><b>댓글·분석에서 언급한 번호의 원문</b>
+      {% for link in explanation.srs_links %}<a href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.id }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
 
-  {% if events %}
-  <div class="qa-section"><h3>이 분석을 만든 변경 이벤트</h3><ul>
-    {% for event in events %}<li>#{{ event.id }} {{ event_labels.get(event.event_type, event.event_type) }} · 바뀐 필드 {{ event.changed_fields|join(', ') or '-' }} · <span class="pill {{ event.analysis_status }}">{{ event.status_label }}</span></li>{% endfor %}
-  </ul></div>
-  {% endif %}
-  {% if finding.related_ids %}<p class="hint">관련 번호: 이슈 {{ (finding.related_ids.issues or [])|join(', ') or '-' }} · SRS {{ (finding.related_ids.srs or [])|join(', ') or '-' }} · TC {{ (finding.related_ids.tcs or [])|join(', ') or '-' }}</p>{% endif %}
+    {% if questions %}<div class="qa-section"><h3>추가 확인사항</h3><ul>{% for q in questions %}<li>{{ q.question }}{% if q.why %} <span class="hint">({{ q.why }})</span>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+
+    {% set validation = s.validation or {} %}
+    {% if validation.removed or validation.notes %}
+    <div class="qa-section"><h3>근거 검증 기록</h3>
+      {% for note in validation.notes or [] %}<p class="hint">{{ note }}</p>{% endfor %}
+      {% if validation.removed %}<ul>{% for item in validation.removed %}<li>뺀 항목 <b>{{ item.value }}</b> ({{ item.kind }}) — {{ item.reason }}</li>{% endfor %}</ul>{% endif %}</div>
+    {% endif %}
+
+    {% if events %}
+    <div class="qa-section"><h3>이 분석을 만든 변경 이벤트</h3><ul>
+      {% for event in events %}<li>#{{ event.id }} {{ event_labels.get(event.event_type, event.event_type) }} · 바뀐 필드 {{ event.changed_fields|join(', ') or '-' }} · <span class="pill {{ event.analysis_status }}">{{ event.status_label }}</span></li>{% endfor %}
+    </ul></div>
+    {% endif %}
+    {% if finding.related_ids %}<p class="hint">관련 번호: 이슈 {{ (finding.related_ids.issues or [])|join(', ') or '-' }} · SRS {{ (finding.related_ids.srs or [])|join(', ') or '-' }} · TC {{ (finding.related_ids.tcs or [])|join(', ') or '-' }}</p>{% endif %}
   </details>
   <p class="hint">모든 결과는 AI 초안입니다. 최종 판정과 반영은 QA 가 합니다.</p>
+</div>
+
+<aside id="processing" class="qa-process"><h3>처리 상태</h3>
+  <form method="post" action="/qa-agent/results/{{ finding.id }}/processing" class="qa-process-form">
+    <input type="hidden" name="product" value="{{ finding.product or '' }}">
+    <label>처리 상태 <select name="state">{% for code, name in processing_states.items() %}<option value="{{ code }}" {% if code == card.processing_state %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+    <label>처리자 <input name="actor" required maxlength="80" autocomplete="name"></label>
+    <label>메모 <input name="note" maxlength="2000" placeholder="확인 내용·완료 또는 보류 이유"></label><button>처리 상태 저장</button>
+  </form>
+  <p class="hint">확인 완료는 이 분석에 대한 QA 처리 완료입니다. 이슈를 종료하거나 실제 장비 검증을 PASS로 바꾸지 않습니다. 처리자 이름은 직접 입력한 기록입니다.</p>
+  <details><summary>처리 이력 {{ processing_history|length }}건</summary><ul>{% for entry in processing_history %}<li>{{ kst(entry.created_at) }} · {{ processing_states[entry.state] }} · {{ entry.actor }} · {{ entry.note }}</li>{% else %}<li>아직 처리 이력이 없습니다.</li>{% endfor %}</ul></details>
+</aside>
+</div>
 </section>
 <script>
 (function () {

@@ -1,5 +1,5 @@
 {# 모든 화면이 같이 쓰는 상단 메뉴 (REQ-WEB-007). 메뉴 순서와 이름은 여기서만 바꾼다.
-   active: 지금 화면이 속한 기능 키(home·vxvue_chatbot·qa_agent·manual_review·knowledge·cost_dashboard·settings_ai).
+   active: 지금 화면이 속한 기능 키(home·vxvue_chatbot·qa_agent·manual_review·knowledge·cost_dashboard·settings).
    guide_url: 그 기능의 사용법 주소. 허브처럼 사용법이 없으면 비운다. #}
 {% macro top_nav(active, guide_url="") -%}
 <nav class="top-nav">
@@ -10,7 +10,7 @@
         ("manual_review", "매뉴얼 개정 검토", "/manual-review"),
         ("knowledge", "검증 자료 관리", "/knowledge"),
         ("cost_dashboard", "AI 사용량", "/cost-dashboard"),
-        ("settings_ai", "AI 분석 설정", "/settings/ai"),
+        ("settings", "설정", "/settings"),
       ] %}<a href="{{ url }}"{% if key == active %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
   {%- if guide_url %}<a href="{{ guide_url }}">사용법</a>{% endif -%}
 </nav>

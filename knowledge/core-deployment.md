@@ -22,7 +22,7 @@
 
 - 핵심 앱은 systemd 유닛(`qa-verification.service`)으로 떠 있다(2026-09-02 systemd 전환 완료). 재기동은 `sudo systemctl restart qa-verification` 한 줄이면 된다 — nohup/kill 방식이 아니다.
 - `scripts/deploy.ps1 -Restart`를 쓰면 파일 전송 + 의존성 설치 + 위 재기동 + 헬스체크까지 한 번에 수행한다(`secrets.txt`의 `SERVER_SUDO_PASSWORD` 필요). `-Restart` 없이 실행하면 재기동은 하지 않고 사람이 나중에 고른다.
-- 재기동 후 `/health`가 `{"status":"ok"}`를 반환하는지, 주요 화면(`/`, `/knowledge`, `/analyses`)이 뜨는지 확인한다.
+- 재기동 후 `/health`가 `{"status":"ok"}`를 반환하는지, 주요 화면(`/`, `/knowledge`, `/qa-agent`, `/manual-review`)이 뜨는지 확인한다. `/analyses`는 2026-10-01 영향 분석 기능을 지울 때 없어진 주소라 404가 정상이다.
 - **다른 서비스나 포트는 건드리지 않는다.**
 
 ## 같은 호스트의 다른 서비스를 보호한다

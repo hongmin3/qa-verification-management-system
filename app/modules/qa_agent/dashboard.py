@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
+import logging
 import re
 from urllib.parse import quote, urlparse
 
@@ -28,6 +29,8 @@ from app.modules.daily_qa.product_adapter import RD_FIXED, RD_LABELS, RD_SPEC_LI
 from app.modules.daily_qa.scheduled_jobs import schedule_settings
 from app.modules.daily_qa.settings import DailyQaSettings, configured_products, load
 from app.modules.daily_qa.store import DailyQaStore
+
+logger = logging.getLogger(__name__)
 
 KST = holidays.KST
 MAX_PERIOD_DAYS = 366
@@ -299,16 +302,40 @@ def badges(finding: dict) -> list[str]:
     return out
 
 
-def card(finding: dict) -> dict:
-    """세 줄 카드: 결론 단계, 한 줄 요약, QA 할 일 (REQ-QAINTEL-033). 세부 표시는 상세 화면의 `자세히` 에 있다."""
+LEGACY_KIND = "이전 형식"
+NO_FRESHNESS = {"state": "unknown", "after_events": 0, "latest_update": ""}
+
+
+def ago(value, now: datetime | None = None) -> str:
+    """`N분 전`·`N시간 전`·`N일 전`. 시각을 읽지 못하면 빈 값이다. 미래 시각은 `방금` 으로 본다."""
+    moment = _moment(value)
+    if moment is None:
+        return ""
+    seconds = int(((now or datetime.now(timezone.utc)) - moment).total_seconds())
+    if seconds < 60:
+        return "방금"
+    if seconds < 3600:
+        return f"{seconds // 60}분 전"
+    if seconds < 86400:
+        return f"{seconds // 3600}시간 전"
+    return f"{seconds // 86400}일 전"
+
+
+def card(finding: dict, freshness: dict | None = None, trigger: list[dict] | None = None, now: datetime | None = None) -> dict:
+    """결과 카드. 결론 단계, 두 줄 요약, QA 할 일 (REQ-QAINTEL-033). 세부 표시는 상세 화면의 `자세히` 에 있다.
+
+    `freshness`·`trigger` 는 목록이 한꺼번에 읽어 넘긴다(REQ-QAINTEL-046). 없으면 `unknown`·빈 목록이다.
+    """
     kind = finding.get("analysis_type", "")
     name = level(finding)
     return {
         "id": finding["id"],
         "subject": finding["subject"],
         "title": finding.get("subject_title", ""),
-        "kind": ANALYSIS_TYPE_LABELS.get(kind, kind or finding.get("skill", "")),
+        "kind": ANALYSIS_TYPE_LABELS.get(kind, kind) if kind else LEGACY_KIND,
         "analysis_type": kind,
+        "legacy": not kind,
+        "is_spec": kind in SRS_SUBJECT_KINDS,
         "verdict": finding["verdict"],
         "verdict_label": label(finding["verdict"]),
         "level": name,
@@ -317,16 +344,199 @@ def card(finding: dict) -> dict:
         "todos": todos(finding),
         "badges": badges(finding),
         "created": kst(finding.get("created_at")),
+        "issue_updated": kst(finding.get('issue_updated_at')) if finding.get('issue_updated_at') else '미확인',
+        "issue_updated_ago": ago(finding.get("issue_updated_at"), now),
         "confidence": finding.get("confidence", ""),
+        "reporter": finding.get('reporter_name') or (f"이름 미확인 ({finding['reporter_id']})" if finding.get('reporter_id') else '이슈 작성자 정보 없음'),
+        "reporter_id": finding.get("reporter_id", ""),
+        "reporter_name": finding.get("reporter_name", ""),
+        "processing_state": finding.get('processing_state', 'open'),
+        "freshness": freshness or dict(NO_FRESHNESS),
+        "trigger": trigger or [],
+        "history_count": int(finding.get("history_count") or 1),
     }
 
 
-def finding_explanation(finding: dict, events: list[dict], polarion=None) -> dict:
-    """저장된 기록만 풀어 쓴다. 옛 결과의 확인 범위·작성자를 추측하지 않는다."""
+#: 이슈가 아니라 사양 번호가 대상인 분석. 이슈 원문·댓글 구획을 두지 않는다 (REQ-QAINTEL-020).
+SRS_SUBJECT_KINDS = ("SPEC_COVERAGE", "TC_CHECK", "SRS_REMOVED")
+#: 신규 이슈의 판정 이름. 코드 값은 `qa-new-issue-analysis/SKILL.md` 의 출력 형식이다 (REQ-QAINTEL-020).
+VALIDITY_LABEL = {
+    "SPEC_VIOLATION": "이슈로 보임",
+    "CONSISTENT_WITH_SPEC": "사양상 정상, 이슈 아닐 수 있음",
+    "SPEC_UNDEFINED": "사양 미정의, 기획 확인 필요",
+    "SPEC_AMBIGUOUS": "사양이 모호함, 기획 확인 필요",
+    "INSUFFICIENT_EVIDENCE": "근거 부족, 판단 보류",
+}
+DUPLICATE_VERDICTS = ("STRONG_DUPLICATE", "POSSIBLE_DUPLICATE")
+DUPLICATE_FLAGS = ("HISTORICAL_SPEC_DUPLICATE", "HISTORICAL_DUPLICATE_REREGISTERED")
+#: 화면 질문 (REQ-QAINTEL-020 분석 종류별 AI 판단).
+KIND_QUESTIONS = {
+    "NEW_ISSUE": "사양으로 보면 이슈가 맞는가",
+    "FIXED_ISSUE": "원인 설명과 수정이 사양에 맞는가",
+    "TC_DRAFT": "원인 설명과 수정이 사양에 맞는가",
+    "COMMENT": "새 댓글이 QA 판단을 바꾸는가",
+    "SPEC_DECISION": "연구소 설명이 사양으로 뒷받침되는가",
+    "SPEC_COVERAGE": "바뀐 사양을 TC가 덮는가",
+    "TC_CHECK": "바뀐 사양을 TC가 덮는가",
+}
+FOLD_LINES = 8
+VERDICT_NOT_SAVED = "판정 저장 안 됨"
+COMMENT_BODY_MISSING = "본문 미수집"
+PENDING_EVENT_STATUSES = ("pending", "failed")
+
+
+def _moment(value) -> datetime | None:
+    if not value:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def freshness(finding: dict, issue, events: list[dict]) -> dict:
+    """분석 뒤에 이슈가 바뀌었는가 (Contract: FreshnessState, REQ-QAINTEL-020 2번).
+
+    분석 시각 뒤에 생긴 같은 이슈의 대기 이벤트가 있거나 이슈의 최근 업데이트가 분석 시각보다 늦으면 `changed_after` 다.
+    화면 표시만 하며 AI 를 부르지 않는다. 분석 시각이나 비교할 자료가 없으면 `unknown` 이다.
+    """
+    analyzed = _moment(finding.get("created_at"))
+    subject = finding.get("subject")
+    own = set(finding.get("event_ids") or [])
+    later = []
+    if analyzed:
+        for event in events or []:
+            created = _moment(event.get("created_at"))
+            if (event.get("entity_id", subject) == subject and event.get("analysis_status") in PENDING_EVENT_STATUSES
+                    and event.get("id") not in own and created and created > analyzed):
+                later.append(event)
+    updated = _moment(issue.updated) if issue is not None else None
+    if later:
+        latest = max(later, key=lambda event: _moment(event["created_at"]))["created_at"]
+    else:
+        latest = ""
+    latest_update = (issue.updated if issue is not None and issue.updated else latest) or ""
+    if not analyzed or (issue is None and not events):
+        return {"state": "unknown", "after_events": 0, "latest_update": latest_update}
+    changed = bool(later) or bool(updated and updated > analyzed)
+    return {"state": "changed_after" if changed else "current", "after_events": len(later), "latest_update": latest_update}
+
+
+def trigger_line(events: list[dict]) -> list[dict]:
+    """`왜 분석했나` 한 줄. 같은 시각·같은 이름은 한 번만 적고 시간순으로 놓는다 (REQ-QAINTEL-020 3번)."""
+    found: dict[tuple[str, str], datetime | None] = {}
+    for event in events or []:
+        kind = event.get("event_type", "")
+        after = event.get("after") or {}
+        if kind == ISSUE_COMMENT_ADDED and after.get("comments"):
+            significant = after.get("significant_ids") or []
+            entries = [(comment.get("created") or event.get("created_at"), "새 댓글") for comment in after["comments"]
+                       if not significant or str(comment.get("id") or "") in significant]
+        else:
+            entries = [(event.get("created_at"), "신규 이슈 등록" if kind == ISSUE_CREATED else EVENT_LABELS.get(kind, kind))]
+        for created, name in entries:
+            found.setdefault((kst(created), name), _moment(created))
+    ordered = sorted(found.items(), key=lambda item: (item[1] is None, item[1] or datetime.min.replace(tzinfo=timezone.utc)))
+    return [{"time": time, "label": name} for (time, name), _ in ordered]
+
+
+def person(name: str = "", person_id: str = "") -> str:
+    """작성자 표시. 이름이 없으면 `이름 미확인 (ID)`, ID도 없으면 빈 값이다. 화면 표시용이며 AI 입력에는 쓰지 않는다."""
+    if name:
+        return name
+    return f"이름 미확인 ({person_id})" if person_id else ""
+
+
+def fold(text: str, limit: int = FOLD_LINES) -> dict:
+    """긴 글은 `limit` 줄까지 보이고 나머지는 접는다. 접은 부분도 HTML 에 있어 자바스크립트 없이 읽힌다."""
+    lines = str(text or "").strip("\n").splitlines()
+    return {"head": "\n".join(lines[:limit]), "rest": "\n".join(lines[limit:]), "extra": max(0, len(lines) - limit)}
+
+
+def workitem_url(polarion, item_id: str) -> str:
+    host = (polarion.host if polarion else "").rstrip("/")
+    parsed = urlparse(host)
+    if parsed.scheme in ("http", "https") and parsed.netloc and not parsed.username and polarion.project_id:
+        return f"{host}/polarion/#/project/{quote(polarion.project_id, safe='')}/workitem?id={quote(item_id, safe='')}"
+    return ""
+
+
+def issue_view(issue, finding: dict, card_info: dict, explanation: dict, polarion=None) -> dict:
+    """머리·이슈 본문 구획에 보일 값 (REQ-QAINTEL-020 1·4번)."""
+    kind = finding.get("analysis_type", "")
+    if kind in SRS_SUBJECT_KINDS:
+        return {"srs": True, "text": explanation["issue"], "url": workitem_url(polarion, finding["subject"])}
+    fields = []
+    if issue is not None:
+        fields = [{"name": name, "text": fold(text)} for name, text in
+                  (("설명", issue.description), ("재현 절차", issue.reproduction_step), ("발생 원인", issue.occurrence_cause),
+                   ("조치 내용", issue.action_details)) if str(text or "").strip()]
+    return {
+        "srs": False, "available": issue is not None, "fields": fields,
+        "occurred": ", ".join(issue.occurred_versions) if issue is not None else "",
+        "target": ", ".join(issue.target_versions) if issue is not None else "",
+        "author": (issue.reporter_name if issue is not None and issue.reporter_name else card_info["reporter"]),
+        "created": kst(issue.created) if issue is not None else "",
+        "updated": (kst(issue.updated) if issue is not None and issue.updated else card_info["issue_updated"]),
+        "status": issue.status if issue is not None else "", "rd_result": issue.rd_result if issue is not None else "",
+        "url": workitem_url(polarion, finding["subject"]),
+    }
+
+
+def verdict_view(finding: dict, view: str) -> dict:
+    """분석 종류별 AI 판단 구획의 값 (REQ-QAINTEL-020 5번). 판정 값은 이름만 바꿔 보인다."""
+    kind = finding.get("analysis_type", "")
+    sections = finding.get("sections") or {}
+    verdict = finding.get("verdict", "")
+    out = {"question": KIND_QUESTIONS.get(kind, ""), "legacy": not kind, "verdict": label(verdict), "needs_review": False,
+           "marks": [], "lines": [], "note": ""}
+    if not kind:
+        out["verdict"] = ""
+        return out
+    if kind == NEW_ISSUE:
+        if not verdict:
+            pass
+        elif verdict in VALIDITY_LABEL:
+            out["verdict"] = VALIDITY_LABEL[verdict]
+        else:
+            out["verdict"], out["needs_review"] = verdict, True
+        duplicate = (sections.get("duplicate") or {}).get("verdict")
+        flags = (sections.get("historical") or {}).get("flags") or []
+        if duplicate in DUPLICATE_VERDICTS or any(flag in DUPLICATE_FLAGS for flag in flags):
+            out["marks"].append("중복 의심")
+    elif kind in (FIXED_ISSUE, "TC_DRAFT"):
+        out["lines"] = [text for text in ((sections.get("root_cause_review") or {}).get("summary"),
+                                          (sections.get("resolution_review") or {}).get("summary")) if text]
+        axes = (sections.get("regression_risk") or {}).get("axes") or []
+        if axes:
+            out["marks"].append(f"회귀 위험 축 해당 {sum(axis.get('applicable') is True for axis in axes)}개")
+    elif kind == COMMENT:
+        entries = [entry for entry in sections.get("comments") or [] if isinstance(entry, dict)]
+        out["marks"] = list(dict.fromkeys(label(entry["classification"]) for entry in entries if entry.get("classification")))
+        out["lines"] = [entry["impact"] for entry in entries if entry.get("impact")]
+    elif kind in (SPEC_COVERAGE, "TC_CHECK"):
+        if view == "SPEC_SUMMARY" and not sections.get("tc_coverage"):
+            out["note"] = "TC 비교는 하지 않은 분석입니다. [기존 TC 검토]로 요청할 수 있습니다."
+        tcs = (sections.get("checklist_coverage") or {}).get("tcs")
+        if tcs:
+            out["marks"].append(f"Checklist {len(tcs)}건")
+    if not verdict:
+        # 판정을 지어내지 않는다 (REQ-QAINTEL-020 읽는 규칙).
+        out["verdict"], out["needs_review"] = VERDICT_NOT_SAVED, False
+    return out
+
+
+def finding_explanation(finding: dict, events: list[dict], polarion=None, issue=None, names: dict | None = None) -> dict:
+    """저장된 기록만 풀어 쓴다. 옛 결과의 확인 범위·작성자를 추측하지 않는다.
+
+    `issue` 가 있으면 댓글은 이슈 원문의 전체 댓글을 시간순으로 보인다. 없으면 변경 이벤트에 저장된 댓글만 보인다.
+    """
+    names = names or {}
     sections = finding.get("sections") or {}
     interpretations = {str(entry.get("comment_id")): entry for entry in sections.get("comments") or []
                        if isinstance(entry, dict)}
-    comments, seen = [], set()
+    comments, seen, originals = [], set(), {}
     for event in events:
         after = event.get("after") or {}
         for comment in after.get("comments") or []:
@@ -336,8 +546,11 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None) -> dic
                 continue
             seen.add(comment_id)
             interpretation = interpretations.get(comment_id, {})
+            author_id = str(comment.get("author") or "")
+            originals[comment_id] = {"created": str(comment.get("created") or ""), "text": str(comment.get("text") or ""),
+                                     "author": person(names.get(author_id, ""), author_id)}
             comments.append({"id": comment_id, "created": kst(comment.get("created")),
-                             "author": comment.get("author") or "작성자 정보 없음", "text": comment.get("text") or "",
+                             "author": person(names.get(author_id, ""), author_id) or "작성자 정보 없음", "text": comment.get("text") or "",
                              "summary": interpretation.get("summary") or "해석이 저장되지 않았습니다.",
                              "classification": interpretation.get("classification") or "",
                              "impact": interpretation.get("impact") or "", "follow_up": interpretation.get("follow_up") or ""})
@@ -355,17 +568,49 @@ def finding_explanation(finding: dict, events: list[dict], polarion=None) -> dic
     mentioned = re.findall(r"(?<![A-Za-z0-9-])([A-Z]{2,}-[0-9]+)(?![A-Za-z0-9-])",
                            "\n".join([finding.get("detail") or "", *(c["text"] for c in comments)]))
     ids = list(dict.fromkeys([*((finding.get("related_ids") or {}).get("srs") or []), *mentioned]))
-    host = (polarion.host if polarion else "").rstrip("/")
-    parsed = urlparse(host)
-    links = []
-    if parsed.scheme in ("http", "https") and parsed.netloc and not parsed.username and polarion.project_id:
-        links = [{"id": value, "url": f"{host}/polarion/#/project/{quote(polarion.project_id, safe='')}/workitem?id={quote(value, safe='')}"}
-                 for value in ids if value != finding["subject"]]
+    links = [{"id": value, "url": url} for value in ids if value != finding["subject"]
+             for url in [workitem_url(polarion, value)] if url]
+    kind = finding.get("analysis_type", "")
+    rows = comment_rows(finding, issue, originals, seen, interpretations)
     return {"issue": sections.get("issue_summary") or finding.get("subject_title") or finding["subject"],
-            "comments": comments, **lists, "has_checked": any(lists.values()),
+            "comments": comments, "comment_rows": rows, **lists, "has_checked": any(lists.values()),
             "comment_locations": locations, "srs_links": links,
             "memo": finding.get("detail") or "분석 메모가 저장되지 않았습니다.",
-            "events": [EVENT_LABELS.get(event.get("event_type"), event.get("event_type", "")) for event in events]}
+            "events": list(dict.fromkeys(EVENT_LABELS.get(event.get("event_type"), event.get("event_type", "")) for event in events)),
+            "interprets_comments": kind == COMMENT}
+
+
+def comment_rows(finding: dict, issue, originals: dict, used_ids: set, interpretations: dict) -> list[dict]:
+    """댓글 구획의 줄 (REQ-QAINTEL-020 7번).
+
+    이슈 스냅샷의 댓글을 바탕으로 하되, 수집기가 번호만 남긴 빈 댓글(`created`·`text`가 비어 있음)은 변경 이벤트에
+    저장된 원문(`originals`, 번호별)으로 시각·본문·작성자를 채운다. 저장된 원문도 없으면 `본문 미수집`이다.
+    스냅샷에 없는 이벤트 댓글과 해석만 저장된 댓글도 줄로 남긴다.
+    줄 순서: 시각을 아는 댓글은 시간순, 시각을 모르는 댓글은 그 뒤에 스냅샷 순서 → 이벤트 순서 → 해석만 있는 순서로 놓는다.
+    """
+    analyzed = _moment(finding.get("created_at"))
+    merged: dict[str, dict] = {}
+    for entry in (issue.comments if issue is not None else []):
+        merged[entry["id"]] = {"created": entry["created"], "text": entry["text"], "author": entry["author_name"]}
+    for comment_id, original in originals.items():
+        current = merged.setdefault(comment_id, {"created": "", "text": "", "author": ""})
+        for key in ("created", "text", "author"):
+            current[key] = current[key] or original[key]
+    for comment_id in interpretations:
+        merged.setdefault(comment_id, {"created": "", "text": "", "author": ""})
+    rows = []
+    for comment_id, entry in merged.items():
+        interpretation = interpretations.get(comment_id) or {}
+        moment = _moment(entry["created"])
+        used = comment_id in used_ids or comment_id in interpretations
+        rows.append({"id": comment_id, "created": kst(entry["created"]), "moment": moment,
+                     "author": entry["author"] or "작성자 정보 없음", "text": entry["text"],
+                     "body_missing": not entry["text"], "used": used, "interpreted": bool(interpretation),
+                     "after": bool(not used and analyzed and moment and moment > analyzed),
+                     "summary": interpretation.get("summary") or "", "classification": interpretation.get("classification") or "",
+                     "impact": interpretation.get("impact") or "", "follow_up": interpretation.get("follow_up") or ""})
+    rows.sort(key=lambda row: (row["moment"] is None, row["moment"] or datetime.min.replace(tzinfo=timezone.utc)))
+    return rows
 
 
 def sort_cards(cards: list[dict]) -> list[dict]:
@@ -458,6 +703,9 @@ def status(choice: ProductChoice) -> dict:
         "progress": progress,
         "last_run": {"id": last["id"], "status": last["status"], "status_label": last["status_label"],
                      "started": kst(last["started_at"]), "finished": kst(last.get("finished_at")),
+                     # 대상 준비를 마친 실행이면 진행 표시가 `상세 분석 열기`를 보인다 (REQ-QAINTEL-042).
+                     "prepared_plan": bool(last.get("summary", {}).get("collection_only") and last["summary"].get("plan_id")
+                                           and last["status"] != "RUNNING"),
                      "result": " · ".join(filter(None, (last["status_label"],
                          "메일 발송 실패" if last.get("email_status") == "failed" else "",
                          claude_limits.KIND_LABELS.get(last["summary"]["claude_limit"].get("kind"), "AI 분석 중단")
@@ -470,23 +718,48 @@ def status(choice: ProductChoice) -> dict:
     }
 
 
-def dashboard(choice: ProductChoice) -> dict:
+def prepared_plan(choice: ProductChoice) -> dict | None:
+    """가장 최근에 준비한 대상 목록(화면용). 없으면 None. AI·외부 서비스를 부르지 않는다 (REQ-QAINTEL-042)."""
+    from app.modules.daily_qa import execution_plan
+    storage = choice.store.storage
+    try:
+        plan = storage.qa_get_plan(product=choice.cfg.slug)
+        if not plan:
+            return None
+        reporters = storage.qa_get_reporters(choice.cfg.slug, [target.get('subject') for target in plan['targets']])
+        return execution_plan.public(plan, reporters=reporters)
+    except (ValueError, KeyError, TypeError, AttributeError):   # 깨진 목록 한 줄이 첫 화면을 막지 않는다
+        logger.warning("qa_prepared_plan_unreadable product=%s", choice.cfg.slug)
+        return None
+
+
+def dashboard(choice: ProductChoice, sort: str = 'updated', filters: dict | None = None) -> dict:
     from app.modules.daily_qa import automation_policy
+    from app.modules.daily_qa import workflow_settings
     cfg, store = choice.cfg, choice.store
     runs = store.list_runs(limit=10, product=cfg.slug, include_legacy=cfg.is_legacy_product)
     last = runs[0] if runs else None
     events = store.list_events(product=cfg.slug, run_id=last["id"]) if last else []
-    findings = store.list_findings(product=cfg.slug, include_legacy=cfg.is_legacy_product, only_analyses=True, limit=30)
+    from app.modules.qa_agent import result_views
+    # 분석결과 구역은 모든 제품에서 결과 페이지와 같은 조회다. 맨 위 한 쪽만 보인다 (REQ-QAINTEL-019·046).
+    listing = result_views.search(choice, {**(filters or {}), 'sort': sort, 'page': 1}, path='/qa-agent')
     return {
+        "listing": listing,
+        "states": result_views.STATES, "level_help": result_views.LEVEL_HELP,
         "status": status(choice),
+        "result_sort": sort,
         "last_run": last,
         "runs": runs,
         "summary": change_summary(events),
-        "cards": sort_cards([card(item) for item in findings]),
+        "cards": listing['cards'],
         "knowledge": knowledge_uploads(cfg.product, cfg.root, _documents_storage(cfg)),
         "event_labels": EVENT_LABELS,
         "run_period": run_period_defaults(min_day=oldest_snapshot_day(cfg)),
         "automation_policy": automation_policy.get_policy(store, cfg.slug),
+        "deferred": deferred_summary(choice),
+        "workflow": workflow_settings.for_choice(choice) if cfg.savings_enabled else {'enabled': False},
+        # 점검 화면에는 건수와 링크만 둔다. 후보 목록은 `상세 분석` 화면에 있다 (REQ-QAINTEL-042).
+        "prepared": prepared_plan(choice) if cfg.savings_enabled else None,
         "automation_history": [{**item, "changed_at": item.get("updated_at", ""),
                                 "label": automation_policy.LABELS["off" if not item.get("enabled", True)
                                                                  else "daily" if item.get("validation_period", True) else "weekly"]}
@@ -566,6 +839,30 @@ def parse_run_period(since: str, until: str, today: date | None = None) -> tuple
     if (until_day - since_day).days + 1 > MAX_PERIOD_DAYS:
         raise PeriodError(f"조회 기간은 {MAX_PERIOD_DAYS}일까지입니다.")
     return since_day.isoformat(), ("" if until_day == today else until_day.isoformat())
+
+
+def deferred_summary(choice: ProductChoice, since: str = "", until: str = "") -> dict:
+    """밀린 변경(자동 분석이 꺼진 동안 저장된 변경)의 건수·기간·분석 종류별 수 (REQ-ALMCHG-005 3·4번).
+
+    `since`·`until` 은 한국 날짜이고 둘 다 비워 둘 수 있다(비우면 전체). 잘못된 날짜는 PeriodError 다.
+    """
+    try:
+        start = date.fromisoformat(since) if since else None
+        end = date.fromisoformat(until) if until else None
+    except ValueError as exc:
+        raise PeriodError("날짜는 YYYY-MM-DD 로 입력하세요.") from exc
+    if start and end and start > end:
+        raise PeriodError("시작일이 종료일보다 늦습니다.")
+    lower = _utc_bounds(start, start)[0] if start else None
+    upper = _utc_bounds(end, end)[1] if end else None
+    events = choice.store.list_events(product=choice.cfg.slug, statuses=("deferred",), since=lower, until=upper)
+    days = sorted(kst(event["created_at"])[:10] for event in events)
+    by_analysis: dict[str, int] = {}
+    for event in events:
+        for analysis in event.get("remaining_analyses") or event.get("analyses") or []:
+            by_analysis[analysis] = by_analysis.get(analysis, 0) + 1
+    return {"count": len(events), "first": days[0] if days else "", "last": days[-1] if days else "",
+            "by_analysis": by_analysis}
 
 
 def run_period_defaults(today: date | None = None, min_day: str = "") -> dict:

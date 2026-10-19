@@ -47,8 +47,7 @@ class IntelligenceSettings:
     issue_drop_ratio: float = 0.5
     event_max_attempts: int = 3
     recent_fixed_days: int = 90
-    #: 세션 한도 초기화가 이 시간 안이면 초기화 뒤 한 번 다시 돈다 (REQ-QAINTEL-025).
-    catchup_max_hours: int = 12
+    #: 한도나 사용률 기준으로 멈춘 점검을 초기화 몇 분 뒤에 이어 할지 (REQ-QAINTEL-049).
     catchup_delay_minutes: int = 5
     #: Knowledge 에 등록된 사양서 조각도 검색할지. 끄면 SRS 스냅샷만 검색한다.
     use_knowledge_documents: bool = True
@@ -61,6 +60,15 @@ class IntelligenceSettings:
     backlog_max_events: int = 10
     #: 작업 입력 글자 기준. 단일 대상이 넘으면 원문을 유지한다 (REQ-QAINTEL-040).
     max_input_chars: int = 60000
+
+
+@dataclass(frozen=True)
+class ChangeReportSettings:
+    """자동 변경 리포트 메일 (`daily_qa.change_report`, SPEC REQ-ALMCHG-004)."""
+
+    enabled: bool = True
+    send_when_empty: bool = True
+    max_items: int = 50
 
 
 @dataclass(frozen=True)
@@ -84,11 +92,19 @@ class DailyQaSettings:
     #: 개편 전 데이터(제품 열이 빈 기록, 옛 스냅샷 위치, 전역 상태 키)의 주인. `daily_qa.product` 다.
     legacy_product: str = ""
     intelligence: IntelligenceSettings = field(default_factory=IntelligenceSettings)
+    change_report: ChangeReportSettings = field(default_factory=ChangeReportSettings)
     #: 분석 작업의 모델·추론 정도. 화면 AI 기능과 같은 `ai.claude.models.standard`·`ai.claude.effort` (REQ-DAILY-016).
     claude_model: str = ""
     claude_effort: str = ""
     #: 같은 성공 작업 묶음의 결과를 재사용한다 (REQ-QAINTEL-037).
     result_cache_enabled: bool = True
+    savings_enabled: bool = False
+    #: 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다 (REQ-QAINTEL-043). 50~100.
+    usage_guard_five_hour_percent: int = 80
+    usage_guard_seven_day_percent: int = 90
+    analysis_model: str = "claude-sonnet-5-5"
+    review_model: str = "claude-opus-5-5"
+    structured_enabled: bool = False
 
     @property
     def product_profile(self) -> ProductProfile:
@@ -136,6 +152,12 @@ class DailyQaSettings:
         return self.snapshot_dir / "issues"
 
     @property
+    def change_mail_base_dir(self) -> Path:
+        """자동 변경 리포트 메일이 끝으로 비교한 기록의 사본(`issues.json`, `srs.json`, REQ-ALMCHG-004).
+        스냅샷 폴더 밖에 두어 AI 분석의 비교 기준과 날짜별 기록 목록에 섞이지 않는다."""
+        return self.product_data_dir / "change_mail_base"
+
+    @property
     def legacy_snapshot_dir(self) -> Path | None:
         """개편 전 SRS 스냅샷 위치(`data/daily_qa/snapshots/*.json`). 옛 제품에만 있다."""
         return self.data_dir / "snapshots" if self.is_legacy_product else None
@@ -156,6 +178,21 @@ def _split_recipients(raw: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in raw.replace(";", ",").split(",") if part.strip())
 
 
+def report_recipients(settings: Settings | None = None) -> tuple[str, ...]:
+    """예약 점검 요약 메일을 받는 주소 (REQ-WEB-008).
+
+    읽는 순서: 설정 탭 값(`daily_qa.report_recipients`) → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → 관리자 메일.
+    """
+    settings = settings or get_settings()
+    secrets = settings.secrets
+    return (
+        _split_recipients(str(settings.get("daily_qa.report_recipients", "") or ""))
+        or _split_recipients(str(secrets.daily_qa_email_to or ""))
+        or _split_recipients(str(secrets.notify_email_to or ""))
+        or _split_recipients(str(settings.get("notifications.admin_email", "") or ""))
+    )
+
+
 def configured_products(settings: Settings | None = None) -> list[str]:
     """예약·대시보드가 다루는 제품 이름 목록 (`daily_qa.products`, 없으면 `daily_qa.product`)."""
     settings = settings or get_settings()
@@ -164,6 +201,38 @@ def configured_products(settings: Settings | None = None) -> list[str]:
         raw = [raw]
     products = [str(item).strip() for item in (raw or []) if str(item).strip()]
     return products or [str(settings.get("daily_qa.product", "VXvue") or "VXvue")]
+
+
+USAGE_GUARD_DEFAULTS = {"five_hour": 80, "seven_day": 90}
+
+
+def usage_guard_percent(get, window: str) -> int:
+    """호출을 멈추는 사용률 기준(%). 50~100 의 정수만 받고, 아니면 기본값(5시간 80·주간 90)을 쓴다 (REQ-QAINTEL-043)."""
+    default = USAGE_GUARD_DEFAULTS[window]
+    raw = get(f"daily_qa.usage_guard.{window}_percent", default)
+    try:
+        value = int(raw) if not isinstance(raw, bool) and float(raw) == int(float(raw)) else default
+    except (TypeError, ValueError):
+        return default
+    return value if 50 <= value <= 100 else default
+
+
+def _flag(value, default: bool) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() not in ("false", "0", "no", "off", "")
+    return default if value is None else bool(value)
+
+
+def _change_report(get) -> ChangeReportSettings:
+    defaults = ChangeReportSettings()
+    try:
+        max_items = int(get("daily_qa.change_report.max_items", defaults.max_items))
+    except (TypeError, ValueError):
+        max_items = defaults.max_items
+    return ChangeReportSettings(
+        enabled=_flag(get("daily_qa.change_report.enabled", True), True),
+        send_when_empty=_flag(get("daily_qa.change_report.send_when_empty", True), True),
+        max_items=max_items if max_items >= 1 else defaults.max_items)
 
 
 def _intelligence(get) -> IntelligenceSettings:
@@ -187,9 +256,7 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
     weekly_day = str(get("daily_qa.weekly_day", "mon") or "mon").strip().lower()[:3]
     if weekly_day not in WEEKDAYS:
         raise ValueError(f"daily_qa.weekly_day 는 {', '.join(WEEKDAYS)} 중 하나여야 합니다: {weekly_day}")
-    recipients = _split_recipients(str(secrets.daily_qa_email_to or "")) or _split_recipients(
-        str(secrets.notify_email_to or "")
-    )
+    recipients = report_recipients(settings)
     legacy = str(get("daily_qa.product", "VXvue") or "VXvue")
     chosen = product or configured_products(settings)[0]
     fallback = {
@@ -210,6 +277,12 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         claude_model=str(get("ai.claude.models.standard", "") or ""),
         claude_effort=str(get("ai.claude.effort", "") or ""),
         result_cache_enabled=bool(get("daily_qa.result_cache.enabled", True)),
+        savings_enabled=bool(get("daily_qa.savings.enabled", False)),
+        usage_guard_five_hour_percent=usage_guard_percent(get, "five_hour"),
+        usage_guard_seven_day_percent=usage_guard_percent(get, "seven_day"),
+        analysis_model=str(get("daily_qa.savings.analysis_model", "claude-sonnet-5-5")),
+        review_model=str(get("daily_qa.savings.review_model", "claude-opus-5-5")),
+        structured_enabled=bool(get("daily_qa.savings.structured_enabled", False)),
         task_timeout_seconds=int(get("daily_qa.task_timeout_seconds", 900) or 900),
         max_tasks_per_run=int(get("daily_qa.max_tasks_per_run", 30) or 30),
         batch_size=max(1, int(get("daily_qa.batch_size", 5) or 5)),
@@ -231,4 +304,5 @@ def load(settings: Settings | None = None, product: str | None = None) -> DailyQ
         profile=profile,
         legacy_product=legacy,
         intelligence=_intelligence(get),
+        change_report=_change_report(get),
     )

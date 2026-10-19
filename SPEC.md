@@ -34,6 +34,7 @@ QA 담당자가 소프트웨어 변경이 생길 때마다 "어떤 Test Case(TC)
 QA 담당자 화면 요청 -> 개정 매뉴얼 -> 사양서·지식 사본과 대조 -> AI 판정(Claude CLI) -> 판정 검증 -> 보고서·Excel·Word Comment
 평일 04:00 예약 실행(공휴일 제외) -> QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> Claude Skill(바뀐 것만) -> 결과 형식·근거 검증 -> 요약 메일 -> /qa-agent 대시보드
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 없음)-> 변경사항 없음(AI 호출 0회) -> 요약 메일
+QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> ALM 변경 리포트(specs/alm-change-report.md, AI 없음) -> 변경 리포트 메일·/qa-agent/changes 화면
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
@@ -49,6 +50,7 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 | 매뉴얼 개정 검토 | QA 담당자가 연구소의 개정 매뉴얼을 받았을 때 화면 또는 Claude 대화에서 | 변경 추적 `.docx` 또는 `.pdf`, Release Note 등 | 변경마다 사양과 맞는지 판정한 결과 화면, Word Comment 파일. Claude 대화로 돌리면 결과 Excel | 5.3 |
 | AI 사용량 | 운영 담당자가 아무 때나 | 없음 | 기능별 AI 토큰 사용량과 추정 비용 | 5.3 |
 | QA Intelligence Agent 일일 점검 | 서버가 평일 04:00 에 제품마다 스스로(공휴일 제외). QA 담당자가 대시보드의 [변경사항 점검하기]으로도 | 없음(Polarion 과 지식 사본을 직접 읽는다) | 요약 메일, `/qa-agent` 대시보드의 변경 요약·분석 카드, 검증 TC 초안 Excel | 5.4 |
+| ALM 변경 리포트 | 서버가 매 업무일 수집 뒤 스스로. QA 담당자가 `/qa-agent/changes` 에서 기간을 골라 아무 때나 | 없음(저장된 날짜별 기록을 읽는다) | 이슈·SRS 의 날짜순 변경 목록 화면, 매 업무일 변경 리포트 메일 | [기능 사양](specs/alm-change-report.md) |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
 | QA Manual Hub | 사내 사용자가 매뉴얼을 찾거나 올릴 때 | 매뉴얼 파일 | 제품·문서·버전별로 정리된 매뉴얼과 최신본(Current) | 5.6 |
 
@@ -111,7 +113,9 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 
 담당자 PC 와 운영 서버가 예약된 수집·점검을 하고, QA 담당자는 결과를 읽고 판단한다. 초안을 원본 TC·Polarion 에 반영하는 일은 사람이 한다.
 
-PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02:30은 서버 시간대 기준이며, 한국 시간으로 환산하려면 서버 시간대와 cron 설정을 확인해야 한다.
+PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 시간대(`America/New_York`) 기준이다.
+
+> **예시** 서버 시간 14:15 는 미국 서머타임 동안(3월~11월 초) 한국 시간 03:15, 그 밖의 기간에는 04:15 다.
 
 ### 4.1 평일 하루 일정표
 
@@ -120,12 +124,12 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 시각 | 어디서 | 무엇이 | 하는 일 | 결과가 남는 곳 | 알리는 방법 | 요구사항 |
 |---|---|---|---|---|---|---|
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
-| 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
-| 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
-| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 세션 한도가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
+| 14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
+| 14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
+| 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
-| 04:00 (검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 실행 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교하고, 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `output/daily_qa/<실행 ID>/` | 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002 |
+| 04:00 (수집은 매 업무일. AI 분석은 검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교한다. AI 분석일이면 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `/qa-agent/changes`, `output/daily_qa/<실행 ID>/` | 변경 리포트 메일 한 통, AI 분석을 했으면 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002, REQ-ALMCHG-001, REQ-ALMCHG-004 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
 | 08:00 (매일), 미완료 시 15분마다 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
@@ -155,7 +159,8 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 
 | 알림 | 언제 오나 | 받는 곳 | 담는 것 | 요구사항 |
 |---|---|---|---|---|
-| QA Agent 요약 메일(제목 `[QA Agent]`) | 점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기) | `DAILY_QA_EMAIL_TO` 의 수신자 | 오늘 변경 요약, 새 Finding 수, 실패한 단계와 첫 실패 이유, Claude 사용량 한도와 초기화 시각, 점검 기록 보기 링크 | REQ-DAILY-008, REQ-MAIL-002 |
+| QA Agent 요약 메일(제목 `[QA Agent] <제품> …`) | 점검이 끝날 때마다 한 통(예약·[변경사항 점검하기]·한도 뒤 다시 돌기) | 설정 탭의 `daily_qa.report_recipients` 수신자. 비어 있으면 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`, 그것도 비어 있으면 `notifications.admin_email` | 상태, 새 결과·검토 필요·대기·AI 호출 수, 확인할 이슈·사양과 결과 링크, 남은 일, 이번 실행의 Claude 사용량, 점검 기록 보기 링크 | REQ-DAILY-008, REQ-MAIL-001, REQ-MAIL-002, REQ-QAINTEL-048 |
+| QA Agent 변경 리포트 메일(제목 `[QA Agent] <제품> 변경 리포트 …`) | 매 업무일 수집이 끝날 때마다 한 통. AI 분석 설정과 상관없다. 화면에서 기간을 골라 보낼 수도 있다 | 요약 메일과 같은 수신자 | 직전 기록부터 오늘까지 이슈·SRS 의 날짜순 변경(번호·제목·바뀐 값·댓글 작성자와 시각), 확인 범위, 화면 링크. 댓글·본문 문장과 AI 판단은 넣지 않는다 | REQ-ALMCHG-004, REQ-MAIL-001 |
 | QA Agent 대시보드 | 메일 링크를 누르거나 아무 때나 | `/qa-agent` | 마지막 실행 결과, 오늘 변경 요약, 분석 카드와 상세, 검증 TC 초안, 기간별 결과. 승인·거절 입력은 없다 | REQ-QAINTEL-019, REQ-QAINTEL-020 |
 | Gemini 할당량 소진·모델 사용 불가 메일 | 분석 중 사람이 조치해야 하는 Gemini 오류가 날 때. 같은 종류는 재발송 대기 시간 동안 다시 보내지 않는다 | `NOTIFY_EMAIL_TO` 의 수신자 | 발생 시각, 모델, 가린 오류 문구, 조치 방법 | REQ-USAGE-003 |
 | ALM 통합 수집 메일 | 평일 09:00 수집 뒤 | ALM-QA-Automation 설정의 수신자 | 바뀐 사양과 연결된 이슈, 우선순위 | 이 저장소 밖 |
@@ -205,7 +210,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | Polarion 조회 실패·0건·이슈 급감 | 그 수집 단계가 `실패` 다. 오늘 스냅샷과 이벤트를 저장하지 않아 다음 실행이 마지막 정상 스냅샷과 비교한다(REQ-QAINTEL-009). 사양–TC 연결 점검은 저장된 스냅샷으로 돈다 |
 | Claude 토큰이 없고 Claude CLI 로그인도 없음 | AI 단계 `건너뜀`, 이유가 메일과 `audit.json` 에 남는다. 이벤트는 대기로 남는다. 토큰이 없어도 그 PC 의 Claude CLI 가 로그인돼 있으면 로그인으로 부른다 |
 | Claude 사용량 한도·인증 실패 | AI 단계 `Claude 사용량 한도`. 변경 감지는 계속하고 이벤트는 대기로 남는다. 초기화 시각이 메일·대시보드에 보이고, 세션 한도면 풀린 뒤 한 번 다시 돈다(REQ-QAINTEL-025) |
-| QA 규칙 판이 제품 설정의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
+| QA 규칙 원문이 없거나 잘못됨, 또는 판 고정을 설정한 제품의 기준 판과 다름 | AI 단계가 `규칙 판 불일치` 로 멈춘다. 이벤트는 대기로 남는다(REQ-DAILY-010) |
 | PC 가 꺼져 있음 | 서버 점검은 그대로 돈다. 서버의 TC·매뉴얼·규칙 사본만 마지막으로 올린 것을 쓴다 |
 | ALM 수집 실패 | 새 사양서 PDF 가 없으므로 사양서 동기화는 마지막 수집본을 대상으로 한다. 지식 업로드는 TC·매뉴얼 등 지식 폴더의 다른 변경도 확인한다 |
 
@@ -736,7 +741,7 @@ TC 색인 -> 사양–TC 연결 점검(AI 없이 코드로 계산) -> 저장
 | Runtime TC | 장비·소프트웨어를 돌려 확인하는 실행형 TC 다 |
 | Dose Table | 발생기 촬영 조건별 선량 표다. 없으면 촬영 가능 조합·출력 정확도를 확정하지 않는다 |
 | Exposure | 실제 X-ray 조사(촬영)다 |
-| QA 규칙 문서 | 제품마다 QA 가 관리하는 두 문서다. `[QA 작성 규칙] <제품> TC 설계 및 자체검토 가이드_Rev*.md` 와 `<제품> 검증 DB AI 지침 프롬프트`. 저장소에 커밋하지 않고 지식 폴더 수집으로 서버 사본을 만든다 |
+| QA 규칙 문서 | 제품마다 QA 가 관리하는 규칙이다. VXvue는 운영 지침과 상세 규칙을 합친 MD 하나를 사용한다. 기존 두 문서 제품은 `[QA 작성 규칙] <제품> TC 설계 및 자체검토 가이드_Rev*.md` 와 `<제품> 검증 DB AI 지침 프롬프트`. 저장소에 커밋하지 않고 지식 폴더 수집으로 서버 사본을 만든다 |
 | 규칙 절 | QA 규칙 문서의 번호 붙은 제목 하나다. 이 문서에서는 "규칙 N절"이라고 쓰고, 코드 주석의 `§N` 과 같다 |
 | 규칙 발췌 | 규칙 문서에서 이번 판단에 필요한 절만 잘라 AI 지시문 뒤에 붙인 글이다. 코드 이름 `system_suffix` |
 | 규칙 구현 현황표 | 규칙 절마다 "무엇으로 구현했고 지금 구현됐는가"를 적은 코드 안의 표다. 코드 이름 `RULE_CAPABILITY` |
@@ -3362,7 +3367,7 @@ Finding 저장 -> 초안 Excel -> 실행 결과 판정 -> audit.json -> 요약 �
 - 예약 기능은 점검을 웹 프로세스 안에서 돌리지 않는다. `scripts/run_daily_qa.py --product <제품>` 을 웹 프로세스와 분리된 별도 프로세스로 띄우고 바로 돌아온다.
 - 별도 프로세스의 화면 출력은 `output/logs/daily_qa.out` 에 이어 쓴다.
 - 예약 시각에 앱이 멈춰 있었어도 1시간 안에 다시 뜨면 그때 한 번 띄운다.
-- 이와 별도로 감시 예약 `qa_agent_limit_catchup` 이 10분마다 깨어나, Claude 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025).
+- 이와 별도로 감시 예약 `qa_agent_limit_catchup` 이 10분마다 깨어나, Claude 한도(세션·주간)가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025·049).
 
 이유: 점검 한 번이 Claude 작업 때문에 수십 분 걸릴 수 있다. 앱이 재시작돼도 진행 중인 점검은 끊기지 않아야 한다.
 
@@ -3730,9 +3735,9 @@ Finding 하나의 필드:
 
 | 값 | 어디서 |
 |---|---|
-| 수신자 | 비밀 설정 `DAILY_QA_EMAIL_TO`. 비어 있으면 `NOTIFY_EMAIL_TO`. 쉼표나 세미콜론으로 여러 명을 적는다 |
+| 수신자 | 설정 탭의 `daily_qa.report_recipients`(REQ-WEB-008). 비어 있으면 비밀 설정 `DAILY_QA_EMAIL_TO`, 그것도 비어 있으면 `NOTIFY_EMAIL_TO`, 그것도 비어 있으면 설정 탭의 관리자 메일(`notifications.admin_email`). 쉼표나 세미콜론으로 여러 명을 적는다 |
 | 메일 서버 | 기존 알림 메일 설정 |
-| 점검 기록 보기 링크 앞부분 | `daily_qa.review_base_url`. 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
+| 점검 기록 보기 링크 앞부분 | `daily_qa.review_base_url`(설정 탭에서 바꾼다, REQ-WEB-008). 비어 있으면 경로(`/qa-agent/runs/<실행 ID>`)만 쓴다 |
 
 **결과**
 
@@ -3784,40 +3789,15 @@ REQ-QAINTEL-019 가 대신한다.
 
 `/daily-qa` 의 실행 목록·검토 대기열·Finding 결정·질문 화면은 없어졌다. 결과는 `/qa-agent` 대시보드와 상세 화면(REQ-QAINTEL-020)에서 보고, 승인·거절·근거 추가 필요 입력은 없다. 옛 `/daily-qa/*` 주소는 GET 이면 307 로 새 주소에 넘어가고, 결정 저장 요청은 받지 않는다. 개편 전 결정은 표에 그대로 남는다.
 
-### REQ-DAILY-010 QA 규칙 판 확인
+### REQ-DAILY-010 QA 규칙 원문 확인
 
-**하는 일** 제품 규칙 Skill 은 그 제품 QA 규칙의 특정 판에 맞춰 쓰였다. 서버 지식 사본의 규칙 판이 그 판과 다르면 AI 분석을 멈추고 사람에게 알린다. 예를 들어 VXvue 규칙이 Rev1.18 로 바뀌었는데 제품 설정의 기준 판이 `1.17` 이면, 분석할 대상이 있는 AI 단계가 `규칙 판 불일치` 로 남는다.
+**하는 일** VXvue는 서버에 동기화한 통합 QA 규칙 MD를 읽는다. 파일명이나 개정 번호가 바뀌어도 유효한 원문이면 적용한다. 개정은 표시용이며 적용 내용은 SHA-256으로 기록한다.
 
-이유: 규칙이 바뀌었는데 Skill 이 그대로면 검증 관문 번호나 판정 기준이 어긋난 결과가 나온다.
-
-**순서**
-
-1. 지식 사본에서 QA 규칙 종류의 파일들을 모은다. 파일 이름의 `Rev<숫자.숫자>` 로 판을 읽고, 판이 가장 높은 것 가운데 파일이 있는 것을 고른다. 지침 프롬프트도 같은 방법으로 고른다.
-2. 규칙 파일이 없으면 불일치로 본다.
-3. 기준 판은 제품 설정 `config/products/<slug>.yaml` 의 `qa_intelligence.rules.supported_rev` 다(VXvue 는 2026-10-13 부터 `1.18`). 고른 규칙 파일의 판이 기준 판과 다르면 불일치로 본다. 기준 판이 비어 있으면 판은 보지 않고 규칙 파일이 있는지만 본다.
-4. 불일치면 분석 대상이 있는 AI 단계(다섯 가지 분석, 매뉴얼 누락 후보 점검)를 돌리지 않고, 그 단계를 `규칙 판 불일치` 로 남긴다. 분석 대상이 없는 단계는 `건너뜀` 이다. 분석하지 못한 이벤트는 `pending` 으로 남아 다음 실행에서 다시 분석한다(REQ-QAINTEL-006).
-5. AI 없는 계산(삭제된 SRS 를 가리키는 TC, 사양–TC 연결 점검)은 그대로 돈다.
-6. 사전 점검 단계는 `일부 실패` 가 되고 비고에 이유가 들어간다. 실행 결과는 `일부 실패` 다.
-
-**결과**
-
-| 곳 | 보이는 것 |
-|---|---|
-| 메일 | 첫 줄 "※ <이유>" (HTML 은 붉은 굵은 글씨) |
-| 점검 기록 보기 | "규칙 판 불일치: <이유>" 경고 |
-| 실행 기록 요약 | 규칙 상태(일치 여부, 찾은 판, 기준 판, 이유, 규칙·프롬프트 파일 이름) |
-
-이유 문장:
-
-| 경우 | 문장 |
-|---|---|
-| 규칙 파일 없음 | "수집된 QA 규칙 파일이 없습니다. 지식 폴더 동기화를 확인하세요." |
-| 판 다름 | "QA 규칙 판이 Skill 기준과 다릅니다 (수집본 Rev<찾은 판> / Skill 기준 Rev<기준 판>). 제품 규칙 Skill 을 새 판에 맞춰 검토한 뒤 제품 설정의 qa_intelligence.rules.supported_rev 를 올리세요." |
-
-**지킬 것**
-
-- 제품 설정의 `qa_intelligence.rules.supported_rev` 는 제품 규칙 Skill 을 새 판에 맞춰 검토·수정한 뒤에만 올린다.
-- 규칙 원문은 저장소에 넣지 않는다. 실행마다 마스킹한 사본을 작업 폴더 `rules/` 로 옮긴다(REQ-DAILY-023).
+1. 통합 표시 `<!-- qa-rules-format: unified-v1 -->`가 있는 MD를 우선 선택한다. 운영 지침과 상세 QA 규칙 구역이 모두 있어야 한다.
+2. 통합 원문이 여러 개이고 내용이 다르거나, 읽기 실패·빈 구역·해시 불일치가 있으면 AI 호출 전에 이유를 남기고 중단한다. 오래된 TXT로 되돌아가지 않는다.
+3. 다른 제품과 전환 전 자료는 기존 두 문서 선택을 유지한다. 다른 제품의 `supported_rev` 설정은 유지할 수 있다. VXvue는 이 값을 고정하지 않는다.
+4. 같은 선택 결과를 단일 이슈 분석·자동 QA·서버 챗봇에 적용한다. 실패한 AI 분석은 대기로 남기고 AI 없는 계산은 계속한다.
+5. 규칙 원문은 저장소에 넣지 않는다. 실행용 사본은 마스킹하며 새 작업은 새 원문을, 진행 중인 질문은 준비된 원본 판을 사용한다.
 
 ### REQ-DAILY-011 수동 실행 명령과 종료 코드
 
@@ -3881,7 +3861,7 @@ python scripts/run_daily_qa.py --check
 4. Claude 인증이 되는가. `CLAUDE_CODE_OAUTH_TOKEN` 이 있거나, 없으면 Claude CLI 가 로그인돼 있는가(`claude auth status`). 어느 쪽인지 쓴다
 5. Claude CLI(`daily_qa.claude_command`)를 실행 경로에서 찾을 수 있는가
 6. 작업 폴더 위치가 규칙에 맞는가(NFR-SEC-001). 맞으면 위치를, 아니면 이유를 쓴다
-7. QA 규칙 판이 제품 설정의 기준 판과 같은가(REQ-DAILY-010). 같으면 `Rev<판>` 을 쓴다
+7. QA 원문을 읽고 내용과 해시를 확인할 수 있는가(REQ-DAILY-010). 개정 번호는 표시용이며 VXvue는 번호로 실행을 막지 않는다
 8. 남아 있는 Claude 사용량 한도가 없는가(REQ-QAINTEL-025). 있으면 한도 설명을 쓴다
 9. 요약 메일 수신자가 있는가. 몇 명인지 쓴다
 
@@ -4277,7 +4257,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
    - 작업 폴더 밖 읽기는 거부되니 다시 시도하지 않는다.
 3. 도구 허용 설정 `.claude/settings.json` 을 매번 새로 쓴다. 허용·금지 도구 목록, 묻지 않고 거부, 원격 측정·오류 보고 끄기, 폴더 안 MCP 설정 쓰지 않기가 들어간다.
 4. 저장소의 공통 Skill 폴더 `app/modules/daily_qa/skills/` 를 `.claude/skills/` 로 통째로 다시 복사한다. 전에 있던 것은 지운다. 이어서 제품 Skill 폴더(`config/products/<slug>/skills/`, VXvue 는 `config/products/vxvue/skills/`)가 있으면 그 위에 복사한다. 이름이 겹치면 제품 것을 쓴다.
-5. QA 규칙 가이드와 지침 프롬프트를 마스킹해 `rules/qa-guide.md`, `rules/instruction-prompt.txt` 로 쓴다. 지식 사본에 없으면 전에 있던 사본을 지운다.
+5. 선택한 QA 원문을 마스킹해 `rules/qa-guide.md`에 쓴다. 통합 MD 모드는 이 파일 하나만 사용하며 옛 `rules/instruction-prompt.txt`를 제거한다. 기존 두 문서 제품은 지침 TXT도 복사한다. 지식 사본에 없으면 전에 있던 사본을 지운다.
 6. `runs/<실행 ID>/` 아래에 `in/`, `out/`, `context/` 를 만든다.
 7. 처음 AI 작업 바로 전에 `context/` 에 아래를 모두 마스킹해 쓴다.
    - 오늘 SRS 전체(`srs_current.jsonl`, 한 줄에 하나)
@@ -4318,7 +4298,7 @@ CLI 요약 값에는 결과 종류, 오류 여부, 대화 횟수, 걸린 밀리�
 
 1. 규칙 원문은 작업 폴더 `rules/` 에서 읽는다. 가이드 파일이 없으면 Finding 을 비우고, 검증 관문 G2 를 `FAIL` 로 두고, 질문 "QA 규칙 파일 없음" 하나만 쓰고 끝낸다. 기억으로 규칙을 대신하지 않는다.
 2. 점검 Skill 은 공통 규칙 Skill 과 제품 규칙 Skill 을 읽지 못했으면 판정하지 않는다. Finding 을 비우고 질문 하나만 쓰고 끝낸다.
-3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 지침 프롬프트, 제품 규칙, 공통 규칙 순서로 따른다.
+3. 규칙이 서로 부딪치면 사람이 답한 내용(`answered_questions`), 제품 운영 지침(통합 MD의 운영 구역 또는 TXT), 제품 상세 규칙, 공통 규칙 순서로 따른다.
 4. 사람 없이 도는 실행이므로 질문은 결과 파일 `open_questions` 에 적는다.
 5. 근거 규칙:
 
@@ -4508,7 +4488,7 @@ REQ-QAINTEL-019 가 대신한다.
   - 올라온 파일 이름을 경로로 믿지 않기: NFR-SEC-003
 - 동기화: 동기화 기록, 사양서 동기화, 지식 폴더 업로드. REQ-KNOW-016, REQ-SYNC-001, REQ-SYNC-002
 - 예약: 앱 안 예약 실행기와 등록된 예약 작업. REQ-SCHED-001, REQ-SCHED-002
-- 화면 공통: 허브, 하위 서비스 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 접속 범위. REQ-WEB-001 ~ REQ-WEB-007, NFR-SEC-004
+- 화면 공통: 허브, 하위 서비스 카드, 살아 있는지 확인, 비밀 설정 상태, 운영 상태, 공용 골격, 공통 상단 메뉴, 설정 탭과 관리자 로그인, 접속 범위. REQ-WEB-001 ~ REQ-WEB-008, NFR-SEC-004
 - 운영
   - 운영 점검, 백업, 로그, 지식 폴더 마운트 설정: REQ-OPS-001 ~ REQ-OPS-004
   - 포트, 배포 스크립트, systemd, nginx: REQ-DEPLOY-001 ~ REQ-DEPLOY-004
@@ -4542,7 +4522,7 @@ Gemini 호출 -(모델 없음)-> 대신 쓸 모델로 한 번 더
 ```flow
 systemd -> python -m app.serve -> 앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작)
 cron 10분마다 -> 운영 점검 -> /health·/config/status·/operations/status -> 문제 있으면 종료 코드 1
-cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
+cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 ```
 
 이 절의 용어:
@@ -5049,6 +5029,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-014 스캔 결과 보기
 
+통합 QA 원문을 읽었지만 개정 번호가 없으면 고급 정보에 `개정 번호 없음(원문 적용)`을 표시한다. 번호가 없다는 이유로 미수집으로 표시하지 않는다.
+
 **하는 일** 지식 폴더를 스캔해 무엇을 고르고 무엇을 왜 뺐는지 JSON 으로 보여 준다. 아무것도 쓰지 않는다.
 
 **언제** 제품 상세 화면 `고급 정보` 의 `스캔 결과 JSON` 링크(`GET /knowledge/source/{제품}`).
@@ -5294,7 +5276,8 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `analysis.max_concurrent_jobs` | `2` | 동시에 돌 수 있는 분석 수(REQ-STORE-003) |
 | `analysis.job_timeout_minutes` | `30` | 멈춘 작업으로 보는 시간 |
 | `analysis.max_retries` / `retry_min_seconds` / `retry_max_seconds` | `3` / `1` / `10` | 네트워크 오류 재시도 횟수와 대기 시간(REQ-AICALL-003) |
-| `retention.backup_days` | `30` | 백업 ZIP 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
+| `retention.backup_days` | `7` | 백업 ZIP 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
+| `retention.deploy_backup_days` | `14` | 배포 전 백업 보관 일수(REQ-OPS-002). 0 이면 지우지 않는다 |
 | `retention.ai_cache_days` | `180` | AI 응답 저장본 보관 일수(REQ-AICALL-002) |
 | `retention.daily_qa_run_days` | `365` | 일일 QA 실행 폴더 보관 일수(NFR-DAILY-002) |
 | `retention.daily_qa_workspace_run_days` | `30` | 일일 QA 작업 폴더의 실행 입력 보관 일수(NFR-DAILY-002) |
@@ -5685,9 +5668,9 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-AICALL-007 화면에서 AI 모델·추론 정도 바꾸기
 
-**하는 일** 운영 담당자가 `/settings/ai` 에서 Claude 모델 등급과 추론 정도를 확인하고 바꾼다. 홈과 AI 사용량에서 연결한다.
+**하는 일** 운영 담당자가 설정 탭(`/settings`, REQ-WEB-008)의 `AI 모델과 사용률 기준` 구획에서 Claude 모델 등급과 추론 정도를 확인하고 바꾼다. 옛 주소 `/settings/ai` 는 `/settings#ai` 로 보낸다.
 
-**언제** 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 일반 접속에서는 버튼을 끄고 SSH 터널 사용법을 안내한다.
+**언제** 설정 조회는 모든 접속에서 가능하다. 저장과 기본값 복구는 관리자 로그인 또는 서버의 루프백 주소로 직접 접속할 때만 가능하다. 둘 다 아니면 읽기 전용이고 로그인 칸과 SSH 터널 사용법을 안내한다(NFR-SEC-004).
 
 **순서**
 
@@ -5705,12 +5688,15 @@ cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
 | `ai.claude.effort` | 빈 값(CLI 기본), `low`, `medium`, `high`, `xhigh`, `max` |
 | `daily_qa.intelligence.audit_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
 | `daily_qa.intelligence.comment_model` | 허용 모델 또는 빈 값(가벼운 작업 모델 따름) |
+| `daily_qa.savings.analysis_model` / `review_model` | 허용 모델 |
+
+설정 탭이 함께 바꾸는 메일·사용률·서버 주소 키는 REQ-WEB-008 에 있다.
 
 허용 모델의 기본 목록은 `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5-1` 이다. DB 에 저장한 값이 설정 파일보다 먼저 적용된다(REQ-AICALL-004·005, REQ-DAILY-016).
 
 **안 될 때** DB 읽기에 실패하면 경고를 남기고 설정 파일 값을 쓴다. 저장 실패는 화면에 알린다. 외부 또는 프록시 접속의 저장·복구는 403 으로 거절한다.
 
-**지킬 것** TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청도 저장할 수 없다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. 설정 파일은 수정하지 않는다.
+**지킬 것** 로그인 없이 저장하려면 TCP 접속 주소로 판단하고 전달 헤더로 권한을 얻을 수 없게 한다. nginx 를 거친 요청은 관리자 로그인을 해야 저장할 수 있다. 허용 밖의 키·비밀값·경로·포트는 바꿀 수 없다. 설정 파일은 수정하지 않는다.
 
 ### REQ-AICALL-006 Claude 사용량 남은 양 보기
 
@@ -5860,7 +5846,7 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 5. 메일을 보낸다. 성공하면 발송 시각과 보낸 수를 기록한다(`sent`).
 6. 보내다 실패해도 선점 시각은 이미 기록됐으므로 대기 시간이 걸린다(`failed`).
 
-**결과** 메일 제목은 `[QA 시스템] <제목 이름>` 이다. 본문에는 다음이 들어간다.
+**결과** 메일 제목은 `[QA Agent] <제목 이름>` 이다(REQ-MAIL-001). 본문에는 다음이 들어간다.
 
 - 발생 시각, 모델·프롬프트 이름과 판
 - 가린 오류 문구(1500자까지)
@@ -5906,6 +5892,16 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 1. 켜져 있고 서버·발신자·수신자가 모두 있어야 "보낼 조건이 됨"(`configured`)이다. 계정은 필수가 아니다(인증 없는 사내 SMTP 도 있다).
 2. 접속 제한 시간은 20초다.
 3. 발송 함수는 어떤 경우에도 예외를 올리지 않고 결과 상태만 돌려준다.
+4. 제목은 제목 생성 함수(`mail_subject`) 한 곳에서만 만든다. 모든 메일 제목은 `[QA Agent]`로 시작하고, 제품이 있는 메일은 그 뒤에 제품 이름이 온다.
+
+이유: 메일 프로그램의 분류 규칙이 `[QA Agent] <제품>` 머리말로 폴더를 나누기 때문이다. 머리말이 메일마다 다르면 규칙이 일부 메일을 놓친다.
+
+| 메일 | 제목 |
+|---|---|
+| 운영 알림(한도·인증·할당량) | `[QA Agent] <알림 이름>` |
+| 예약 점검 요약 | `[QA Agent] <제품> <MM/DD> 점검 · 검토 필요 <N>건 · 대기 <N>건` 뒤에 실패일 때만 ` · 일부 실패` 또는 ` · 실패`, Claude 한도에 걸렸으면 ` · <한도 이름>` |
+| 변경 목록만 만든 실행(AI 미분석) | `[QA Agent] <제품> 변경 목록 · AI 미분석 · …` |
+| 시험 발송(REQ-MAIL-003) | `[QA Agent] [시험] <알림 이름>` |
 
 **결과** 설정 상태를 값은 빼고 알려 준다: `enabled`, `configured`, `host_set`, `sender_set`, `recipient_count`, `credentials_set`, `cooldown_minutes`, `warnings`.
 
@@ -5936,9 +5932,14 @@ VXvue AI 챗봇(`/vxvue-chatbot`) 상단에서도 같은 값을 작게 보인다
 
 1. 수신자를 넘기면 그 주소로, 아니면 `NOTIFY_EMAIL_TO` 로 보낸다(일일 QA 는 `DAILY_QA_EMAIL_TO` 를 넘긴다).
 2. 글 본문을 넣고, HTML 본문이 있으면 함께 넣는다.
-3. 예외를 올리지 않는다.
+3. 메일마다 `Message-ID`(메일 고유 번호)를 발신 주소의 도메인으로 만들어 직접 넣는다. 나중에 메일 서버 기록과 대조할 수 있게 하기 위해서다.
+4. 예외를 올리지 않는다.
 
-**결과** `sent`(수신자 수), `not_configured`, `failed`(오류 종류·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·토큰은 로그와 결과에서 가린다.
+**결과** `sent`(수신자 수, 가린 수신 주소 `recipient_masks`, 메일 고유 번호 `message_id`), `not_configured`, `failed`(오류 종류·SMTP 응답 코드·가린 응답 문장) 중 하나를 돌려준다. 주소·계정·비밀번호·토큰은 로그와 결과에서 가린다.
+
+> **예시** 가린 주소는 앞 세 글자만 남긴다: `hon***@vieworks.com`. 아이디가 세 글자 이하이면 첫 글자만 남긴다.
+
+예약 점검 메일을 보내면 점검 기록의 메일 단계 비고에 `발송 <한국 시간> · 수신 <가린 주소> · Message-ID <값>`을 남긴다. 메일을 받지 못했다는 문의가 오면 이 줄로 발송 여부와 메일 서버 기록을 대조한다. 본문의 구성과 링크 규칙은 REQ-QAINTEL-048이 정한다.
 
 정기 점검은 메일 단계가 끝날 때까지 `RUNNING`으로 남긴다. 메일 실패는 점검 기록 보기의 메일 단계에 기록하며, 앞 단계가 성공했어도 실행 결과는 `PARTIAL`이다. 앞 단계의 실패 결과는 그대로 유지한다.
 
@@ -5960,6 +5961,14 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 2. 보낼 조건이 안 되면 넣어야 할 키 이름을 안내하고 종료 코드 1 로 끝난다.
 3. 최근 알림 기록을 찍는다.
 4. `--send` 면 그 종류의 대기 시간 기록을 지우고 "테스트 발송입니다. 실제 오류가 아닙니다." 알림을 보낸다. 실패하면 종료 코드 1 이다.
+
+**설정 탭에서 보내는 시험 발송** 시험 발송 함수(`send_test(kind, recipients)`)가 화면에서 고른 종류의 시험 메일을 고른 수신자에게만 보낸다.
+
+- 종류는 알림 종류 값(`claude_usage_limit` 등) 또는 `report`(예약 점검 요약 예시)다.
+- 재발송 대기 시간을 쓰지도 지우지도 않는다. 실제 알림의 대기 기록에 영향이 없다.
+- 제목은 `[QA Agent] [시험] <알림 이름>`이고 본문 첫 줄에 "시험 발송입니다. 실제 오류가 아닙니다."를 쓴다.
+- `report` 는 실제 예약 점검 요약 메일과 같은 구성(상태 띠, 숫자, 확인할 이슈·사양, 남은 일, 사용량, 점검 정보)으로 만들고 값은 `예시` 임을 밝힌 가짜 값이다. 제목은 `[QA Agent] [시험] …`으로 시작한다.
+- 결과는 REQ-MAIL-002와 같다(`status`, `recipients`, `recipient_masks`, `message_id`). 알 수 없는 종류는 보내지 않고 `failed`를 돌려준다.
 
 ### REQ-SCHED-001 앱 안 예약 실행기
 
@@ -5995,7 +6004,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 | `sync_vxvue_specification` | `vxvue.yaml` `sync` (평일 03:30). 설정이 없으면 월 07:30 | 사양서 동기화(REQ-SYNC-001)를 자기 자신의 주소로 부른다 | 크롤러 output 폴더 없음, 이미 진행 중 |
 | `sync_product_knowledge_<slug>` | 제품별 `sync` (VXvue 평일 03:30). 없으면 월 07:45 | 지식 폴더 수집·등록(REQ-KNOW-011) | 폴더 경로 없음(등록 안 함), 폴더 접근 불가, 이미 진행 중 |
 | `qa_agent_<slug>` | `daily_qa.schedule` (평일 04:00). 늦게 깨어나도 1시간 안이면 돈다. `daily_qa.products` 의 제품마다 하나 | QA Agent 점검(REQ-QAINTEL-001)을 별도 프로세스로 띄운다 | 공휴일(`daily_qa.schedule.skip_holidays`), `daily_qa.enabled` 꺼짐, Polarion 설정 없음, 그 제품의 다른 실행이 진행 중 (Claude 토큰만 없으면 AI 단계만 건너뛰고 돈다) |
-| `qa_agent_limit_catchup` | 10분마다 | 세션 한도가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
+| `qa_agent_limit_catchup` | 10분마다 | 한도(세션·주간)가 풀린 제품을 한 번 다시 띄운다(REQ-QAINTEL-025·049) | 다시 돌 차례인 제품이 없음. 다른 실행이 진행 중이면 기록을 남겨 다음에 본다 |
 
 **지킬 것** 운영 서버에서는 앞의 두 작업이 폴더를 볼 수 없어 늘 건너뛴다. 이 두 작업의 자동 실행은 담당자 PC 의 작업 스케줄러가 맡는다(REQ-SYNC-001, REQ-SYNC-002).
 
@@ -6014,7 +6023,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 | 매뉴얼 개정 검토 | `/manual-review` |
 | 검증 자료 관리 | `/knowledge` |
 | AI 사용량 | `/cost-dashboard` |
-| AI 분석 설정 | `/settings/ai` (REQ-AICALL-007) |
+| 설정 | `/settings` (REQ-WEB-008, REQ-AICALL-007) |
 | 하위 서비스 카드 | REQ-WEB-002 |
 
 화면의 메뉴와 버튼은 업무 이름으로 표시한다. URL·데이터 필드·상태 코드·화면 요소 ID는 유지한다. 점검 현황, 기간별 결과, 자동 점검 범위, 등록 자료와 최신 상태, 점검 실행, 변경사항 점검하기, 현재 이슈 전체 점검, 기존 TC 검토, 점검 기록 보기, 검토 항목, 판단 근거로 안내한다.
@@ -6124,7 +6133,7 @@ AI 제공자 상태(`ai_provider`) 항목:
 
 **하는 일** 어느 화면에 있든 머리 오른쪽에 같은 메뉴가 같은 순서로 보인다. 지금 보고 있는 기능은 강조해서 보인다.
 
-> **예시** 매뉴얼 개정 검토 화면에서는 `QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · AI 분석 설정 · 사용법` 이 보이고 `매뉴얼 개정 검토` 가 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
+> **예시** 매뉴얼 개정 검토 화면에서는 `QA 홈 · VXvue AI 챗봇 · 사양·이슈 변경 점검 · 매뉴얼 개정 검토 · 검증 자료 관리 · AI 사용량 · 설정 · 사용법` 이 보이고 `매뉴얼 개정 검토` 가 강조된다. `사용법` 은 `/manual-review/guide` 로 간다.
 
 **결과**
 
@@ -6136,13 +6145,13 @@ AI 제공자 상태(`ai_provider`) 항목:
 | 4 | 매뉴얼 개정 검토 | `/manual-review` | 보인다 |
 | 5 | 검증 자료 관리 | `/knowledge` | 보인다 |
 | 6 | AI 사용량 | `/cost-dashboard` | 보인다 |
-| 7 | AI 분석 설정 | `/settings/ai` | 보인다 |
-| 8 | 사용법 | 그 기능의 `/<기능>/guide`. 사용법이 없는 화면(AI 분석 설정)은 빠진다 | 빠진다 |
+| 7 | 설정 | `/settings` | 보인다 |
+| 8 | 사용법 | 그 기능의 `/<기능>/guide`. 사용법이 없는 화면(설정)은 빠진다 | 빠진다 |
 
 **순서**
 
 1. 메뉴 목록은 `app/web/templates/_nav.html` 의 `top_nav` 하나에만 적는다. 메뉴 이름은 허브 카드 이름과 같다.
-2. 각 화면은 자기 기능 이름(`vxvue_chatbot`·`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`·`settings_ai`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
+2. 각 화면은 자기 기능 이름(`vxvue_chatbot`·`qa_agent`·`manual_review`·`knowledge`·`cost_dashboard`·`settings`, 허브는 `home`)과 사용법 주소를 넘겨 부른다.
 3. 넘겨받은 기능의 메뉴에 강조 표시(`class="active"`, `aria-current="page"`)를 붙인다. 강조는 한 화면에 하나다.
 
 **지킬 것**
@@ -6151,6 +6160,79 @@ AI 제공자 상태(`ai_provider`) 항목:
 - VXvue AI 챗봇의 대화 화면은 머리 영역을 숨기는 전체 화면이라 상단 메뉴가 없다. 챗봇 사용법 화면에는 있다.
 
 이유: 같은 곳으로 가는 버튼(`점검 현황`과 `사양·이슈 변경 점검`)과 하위 화면이 메뉴를 차지하면 매일 쓰는 기능을 찾기 어렵다.
+
+### REQ-WEB-008 설정 탭과 관리자 로그인
+
+**하는 일** 운영 담당자가 `설정` 탭 한 곳에서 메일 수신자, AI 모델, 사용률 기준, 메일 링크의 서버 주소를 화면에서 바꾼다. 설정 파일을 고치거나 서버에 들어가지 않아도 된다. 기존 `AI 분석 설정` 메뉴는 이 탭 안의 `AI 모델과 사용률 기준` 구획으로 합쳤다.
+
+> **예시** 담당자가 설정 탭에서 비밀번호를 넣고 로그인한 뒤 `자동 보고 메일 받는 사람`에 동료 주소를 더해 저장한다. 다음 예약 점검 요약 메일부터 동료도 받는다.
+
+**언제** `GET /settings`. 옛 주소 `GET /settings/ai` 는 `/settings#ai` 로 보낸다(303).
+
+| 용어 | 뜻 |
+|---|---|
+| 관리자 로그인 | 비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다 |
+| 로그인 쿠키(`qa_admin`) | 로그인했다는 표시. 브라우저가 8시간 들고 있다 |
+| 가린 주소 | 앞 세 글자만 남긴 메일 주소(`hon***@vieworks.com`) |
+
+**입력**
+
+| 값 | 어디서 |
+|---|---|
+| 비밀번호 | 로그인 칸. 따로 정한 적이 없으면 `1` 이다 |
+| 설정 값 | 각 구획의 입력칸 |
+| 시험 발송 종류·받을 곳 | `메일 시험 발송` 구획의 고르는 칸 |
+
+**순서**
+
+1. 로그인 전에는 지금 값을 읽기 전용으로 보여 준다. 메일 주소는 가려서 보이고, 비밀번호 한 칸이 있다.
+2. 비밀번호가 맞으면 로그인 쿠키를 주고 `/settings` 로 돌아간다. 쿠키는 이 사이트 안에서만 보내고 자바스크립트가 읽을 수 없으며 다른 사이트에서 온 요청에는 붙지 않는다(`HttpOnly`, `SameSite=Strict`).
+3. 로그인한 뒤에는 아래 구획이 열린다.
+4. 저장하면 값을 검사하고, 하나라도 틀리면 전체를 거절한다. 맞으면 DB 에 저장하고 변경 이력에 남긴 뒤 설정을 다시 읽는다. 다음 AI 호출과 다음 점검 실행부터 새 값을 쓴다.
+
+| 구획 | 하는 일 |
+|---|---|
+| `관리자 메일` | 한도·오류 알림을 받는 관리자 주소 1개 |
+| `자동 보고 메일 받는 사람` | 예약 점검 요약 메일을 받는 사람. 쉼표로 나눠 1~10명, 더하거나 지울 수 있다 |
+| `메일 시험 발송` | 알림 종류나 예약 점검 요약 예시를 고른 곳에만 시험으로 보낸다(REQ-MAIL-003) |
+| `AI 모델과 사용률 기준` | 작업별 모델, 추론 정도, 5시간·주간 사용률 기준(%) |
+| `메일 링크 서버 주소` | 메일 속 링크가 가리킬 서버 주소. 따로 나뉜 구획이다 |
+| `관리자 비밀번호 변경` | 선택 기능. 바꾸지 않아도 된다 |
+| `변경 이력` | 최근 변경 10건. 주소는 가려서 보인다. 비밀번호는 값을 보이지 않고 `새 비밀번호로 변경` 또는 `처음 비밀번호로 되돌림`이라고만 적는다 |
+
+**설정**
+
+| 키 | 형식 | 기본 | 뜻 |
+|---|---|---|---|
+| `notifications.admin_email` | 메일 주소 1개 | `NOTIFY_EMAIL_TO` 의 첫 주소 | 한도·오류 알림을 받는 관리자(REQ-QAINTEL-049) |
+| `daily_qa.report_recipients` | 쉼표로 나눈 주소 1~10개 | 비어 있음 | 예약 점검 요약 메일 받는 사람. 읽는 순서는 `daily_qa.report_recipients` → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO` → `notifications.admin_email` 이다. 앞의 값이 비어 있을 때만 다음 값을 쓴다 |
+| `daily_qa.savings.analysis_model` / `review_model` | 허용 모델 | `claude-sonnet-5-5` / `claude-opus-5-5` | 일반 분석·선택 재검토 모델 |
+| `daily_qa.usage_guard.five_hour_percent` / `seven_day_percent` | 정수 50~100 | 80 / 90 | 호출 직전 실제 사용률이 이 값 이상이면 새 호출을 멈춘다(REQ-QAINTEL-043) |
+| `daily_qa.review_base_url` | `http://` 또는 `https://` 로 시작하는 주소 | 빈 값 | 메일 링크의 서버 주소 |
+| `admin.password_hash` | 화면에서 만든 암호화 값 | 없음(없으면 비밀번호 `1`) | 관리자 비밀번호. 화면과 응답에 보이지 않는다 |
+
+호출 횟수 상한(`daily_qa.savings.per_run`·`per_day`)은 더 이상 읽지 않으므로 설정 탭에 두지 않는다.
+
+**안 될 때**
+
+| 경우 | 동작 |
+|---|---|
+| 비밀번호를 연달아 5번 틀림 | 10분 동안 로그인을 받지 않는다. 안내 문구만 보인다 |
+| 로그인 없이 저장·시험 발송 | 403. 서버에서 직접 접속(SSH 터널 포함)한 경우는 로그인 없이 저장할 수 있다(NFR-SEC-004) |
+| 값 형식이 틀림 | 아무것도 저장하지 않고 이유를 같은 화면에 보인다(422) |
+| 일반 저장에 비밀번호 암호화 값(`admin.password_hash`)을 넣음 | 거절한다(422). 비밀번호는 `관리자 비밀번호 변경`으로만 바꾼다. 반복 횟수가 600,000이 아닌 저장값으로는 로그인할 수 없다 |
+| 메일 서버 설정이 없음 | 시험 발송이 `메일 설정이 없어 보내지 않았습니다` 로 끝난다 |
+| 쿠키가 없거나 만료됨 | 로그인 전 화면으로 돌아간다 |
+
+**지킬 것**
+
+- 설정 조회·저장·시험 발송은 Claude 를 호출하지 않는다(REQ-QAINTEL-042).
+- 화면과 응답에는 가린 주소만 보인다. 로그인한 관리자 자신의 입력칸에만 원래 주소가 들어간다.
+- 비밀번호 원문과 암호화 값은 화면·응답·로그·변경 이력 어디에도 내지 않는다(NFR-SEC-002). 비밀번호는 PBKDF2-SHA256 600,000회로 저장한다.
+- 비밀번호 변경을 요구하는 배너나 강제 변경은 두지 않는다. 처음 비밀번호 `1` 을 계속 쓰는 것은 사용자가 정한 운영 방식이다.
+- 자바스크립트가 꺼져도 읽고 저장할 수 있다. 1366px·1920px 에서 가로로 넘치지 않는다.
+
+> **주의** 서버는 평문 HTTP 라서 비밀번호가 사내망에서 그대로 전달된다. 사내망 밖에 열기 전에 HTTPS 를 먼저 정한다(NFR-SEC-004).
 
 ### REQ-OPS-001 운영 상태 점검
 
@@ -6199,7 +6281,7 @@ python scripts/monitor_health.py --disk-path . [--base-url URL] [--check 이름=
 
 **하는 일** DB 와 업로드 원본을 ZIP 하나로 백업하고, 그 ZIP 이 온전한지 바로 확인한다.
 
-**언제** 서버 cron 이 매일 02:15 에 돌린다(`docs/OPERATIONS.md`).
+**언제** 서버 cron 이 매일 14:15(서버 시간, 한국 03:15·겨울 04:15)에 돌린다(`docs/OPERATIONS.md`).
 
 ```text
 python scripts/backup_data.py --destination backups
@@ -6220,11 +6302,15 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 | 대상 | 이름 형식 | 설정 키 | 기본 |
 |---|---|---|---|
-| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 30일. 가장 새 백업 하나는 날짜와 관계없이 남긴다 |
+| 백업 ZIP | `qa-backup-YYYYMMDDTHHMMSSZ.zip` | `retention.backup_days` | 7일. 가장 새 백업 하나는 날짜와 관계없이 남긴다 |
+| 배포 전 백업 | `deploy-<이름>-YYYYMMDDTHHMMSSZ` 폴더, 또는 같은 이름에 `.tgz`·`.tar`·`.tar.gz`·`.zip` 을 붙인 파일 | `retention.deploy_backup_days` | 14일. 가장 새 배포 전 백업 하나는 날짜와 관계없이 남긴다 |
 | AI 응답 저장본 | `ai_cache` 의 만든 시각(`created_at`) | `retention.ai_cache_days` | 180일 |
 | 일일 QA 실행 폴더 | `output/daily_qa/YYYYMMDD-HHMMSS/` | `retention.daily_qa_run_days` | 365일 |
 | 일일 QA 작업 폴더의 실행 입력 | `<작업 폴더>/runs/YYYYMMDD-HHMMSS/` | `retention.daily_qa_workspace_run_days` | 30일 |
 
+> **예시** 백업 ZIP 하나가 약 900MB 이면 7일 보관으로 백업 폴더는 7GB 안팎에서 더 늘지 않는다. 30일 보관일 때는 27GB 까지 늘었다.
+
+- 백업 ZIP 과 배포 전 백업은 둘 다 백업 폴더(`--destination`, 운영 서버는 앱 폴더의 `backups/`) 안에서만 찾는다.
 - 보관 일수가 0 이면 그 종류는 지우지 않는다.
 - 이름 형식이 맞지 않는 파일·폴더는 날짜와 관계없이 건드리지 않는다.
 - 일일 QA 스냅샷은 지우지 않는다.
@@ -6246,6 +6332,11 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
   이유: 지식 사본은 원본이 담당자 PC 지식 폴더에 있어 다시 올리면 된다.
 
 - 작업 폴더의 실행 입력은 백업을 돌리는 컴퓨터의 작업 폴더만 정리한다. 일일 QA 를 다른 컴퓨터에서 돌리면 그 컴퓨터에서는 지워지지 않는다.
+- 배포하기 전에 서버의 코드·설정·DB 를 따로 백업할 때는 앱 폴더의 `backups/` 안에 `deploy-<이름>-<UTC 시각>` 이름으로 만든다. 예: `backups/deploy-chatbot-20261013T083709Z/`, `backups/deploy-config-20261013T053607Z.tgz`.
+
+  이유: 이름 형식이 다르거나 앱 폴더 밖(홈 폴더 등)에 둔 백업은 자동으로 지워지지 않아 계속 쌓인다. 앱 폴더 밖은 같은 서버의 다른 서비스 영역이기도 하다.
+
+- 같은 날 백업 ZIP 을 손으로 여러 번 만들어도 따로 지우지 않는다. 보관 일수가 지나면 함께 지워진다.
 
 ### REQ-OPS-003 앱 로그
 
@@ -6680,11 +6771,12 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 **결과**
 
-- 핵심 앱에는 로그인·권한 확인이 없다. 문서 등록·삭제, 지식 자산 업로드·확정, 동기화 기록 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.
+- 설정 탭(`/settings`)의 저장·시험 발송은 관리자 로그인(비밀번호, 8시간 쿠키) 또는 서버 직접 접속일 때만 받는다(REQ-WEB-008). 로그인 요청과 저장 요청은 같은 주소에서 온 것만 받는다.
+- 그 밖의 화면에는 로그인·권한 확인이 없다. 문서 등록·삭제, 지식 자산 업로드·확정, 동기화 기록 쓰기, 설정 다시 읽기 주소를 사내망의 누구나 부를 수 있다.
 - 평문 HTTP 로 운영한다.
 - 매뉴얼 서버는 자체 인증·세션을 가진다. 세션 쿠키 범위를 `/manual-hub/` 로 좁힌다.
 
-**지킬 것** 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(`SECURITY.md`).
+**지킬 것** 외부 노출이 필요해지면 HTTPS 와 인증 정책을 먼저 정한 뒤 진행한다(`SECURITY.md`). 설정 탭의 비밀번호는 평문 HTTP 로 전달되므로 외부 노출 전에 반드시 HTTPS 를 먼저 정한다.
 
 ### NFR-PRIV-001 외부로 나가는 글 가리기
 
@@ -8301,6 +8393,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 |---|---|---|
 | QA Intelligence Agent | [specs/qa-intelligence.md](specs/qa-intelligence.md) | draft |
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
+| ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
 
 <!-- spec-index: end -->
 
@@ -9097,7 +9190,7 @@ python -m pytest tests/test_daily_qa_pipeline.py tests/test_daily_qa_polarion.py
 
 ### TEST-DAILY-009
 
-자동 테스트 없음. Skill 내용(REQ-DAILY-024, REQ-DAILY-025)은 QA 규칙 판이 바뀔 때 사람이 검토한다. 자동 테스트(`test_prepare_writes_settings_skills_and_rules`)는 Skill 이 작업 폴더로 복사되는지만 본다.
+`tests/test_unified_qa_rules.py`는 통합 원문 선택·필수 구역·해시·업무별 절 전달과 검증 모드를 확인한다. 문장의 의미와 실제 답변 품질은 별도 검토한다.
 
 1. 새 판 규칙의 검증 관문·판정 이름이 제품 규칙 Skill `vxvue-qa-rules`(`config/products/vxvue/skills/vxvue-qa-rules/`)와 `schema.py` 의 `VERDICTS` 와 같은지 본다.
 2. Skill 이 가리키는 절 번호가 새 판에도 같은 뜻인지 본다.
@@ -9209,7 +9302,7 @@ REQ-KNOW-001, 013, 014, 017, 020 은 자동 테스트가 화면 스크립트 문
 4. `/knowledge/products/vxvue` 의 사양서 구역에 업로드 버튼이 없고 "ALM 에서 자동으로 수집합니다." 가 보이는지 본다.
 5. `수집 제외 N건 · 자세히` 를 펼치면 파일명·분류·이유·대신 쓰는 파일이 보이는지 본다.
 6. `고급 정보` 의 `스캔 결과 JSON` 이 JSON 을 여는지, 현황판 `고급 정보` 의 `죽은 등록 정리` 가 확인 창과 결과 알림을 띄우는지 본다.
-7. 1920px 와 390px 폭에서 가로 스크롤이 생기지 않는지 본다.
+7. 1366px 와 1920px 폭에서 가로 스크롤이 생기지 않는지 본다.
 
 ### TEST-KNOW-007
 
@@ -9277,9 +9370,9 @@ REQ-AICALL-007 을 `tests/test_setting_overrides.py`, `tests/test_settings_api.p
 
 1. 허용 키·모델·추론 정도만 저장되고 잘못된 묶음은 전체 거절되는지 본다.
 2. 설정 파일 기본값·DB 우선 적용·기본값 복구·변경 기록·DB 읽기 실패 시 기본값을 본다.
-3. 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다.
+3. 로그인 없는 외부·전달 헤더 요청의 저장 거절과 루프백 직접 접속 저장을 본다. 화면 읽기 전용·SSH 터널 안내·진행 중 실행 안내를 본다. 저장 주소는 `/settings`, `/settings/reset` 이다(REQ-WEB-008).
 4. 새 프로세스가 DB 값을 읽고 이미 읽은 설정 객체는 바뀌지 않는지 본다.
-5. 390px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.
+5. 1366px·1920px 브라우저에서 화면 가로 스크롤과 저장·복구 후 표시를 확인한다.
 
 ### TEST-AICALL-005
 
@@ -9323,9 +9416,11 @@ REQ-USAGE-002 를 `tests/test_persistent_analyses.py` 의 `test_tokens_used_sinc
 
 REQ-USAGE-003, REQ-MAIL-001 을 `tests/test_notifier.py` 로 확인한다: 오류 종류 판정, 대상 아닌 오류는 무시, 할당량 오류에 메일 한 통, 조치 방법·맥락 포함, 오류 문구 가리기, 같은 오류 두 번째는 억제, 종류별 대기 시간 분리, 대기 시간이 지나면 다시 보냄, 발송 실패에도 대기 시간 시작, 수신자 없음·설정 꺼짐이면 안 보냄, 상태에 값 없음, 계정 없음 경고, 실제 호출 경로에서 알림, 알림 기록.
 
+메일 제목과 발송 결과는 같은 파일의 다음 시험이 확인한다: 모든 제목이 `[QA Agent]`로 시작, 발송 결과의 `Message-ID`가 실제 메일 머리글과 같음, 가린 수신 주소, 시험 발송이 대기 기록을 건드리지 않음.
+
 ### TEST-MAIL-001
 
-REQ-MAIL-002, 003 은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 `scripts/test_notification.py` 를 실행해 상태를 보고 `--send` 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 TEST-DAILY-006 이 본문 내용을 본다.
+REQ-MAIL-002의 `Message-ID`·가린 주소와 REQ-MAIL-003의 시험 발송 함수는 `tests/test_notifier.py`가 확인한다. 명령줄 시험 발송(`scripts/test_notification.py`)은 자동 테스트가 없다. 사람이 확인하는 절차: 서버에서 `scripts/test_notification.py` 를 실행해 상태를 보고 `--send` 로 시험 메일이 오는지 본다. 일일 QA 요약 메일은 TEST-DAILY-006 이 본문 내용을 본다.
 
 ### TEST-SCHED-001
 
@@ -9337,6 +9432,18 @@ REQ-SCHED-001, 002 는 일일 QA 작업 등록만 자동으로 본다(`tests/tes
 
 REQ-WEB-001, 002, 003, 006, 007 을 `tests/test_web.py` 로 확인한다: `/health`, 허브 카드 링크, 설정된 하위 서비스 카드 표시·빈 주소 숨김, 앱 포트로 들어온 상대 경로의 307 이동, 기본 포트면 이동하지 않음, 기능별 사용법 분리, `/guide` 308, 허브와 기능 화면의 상단 메뉴 순서·강조 표시, 기간별 결과·자동 점검 범위가 상단 메뉴에 없고 점검 현황 화면에서 열림.
 
+### TEST-WEB-003
+
+REQ-WEB-008, NFR-SEC-004 를 `tests/test_admin_auth.py`, `tests/test_settings_screen.py`, `tests/test_settings_api.py` 로 확인한다.
+
+1. 처음 비밀번호 `1` 로 로그인하면 `qa_admin` 쿠키(`HttpOnly`, `SameSite=Strict`)가 붙고, 틀린 비밀번호나 5번 실패 뒤 10분 잠금, 만료·변조 쿠키 거절을 본다.
+2. 로그인 없이 저장·시험 발송·비밀번호 변경이 403 이고, 서버 직접 접속은 로그인 없이 저장되는지 본다.
+3. 허용 키·형식(주소 1~10개, 사용률 50~100, 허용 모델, 서버 주소)만 저장되고 틀린 묶음은 전체 거절되는지 본다.
+4. 수신자 읽기 순서(화면 값 → `DAILY_QA_EMAIL_TO` → `NOTIFY_EMAIL_TO`)와 관리자 메일 기본값을 본다.
+5. 화면·응답·변경 이력에 가린 주소만 있고 비밀번호 암호화 값이 없는지, 로그인한 관리자의 입력칸에만 원래 주소가 있는지 본다.
+6. `/settings/ai` 가 `/settings#ai` 로 가는지, 상단 메뉴 이름이 `설정` 인지 본다.
+7. 1366px·1920px 브라우저에서 가로 스크롤이 없는지 확인한다.
+
 ### TEST-WEB-002
 
 REQ-WEB-005 는 운영 점검 쪽에서만 본다(`tests/test_monitor_health.py`). 사람이 확인하는 절차: `curl http://127.0.0.1:24357/operations/status` 가 다섯 항목을 주고 `database_integrity` 가 `ok` 인지 본다.
@@ -9347,7 +9454,9 @@ REQ-OPS-001 을 `tests/test_monitor_health.py` 로 확인한다: 모두 정상�
 
 ### TEST-OPS-002
 
-REQ-OPS-002 를 `tests/test_backup.py` 로 확인한다: 임시 루트에서 백업 후 확인이 `ok`(`test_backup_round_trip_verifies_sqlite_and_manifest`), 일일 QA 스냅샷은 넣고 지식 사본은 빼기, 보관 일수가 지난 백업·실행 폴더·AI 응답 저장본 지우기(가장 새 백업은 남김), 보관 일수를 설정에서 읽기, 확인 뒤에만 지우기.
+REQ-OPS-002 를 `tests/test_backup.py` 로 확인한다: 임시 루트에서 백업 후 확인이 `ok`(`test_backup_round_trip_verifies_sqlite_and_manifest`), 일일 QA 스냅샷은 넣고 지식 사본은 빼기, 확인 뒤에만 지우기.
+
+보관 정리는 같은 파일에서 확인한다: 보관 일수가 지난 백업·실행 폴더·AI 응답 저장본 지우기(가장 새 백업은 남김), 보관 일수가 지난 배포 전 백업 폴더·묶음 파일 지우기(가장 새 것은 남기고 이름 형식이 다른 것은 두기), 보관 일수를 설정에서 읽기, 실제 설정의 보관 일수(백업 7일·배포 전 백업 14일).
 
 ### TEST-OPS-003
 
@@ -9827,7 +9936,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DAILY-007 | `app/modules/daily_qa/schema.py`, `app/modules/daily_qa/skills/qa-common-rules/references/output-contract.md` | TEST-DAILY-004: `tests/test_daily_qa_outputs.py`, `tests/test_daily_qa_fixes.py` | implemented |
 | REQ-DAILY-008 | `app/modules/daily_qa/report.py`, `app/modules/daily_qa/pipeline.py`, `app/core/notifier.py` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, `tests/test_qa_exception_notifications.py` | implemented |
 | REQ-DAILY-009 | `app/modules/daily_qa/router.py` | TEST-DAILY-005: `tests/test_daily_qa_router.py` | deprecated |
-| REQ-DAILY-010 | `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
+| REQ-DAILY-010 | `app/core/qa_rule_source.py`, `app/modules/daily_qa/rules.py`, `app/modules/daily_qa/pipeline.py`, `config/products/vxvue.yaml` | `tests/test_unified_qa_rules.py`, TEST-DAILY-006: `tests/test_daily_qa_runner.py`, TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | implemented |
 | REQ-DAILY-011 | `scripts/run_daily_qa.py` | TEST-DAILY-007 | implemented |
 | REQ-DAILY-012 | `scripts/run_daily_qa.py`, `app/core/claude_cli.py` | TEST-DAILY-007, `tests/test_qa_intel_login.py` | implemented |
 | REQ-DAILY-013 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/agent_runner.py` | TEST-DAILY-001: `tests/test_daily_qa_pipeline.py`, `tests/test_daily_qa_fixes.py` | implemented |
@@ -9879,14 +9988,14 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-AICALL-004 | `app/core/model_router.py` | TEST-QAAGENT-011: `tests/test_qa_agent_retired.py` | deprecated |
 | REQ-AICALL-005 | `app/core/claude_cli.py`, `app/core/gemini_client.py`, `app/core/model_router.py`, `config.yaml` | TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-006 | `app/core/claude_usage.py`, `app/modules/daily_qa/agent_runner.py`, `app/main.py`, `app/web/templates/_claude_usage.html`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/static/vxvue-chatbot.js` | TEST-AICALL-005: `tests/test_claude_usage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py`, `tests/test_vxvue_chat_router.py` | verified |
-| REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings_ai.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
+| REQ-AICALL-007 | `app/core/config.py`, `app/core/setting_overrides.py`, `app/core/storage.py`, `app/web/settings_router.py`, `app/web/templates/settings.html`, `app/serve.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/qa_agent/run_view.py` | TEST-AICALL-006: `tests/test_setting_overrides.py`, `tests/test_settings_api.py`, `tests/test_settings_screen.py` | verified |
 | REQ-USAGE-001 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-002 | `app/modules/qa_agent/router.py`, `app/core/storage.py`, `app/core/usage.py`, `app/modules/manual_review/router.py` | TEST-USAGE-001: `tests/test_persistent_analyses.py`, `tests/test_cost_dashboard.py` | implemented |
 | REQ-USAGE-003 | `app/core/notifier.py`, `app/core/gemini_client.py`, `app/core/storage.py` | TEST-USAGE-002: `tests/test_notifier.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-USAGE-004 | `app/core/model_router.py` | TEST-AICALL-002: `tests/test_model_router.py` | implemented |
-| REQ-MAIL-001 | `app/core/notifier.py` | TEST-USAGE-002: `tests/test_notifier.py` | implemented |
-| REQ-MAIL-002 | `app/core/notifier.py` | TEST-MAIL-001 | implemented |
-| REQ-MAIL-003 | `scripts/test_notification.py` | TEST-MAIL-001 | implemented |
+| REQ-MAIL-001 | `app/core/notifier.py`, `app/modules/daily_qa/report.py` | TEST-USAGE-002: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py` | implemented |
+| REQ-MAIL-002 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py` | TEST-MAIL-001: `tests/test_notifier.py`, `tests/test_qa_workflow_email.py` | implemented |
+| REQ-MAIL-003 | `scripts/test_notification.py`, `app/core/notifier.py` | TEST-MAIL-001: `tests/test_notifier.py` | implemented |
 | REQ-SCHED-001 | `app/core/scheduler.py`, `app/main.py` | TEST-SCHED-001 | implemented |
 | REQ-SCHED-002 | `app/modules/knowledge/scheduled_jobs.py`, `app/modules/qa_agent/scheduled_jobs.py`, `app/modules/daily_qa/scheduled_jobs.py` | TEST-SCHED-001: `tests/test_daily_qa_pipeline.py` | implemented |
 | REQ-WEB-001 | `app/web/router.py`, `app/web/templates/hub.html` | TEST-WEB-001: `tests/test_web.py` | implemented |
@@ -9896,6 +10005,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-WEB-005 | `app/main.py`, `app/core/storage.py` | TEST-WEB-002 | implemented |
 | REQ-WEB-006 | `app/web/templates/base.html`, `app/web/static/app.css`, `app/web/router.py` | TEST-WEB-001: `tests/test_web.py` | implemented |
 | REQ-WEB-007 | `app/web/templates/_nav.html`, `app/web/static/app.css`, `app/modules/qa_agent/templates/dashboard.html` | TEST-WEB-001: `tests/test_web.py` | verified |
+| REQ-WEB-008 | `app/core/admin_auth.py`, `app/core/setting_overrides.py`, `app/web/settings_router.py`, `app/web/templates/settings.html`, `app/web/templates/admin_login.html`, `app/modules/daily_qa/settings.py`, `app/core/notifier.py` | TEST-WEB-003: `tests/test_admin_auth.py`, `tests/test_settings_screen.py`, `tests/test_settings_api.py` | verified |
 | REQ-OPS-001 | `scripts/monitor_health.py` | TEST-OPS-001: `tests/test_monitor_health.py` | implemented |
 | REQ-OPS-002 | `scripts/backup_data.py`, `app/core/retention.py` | TEST-OPS-002: `tests/test_backup.py` | implemented |
 | REQ-OPS-003 | `app/core/logger.py`, `deploy/systemd/qa-verification.service` | TEST-SCHED-001 | implemented |
@@ -9909,7 +10019,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |
-| NFR-SEC-004 | `deploy/nginx/qa-platform.conf` | TEST-SEC-004 | implemented |
+| NFR-SEC-004 | `deploy/nginx/qa-platform.conf`, `app/core/admin_auth.py`, `app/web/settings_router.py` | TEST-SEC-004, TEST-WEB-003: `tests/test_admin_auth.py` | implemented |
 | NFR-PRIV-001 | `app/core/security_filter.py`, `app/core/gemini_client.py` | TEST-PRIV-001: `tests/test_security_filter.py` | implemented |
 | NFR-PRIV-002 | `.gitignore` | TEST-PRIV-002 | implemented |
 | NFR-OPS-001 | `app/core/console.py` | TEST-OPS-004 | implemented |
@@ -10118,6 +10228,11 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 - 백업 범위: 일일 QA 스냅샷은 넣고 지식 사본은 뺀다(REQ-OPS-002).
 - 오래된 백업 지우기: ① `retention.backup_days`(기본 30일)가 지난 것을 지운다. 가장 새 백업 하나는 남긴다(REQ-OPS-002).
 - AI 응답 저장본(`ai_cache`)의 보관 기간: 180일(`retention.ai_cache_days`, REQ-AICALL-002).
+
+**결정됨 (2026-10-16)**
+
+- 백업 ZIP 보관 기간을 30일에서 7일로 줄였다. 백업 ZIP 이 하루 900MB 안팎으로 커져 30일이면 27GB 가 쌓였다(REQ-OPS-002).
+- 배포 전 백업은 `backups/deploy-<이름>-<UTC 시각>` 으로 만들고 14일 뒤 지운다(`retention.deploy_backup_days`, REQ-OPS-002).
 
 ### 13.6 하위 서비스 QA Manual Hub
 

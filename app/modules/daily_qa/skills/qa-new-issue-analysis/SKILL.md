@@ -10,6 +10,10 @@ findings 를 비운 결과와 질문 하나만 쓰고 끝낸다.
 
 ## 입력
 
+`verification_mode=true`이면 선택한 버전의 `candidates.tcs`를 확인하고 `sections.tc_coverage`에
+TC 위치·`covers`·이유를 남긴다. 사양·이슈·TC의 Expected가 충돌하면 QA가 확인할 점과 TC 보완 제안을
+`action`에 적는다. 이슈에 번호가 적혀 있다는 이유만으로 검증된 것으로 보지 않는다.
+
 `in/NEW-*.json` 의 `items[]` (대상 이슈마다 하나):
 
 - `target`: 이슈 번호. Finding 의 `subject` 에 그대로 쓴다.
@@ -19,7 +23,7 @@ findings 를 비운 결과와 질문 하나만 쓰고 끝낸다.
 - `candidates.issues[]`: 코드가 고른 비슷한 과거 이슈. 같은 버전 후보가 앞에 있다. 각 후보의
   `rd_result`(과거 처리 결과), `match`(왜 걸렸는지).
 - `candidates.srs[]`: 사양 후보(오늘 SRS). `candidates.spec_docs[]`: 사양서 조각(`ref`, `location`).
-- `search`: 코드가 쓴 검색어. TC 후보는 없다(TC 는 자동 분석에서 보지 않는다).
+- `search`: 코드가 쓴 검색어. `verification_mode=false`일 때 TC 후보는 없다. 통합 점검은 선택 버전의 TC를 비교한다.
 
 ## 절차 (이슈마다)
 

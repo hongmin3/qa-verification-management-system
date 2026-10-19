@@ -102,6 +102,37 @@ def test_old_backups_are_pruned_but_the_newest_is_kept(tmp_path):
     assert prune_backups(folder, keep_days=0, now=now + timedelta(days=400)) == []
 
 
+def test_old_deploy_backups_are_pruned_but_the_newest_is_kept(tmp_path):
+    # Validates: REQ-OPS-002
+    from app.core.retention import prune_deploy_backups
+
+    now = datetime(2026, 10, 16, 3, 0, tzinfo=timezone.utc)
+    folder = tmp_path / "backups"
+    old_dir = folder / "deploy-chatbot-20260901T083709Z"
+    (old_dir / "app").mkdir(parents=True)
+    (old_dir / "app" / "main.py").write_text("x", encoding="utf-8")
+    old_tgz = folder / "deploy-config-20260902T053607Z.tgz"
+    old_tar = folder / "deploy-app-code-20260903T000000Z.tar.gz"
+    recent = folder / "deploy-revision-20261015T101030Z.tgz"
+    unrelated_dir = folder / "chat-evidence-20260901T040618Z"
+    unrelated_dir.mkdir()
+    zip_backup = folder / "qa-backup-20260901T021500Z.zip"
+    for path in (old_tgz, old_tar, recent, zip_backup):
+        path.write_bytes(b"x")
+
+    removed = prune_deploy_backups(folder, keep_days=14, now=now)
+
+    assert sorted(path.name for path in removed) == sorted([old_dir.name, old_tgz.name, old_tar.name])
+    assert not old_dir.exists() and not old_tgz.exists() and not old_tar.exists()
+    # 이름 형식이 다른 것과 백업 ZIP 은 이 정리가 건드리지 않는다.
+    assert recent.exists() and unrelated_dir.exists() and zip_backup.exists()
+    # 모두 오래됐어도 가장 새 배포 전 백업 하나는 남긴다.
+    assert prune_deploy_backups(folder, keep_days=1, now=now + timedelta(days=400)) == []
+    assert recent.exists()
+    assert prune_deploy_backups(folder, keep_days=0, now=now + timedelta(days=400)) == []
+    assert prune_deploy_backups(tmp_path / "missing", keep_days=1, now=now) == []
+
+
 def test_old_daily_qa_run_folders_are_pruned(tmp_path):
     # Validates: NFR-DAILY-002
     from app.core.retention import prune_run_folders
@@ -149,12 +180,14 @@ def test_retention_days_come_from_config(tmp_path):
     assert days["ai_cache_days"] == 0
     assert days["daily_qa_run_days"] == 365
     assert days["daily_qa_workspace_run_days"] == 30
+    assert days["deploy_backup_days"] == 14
 
 
 def test_real_config_declares_retention_and_drops_unused_keys():
-    # Validates: REQ-CONF-001
+    # Validates: REQ-CONF-001, REQ-OPS-002
     real = config.build_settings()
-    assert real.get("retention.backup_days") == 30
+    assert real.get("retention.backup_days") == 7
+    assert real.get("retention.deploy_backup_days") == 14
     assert real.get("retention.ai_cache_days") == 180
     assert real.get("storage.database_url") is None
     assert real.get("app.locale") is None
@@ -174,9 +207,14 @@ def test_backup_cli_prunes_after_verifying(monkeypatch, tmp_path):
     folder.mkdir()
     ancient = folder / "qa-backup-20000101T000000Z.zip"
     ancient.write_bytes(b"x")
+    old_deploy = folder / "deploy-app-20000101T000000Z.tgz"
+    new_deploy = folder / "deploy-app-20000102T000000Z.tgz"
+    old_deploy.write_bytes(b"x")
+    new_deploy.write_bytes(b"x")
     monkeypatch.setattr(sys, "argv", ["backup_data.py", "--destination", str(folder)])
     assert backup_cli.main() == 0
     assert not ancient.exists()
+    assert not old_deploy.exists() and new_deploy.exists()
     assert len(list(folder.glob("qa-backup-*.zip"))) == 1
 
     ancient.write_bytes(b"x")

@@ -22,6 +22,8 @@ data/manual_hub_cache/
 data/*.db
 data/spec_sync_state.json
 data/spec_sync.lock
+# 관리자 로그인 쿠키 서명 키(REQ-WEB-008). 저장소에 올라가면 누구나 관리자 쿠키를 만들 수 있다.
+data/admin_session.key
 output/reports/
 output/exports/
 output/generated_tc/
@@ -60,5 +62,7 @@ scratch/
 # 그 컴퓨터에만 쓰는 설정 (SPEC REQ-CONF-001 순서 2). 배포하지 않는다.
 config.local.yaml
 data/vxvue_chatbot/
+data/vxvue_desktop/
+output/vxvue_desktop/
 data/knowledge_retry/
 .superpowers/sdd/vxvue-ai-chatbot/

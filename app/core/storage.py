@@ -7,18 +7,22 @@ from pathlib import Path
 
 from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
+from app.core.qa_execution_storage import QaExecutionStorageMixin
 from app.core.vxchat_storage import VxChatStorageMixin
+from app.core.vxdesk_storage import VxDeskStorageMixin
 
 from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
 
 
-class Storage(DailyQaStorageMixin, VxChatStorageMixin):
+class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExecutionStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
         self._initialize_daily_qa()
+        self._initialize_qa_execution()
         self._initialize_vxchat()
+        self._initialize_vxdesk()
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
@@ -830,6 +834,11 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin):
                 (kind, now),
             )
         return True
+
+    def release_notification(self, kind: str) -> None:
+        """보내지 못한 알림의 선점을 푼다. 한 번도 보낸 적 없는 행만 지워 다음 시도가 다시 선점할 수 있게 한다."""
+        with self.connect() as db:
+            db.execute("DELETE FROM notifications WHERE kind=? AND last_sent_at IS NULL", (kind,))
 
     def mark_notification_sent(self, kind: str) -> None:
         now = datetime.now(timezone.utc).isoformat()

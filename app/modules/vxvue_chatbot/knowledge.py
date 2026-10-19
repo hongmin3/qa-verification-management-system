@@ -64,16 +64,10 @@ def prepare_knowledge(storage, destination, project_root=None):
                     raise ValueError("지식 동기화 목록의 경로를 확인해주세요.")
                 docs.append({"id": f"asset-{index}", "kind": asset["kind"], "name": asset["file_name"],
                              "path": str(path), "error": asset.get("error"), "expected_sha256": asset.get("sha256")})
-        required = {}
-        for kind in ("instruction_prompt", "qa_rules"):
-            candidates = [d for d in docs if d["kind"] == kind]
-            if not candidates:
-                raise ValueError("지침 프롬프트와 QA 규칙 MD를 Knowledge에 동기화한 뒤 질문해주세요.")
-            latest = max(revision(d["name"]) for d in candidates)
-            selected = [d for d in candidates if revision(d["name"]) == latest]
-            if len({Path(d["path"]).read_bytes() for d in selected if Path(d["path"]).is_file()}) > 1:
-                raise ValueError("같은 개정 번호의 지침이 서로 다릅니다. 적용할 문서를 확인해주세요.")
-            required[kind] = selected[0]
+        from app.core.qa_rule_source import select_rule_documents
+        selected = select_rule_documents(docs, require_prompt=True)
+        required = {d["kind"]: d for d in selected}
+        docs = [d for d in docs if d["kind"] not in ("qa_rules", "instruction_prompt") or d in selected]
         skill_docs = [d for d in docs if d["kind"] == "skill_instruction"]
         if len(skill_docs) > 1:
             raise ValueError("Skill 지침 동기화본이 여러 개입니다. 적용할 원본을 확인해주세요.")
