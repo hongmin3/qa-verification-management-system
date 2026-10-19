@@ -17,9 +17,9 @@ description: QA Agent 무인 점검 Skill(qa-new-issue-analysis, qa-fixed-issue-
 
 1. **공통 규칙** — 이 파일. 모든 제품에 같다.
 2. **제품 규칙** — 프롬프트가 알려 준 제품 규칙 Skill(예: `vxvue-qa-rules`)과 작업 폴더 `rules/`
-   의 제품 QA 규칙 원문(`rules/qa-guide.md`, `rules/instruction-prompt.txt`). Gate 번호·절 번호·
+   의 제품 QA 규칙 원문(`rules/qa-guide.md`, 두 문서 방식 제품은 `rules/instruction-prompt.txt`도 포함). Gate 번호·절 번호·
    제품 고유 검토 관점(장비·DICOM 등)은 제품 규칙이 정한다.
-3. 충돌 우선순위: 입력의 `answered_questions`(사람이 답한 내용) > 제품 지침 프롬프트 > 제품 규칙 > 공통 규칙.
+3. 충돌 우선순위: 입력의 `answered_questions`(사람이 답한 내용) > 제품 운영 지침(통합 MD의 운영 구역 또는 지침 TXT) > 제품 상세 규칙 > 공통 규칙.
 
 `rules/qa-guide.md` 가 없으면 findings 를 비운 채 `gate_status.G2 = "FAIL"` 과 질문 하나("QA 규칙
 파일 없음")만 쓰고 끝낸다. 기억에 의존해 규칙을 대신하지 않는다.

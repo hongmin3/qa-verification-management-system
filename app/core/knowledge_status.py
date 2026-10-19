@@ -277,7 +277,7 @@ def product_health(config: ProductConfig, storage, root: Path | None = None) -> 
     level = max((asset.level for asset in assets), key=_LEVEL_ORDER.__getitem__, default=READY)
     from app.core.qa_rules import load_rule_set
 
-    rule_set = load_rule_set(config.product)
+    rule_set = load_rule_set(config.product, root)
     return ProductHealth(
         product=config.product, slug=config.slug, level=level, label=LEVEL_LABELS[level],
         last_updated=_latest([asset.last_updated for asset in assets]),
@@ -291,7 +291,7 @@ def product_health(config: ProductConfig, storage, root: Path | None = None) -> 
             "uploaded_from": ctx.manifest.get("uploaded_from", ""),
             "synced_at": ctx.manifest.get("synced_at", ""),
             "last_sync_detail": (ctx.folder_sync or {}).get("detail", ""),
-            "rule_revision": rule_set.revision if rule_set.available else "",
+            "rule_revision": (rule_set.revision or "개정 번호 없음(원문 적용)") if rule_set.available else "",
         },
     )
 

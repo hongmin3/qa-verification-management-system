@@ -158,4 +158,4 @@ def test_product_rule_skill_lives_with_the_product_config():
     common = REPO / "app" / "modules" / "daily_qa" / "skills"
     assert not any(path.name.startswith("vxvue-") for path in common.iterdir())
     assert VXVUE_PROFILE.skills_dir == REPO / "config" / "products" / "vxvue" / "skills"
-    assert VXVUE_PROFILE.supported_rules_rev == "1.18" and "GENERATOR" in VXVUE_PROFILE.regression_axes
+    assert VXVUE_PROFILE.supported_rules_rev == "" and "GENERATOR" in VXVUE_PROFILE.regression_axes

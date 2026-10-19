@@ -18,7 +18,7 @@ vxvue_chatbot:
   prompt_cache_ttl: ""
   batch_token_budget: 30000
   mcp_output_tokens: 40000
-  reviewed_skill_code_hash: "9e23f741f51c92709d3324868f129e90aa52b9402db9138bf18df29abd38d279"
+  reviewed_skill_code_hash: "db1c5ea898fb543509bfd7be45468b322ea3a3854a94bfd56e3b533a69ab3ad7"
   message_char_limit: 30000
   max_pending_jobs: 20
   max_file_bytes: 52428800

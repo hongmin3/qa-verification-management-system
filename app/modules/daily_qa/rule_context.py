@@ -8,6 +8,33 @@ import re
 def guide_context(task, run, *, strict=False) -> list[tuple[str, str]]:
     mapping = run.root / '.claude' / 'skills' / run.product_skill / 'guide-sections.json'
     guide = run.root / 'rules' / 'qa-guide.md'
+    if guide.is_file():
+        from app.core.qa_rule_source import UNIFIED_MARKER, unified_parts
+        text = guide.read_text(encoding='utf-8-sig')
+        if UNIFIED_MARKER in text:
+            from app.core.qa_rules import RuleSet, parse_rule_document
+            operations, details = unified_parts(text)
+            skills = {
+                'qa-new-issue-analysis': ('S01', 'S02'),
+                'qa-fixed-issue-analysis': ('S04', 'S05', 'S09'),
+                'qa-verification-tc-draft': ('S03', 'S04', 'S05', 'S09'),
+                'qa-spec-decision-analysis': ('S01', 'S02'),
+                'qa-comment-analysis': ('S01', 'S02'),
+                'qa-spec-change-summary': ('S02', 'S05'),
+                'qa-spec-coverage-analysis': ('S02', 'S03'),
+                'qa-issue-spec-audit': ('S01', 'S02'),
+                'qa-manual-completeness': ('S07',),
+            }.get(task.skill, ())
+            if any(item.get('verification_mode') for item in task.payload.get('items', [])):
+                skills = tuple(dict.fromkeys((*skills, 'S03', 'S04', 'S05')))
+            rules = RuleSet('VXvue', [parse_rule_document(details, 'QA 상세 규칙', 'qa_rules')])
+            chosen = {}
+            for skill in skills:
+                for section in rules.slice(skill=skill, char_budget=24000):
+                    chosen[id(section)] = section
+            excerpt = '\n\n'.join(section.render() for section in chosen.values()) if chosen else details
+            notice = '\n상세 규칙은 업무 주제로 발췌했다. 필요한 근거·Gate·출력 기준이 부족하면 rules/qa-guide.md에서 제목으로 추가 확인한다. 절 번호는 고정 기준이 아니다.\n'
+            return [(run.rel(guide) + ' (운영 지침과 업무별 상세 규칙)', operations + excerpt + notice)]
     if not run.product_skill or not mapping.is_file() or not guide.is_file():
         if strict:
             raise ValueError('제품 규칙의 절 연결 또는 QA 가이드 원문이 없습니다.')

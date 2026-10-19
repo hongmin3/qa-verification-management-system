@@ -170,3 +170,27 @@ def test_bundle_carries_no_user_config_and_token_initialization_preserves_existi
     token = path.read_bytes()
     assert len(token.strip()) >= 32
     assert initialize(tmp_path).read_bytes() == token
+
+def test_unified_workflow_pagination_without_prompt_preserves_pinned_snapshot(server):
+    from tests.test_unified_qa_rules import UNIFIED
+    client, base, root = server
+    old_sid=value(rpc(client,"get_status"))["snapshot_id"]
+    manifest=json.loads((base/"manifest.json").read_text(encoding="utf-8"))
+    manifest["assets"]=[a for a in manifest["assets"] if a["kind"] not in ("qa_rules","instruction_prompt")]
+    path=base/"original/qa_rules/current.md"
+    path.write_text(UNIFIED,encoding="utf-8")
+    manifest["assets"].append({"kind":"qa_rules","file_name":"current.md","sha256":hashlib.sha256(path.read_bytes()).hexdigest()})
+    (base/"manifest.json").write_text(json.dumps(manifest),encoding="utf-8")
+    sid=value(rpc(client,"get_status"))["snapshot_id"]
+    assert sid!=old_sid
+    offset=0
+    chunks=[]
+    while True:
+        part=value(rpc(client,"get_workflow",{"snapshot_id":sid,"offset":offset,"limit":300}))
+        chunks.append(part["text"])
+        if not part["truncated"]: break
+        offset=part["next_offset"]
+    text="".join(chunks)
+    assert text.count("요청 범위와 확인 근거")==1
+    assert "CURRENT PROMPT" not in text
+    assert "CURRENT PROMPT" in value(rpc(client,"get_workflow",{"snapshot_id":old_sid}))["text"]

@@ -1,21 +1,20 @@
 ---
 name: vxvue-qa-rules
-description: VXvue 제품 규칙 Skill. VXvue QA 규칙(가이드 Rev1.18)의 Gate 번호(§76 기준 G1~G7)와, QA Agent 분석 Skill 이 판정 전에 읽을 가이드 절을 알려 준다. VXvue 점검 작업에서 qa-common-rules 다음에 읽는다.
+description: VXvue 제품 규칙 Skill. 현재 VXvue QA 규칙의 Gate 의미와, QA Agent 분석 Skill 이 판정 전에 읽을 가이드 절을 알려 준다. VXvue 점검 작업에서 qa-common-rules 다음에 읽는다.
 ---
 
 # VXvue 제품 규칙 (무인 실행)
 
 공통 규칙은 `qa-common-rules` 에 있다. 이 Skill 은 **VXvue 에만 해당하는 것**만 적는다.
-QA 규칙 원문은 작업 폴더 `rules/qa-guide.md`(`[QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드`)와
-`rules/instruction-prompt.txt`(지침 프롬프트)다. 이 Skill 은 원문을 복사하지 않고 절 번호만 가리킨다.
-
-기준 판: Rev1.18. 제품 설정 `config/products/vxvue.yaml` 의 `qa_intelligence.rules.supported_rev` 와 같다.
-판이 바뀌면 코드가 AI 단계를 멈춘다(REQ-DAILY-010). 이 Skill 을 새 판에 맞춰 고친 뒤 설정 값을 올린다.
+QA 규칙 원문은 작업 폴더 `rules/qa-guide.md`의 통합 운영 지침과 상세 QA 규칙이다.
+서버형 VXvue Skill과 같은 원문을 사용한다. 개정 번호가 바뀌어도 현재 본문을 읽고 적용한다.
+아래 절 번호는 탐색 힌트다. 번호가 달라지면 제목·Skill·기능으로 찾는다.
+현재 원문의 Gate 의미를 결과 형식에 표현할 수 없으면 구체적인 충돌을 질문으로 남긴다.
 
 ## Gate (가이드 §76 기준, G1~G7)
 
 가이드 §44 는 Gate 를 5개(G1~G5)로 적은 옛 번호다. §62·§76 이 7개로 다시 정의했으므로
-**§76 번호만 쓴다.** 각 Gate 의 뜻과 판정법은 `references/gates.md` — 결과의 `gate_status` 를
+현재 원문의 최종 Gate 정의를 확인한다. 각 Gate 의 뜻과 판정법은 `references/gates.md` — 결과의 `gate_status` 를
 채우기 전에 읽는다. 프롬프트에 이미 들어 있으면 다시 읽지 않는다.
 
 ## 분석 Skill 별로 먼저 읽을 가이드 절
