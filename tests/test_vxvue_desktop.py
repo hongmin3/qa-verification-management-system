@@ -194,3 +194,63 @@ def test_unified_workflow_pagination_without_prompt_preserves_pinned_snapshot(se
     assert text.count("요청 범위와 확인 근거")==1
     assert "CURRENT PROMPT" not in text
     assert "CURRENT PROMPT" in value(rpc(client,"get_workflow",{"snapshot_id":old_sid}))["text"]
+
+
+def test_client_disconnect_while_reading_is_not_a_server_error(monkeypatch, caplog):
+    """Desktop 이 요청 본문을 다 보내기 전에 끊어도 서버 오류 추적을 남기지 않는다 (REQ-VXVUECHATBOT-011)."""
+    import asyncio
+    import logging
+
+    from starlette.requests import ClientDisconnect
+
+    from app.modules.vxvue_chatbot import desktop
+
+    class Gone:
+        headers = {"content-length": "10"}
+
+        async def stream(self):
+            raise ClientDisconnect()
+            yield b""  # pragma: no cover - 비동기 생성기로 만들기 위한 줄
+
+    monkeypatch.setattr(desktop, "_authorize", lambda request: {"kind": "device"})
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        response = asyncio.run(desktop._handle(Gone(), 204))
+    assert response.status_code == 499
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert any("disconnected" in r.getMessage() for r in caplog.records)
+
+
+def test_desktop_results_show_paths_inside_the_knowledge_folder_only():
+    """Generator 근거의 원본 경로는 지식 폴더 안의 상대 경로로만 보인다 (REQ-VXVUECHATBOT-011).
+    모양은 2026-10-19 운영 get_generator_evidence 응답(sources[].file, vss[].source.file, tc[].file)을 따랐다."""
+    from app.modules.vxvue_chatbot import desktop
+
+    root = "/home/ubuntu/ai-regression-impact-analyzer/data/vxvue_desktop/snapshots/68bc269460a75612c7c30d6f"
+    tools = desktop.DesktopTools.__new__(desktop.DesktopTools)
+    tools.snapshot = {"root": root}
+    tc_file = f"{root}/original/(TC) RA16-149-003_VXvue_Generator_Test_Case (261006).xlsx"
+    value = {"sources": [{"file": tc_file, "sha256": "e0"}],
+             "vss": [{"source": {"file": f"{root}/original/(사양서) VSS Specification (261006).xlsx", "cell": "U36"}}],
+             "tc": [{"file": tc_file, "row": 7}],
+             "scope": {"root": root, "files": [{"path": r"C:\Users\kim\VXvue 지식파일\a.pdf", "bytes": 1}]}}
+    cleaned = desktop.client_paths(value, root)
+    text = repr(cleaned)
+    assert "/home/" not in text and "Users" not in text and "snapshots" not in text
+    assert cleaned["sources"][0]["file"] == "(TC) RA16-149-003_VXvue_Generator_Test_Case (261006).xlsx"
+    assert cleaned["vss"][0]["source"]["file"] == "(사양서) VSS Specification (261006).xlsx"
+    assert cleaned["scope"]["files"][0]["path"] == "a.pdf" and cleaned["scope"]["root"] == ""
+    assert cleaned["sources"][0]["sha256"] == "e0" and cleaned["tc"][0]["row"] == 7
+
+
+def test_status_connection_guide_keeps_the_server_address(monkeypatch):
+    """사용자가 이미 접속한 서버 주소는 연결 안내에서 가리지 않는다. 다른 값의 주소는 그대로 가린다."""
+    import json
+
+    from app.modules.vxvue_chatbot import desktop
+
+    monkeypatch.setattr(desktop, "call", lambda name, args: {"note": "장비 10.1.2.3"})
+    reply = desktop.dispatch({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "get_status", "arguments": {}}},
+                             {"bridge_version": "1.2.1", "base_url": "http://10.13.0.222:24357"})
+    data = json.loads(reply["content"][0]["text"])
+    assert data["connection"]["guide"] == "http://10.13.0.222:24357/vxvue-desktop"
+    assert data["note"] == "장비 [IP_ADDRESS]"
