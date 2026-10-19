@@ -129,7 +129,7 @@ def _remove_file_if_owned(storage, document: dict, owned_dirs: list[Path]) -> No
         return
     if not any(resolved.is_relative_to(directory.resolve()) for directory in owned_dirs):
         return
-    for kind in ("specification", "testcase", "manual"):
+    for kind in REGISTERABLE_KINDS:
         for other in storage.list_documents(kind):
             if other["id"] != document["id"] and Path(other["path"]).resolve() == resolved:
                 return

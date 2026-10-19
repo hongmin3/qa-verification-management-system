@@ -43,6 +43,7 @@
   (사양서) VXvue 사양서1(260907).pdf              → 사양서
   (매뉴얼) VXvue Operation Manual.V1.0.11_KO.pdf  → 매뉴얼
   (TC) RA16-148-002_VXvue_TestCase.xlsx           → Test Case
+  (릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx → 릴리즈노트
   [QA 작성 규칙] … 가이드_Rev1.12.md               → QA 규칙
   VXvue 업무 자동화 지침 프롬프트.txt               → 지침 프롬프트
 ```

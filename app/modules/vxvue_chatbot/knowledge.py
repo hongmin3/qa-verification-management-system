@@ -11,7 +11,7 @@ from .skill.scripts.corpus import Corpus
 from app.core.product_knowledge import load_manifest, collected_path, manifest_path, product_dir
 from app.core.skill_knowledge import parse_bundle
 
-KINDS = ("specification", "manual", "testcase", "qa_rules", "instruction_prompt", "skill_instruction")
+KINDS = ("specification", "manual", "testcase", "release_note", "qa_rules", "instruction_prompt", "skill_instruction")
 _snapshot_lock = Lock()
 
 

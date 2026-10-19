@@ -4623,7 +4623,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-003 사양서·매뉴얼 새 문서 등록과 현재 문서 교체
 
-**하는 일** 출처가 `manual` 인 사양서·매뉴얼을 사람이 올려 분석 대상으로 만든다. 같은 논리 문서가 이미 있으면 새 파일로 교체한다. 새 파일이 문제없이 등록된 뒤에만 이전 등록을 뺀다.
+**하는 일** 출처가 `manual` 인 사양서·매뉴얼·릴리즈노트를 사람이 올려 분석 대상으로 만든다. 같은 논리 문서가 이미 있으면 새 파일로 교체한다. 새 파일이 문제없이 등록된 뒤에만 이전 등록을 뺀다.
 
 > **예시** Bellalun Viewer 사양서 출처가 `manual` 이다. `(사양서) Bellalun Viewer 사양서1(260930).pdf` 를 올리면 새 판이 등록되고 `사양서1(260710)` 등록이 분석 대상에서 빠진다. `사양서2(260710)` 는 다른 문서이므로 그대로 남는다.
 
@@ -4641,7 +4641,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 값 | 뜻 | 꼭 필요한가 |
 |---|---|---|
 | 파일(`file`) | `.pdf` 또는 `.docx` | 예 |
-| 종류(`kind`) | `specification` 또는 `manual` | 새 주소에서 예 |
+| 종류(`kind`) | `specification`, `manual`, `release_note` 중 하나 | 새 주소에서 예 |
 | 교체 대상(`replace_id`) | 이 파일로 바꿀 등록의 문서 번호. 같은 제품·같은 종류여야 한다 | 아니오 |
 | 출처(`source`) | 부르는 쪽이 자신을 밝히는 값. 사양서 동기화는 `alm_crawler` 를 보낸다. 화면은 보내지 않는다 | 아니오 |
 | 버전(`version`) | 비우면 제품 설정의 `version` 을 쓴다. 화면에는 이 칸이 없다 | 아니오 |
@@ -4649,7 +4649,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 **순서**
 
 1. 제품 설정을 찾는다. 출처 규칙(REQ-KNOW-018)으로 이 등록을 받을 수 있는지 먼저 본다. 받을 수 없으면 파일을 저장하지 않는다.
-2. 올린 파일 이름을 파일명 규약(REQ-KNOW-008, 제품 설정의 `knowledge_source.classify` 포함)으로 나눠 본다. 문서 표에 등록하는 다른 종류(`specification`·`manual`·`testcase`)로 나오면 거절하고 파일을 저장하지 않는다. 어느 규약에도 맞지 않는 이름은 받는다.
+2. 올린 파일 이름을 파일명 규약(REQ-KNOW-008, 제품 설정의 `knowledge_source.classify` 포함)으로 나눠 본다. 문서 표에 등록하는 다른 종류(`specification`·`manual`·`testcase`·`release_note`)로 나오면 거절하고 파일을 저장하지 않는다. 어느 규약에도 맞지 않는 이름은 받는다.
 
    > **예시** `(매뉴얼) VXvue Web System Design & API Protocol Manual_EN 1.pdf` 를 사양서로 올리면 거절된다. 이 파일은 이름으로 보면 매뉴얼이다.
 
@@ -4828,6 +4828,8 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 > **예시** `(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx` 는 `(TC)` 로 시작하므로 TC 다. `polarion_query_backup.pdf` 는 어느 규약에도 맞지 않아 `unknown` 이 된다.
 
+> **예시** `(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx` 는 릴리즈노트다. 제품 상세 화면에서 관리하고 VXvue 챗봇이 검색한다. 사양서·TC 를 읽는 분석 기능(REQ-KNOW-006)은 읽지 않는다.
+
 **순서**
 
 1. 파일 이름을 먼저 바로잡는다(REQ-KNOW-015).
@@ -4841,6 +4843,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 3 | `specification` | `(사양서)*`, `*SRS 사양서*`, `*사양서[0-9]*` | 예 |
 | 4 | `manual` | `(매뉴얼)*`, `System Integration Guide*`, `*Conformance Statement*`, `*Operation Manual*`, `*Service Manual*`, `*API Protocol Manual*` | 예 |
 | 5 | `testcase` | `(TC)*`, `*Test Case*`, `*TestCase*`, `*Checklist*` | 예 |
+| 6 | `release_note` | `(릴리즈노트)*`, `Release Note*` | 예 |
 
 **설정**
 
@@ -4866,7 +4869,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **순서**
 
-1. 앞의 종류 표시(`(사양서)`, `(매뉴얼)`, `(TC)`, `[…]`)를 뗀다.
+1. 앞의 종류 표시(`(사양서)`, `(매뉴얼)`, `(TC)`, `(릴리즈노트)`, `[…]`)를 뗀다.
 2. 리비전을 아래 표의 순서로 찾고, 한 가지만 쓴다.
 
 | 순서 | 표기 | 모양 | 비교 방법 |
@@ -5121,7 +5124,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 > **예시** `vxvue.yaml` 의 `specification.source` 가 `alm_crawler` 라서 VXvue 사양서에는 업로드 버튼이 없고 업로드 주소도 409 로 거절한다. `bellalun-viewer.yaml` 은 `manual` 이라서 `새 문서 등록` 과 `교체` 가 보인다. 코드에는 두 제품 이름이 나오지 않는다.
 
-**입력** 제품 설정 파일(REQ-CONF-003)의 다섯 키다. 모두 같은 모양(`source`, `required`)이다.
+**입력** 제품 설정 파일(REQ-CONF-003)의 여섯 키다. 모두 같은 모양(`source`, `required`)이다.
 
 | 키 | 자료 종류 | `source` 기본값 | `required` 기본값 |
 |---|---|---|---|
@@ -5130,8 +5133,9 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | `manual` | Manual / Protocol | `knowledge_folder` | 아니오 |
 | `qa_rules` | QA 규칙 | `knowledge_folder` | 예 |
 | `instruction_prompt` | 지침 프롬프트 | `knowledge_folder` | 아니오 |
+| `release_note` | 릴리즈노트 | `knowledge_folder` | 아니오 |
 
-이유: 일일 QA 점검은 최신 사양서·TC·QA 규칙을 분석 자료로 쓴다. 매뉴얼과 지침 프롬프트는 없는 제품도 있다. 단일 이슈 분석의 G1 관문은 사용을 종료했다.
+이유: 일일 QA 점검은 최신 사양서·TC·QA 규칙을 분석 자료로 쓴다. 매뉴얼·지침 프롬프트·릴리즈노트는 없는 제품도 있다. 단일 이슈 분석의 G1 관문은 사용을 종료했다.
 
 각 키에는 화면 숨김(`hidden`, 기본값 `false`)을 더 적을 수 있다. `true` 면 그 자료 구역이 제품 상세 화면에 보이지 않고, 상태 판정(REQ-KNOW-019)에서도 빠진다.
 
@@ -5143,7 +5147,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 | `source` | 화면 등록·교체 | 등록 주소가 받는 요청 | 지우기 | 상태 판정이 보는 동기화 기록 |
 |---|---|---|---|---|
-| `manual` | 보인다(사양서·매뉴얼·TC 만) | `source` 를 보내지 않았거나 `manual` 인 요청 | 된다 | 그 종류가 수집 기록에 있을 때 지식 폴더 기록 |
+| `manual` | 보인다(사양서·매뉴얼·TC·릴리즈노트만) | `source` 를 보내지 않았거나 `manual` 인 요청 | 된다 | 그 종류가 수집 기록에 있을 때 지식 폴더 기록 |
 | `alm_crawler` | 없다 | `source=alm_crawler` 를 보낸 요청(사양서 동기화)만 | `source=alm_crawler` 일 때만 | 그 종류 이름의 동기화 기록과, 수집 기록에 그 종류가 있으면 지식 폴더 기록 |
 | `external_sync` | 없다 | `source=external_sync` 를 보낸 요청만 | `source=external_sync` 일 때만 | 위와 같다 |
 | `knowledge_folder` | 없다 | 받지 않는다(지식 폴더 업로드 확정만 등록한다) | 되지 않는다 | 지식 폴더 기록(`product_knowledge`) |
@@ -5160,7 +5164,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 - 공통 Knowledge 코드(`app/core/knowledge_*.py`, `app/core/product_knowledge.py`, `app/modules/knowledge/`)에 제품 이름으로 나뉘는 조건문을 두지 않는다.
 - 같은 뜻의 값을 두 곳에 적지 않는다. 사양서 출처는 예전부터 있던 `specification.source` 를 그대로 쓴다.
 - 지식 폴더 수집(REQ-KNOW-011, REQ-SYNC-002)은 출처와 관계없이 폴더에 있는 자료를 등록한다. VXvue 사양서처럼 ALM 산출물이 지식 폴더를 거쳐 오는 경우도 자동 경로로 본다.
-- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서·매뉴얼은 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
+- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서·매뉴얼·릴리즈노트는 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
 
 ### REQ-KNOW-019 제품별 Knowledge 상태 판정
 
@@ -5415,6 +5419,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | `manual.source` / `required` | `knowledge_folder` / 아니오 | Manual / Protocol 출처 |
 | `qa_rules.source` / `required` | `knowledge_folder` / 예 | QA 규칙 출처 |
 | `instruction_prompt.source` / `required` | `knowledge_folder` / 아니오 | 지침 프롬프트 출처 |
+| `release_note.source` / `required` | `knowledge_folder` / 아니오 | 릴리즈노트 출처 |
 | `issue_source.source` / `export_dir` / `id_prefix` | `manual` / 빈 값 / 빈 값 | Polarion 이슈 Export 폴더와 이슈 번호 앞글자(REQ-ISSUE-001) |
 | `sync.day_of_week` / `sync.schedule_time` | `*` / `07:00` | 앱 안 예약 실행 요일·시각(한국 시간). VXvue 는 `mon-fri` / `03:30` |
 | `sync.stale_after_days` | `14` | 마지막 성공 수집이 이 날수보다 오래되면 상태 판정이 `업데이트 필요` 로 본다(REQ-KNOW-019) |

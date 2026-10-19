@@ -37,7 +37,7 @@ from pathlib import Path
 from app.core.config import get_settings
 from app.core.product_config import ProductConfig
 
-# 자산 종류. `documents` 테이블에 등록되는 것은 specification / manual / testcase 셋이고,
+# 자산 종류. `documents` 테이블에 등록되는 것은 specification / manual / testcase / release_note 넷이고,
 # qa_rules / instruction_prompt 는 app/core/qa_rules.py 가 읽는 규칙 자산이다.
 KIND_SPECIFICATION = "specification"
 KIND_MANUAL = "manual"
@@ -45,9 +45,11 @@ KIND_TESTCASE = "testcase"
 KIND_QA_RULES = "qa_rules"
 KIND_INSTRUCTION_PROMPT = "instruction_prompt"
 KIND_SKILL_INSTRUCTION = "skill_instruction"
+# 제품 릴리즈노트. 화면에서 관리하고 챗봇이 검색한다. 사양서·TC 를 읽는 분석은 읽지 않는다.
+KIND_RELEASE_NOTE = "release_note"
 KIND_UNKNOWN = "unknown"
 
-REGISTERABLE_KINDS = (KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE)
+REGISTERABLE_KINDS = (KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE, KIND_RELEASE_NOTE)
 RULE_KINDS = (KIND_QA_RULES, KIND_INSTRUCTION_PROMPT)
 
 # 같은 논리 문서에 여러 형식이 있으면 이 순서로 하나만 고른다. 원본(PDF/DOCX/XLSX)이
@@ -65,6 +67,7 @@ DEFAULT_CLASSIFIERS: dict[str, tuple[str, ...]] = {
     KIND_SPECIFICATION: ("(사양서)*", "*SRS 사양서*", "*사양서[0-9]*"),
     KIND_MANUAL: ("(매뉴얼)*", "System Integration Guide*", "*Conformance Statement*", "*Operation Manual*", "*Service Manual*", "*API Protocol Manual*"),
     KIND_TESTCASE: ("(TC)*", "*Test Case*", "*TestCase*", "*Checklist*"),
+    KIND_RELEASE_NOTE: ("(릴리즈노트)*", "Release Note*"),
     KIND_QA_RULES: ("[[]QA 작성 규칙[]]*",),
     KIND_SKILL_INSTRUCTION: ("[[]Skill 지침[]]*",),
     # 띄어쓰기 대신 밑줄로 이어 쓴 이름도 있다 (`VXvue_검증_DB_AI_지침_프롬프트_Rev1.17.txt`).
@@ -73,9 +76,9 @@ DEFAULT_CLASSIFIERS: dict[str, tuple[str, ...]] = {
 
 # 분류 우선순위. 예: "(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx"는
 # `(TC)` 접두사가 있으므로 Checklist 패턴보다 먼저 testcase 로 확정돼야 한다.
-CLASSIFY_ORDER = (KIND_SKILL_INSTRUCTION, KIND_QA_RULES, KIND_INSTRUCTION_PROMPT, KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE)
+CLASSIFY_ORDER = (KIND_SKILL_INSTRUCTION, KIND_QA_RULES, KIND_INSTRUCTION_PROMPT, KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE, KIND_RELEASE_NOTE)
 
-KIND_PREFIX_RE = re.compile(r"^\s*(?:\((?:사양서|매뉴얼|TC)\)|\[[^\]]+\])\s*")
+KIND_PREFIX_RE = re.compile(r"^\s*(?:\((?:사양서|매뉴얼|TC|릴리즈노트)\)|\[[^\]]+\])\s*")
 # (260907) 형태의 날짜 리비전. 사양서가 쓰는 방식이다.
 DATE_REVISION_RE = re.compile(r"\((\d{6})\)")
 # V1.0.11 / V1.0.12W1 / v1.4.4 / V4.2 형태. 매뉴얼이 쓰는 방식이다.

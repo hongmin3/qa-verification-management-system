@@ -89,6 +89,7 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to htt
 | `(사양서)`, `*SRS 사양서*` | specification | O |
 | `(매뉴얼)`, `System Integration Guide*`, `*Conformance Statement*`, `*Operation Manual*`, `*Service Manual*`, `*API Protocol Manual*` | manual | O |
 | `(TC)`, `*Test Case*`, `*TestCase*`, `*Checklist*` | testcase | O |
+| `(릴리즈노트)`, `Release Note*` | release_note | O (분석은 읽지 않고 화면·챗봇만 씀) |
 | `[QA 작성 규칙]` | qa_rules | X (규칙 로더가 읽음) |
 | `*지침 프롬프트*`, `*지침_프롬프트*` | instruction_prompt | X (규칙 로더가 읽음) |
 

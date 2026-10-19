@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-10-19 릴리즈노트 자료 종류
+
+- REQ-KNOW-008, REQ-KNOW-009: `(릴리즈노트)` 로 시작하거나 `Release Note` 로 시작하는 파일을 새 자료 종류 릴리즈노트(`release_note`)로 나눈다. 전에는 규약에 없어 수집에서 빠졌다. 같은 릴리즈노트는 `Rev` 번호가 높은 판 하나만 쓴다.
+- REQ-KNOW-003, REQ-KNOW-018: 제품 설정에 `release_note` 출처를 둔다(기본 `knowledge_folder`, 꼭 필요하지 않음). VXvue 는 `manual` 로 두어 제품 상세 화면에 릴리즈노트 구역과 `새 문서 등록`·`교체`·`삭제` 가 보인다. `.pdf`·`.docx` 를 받는다.
+- REQ-VXVUECHATBOT-006: VXvue 챗봇 지식 판에 등록된 릴리즈노트를 넣는다. 사양서·TC 를 읽는 분석 기능은 릴리즈노트를 읽지 않는다.
+
 ## 2026-10-19 PC 지식 업로드 예약의 1분 로그 정리
 
 - REQ-SYNC-002: 1분마다 도는 PC 예약이 수집 요청을 물을 때마다 HTTP 요청 줄(`HTTP Request: GET …/knowledge/product-knowledge/request`)이 `output/logs/product_knowledge_retry.log` 에 쌓이던 문제를 고쳤다. 할 일이 없는 실행은 이제 아무 줄도 남기지 않는다. PC 실행본에 반영하려면 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 한다.

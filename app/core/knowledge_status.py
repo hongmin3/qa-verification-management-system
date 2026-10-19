@@ -53,7 +53,7 @@ SOURCE_MESSAGES = {
 }
 #: 등록 부가 정보의 출처 → 문서 행의 출처 이름 (REQ-KNOW-020).
 DOCUMENT_SOURCE_LABELS = {"product_knowledge": "지식 폴더", SOURCE_ALM: "ALM 자동", SOURCE_EXTERNAL: "외부 자동화"}
-UPLOAD_ACCEPT = {"specification": ".pdf,.docx", "manual": ".pdf,.docx", "testcase": ".xlsx"}
+UPLOAD_ACCEPT = {"specification": ".pdf,.docx", "manual": ".pdf,.docx", "release_note": ".pdf,.docx", "testcase": ".xlsx"}
 
 
 @dataclass

@@ -418,3 +418,42 @@ def test_check_request_happens_before_saving(env):
     with pytest.raises(RegistrationError) as caught:
         check_request(env.storage, config, "specification")
     assert caught.value.status == 409
+
+
+# -- 릴리즈노트 자료 종류 (REQ-KNOW-008, REQ-KNOW-009, REQ-KNOW-003, REQ-KNOW-018) ------------
+
+
+def test_release_note_name_is_its_own_kind_with_revision():
+    """Validates: REQ-KNOW-008, REQ-KNOW-009."""
+    name = "(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx"
+    assert product_knowledge.classify(name) == "release_note"
+    assert product_knowledge.classify("Release Note_VXvue 1.2.0 Rev01.pdf") == "release_note"
+    parsed = product_knowledge.parse_asset_name(name)
+    assert parsed["revision"] == "Rev03" and not parsed["base_name"].startswith("(")
+
+
+def test_vxvue_release_note_is_uploaded_and_replaced_on_the_detail_screen(env):
+    """Validates: REQ-KNOW-003, REQ-KNOW-018."""
+    config = product_config.load_product_config("vxvue")
+    assert product_config.can_manual_upload(config, "release_note") and not config.is_required("release_note")
+    first = _upload(env, "vxvue", "release_note", "(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx", _docx("1.1.0 변경 내역"))
+    assert first.status_code == 303
+    [old] = env.storage.active_documents("release_note", "VXvue")
+    second = _upload(env, "vxvue", "release_note", "(릴리즈노트) Release Note_VXvue 1.1.0 Rev04.docx", _docx("1.1.0 변경 내역 개정"), old["id"])
+    assert second.status_code == 303
+    assert [doc["name"] for doc in env.storage.active_documents("release_note", "VXvue")] == ["(릴리즈노트) Release Note_VXvue 1.1.0 Rev04.docx"]
+    section = _asset(_health(env, "vxvue"), "release_note")
+    assert section.can_upload and section.accept == ".pdf,.docx"
+
+
+def test_release_note_uploaded_as_manual_is_refused(env):
+    """Validates: REQ-KNOW-003."""
+    response = _upload(env, "vxvue", "manual", "(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx", _docx("본문"))
+    assert response.status_code == 400
+    assert env.storage.active_documents("manual", "VXvue") == []
+
+
+def test_vxvue_chatbot_snapshot_reads_release_notes():
+    """Validates: REQ-VXVUECHATBOT-006."""
+    from app.modules.vxvue_chatbot.knowledge import KINDS
+    assert "release_note" in KINDS

@@ -48,6 +48,10 @@ manual:
   # 매뉴얼·Protocol 도 TC 처럼 화면에서 새 문서 등록·교체·삭제를 한다. 지식 폴더 수집도 그대로 한다.
   source: manual
 
+release_note:
+  # 릴리즈노트도 매뉴얼처럼 화면에서 등록·교체·삭제하고 지식 폴더에서도 수집한다 (REQ-KNOW-018).
+  source: manual
+
 instruction_prompt:
   # 지침 프롬프트는 QA 규칙 MD 와 합칠 예정이라 화면 구역을 숨긴다. 수집은 그대로 한다 (REQ-KNOW-018).
   # source 를 적지 않으면 manual 이 되므로 기본 출처를 그대로 적는다.

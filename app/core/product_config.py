@@ -27,10 +27,10 @@ _SOURCE_ALIASES = {"alm": SOURCE_ALM}
 
 # 자료 종류. 값은 `app/core/product_knowledge.KIND_*` 와 같다 (이 모듈이 그 모듈을 import 하면
 # 순환이 생겨 문자열로 둔다). 순서가 화면 순서다.
-ASSET_KINDS = ("specification", "testcase", "manual", "qa_rules", "instruction_prompt", "skill_instruction")
+ASSET_KINDS = ("specification", "testcase", "manual", "release_note", "qa_rules", "instruction_prompt", "skill_instruction")
 # 사람이 화면에서 올릴 수 있는 종류. 규칙 자산은 규칙 로더가 수집 기록만 읽으므로 뺀다.
-UPLOADABLE_KINDS = ("specification", "testcase", "manual")
-DEFAULT_REQUIRED = {"specification": True, "testcase": True, "manual": False, "qa_rules": True, "instruction_prompt": False, "skill_instruction": False}
+UPLOADABLE_KINDS = ("specification", "testcase", "manual", "release_note")
+DEFAULT_REQUIRED = {"specification": True, "testcase": True, "manual": False, "release_note": False, "qa_rules": True, "instruction_prompt": False, "skill_instruction": False}
 
 
 def normalize_source(value: str) -> str:
@@ -194,6 +194,7 @@ class ProductConfig(BaseModel):
     specification: SpecificationSyncConfig = Field(default_factory=SpecificationSyncConfig)
     testcase: TestCaseSyncConfig = Field(default_factory=TestCaseSyncConfig)
     manual: KnowledgeAssetSource = Field(default_factory=_folder_source)
+    release_note: KnowledgeAssetSource = Field(default_factory=_folder_source)
     qa_rules: KnowledgeAssetSource = Field(default_factory=_folder_source)
     instruction_prompt: KnowledgeAssetSource = Field(default_factory=_folder_source)
     skill_instruction: KnowledgeAssetSource = Field(default_factory=_folder_source)
@@ -248,6 +249,7 @@ KIND_LABELS = {
     "specification": "사양서",
     "testcase": "Test Case / Checklist",
     "manual": "Manual / Protocol",
+    "release_note": "릴리즈노트",
     "qa_rules": "QA 규칙",
     "instruction_prompt": "지침 프롬프트",
     "skill_instruction": "Skill 지침",

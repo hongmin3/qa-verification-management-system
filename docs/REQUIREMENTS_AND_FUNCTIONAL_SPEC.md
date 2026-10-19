@@ -129,6 +129,7 @@
 | `(사양서) …`, `…SRS 사양서…`, `…사양서N…` | 사양서 |
 | `(매뉴얼) …`, `…Operation Manual…`, `…Service Manual…`, `…Conformance Statement…`, `System Integration Guide…`, `…API Protocol Manual…` | 매뉴얼 |
 | `(TC) …`, `…Test Case…`, `…TestCase…`, `…Checklist…` | Test Case |
+| `(릴리즈노트) …`, `Release Note…` | 릴리즈노트 |
 | `[QA 작성 규칙] …` | QA 규칙 |
 | `…지침 프롬프트…` | 지침 프롬프트 |
 
