@@ -113,7 +113,9 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 
 담당자 PC 와 운영 서버가 예약된 수집·점검을 하고, QA 담당자는 결과를 읽고 판단한다. 초안을 원본 TC·Polarion 에 반영하는 일은 사람이 한다.
 
-PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02:30은 서버 시간대 기준이며, 한국 시간으로 환산하려면 서버 시간대와 cron 설정을 확인해야 한다.
+PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 시간대(`America/New_York`) 기준이다.
+
+> **예시** 서버 시간 14:15 는 미국 서머타임 동안(3월~11월 초) 한국 시간 03:15, 그 밖의 기간에는 04:15 다.
 
 ### 4.1 평일 하루 일정표
 
@@ -122,8 +124,8 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02
 | 시각 | 어디서 | 무엇이 | 하는 일 | 결과가 남는 곳 | 알리는 방법 | 요구사항 |
 |---|---|---|---|---|---|---|
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
-| 02:15 (매일, 서버 시간) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
-| 02:30 (매일, 서버 시간) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
+| 14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
+| 14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
@@ -4520,7 +4522,7 @@ Gemini 호출 -(모델 없음)-> 대신 쓸 모델로 한 번 더
 ```flow
 systemd -> python -m app.serve -> 앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작)
 cron 10분마다 -> 운영 점검 -> /health·/config/status·/operations/status -> 문제 있으면 종료 코드 1
-cron 매일 02:15 -> 백업 ZIP -> 지문·DB 검사 확인
+cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 ```
 
 이 절의 용어:
@@ -6268,7 +6270,7 @@ python scripts/monitor_health.py --disk-path . [--base-url URL] [--check 이름=
 
 **하는 일** DB 와 업로드 원본을 ZIP 하나로 백업하고, 그 ZIP 이 온전한지 바로 확인한다.
 
-**언제** 서버 cron 이 매일 02:15 에 돌린다(`docs/OPERATIONS.md`).
+**언제** 서버 cron 이 매일 14:15(서버 시간, 한국 03:15·겨울 04:15)에 돌린다(`docs/OPERATIONS.md`).
 
 ```text
 python scripts/backup_data.py --destination backups

@@ -52,9 +52,10 @@ tar czf "backups/deploy-app-$(date -u +%Y%m%dT%H%M%SZ).tgz" app scripts config c
 `/health`, `/config/status`, `/operations/status`를 확인하고 디스크 부족, 토큰 한도 초과,
 DB 무결성 오류, stale 작업, 마지막 지식 동기화 실패 시 exit code 1을 반환한다.
 
-운영 서버의 사용자 crontab에는 다음 두 작업을 등록한다.
+운영 서버의 사용자 crontab에는 다음 두 작업을 등록한다. 시각은 서버 시간대(`America/New_York`) 기준이다.
+14:15 는 한국 시간 03:15(미국 서머타임이 아닐 때 04:15)다.
 
 ```cron
-15 2 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
-*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --disk-path . >> output/logs/monitor.log 2>&1
+15 14 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
+*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --check nginx=http://127.0.0.1/health --check manual_hub=http://127.0.0.1/manual-hub/api/health --disk-path . >> output/logs/monitor.log 2>&1
 ```

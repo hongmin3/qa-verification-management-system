@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="469b537b57b586a209f9e9c79410b16bf8e1995258a112349fdc2087b712fcb2">
+<meta name="spec-source-sha256" content="168aef22502c8d8a162578bb9cd454a699fdb611e6f8e4a17cd4146bdcbb94cd">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -1182,15 +1182,18 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <section class="chapter" id="sec-4">
 <h2>4. 전체 자동화 흐름</h2>
 <p><span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 와 운영 서버가 예약된 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>·점검을 하고, QA 담당자는 결과를 읽고 판단한다. 초안을 원본 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>·<span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 에 반영하는 일은 사람이 한다.</p>
-<p>PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 의 02:15·02:30은 서버 시간대 기준이며, 한국 시간으로 환산하려면 서버 시간대와 cron 설정을 확인해야 한다.</p>
+<p>PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 시간대(<code>America/New_York</code>) 기준이다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p>서버 시간 14:15 는 미국 서머타임 동안(3월~11월 초) 한국 시간 03:15, 그 밖의 기간에는 04:15 다.</p>
+</aside>
 <h3>4.1 평일 하루 일정표</h3>
 <p>아래 표는 이 시스템과 연결된 주요 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>이다. &quot;알리는 방법&quot;이 &quot;없음&quot;인 일은 로그만 남긴다. 그 일이 실패하면 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 스케줄러의 &quot;마지막 실행 결과&quot;가 0 이 아니게 되거나(PC), 서버 로그에 실패가 남는다. <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>이 확인하는 대상은 <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a> 에서 정한다.</p>
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>시각</th><th>어디서</th><th>무엇이</th><th>하는 일</th><th>결과가 남는 곳</th><th>알리는 방법</th><th>요구사항</th></tr></thead>
 <tbody>
 <tr><td data-label="시각">10분마다 (매일)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">운영 상태 점검(<code>scripts/monitor_health.py</code>)</td><td data-label="하는 일">앱 상태, DB, <span class="term" title="RUNNING 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다" tabindex="0">멈춘 작업</span>, 마지막 동기화, 디스크 남은 용량을 본다</td><td data-label="결과가 남는 곳"><code>output/logs/monitor.log</code></td><td data-label="알리는 방법">없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td></tr>
-<tr><td data-label="시각">02:15 (매일, 서버 시간)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">백업(<code>scripts/backup_data.py</code>)</td><td data-label="하는 일">DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 백업과 일일 QA <span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span>를 지운다</td><td data-label="결과가 남는 곳"><code>backups/</code>, <code>output/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a></td></tr>
-<tr><td data-label="시각">02:30 (매일, 서버 시간)</td><td data-label="어디서">운영 서버 cron(<code>/etc/cron.d/qa-manual-hub-backup</code>)</td><td data-label="무엇이">QA Manual Hub 백업(<code>scripts/backup.sh</code>)</td><td data-label="하는 일"><span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>의 DB 와 파일을 백업한다</td><td data-label="결과가 남는 곳"><code>&lt;APP_ROOT&gt;/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a></td></tr>
+<tr><td data-label="시각">14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">백업(<code>scripts/backup_data.py</code>)</td><td data-label="하는 일">DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 백업과 일일 QA <span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span>를 지운다</td><td data-label="결과가 남는 곳"><code>backups/</code>, <code>output/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a></td></tr>
+<tr><td data-label="시각">14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30)</td><td data-label="어디서">운영 서버 cron(<code>/etc/cron.d/qa-manual-hub-backup</code>)</td><td data-label="무엇이">QA Manual Hub 백업(<code>scripts/backup.sh</code>)</td><td data-label="하는 일"><span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다</td><td data-label="결과가 남는 곳"><code>&lt;APP_ROOT&gt;/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a></td></tr>
 <tr><td data-label="시각">10분마다 (매일)</td><td data-label="어디서">운영 서버 앱 내장 예약(<code>qa_agent_limit_catchup</code>)</td><td data-label="무엇이"><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량 한도 뒤 다시 돌기</td><td data-label="하는 일">한도(<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간)가 풀린 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>이 있으면 그 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 점검을 한 번 다시 띄운다</td><td data-label="결과가 남는 곳">아래 04:00 줄과 같다</td><td data-label="알리는 방법">아래 04:00 줄과 같다</td><td data-label="요구사항"><a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a></td></tr>
 <tr><td data-label="시각">앱 시작 1분 뒤, 그 뒤 10분마다</td><td data-label="어디서">운영 서버 앱 내장 예약(<code>qa_agent_missed_schedule</code>)</td><td data-label="무엇이">놓친 오늘 예약 만회</td><td data-label="하는 일">04:00 에 앱이 꺼져 있었으면 오늘 몫의 <span class="term" title="서버가 평일 아침마다 제품별로 스스로 돌리는 QA Intelligence Agent 점검 한 번(daily_qa 실행)" tabindex="0">일일 점검</span>을 한 번 띄운다</td><td data-label="결과가 남는 곳">점검 결과와 같다</td><td data-label="알리는 방법">점검 결과와 같다</td><td data-label="요구사항"><a class="idref" href="#REQ-QAINTEL-035">REQ-QAINTEL-035</a></td></tr>
 <tr><td data-label="시각">03:30 (평일)</td><td data-label="어디서"><span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 스케줄러(<code>AIRegressionAnalyzer_VXvueSpecSync</code>)</td><td data-label="무엇이"><span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 동기화(<code>scripts/sync_vxvue_spec.py</code>)</td><td data-label="하는 일">전날 09:00 에 나온 새 <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> PDF 를 서버에 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다</td><td data-label="결과가 남는 곳">서버 Knowledge 목록, <code>output/logs/sync_vxvue_spec.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a></td></tr>
@@ -6437,23 +6440,23 @@ python scripts/rule_capability_report.py --markdown
 </figure>
 <p>서버에서 앱을 띄우고 지키는 길:</p>
 <figure class="flow">
-<svg viewBox="0 0 955 292" width="955" height="292" role="img" aria-label="systemd → python -m app.serve, python -m app.serve → 앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작), cron 10분마다 → 운영 점검, 운영 점검 → /health·/config/status·/operations/status, /health·/config/status·/operations/status → 문제 있으면 종료 코드 1, cron 매일 02:15 → 백업 ZIP, 백업 ZIP → 지문·DB 검사 확인">
+<svg viewBox="0 0 955 292" width="955" height="292" role="img" aria-label="systemd → python -m app.serve, python -m app.serve → 앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작), cron 10분마다 → 운영 점검, 운영 점검 → /health·/config/status·/operations/status, /health·/config/status·/operations/status → 문제 있으면 종료 코드 1, cron 매일 14:15(서버 시간) → 백업 ZIP, 백업 ZIP → 지문·DB 검사 확인">
 <defs><marker id="flow-arrow-12" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M329 44 L371.5 88" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M292 44 L371.5 88" marker-end="url(#flow-arrow-12)"/>
 <path class="edge" d="M371.5 124 L217.5 168" marker-end="url(#flow-arrow-12)"/>
-<path class="edge" d="M449.5 44 L521 88" marker-end="url(#flow-arrow-12)"/>
+<path class="edge" d="M412.5 44 L521 88" marker-end="url(#flow-arrow-12)"/>
 <path class="edge" d="M521 124 L617 168" marker-end="url(#flow-arrow-12)"/>
 <path class="edge" d="M617 204 L477.5 248" marker-end="url(#flow-arrow-12)"/>
 <path class="edge" d="M598 44 L627 88" marker-end="url(#flow-arrow-12)"/>
 <path class="edge" d="M627 124 L877 168" marker-end="url(#flow-arrow-12)"/>
-<g class="node"><rect x="290.5" y="8" width="77" height="36" rx="8"/><text x="329" y="26">systemd</text></g>
+<g class="node"><rect x="253.5" y="8" width="77" height="36" rx="8"/><text x="292" y="26">systemd</text></g>
 <g class="node"><rect x="288" y="88" width="167" height="36" rx="8"/><text x="371.5" y="106">python -m app.serve</text></g>
 <g class="node"><rect x="8" y="168" width="419" height="36" rx="8"/><text x="217.5" y="186">앱 시작(끊긴 작업 정리·대기 작업 이어받기·예약 실행기 시작)</text></g>
-<g class="node"><rect x="391.5" y="8" width="116" height="36" rx="8"/><text x="449.5" y="26">cron 10분마다</text></g>
+<g class="node"><rect x="354.5" y="8" width="116" height="36" rx="8"/><text x="412.5" y="26">cron 10분마다</text></g>
 <g class="node"><rect x="479" y="88" width="84" height="36" rx="8"/><text x="521" y="106">운영 점검</text></g>
 <g class="node"><rect x="451" y="168" width="332" height="36" rx="8"/><text x="617" y="186">/health·/config/status·/operations/status</text></g>
 <g class="node"><rect x="388" y="248" width="179" height="36" rx="8"/><text x="477.5" y="266">문제 있으면 종료 코드 1</text></g>
-<g class="node"><rect x="531.5" y="8" width="133" height="36" rx="8"/><text x="598" y="26">cron 매일 02:15</text></g>
+<g class="node"><rect x="494.5" y="8" width="207" height="36" rx="8"/><text x="598" y="26">cron 매일 14:15(서버 시간)</text></g>
 <g class="node"><rect x="587" y="88" width="80" height="36" rx="8"/><text x="627" y="106">백업 ZIP</text></g>
 <g class="node"><rect x="807" y="168" width="140" height="36" rx="8"/><text x="877" y="186">지문·DB 검사 확인</text></g>
 </svg>
@@ -8526,8 +8529,9 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <section class="card kind-req" id="REQ-OPS-002">
 <h3><span class="idtag">REQ-OPS-002</span> 백업 만들기와 확인</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a>, <a class="idref" href="#REQ-AICALL-002">REQ-AICALL-002</a>, <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-OPS-002">TEST-OPS-002</a></span></div>
-<details class="history"><summary>변경 이력 5</summary>
+<details class="history"><summary>변경 이력 6</summary>
 <ul>
+<li><span class="hist">2026-10-19 master 통합과 운영 백업 시각 정리</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 백업 예약 시각을 운영 crontab 에 맞춰 서버 시간 14:15(한국 03:15, 미국 서머타임이 아닐 때 04:15)로 고쳤다. 이전 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 02:15 였다. <code>docs/OPERATIONS.md</code> 의 crontab 예시도 운영과 같은 두 줄로 바꿨다.</li>
 <li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 백업 ZIP <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 기간을 30일에서 7일로 줄였다(<code>retention.backup_days</code>). 백업 ZIP 이 하루 900MB 안팎으로 커져 30일이면 27GB 가 쌓였다.</li>
 <li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 배포 전 백업을 <code>backups/deploy-&lt;이름&gt;-&lt;UTC 시각&gt;</code> 이름(폴더 또는 <code>.tgz</code>·<code>.tar</code>·<code>.tar.gz</code>·<code>.zip</code>)으로 만들도록 정하고, 14일이 지나면 매일 백업 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>이 지운다(<code>retention.deploy_backup_days</code>). 가장 새 것 하나는 남긴다. 이전에는 이런 백업이 다른 이름이나 홈 폴더에 남아 지워지지 않았다.</li>
 <li><span class="hist">2026-10-16 백업 보관 기간 줄이기</span> <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>: 운영 서버에서 쌓인 백업 약 13GB(오래된 백업 ZIP, 같은 날 손으로 만든 백업 ZIP, 배포 전 백업 폴더·묶음, 홈 폴더의 배포 백업, pip 캐시)를 사용자 승인 후 손으로 지웠다. 디스크 사용률은 64%에서 61%가 됐다.</li>
@@ -8536,7 +8540,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 </ul>
 </details>
 <p><strong>하는 일</strong> DB 와 업로드 원본을 ZIP 하나로 백업하고, 그 ZIP 이 온전한지 바로 확인한다.</p>
-<p><strong>언제</strong> 서버 cron 이 매일 02:15 에 돌린다(<code>docs/OPERATIONS.md</code>).</p>
+<p><strong>언제</strong> 서버 cron 이 매일 14:15(서버 시간, 한국 03:15·겨울 04:15)에 돌린다(<code>docs/OPERATIONS.md</code>).</p>
 <pre><code class="language-text">python scripts/backup_data.py --destination backups
 python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </code></pre>
@@ -10606,8 +10610,9 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <section class="card kind-req" id="REQ-HUBOPS-009">
 <h3><span class="idtag">REQ-HUBOPS-009</span> 백업</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-HUBOPS-001">REQ-HUBOPS-001</a>, <a class="idref" href="#TEST-HUBOPS-003">TEST-HUBOPS-003</a></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 4</summary>
 <ul>
+<li><span class="hist">2026-10-19 master 통합과 운영 백업 시각 정리</span> <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: 4절 일정표의 QA Manual Hub 백업 시각을 운영 값인 서버 시간 14:30(한국 03:30)으로 고쳤다. 설치 스크립트가 처음 만드는 기본값 02:30 은 바꾸지 않았다.</li>
 <li><span class="hist">2026-09-30 · 자동화 하루 일정과 사양서 읽는 순서 정리</span> <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>, <a class="idref" href="#REQ-DAILY-008">REQ-DAILY-008</a>, <a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: SPEC 4절에 예약 시각, 실행 위치, 결과 저장 위치와 알림 경로를 정리했다. 서버 cron 시각은 서버 시간대 기준으로 구분했다.</li>
 <li><span class="hist">2026-09-30 · 사양–코드 불일치 60건 수정 · 결정 대기 18건 반영</span> <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: 백업과 복구가 <code class="term" title="서버의 설정 파일 &lt;APP_ROOT&gt;/.env 다. DB 접속 정보가 들어 있어 권한 600으로 둔다" tabindex="0">.env</code> 의 <code>STORAGE_ROOT</code> 를 따른다. 저장소를 다른 곳으로 옮겨도 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 파일이 백업에서 빠지지 않는다.</li>
 <li><span class="hist">2026-09-30 · 사양–코드 불일치 60건 수정 · 결정 대기 18건 반영</span> <a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a>: <code>install.sh</code> 가 매일 02:30 자동 백업 파일(<code>/etc/cron.d/qa-manual-hub-backup</code>)을 만든다. 이미 있으면 그대로 둔다.</li>
@@ -16212,8 +16217,9 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <section class="card kind-req" id="REQ-ALMCHG-004">
 <h3><span class="idtag">REQ-ALMCHG-004</span> 변경 리포트 메일</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a>, <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>, <a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#TEST-ALMCHG-004">TEST-ALMCHG-004</a>, <a class="idref" href="#TEST-ALMCHG-006">TEST-ALMCHG-006</a></span></div>
-<details class="history"><summary>변경 이력 7</summary>
+<details class="history"><summary>변경 이력 8</summary>
 <ul>
+<li><span class="hist">2026-10-19 master 통합과 운영 백업 시각 정리</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 월요일 변경 리포트 메일 시험이 작성일(10-16)에만 통과하던 문제를 고쳤다. 기대 기간을 저장된 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 시각에서 읽는다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 동작은 바뀌지 않았다.</li>
 <li><span class="hist">2026-10-16 변경 리포트 메일 작성자별 묶기</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 변경 리포트 메일의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 변경을 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 작성자(처음 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한 사람)별로 묶는다. 묶음 제목은 작성자 이름과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 수다. 작성자는 이름순으로 놓고, 이름을 모르는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 &quot;작성자 미확인&quot; 묶음으로 맨 뒤에 둔다. 같은 작성자 안에서는 최근 변경 순이다(사용자 요청 2026-10-16).</li>
 <li><span class="hist">2026-10-16 같은 날 다시 수집해도 자동 변경 리포트 메일이 이어서 비교</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 자동 변경 리포트 메일이 끝으로 비교한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 <code>data/daily_qa/&lt;제품&gt;/change_mail_base/</code> 에 한 벌 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한다. 같은 날 [변경사항 점검하기]나 다시 돈 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 그날 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 덮어써도, 다음 자동 메일은 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>부터 비교한다. 이전에는 04:00 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>부터 다시 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한 시각 사이의 변경이 어느 자동 메일에도 실리지 않았다(사용자 결정 2026-10-16). 이렇게 이어서 비교한 메일은 <span class="term" title="리포트가 실제로 비교한 기록의 날짜와, 기록이 없어 하루 단위로 볼 수 없었던 날이다" tabindex="0">확인 범위</span>에 다시 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한 시각을 알린다.</li>
 <li><span class="hist">2026-10-16 같은 날 다시 수집해도 자동 변경 리포트 메일이 이어서 비교</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>은 날짜별 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span> 폴더 밖에 있어 AI 분석의 비교 기준(<a class="idref" href="#REQ-QAINTEL-003">REQ-QAINTEL-003</a>, <a class="idref" href="#REQ-QAINTEL-004">REQ-QAINTEL-004</a>, <a class="idref" href="#REQ-QAINTEL-027">REQ-QAINTEL-027</a>), <code>/qa-agent/changes</code> 화면, 화면의 수동 메일은 그대로 날짜별 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>만 쓴다.</li>
