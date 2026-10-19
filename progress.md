@@ -6,7 +6,9 @@
 - 운영 서버 `/knowledge/products/vxvue` 고급 정보가 `폴더 접근: 불가(담당자 PC 가 업로드)` 였다. 사용자 결정으로 버튼은 "PC 에 수집 요청" 방식이다(REQ-KNOW-021).
 - 운영 반영(2026-10-19): 사전 대조에서 서버의 대상 파일 11개가 모두 변경 직전 판(`2a0abc0`)과 같았고, 서버에서만 바뀐 내용은 없었다. 실행 중인 점검·분석 0건을 확인했다. 대상 파일을 `backups/deploy-knowledge-collect-20261019T053703Z.tgz` 로 백업한 뒤 `eab7d69` 의 파일 13개만 반영했다. 반영 뒤 해시가 모두 일치했고, 서버 관련 테스트 46건이 통과했다. 서비스 재기동 뒤 health 는 ok 였다.
 - 운영 화면 확인: VXvue 상세에 `지금 수집` 1개, 지침 프롬프트 구역 없음, 매뉴얼 구역에 교체 8·삭제 8·새 문서 등록 1이 보였다. Bellalun 의 지침 프롬프트 구역은 그대로다. 요청 조회 응답은 `requested_at: ""` 였다. health·Knowledge·사용법·QA Agent·매뉴얼 검토·VXvue 챗봇 화면은 모두 200 이었다. 운영에서 `지금 수집` 버튼은 누르지 않았다.
-- 남은 일(PC): 담당자 PC 에서 관리자 PowerShell 로 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 1분 확인과 요청 처리 코드가 적용된다. 그 전까지 요청은 "대기 중"으로 남고 다음 08:00 예약 때 처리된다.
+- PC 예약 재설치(2026-10-19 14:43, REQ-KNOW-021·REQ-SYNC-002): 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1 -CheckOnly` 가 지식 폴더 접근 정상으로 통과했다. 대상 주소는 기존 예약에서 읽은 `http://10.13.0.222:24357` 이다. 옵션 없이 설치했고, 원래 예약 XML 은 `backups/knowledge-schedule-20261019-144334/QA_ProductKnowledge_Sync.xml` 에 있다.
+- 설치 뒤 확인: 시각 트리거(08:00 시작)의 반복 간격이 15분에서 1분이 되었고 PC 시작 트리거가 남아 있다. 예약 인자에서 `--wait-retry` 가 빠졌다. 실행본 `data/knowledge_retry/worker-e9fc26b70290b1ac/` 의 `knowledge_retry.py`·`knowledge_push.py`·`skill_knowledge.py`·`retry_product_knowledge.py` 는 저장소 현재 판과 SHA-256 이 같다.
+- 실제 동작: 사용자 승인으로 운영 화면 `/knowledge/products/vxvue` 의 `지금 수집` 을 14:47:49 KST 에 눌렀다. 로그에 14:44~14:48 매분 요청 조회가 남았고, 14:48:04 조회에서 요청을 받아 14:49:14 에 `SUCCESS 수집 8건, 미변경 13건, 실패 0건, 제외 2건 / 업로드 7건(62.2MB) … 등록 6건, 이전 리비전 정리 6건` 으로 끝났다. `requested_at` 은 클릭 뒤 약 85초 만에 빈 값이 되었다. 고급 정보의 마지막 수집 기록은 12:13:53 에서 14:49:13 KST 로 바뀌었다. 예약 마지막 결과는 0 이다.
 - 잔여 작업: Bellalun Viewer 의 지침 프롬프트 구역도 숨긴다(`config/products/bellalun-viewer.yaml` 에 `instruction_prompt: {source: knowledge_folder, hidden: true}`). 지침 프롬프트와 QA 규칙 MD 를 합치는 작업을 먼저 끝낸 뒤에 한다(사용자 요청 2026-10-19).
 - 참고: Bellalun Viewer 는 PC 업로드 예약이 없어(예약은 VXvue 만 올린다) 운영 서버에서 `지금 수집` 을 누르면 요청이 대기 중으로 남는다.
 
