@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core import document_cache, knowledge_status
+from app.core.knowledge_collect_request import pending_request, request_collect
 from app.core.config import app_self_url, get_settings
 from app.core.knowledge_registry import (
     NeedsColumnMapping,
@@ -84,7 +85,32 @@ def _detail_url(config, notice: str = "") -> str:
 def product_detail(request: Request, slug: str, notice: str = ""):
     """제품 Knowledge 상세 (REQ-KNOW-020). 제품마다 다른 템플릿을 두지 않는다."""
     config = _config_or_404(slug)
-    return templates.TemplateResponse(request, "product.html", {"health": knowledge_status.product_health(config, storage), "notice": notice})
+    return templates.TemplateResponse(request, "product.html", {
+        "health": knowledge_status.product_health(config, storage), "notice": notice,
+        "collect_pending": pending_request(config.product, storage) if config.knowledge_source.dir else "",
+    })
+
+
+@router.post("/knowledge/products/{slug}/collect")
+def collect_product_knowledge(slug: str):
+    """제품 상세의 `지금 수집` (REQ-KNOW-021). 폴더를 볼 수 있으면 바로 수집하고, 아니면 PC 에 요청을 남긴다."""
+    config = _config_or_404(slug)
+    if not config.knowledge_source.dir:
+        raise HTTPException(400, f"config/products/ 에 '{config.product}' 의 knowledge_source.dir 설정이 없습니다.")
+    if source_available(config):
+        return _sync_now(config)
+    requested_at = request_collect(config.product)
+    return {"status": "REQUESTED", "requested_at": requested_at,
+            "detail": "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 1~2분 뒤 새로고침하세요."}
+
+
+@router.get("/knowledge/product-knowledge/request")
+def collect_request_state(product: str):
+    """담당자 PC 가 1분마다 묻는 남은 수집 요청 (REQ-KNOW-021). 없으면 `requested_at` 이 빈 문자열이다."""
+    product = product.strip()
+    config = resolve_config(product)
+    name = config.product if config else product
+    return {"product": name, "requested_at": pending_request(name, storage)}
 
 
 def _owned_dirs() -> list[Path]:
@@ -151,6 +177,13 @@ def trigger_product_knowledge_sync(product: str = Form(...)):
             f"이 서버에서 지식 폴더에 접근할 수 없습니다: {config.knowledge_source.dir}. "
             "폴더가 있는 PC에서 scripts/sync_product_knowledge.py 를 실행하세요.",
         )
+    return _sync_now(config)
+
+
+def _sync_now(config) -> dict:
+    """이 서버가 폴더를 직접 읽어 수집·등록한다 (REQ-KNOW-011)."""
+    if storage.is_sync_running(config.product, "product_knowledge"):
+        raise HTTPException(409, f"'{config.product}' 지식 폴더 수집이 이미 진행 중입니다.")
     sync_id = storage.sync_start(config.product, "product_knowledge", "knowledge_folder")
     try:
         result = sync_and_register(config.product, storage=storage)

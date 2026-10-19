@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-10-19 Knowledge 상세 지금 수집·VXvue 매뉴얼 화면 등록·지침 프롬프트 숨김
+
+- 사용자 요청: 제품 상세에 지식 폴더 전체를 그 시점에 수집하는 수동 버튼, VXvue 매뉴얼에 TC 같은 등록·교체·삭제, VXvue 지침 프롬프트 구역 삭제.
+- 운영 서버 `/knowledge/products/vxvue` 고급 정보가 `폴더 접근: 불가(담당자 PC 가 업로드)` 였다. 사용자 결정으로 버튼은 "PC 에 수집 요청" 방식이다(REQ-KNOW-021).
+- 남은 일(배포): 운영 서버에 앱을 반영하고, 담당자 PC 에서 관리자 PowerShell 로 `scripts/install_product_knowledge_schedule.ps1` 을 다시 실행해야 1분 확인과 요청 처리 코드가 적용된다. 그 전까지 요청은 "대기 중"으로 남고 다음 08:00 예약 때 처리된다.
+- 잔여 작업: Bellalun Viewer 의 지침 프롬프트 구역도 숨긴다(`config/products/bellalun-viewer.yaml` 에 `instruction_prompt: {source: knowledge_folder, hidden: true}`). 지침 프롬프트와 QA 규칙 MD 를 합치는 작업을 먼저 끝낸 뒤에 한다(사용자 요청 2026-10-19).
+- 참고: Bellalun Viewer 는 PC 업로드 예약이 없어(예약은 VXvue 만 올린다) 운영 서버에서 `지금 수집` 을 누르면 요청이 대기 중으로 남는다.
+
 ## 2026-10-19 Claude 중단 작업 재개: 지식 문서 우선순위
 
 - 재개 범위: 최신 Claude 세션의 REQ-KNOW-012 구현 뒤 전체 시험·운영 배포. 별도 `claude/unconfirmed-items-20261019` 작업은 보존했다.

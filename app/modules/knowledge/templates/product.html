@@ -20,6 +20,12 @@
     <span class="kn-level kn-{{ health.level }}">{{ health.label }}</span>
   </div>
   <p class="kn-meta">마지막 갱신: {% if health.last_updated %}<span data-utc-time="{{ health.last_updated }}">{{ health.last_updated[:16].replace('T', ' ') }} UTC</span>{% else %}기록 없음{% endif %} · <a href="/knowledge">현황판으로</a></p>
+  {% if health.advanced.source_dir %}
+  <form method="post" action="/knowledge/products/{{ health.slug }}/collect" class="kn-upload knowledge-sync-form">
+    <button type="submit">지금 수집</button>
+    <span class="hint">지식 폴더 전체를 지금 다시 수집합니다.{% if collect_pending %} · 수집 요청 대기 중 (<span data-utc-time="{{ collect_pending }}">{{ collect_pending[:16].replace('T', ' ') }} UTC</span> 요청){% endif %}</span>
+  </form>
+  {% endif %}
 </section>
 
 {% for asset in health.assets %}
@@ -73,11 +79,6 @@
   <form class="kn-upload kn-upload-form" method="post" action="/knowledge/products/{{ health.slug }}/documents" enctype="multipart/form-data">
     <input type="hidden" name="kind" value="{{ asset.kind }}">
     <label>새 문서 등록 <input type="file" name="file" accept="{{ asset.accept }}"></label>
-  </form>
-  {% elif asset.source == 'knowledge_folder' and health.advanced.folder_accessible %}
-  <form method="post" action="/knowledge/sync/product-knowledge" class="kn-upload knowledge-sync-form">
-    <input type="hidden" name="product" value="{{ health.product }}">
-    <button type="submit">지금 수집</button>
   </form>
   {% endif %}
 </section>
@@ -141,6 +142,7 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
       const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) { alert(body.detail || `수집 실패 (HTTP ${response.status})`); return; }
+      if (body.status === 'REQUESTED') { alert(body.detail); location.reload(); return; }
       const notes = [body.detail];
       if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 요청]\n' + body.duplicates.join('\n'));
       alert(notes.join('\n'));

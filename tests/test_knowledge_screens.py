@@ -31,7 +31,8 @@ def test_guide_shows_upload_command_and_schedule():
     assert "12000" not in text
     assert "--report-to http://서버" not in text
     assert "--upload-to http://&lt;서버 주소&gt;:24357" in text
-    assert "평일 10:00" in text
+    assert "매일 08:00" in text and "평일 10:00" not in text                    # REQ-KNOW-017 운영 방식
+    assert "지금 수집" in text                                                    # REQ-KNOW-021
     assert "매주 자동 수집" not in text
 
 

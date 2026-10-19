@@ -273,7 +273,7 @@ def _judge(ctx: _Context, kind: str) -> AssetStatus:
 
 def product_health(config: ProductConfig, storage, root: Path | None = None) -> ProductHealth:
     ctx = _Context(config, storage, root)
-    assets = [_judge(ctx, kind) for kind in ASSET_KINDS]
+    assets = [_judge(ctx, kind) for kind in ASSET_KINDS if not config.asset_source(kind).hidden]
     level = max((asset.level for asset in assets), key=_LEVEL_ORDER.__getitem__, default=READY)
     from app.core.qa_rules import load_rule_set
 

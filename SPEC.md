@@ -131,7 +131,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 �
 | 03:30 (평일) | 담당자 PC 작업 스케줄러(`AIRegressionAnalyzer_VXvueSpecSync`) | 사양서 동기화(`scripts/sync_vxvue_spec.py`) | 전날 09:00 에 나온 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. PC 가 꺼져 있었으면 켜진 뒤 바로 돈다 | 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 없음 | REQ-SYNC-001 |
 | 04:00 (수집은 매 업무일. AI 분석은 검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교한다. AI 분석일이면 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `/qa-agent/changes`, `output/daily_qa/<실행 ID>/` | 변경 리포트 메일 한 통, AI 분석을 했으면 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002, REQ-ALMCHG-001, REQ-ALMCHG-004 |
 | 09:00 (평일) | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포 | Polarion SRS를 수집하고 PDF를 생성한다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다 | `output/srs_crawler/`, 지식 폴더 | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003 |
-| 08:00 (매일), 미완료 시 15분마다 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002 |
+| 08:00 (매일), 미완료 시 15분마다. 1분마다 화면 수집 요청 확인 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다. 화면에서 `지금 수집` 요청이 있으면 바로 올린다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002, REQ-KNOW-021 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 
 ```flow
@@ -4920,7 +4920,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 | 경로 | 누가 |
 |---|---|
-| `/knowledge` 의 `지금 수집` → `POST /knowledge/sync/product-knowledge` (`product`) | 폴더에 접근할 수 있는 서버 |
+| 제품 상세의 `지금 수집`(REQ-KNOW-021), 또는 `POST /knowledge/sync/product-knowledge` (`product`) | 폴더에 접근할 수 있는 서버 |
 | 앱 안 예약 실행(REQ-SCHED-002) | 같은 조건. 접근할 수 없으면 건너뛴다 |
 | `python scripts/sync_product_knowledge.py [--product 제품]…` | 담당자 PC(로컬 DB 에 등록) |
 | `--upload-to` 경로의 첫 단계 | 담당자 PC(REQ-SYNC-002) |
@@ -5133,6 +5133,12 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 이유: 일일 QA 점검은 최신 사양서·TC·QA 규칙을 분석 자료로 쓴다. 매뉴얼과 지침 프롬프트는 없는 제품도 있다. 단일 이슈 분석의 G1 관문은 사용을 종료했다.
 
+각 키에는 화면 숨김(`hidden`, 기본값 `false`)을 더 적을 수 있다. `true` 면 그 자료 구역이 제품 상세 화면에 보이지 않고, 상태 판정(REQ-KNOW-019)에서도 빠진다.
+
+> **예시** `vxvue.yaml` 에 `instruction_prompt: {hidden: true}` 를 적으면 VXvue 상세 화면에 `지침 프롬프트` 구역이 없다. Bellalun Viewer 는 적지 않았으므로 그대로 보인다.
+
+> **주의** 숨김은 화면과 상태 판정에만 쓴다. 지식 폴더 수집과 업로드(REQ-KNOW-011, REQ-SYNC-002)는 숨긴 종류의 파일도 그대로 수집한다. 그 파일을 쓰는 다른 기능이 있을 수 있기 때문이다.
+
 `source` 값과 그 값이 정하는 동작:
 
 | `source` | 화면 등록·교체 | 등록 주소가 받는 요청 | 지우기 | 상태 판정이 보는 동기화 기록 |
@@ -5219,7 +5225,10 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 그 밖의 출처에 있는 사람이 올린 등록(REQ-KNOW-005) | 그 문서 줄에만 `삭제`. 교체·새 문서 등록은 없다 |
 | `alm_crawler` | "ALM 에서 자동으로 수집합니다. 여기서 올릴 수 없습니다." 와 마지막 동기화 시각·결과. 업로드 버튼 없음 |
 | `external_sync` | "다른 자동화가 보내는 자료입니다." 와 마지막 동기화 결과 |
-| `knowledge_folder` | "담당자 PC 의 지식 폴더에서 수집합니다." 와 마지막 수집 시각. 이 서버가 폴더에 접근할 수 있으면 `지금 수집` 버튼(REQ-KNOW-011) |
+| `knowledge_folder` | "담당자 PC 의 지식 폴더에서 수집합니다." 와 마지막 수집 시각 |
+
+   제품 설정에 지식 폴더(`knowledge_source.dir`)가 있으면 화면 머리에 `지금 수집` 버튼이 하나 있다(REQ-KNOW-021). 구역마다 따로 두지 않는다.
+   `hidden: true` 인 자료 종류(REQ-KNOW-018)는 구역을 그리지 않는다.
 
 5. 지식 폴더 수집에서 뺀 파일이 있으면 "수집 제외 N건" 과 `자세히` 가 보인다. 펼치면 파일명, 분류 결과, 제외 이유, 대신 쓰는 파일을 표로 보인다. 값은 수집 기록(`manifest.json`)에서 읽는다.
 6. 화면 아래 `고급 정보` 를 펼치면 폴더 경로, 이 서버에서 폴더 접근 가능 여부, 업로드한 PC, 마지막 동기화 상세 문구, QA 규칙 판, 스캔 결과 JSON 링크(REQ-KNOW-014)가 보인다.
@@ -5235,6 +5244,48 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 - 제품마다 다른 템플릿을 두지 않는다. 한 템플릿이 상태 판정 결과(REQ-KNOW-019)만 읽어 그린다.
 - 업로드 양식은 받을 수 있는 확장자만 고르게 한다(`accept`). 서버가 한 번 더 확인한다.
+
+### REQ-KNOW-021 제품 상세에서 지식 폴더 지금 수집
+
+**하는 일** 담당자가 지식 폴더에 새 파일을 넣은 뒤 제품 상세 화면의 `지금 수집` 을 누르면, 그 시점의 지식 폴더 전체가 수집·등록된다. 다음 날 08:00 예약을 기다리지 않아도 된다.
+
+> **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 1~2분 뒤 새로고침하면 새 매뉴얼이 목록에 있다.
+
+**언제** 제품 상세 화면 머리의 `지금 수집`(`POST /knowledge/products/<slug>/collect`). 제품 설정에 지식 폴더가 있을 때만 버튼이 보인다.
+
+**순서**
+
+1. 이 서버가 지식 폴더를 읽을 수 있으면 바로 수집하고 등록한다(REQ-KNOW-011, REQ-KNOW-012). 결과 문구를 알림 창으로 보인다.
+2. 읽을 수 없으면 수집 요청을 남긴다. 요청 시각은 `data/product_knowledge/<slug>/collect_request.json` 에 쓴다. 이미 요청이 있으면 시각만 새로 쓴다.
+3. 담당자 PC 의 예약 작업(REQ-SYNC-002)이 1분마다 `GET /knowledge/product-knowledge/request?product=` 로 남은 요청을 묻는다.
+4. 남은 요청이 있고 PC 가 아직 처리하지 않은 요청이면, 그날 업로드를 이미 마쳤어도 바로 올린다. 처리한 요청 시각을 PC 상태 파일에 적어 같은 요청을 두 번 처리하지 않는다.
+5. 업로드 확정이나 실패 보고가 동기화 기록(REQ-KNOW-016)에 남으면 그 요청은 끝난 것으로 본다.
+
+"남은 요청"은 요청 시각이 그 제품의 마지막으로 끝난 지식 폴더 동기화 기록(`product_knowledge`)보다 늦은 요청이다.
+
+**결과**
+
+| 경우 | 사용자에게 보이는 것 |
+|---|---|
+| 서버가 바로 수집함 | 수집·등록 결과 문구(REQ-KNOW-011) |
+| 요청을 남김 | "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 1~2분 뒤 새로고침하세요." |
+| 남은 요청이 있을 때 화면 | 버튼 옆에 "수집 요청 대기 중 (요청 시각)" |
+
+**안 될 때**
+
+| 경우 | 사용자에게 보이는 것 |
+|---|---|
+| 설정 파일이 없는 제품 | "'<제품>' 제품 설정이 없습니다."(404) |
+| 지식 폴더 설정이 없음 | "config/products/ 에 '<제품>' 의 knowledge_source.dir 설정이 없습니다."(400) |
+| 서버 수집이 이미 진행 중 | REQ-KNOW-011 과 같다(409) |
+| 담당자 PC 가 꺼져 있음 | 요청이 "대기 중"으로 남는다. PC 가 켜지면 처리한다 |
+
+> **주의** 요청을 처리하는 것은 그 제품을 올리도록 예약된 PC 다(지금은 VXvue). 예약이 없는 제품은 요청이 계속 대기 중으로 남는다.
+
+**지킬 것**
+
+- 요청은 서버 폴더 안 파일 하나로 끝낸다. 요청 때문에 PC 가 이미 가진 업로드 경로(REQ-SYNC-002)와 다른 길로 올리지 않는다.
+- PC 가 요청을 물을 때 서버에 닿지 않으면 요청이 없는 것으로 보고 평소 일정대로 동작한다.
 
 ### REQ-CONF-001 설정 파일 읽기
 
@@ -6619,7 +6670,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 이유: 서버가 PC 폴더를 마운트하는 방법은 쓰지 않는다. PC 가 Wi-Fi DHCP 라 주소가 바뀌고, 사내 DNS 에 이름이 없으며, 외근 때는 망에 없기 때문이다. 폴더를 볼 수 있는 쪽이 밀어 올리고, 서버는 마지막 업로드본을 계속 쓴다.
 
-**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 매일 08:00 KST와 15분 간격 확인으로 설정한다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
+**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 08:00 KST부터 1분 간격으로 실행한다. 매일 업로드와 15분 재시도 시각은 아래 상태 파일이 정하고, 1분 간격은 화면의 수집 요청(REQ-KNOW-021)을 빨리 보기 위한 것이다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
 
 ```text
 python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<서버 주소>:24357
@@ -6630,10 +6681,15 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 3. `PARTIAL`, `FAILED`, `NEEDS_CONFIG`면 15분 후 다시 시도한다.
 4. 수일 동안 PC가 꺼졌으면 마지막 완료 날짜와 비교해 최신 자료를 한 번 수집한다.
 5. 실패 중에는 서버의 이전 자료를 계속 사용한다. 성공하면 다음 날 08:00까지 대기한다.
+6. 실행할 때마다 서버에 남은 수집 요청(REQ-KNOW-021)을 묻는다. 처리하지 않은 요청이 있으면 2~3번의 대기와 관계없이 바로 올리고, 처리한 요청 시각을 상태 파일에 적는다.
 
 기존 09:00 사양 수집과 03:30 사양 동기화는 유지한다. 같은 PDF가 두 경로로 등록되면 챗봇 지식 판에서 같은 바이트의 원본을 한 번만 검색한다. 03:30 새 등록도 다음 요청에 반영한다.
 
-**설치** `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 작업을 바꾼다. 수집·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 예약이 재시도 시각보다 조금 일찍 실행되면 남은 시간만 기다렸다 시도한다(`--wait-retry`). 별도 중복 작업을 만들지 않는다.
+**설치** `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 작업을 바꾼다. 수집·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 별도 중복 작업을 만들지 않는다.
+
+예약은 1분마다 돌므로 재시도 시각까지 기다리지 않고 끝낸다(`--wait-retry` 를 붙이지 않는다).
+
+이유: 기다리는 동안에는 다음 실행이 건너뛰어져 수집 요청을 늦게 본다.
 
 **입력**
 
@@ -9320,6 +9376,23 @@ REQ-KNOW-002, 003, 005, 018, 019, 020 을 `tests/test_knowledge_profiles.py` 로
 python -m pytest tests/test_knowledge_profiles.py -q
 ```
 
+### TEST-KNOW-008
+
+REQ-KNOW-021 과 REQ-KNOW-018 의 화면 숨김을 `tests/test_knowledge_collect_request.py` 로 확인한다. 설정·DB·수집 기록은 모두 임시 폴더다.
+
+1. 폴더를 읽을 수 없는 서버에서 `지금 수집` 은 요청을 남기고(`REQUESTED`), 남은 요청 조회가 그 시각을 돌려준다. 상세 화면에 "수집 요청 대기 중"이 보인다.
+2. 요청 뒤에 지식 폴더 동기화 기록이 끝나면 남은 요청이 없다.
+3. 폴더를 읽을 수 있는 서버에서는 바로 수집한다.
+4. 지식 폴더 설정이 없는 제품은 400, 설정 없는 제품은 404 다.
+5. PC 쪽(`run_due`): 그날 업로드를 마쳤어도 처리하지 않은 요청이 있으면 한 번 올리고, 같은 요청은 다시 올리지 않는다. 요청 조회가 실패하면 평소 일정대로 동작한다.
+6. `hidden: true` 인 종류는 상세 화면 구역과 상태 판정에서 빠진다. VXvue 상세에는 `지침 프롬프트` 구역이 없고 매뉴얼 구역에 `새 문서 등록` 이 있다.
+
+```text
+python -m pytest tests/test_knowledge_collect_request.py -q
+```
+
+사람이 확인하는 절차: 담당자 PC 에 예약을 다시 설치한 뒤 운영 화면에서 `지금 수집` 을 누르고, 2분 안에 "마지막 수집" 시각이 바뀌는지 본다.
+
 ### TEST-CONF-001
 
 REQ-CONF-002 와 REQ-WEB-004 를 `tests/test_secrets_file.py` 로 확인한다: 줄 형식·키만 있는 한 줄·따옴표·CRLF, 별칭, 모르는 키 무시, JSON 과 깨진 JSON, 자리표시 값은 없는 값, 우선순위(환경변수 > json > txt > .env), 앞 출처가 비면 다음으로, BOM, 파일 없음, 상태에 Key 가 나오지 않음, `/config/status` 응답에 Key 가 없음.
@@ -9973,9 +10046,10 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-015 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-016 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/main.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
-| REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py` | verified |
+| REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py`, `app/core/knowledge_status.py` | TEST-KNOW-007, TEST-KNOW-008: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py`, `tests/test_knowledge_collect_request.py` | verified |
 | REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/knowledge_registry.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |

@@ -23,7 +23,7 @@ foreach ($file in @($Python, $script)) {
 }
 & $Python -X utf8 $script --project-root $ProjectRoot --product VXvue --upload-to $TargetUrl --check
 if ($LASTEXITCODE -ne 0) { throw '지식 폴더 설정 확인에 실패했습니다.' }
-Write-Output 'QA_ProductKnowledge_Sync: 매일 08:00 KST · 미완료 시 15분마다 재시도 · PC 시작 때 만회'
+Write-Output 'QA_ProductKnowledge_Sync: 매일 08:00 KST · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인 · PC 시작 때 만회'
 if ($CheckOnly) { Write-Output '계획 확인 완료. 예약은 변경하지 않았습니다.'; exit 0 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principalCheck = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -45,9 +45,11 @@ $worker = Join-Path $ProjectRoot ('data\knowledge_retry\worker-' + $workerDigest
 New-Item -ItemType Directory -Path $worker -Force | Out-Null
 foreach ($file in $workerSources) { Copy-Item -LiteralPath $file -Destination (Join-Path $worker (Split-Path $file -Leaf)) -Force }
 $installedScript = Join-Path $worker 'retry_product_knowledge.py'
-$action = New-ScheduledTaskAction -Execute $Python -Argument ('-X utf8 "{0}" --project-root "{1}" --product VXvue --upload-to "{2}" --wait-retry' -f $installedScript,$ProjectRoot,$TargetUrl) -WorkingDirectory $ProjectRoot
+$action = New-ScheduledTaskAction -Execute $Python -Argument ('-X utf8 "{0}" --project-root "{1}" --product VXvue --upload-to "{2}"' -f $installedScript,$ProjectRoot,$TargetUrl) -WorkingDirectory $ProjectRoot
 # No RepetitionDuration means indefinite repetition; the Python state gates daily due work.
-$repeat = New-ScheduledTaskTrigger -Once -At ([datetime]::Today.AddHours(8)) -RepetitionInterval (New-TimeSpan -Minutes 15)
+# Every minute so a screen "지금 수집" request (REQ-KNOW-021) is picked up quickly. No --wait-retry:
+# a waiting instance would make IgnoreNew skip the following minutes.
+$repeat = New-ScheduledTaskTrigger -Once -At ([datetime]::Today.AddHours(8)) -RepetitionInterval (New-TimeSpan -Minutes 1)
 $startup = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2)
 $settings.Enabled = $true

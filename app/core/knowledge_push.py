@@ -47,6 +47,17 @@ def fetch_server_state(client, target_url: str, product: str) -> dict[tuple[str,
     return {(asset["kind"], asset["file_name"]): asset.get("sha256", "") for asset in payload.get("assets", [])}
 
 
+def fetch_collect_request(product: str, target_url: str, timeout: int = 10) -> str:
+    """화면 `지금 수집` 이 남긴, 아직 처리되지 않은 요청 시각 (REQ-KNOW-021). 없으면 빈 문자열.
+
+    실패하면 예외를 올린다. 요청이 없는 것으로 볼지는 부르는 쪽(`knowledge_retry.run_due`)이 정한다.
+    """
+    with _client(timeout) as client:
+        response = client.get(f"{target_url.rstrip('/')}/knowledge/product-knowledge/request", params={"product": product})
+        response.raise_for_status()
+        return str(response.json().get("requested_at") or "")
+
+
 def push_product(product: str, target_url: str, *, dry_run: bool = False, timeout: int = UPLOAD_TIMEOUT_SECONDS) -> dict:
     """제품 하나의 지식 폴더를 수집해 서버로 올린다.
 

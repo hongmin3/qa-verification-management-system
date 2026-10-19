@@ -8,7 +8,17 @@ import os
 KST = timezone(timedelta(hours=9))
 
 
-def run_due(product, target_url, *, state_dir, now=None, push=None):
+def _requested(check_request):
+    """서버에 남은 화면 수집 요청 시각 (REQ-KNOW-021). 묻지 못하면 요청이 없는 것으로 본다."""
+    if check_request is None:
+        return ""
+    try:
+        return str(check_request() or "")
+    except Exception:
+        return ""
+
+
+def run_due(product, target_url, *, state_dir, now=None, push=None, check_request=None):
     from app.core.knowledge_push import push_product
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     state_dir = Path(state_dir)
@@ -37,14 +47,19 @@ def run_due(product, target_url, *, state_dir, now=None, push=None):
                 state = {}
             today = now.astimezone(KST).date()
             due_date = today if now.astimezone(KST).hour >= 8 else today - timedelta(days=1)
-            # First installation before 08:00 waits for today's schedule.
-            if not state and now.astimezone(KST).hour < 8:
-                return {"status": "NOT_DUE", "detail": "오전 8시 실행 대기"}
-            if state.get("completed_date", "") >= due_date.isoformat():
-                return {"status": "NOT_DUE", "detail": "해당 일정 동기화 완료"}
-            next_retry = state.get("next_retry_at")
-            if next_retry and now < datetime.fromisoformat(next_retry):
-                return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
+            # A screen request the PC has not handled yet runs now, whatever the daily schedule says.
+            request = _requested(check_request)
+            if request and request != state.get("handled_request"):
+                state["handled_request"] = request
+            else:
+                # First installation before 08:00 waits for today's schedule.
+                if not state and now.astimezone(KST).hour < 8:
+                    return {"status": "NOT_DUE", "detail": "오전 8시 실행 대기"}
+                if state.get("completed_date", "") >= due_date.isoformat():
+                    return {"status": "NOT_DUE", "detail": "해당 일정 동기화 완료"}
+                next_retry = state.get("next_retry_at")
+                if next_retry and now < datetime.fromisoformat(next_retry):
+                    return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
             try:
                 result = (push or push_product)(product, target_url)
             except Exception as exc:

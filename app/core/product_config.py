@@ -45,6 +45,8 @@ class KnowledgeAssetSource(BaseModel):
 
     source: str = SOURCE_MANUAL
     required: bool | None = None
+    #: 제품 상세 화면과 상태 판정에서 이 구역을 뺀다. 수집은 그대로 한다 (REQ-KNOW-018).
+    hidden: bool = False
 
 
 def _folder_source() -> KnowledgeAssetSource:
