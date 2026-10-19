@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.core import notifier
-from app.modules.daily_qa import change_mail, holidays
+from app.modules.daily_qa import change_mail, holidays, snapshots
 from app.modules.daily_qa.change_report import build_change_report
 from app.modules.daily_qa.settings import ChangeReportSettings
 from app.modules.daily_qa.snapshots import KIND_ISSUES, KIND_SRS
@@ -36,6 +36,10 @@ def make(tmp_path, **settings):
     return h
 
 
+def kst_minute(raw: str) -> str:
+    return datetime.fromisoformat(raw).astimezone(KST).strftime("%Y-%m-%d %H:%M")
+
+
 def change_mails(h):
     return [mail for mail in h.sent if "변경 리포트" in mail[0]]
 
@@ -57,7 +61,11 @@ def test_monday_mail_covers_friday_to_monday(h):
     subject, text, html, recipients = mails[-1]
     assert subject.startswith("[QA Agent] VXvue 변경 리포트 · 10-16(금)~10-19(월) · 이슈 1건 · SRS 1건")
     assert recipients == ("qa@example.com",)
-    assert "기간: 2026-10-16" in text and "비교한 기록: 10-16, 10-19" in text
+    # 기간은 두 기록을 실제로 수집한 시각이다. 수집 시각은 벽시계라 날짜를 고정하지 않고 기록에서 읽는다.
+    store = snapshots.for_settings(h.cfg)
+    first, last = (kst_minute(store.meta(store.between(KIND_ISSUES, day, day)[0])["collected_at"])
+                   for day in ("2026-10-16", "2026-10-19"))
+    assert f"기간: {first} ~ {last} · 비교한 기록: 10-16, 10-19" in text
     assert "AI 분석: 켜짐 · 밀린 변경 0건" in text
 
 
