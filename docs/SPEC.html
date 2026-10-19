@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="ed6da82f2ad7a17731fe9fe1d67cb86858d2cafe86f7a1dffb1d133587fad2fd">
+<meta name="spec-source-sha256" content="0b16012c900b271bb1592eb733c05db7a446ca2a52b918304c217c8e4ce5a1cb">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -16341,8 +16341,9 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 <section class="card kind-req" id="REQ-ALMCHG-004">
 <h3><span class="idtag">REQ-ALMCHG-004</span> 변경 리포트 메일</h3>
 <div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a>, <a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a>, <a class="idref" href="#REQ-ALMCHG-003">REQ-ALMCHG-003</a>, <a class="idref" href="#REQ-QAINTEL-038">REQ-QAINTEL-038</a>, <a class="idref" href="#TEST-ALMCHG-004">TEST-ALMCHG-004</a>, <a class="idref" href="#TEST-ALMCHG-006">TEST-ALMCHG-006</a></span></div>
-<details class="history"><summary>변경 이력 8</summary>
+<details class="history"><summary>변경 이력 9</summary>
 <ul>
+<li><span class="hist">2026-10-20 변경 리포트 메일의 50건 제한 삭제</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 변경 리포트 메일이 기간에 바뀐 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>와 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 를 모두 싣는다. 전에는 구획마다 50건까지만 싣고 나머지는 &quot;나머지 &lt;n&gt;건은 화면에서 보기&quot;로 넘겼다. 50건을 먼저 자른 뒤 작성자별로 묶었기 때문에, 2026-10-20 메일에서는 한 작성자의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 13건 중 8건이 빠졌다. 이제 작성자 묶음마다 그 작성자의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>가 모두 실린다. 설정 <code>daily_qa.change_report.max_items</code> 는 없앴다.</li>
 <li><span class="hist">2026-10-19 master 통합과 운영 백업 시각 정리</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 월요일 변경 리포트 메일 시험이 작성일(10-16)에만 통과하던 문제를 고쳤다. 기대 기간을 저장된 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 시각에서 읽는다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 동작은 바뀌지 않았다.</li>
 <li><span class="hist">2026-10-16 변경 리포트 메일 작성자별 묶기</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 변경 리포트 메일의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 변경을 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 작성자(처음 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>한 사람)별로 묶는다. 묶음 제목은 작성자 이름과 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 수다. 작성자는 이름순으로 놓고, 이름을 모르는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 &quot;작성자 미확인&quot; 묶음으로 맨 뒤에 둔다. 같은 작성자 안에서는 최근 변경 순이다(사용자 요청 2026-10-16).</li>
 <li><span class="hist">2026-10-16 같은 날 다시 수집해도 자동 변경 리포트 메일이 이어서 비교</span> <a class="idref" href="#REQ-ALMCHG-004">REQ-ALMCHG-004</a>: 자동 변경 리포트 메일이 끝으로 비교한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 <code>data/daily_qa/&lt;제품&gt;/change_mail_base/</code> 에 한 벌 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한다. 같은 날 [변경사항 점검하기]나 다시 돈 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 그날 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 덮어써도, 다음 자동 메일은 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>부터 비교한다. 이전에는 04:00 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>부터 다시 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한 시각 사이의 변경이 어느 자동 메일에도 실리지 않았다(사용자 결정 2026-10-16). 이렇게 이어서 비교한 메일은 <span class="term" title="리포트가 실제로 비교한 기록의 날짜와, 기록이 없어 하루 단위로 볼 수 없었던 날이다" tabindex="0">확인 범위</span>에 다시 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한 시각을 알린다.</li>
@@ -16379,8 +16380,10 @@ CATEGORY는 프로젝트 전체에서 이 <span class="term" title="한 제품 �
 </ul>
 </li>
 <li>아래 구획대로 HTML 본문과 글 본문을 함께 만든다.</li>
-<li><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>와 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 구획마다 대상을 <code>daily_qa.change_report.max_items</code> 개까지 싣는다. 넘으면 &quot;나머지 &lt;n&gt;건은 화면에서 보기&quot;와 화면 링크를 단다.</li>
-<li>실을 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 작성자별로 묶는다.
+<li>기간에 바뀐 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>와 <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 를 모두 싣는다. 건수로 자르지 않는다.
+이유: 건수로 자르면 같은 작성자의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 가운데 일부만 메일에 남는다. 2026-10-20 메일은 71건 가운데 50건만 실려 한 작성자의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 13건 중 8건이 빠졌다.
+</li>
+<li><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 작성자별로 묶는다.
 <ul>
 <li>작성자는 이름순으로 놓는다. 작성자 이름을 모르는 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 &quot;작성자 미확인&quot; 묶음으로 맨 뒤에 둔다.</li>
 <li>같은 작성자 안에서는 마지막 변경이 최근인 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>부터 놓는다.</li>
@@ -16458,7 +16461,6 @@ SRS: 신규 &lt;n&gt; · 수정 &lt;n&gt; · 조회에서 빠짐 &lt;n&gt;
 <tbody>
 <tr><td><code>daily_qa.change_report.enabled</code></td><td><code>true</code></td><td>자동 변경 리포트 메일을 보낼지. 화면의 수동 메일은 이 값과 상관없다</td></tr>
 <tr><td><code>daily_qa.change_report.send_when_empty</code></td><td><code>true</code></td><td>변경이 없는 날에도 &quot;변경 없음&quot; 메일을 보낼지. <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>이 돌았다는 것을 알리기 위한 값이다</td></tr>
-<tr><td><code>daily_qa.change_report.max_items</code></td><td><code>50</code></td><td><span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·<span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 구획마다 싣는 대상 수 상한</td></tr>
 </tbody>
 </table></div>
 </div></section>
@@ -16615,11 +16617,11 @@ SRS: 신규 &lt;n&gt; · 수정 &lt;n&gt; · 조회에서 빠짐 &lt;n&gt;
 <ol>
 <li>월요일 <span class="term" title="AI 를 부르지 않고 SRS·이슈를 읽어 스냅샷과 변경 이벤트만 남기는 실행이다" tabindex="0">수집 실행</span>을 돌리고 같은 날 한 번 더 돌린다.</li>
 <li>메일 글 본문과 HTML 본문을 읽는다.</li>
-<li><span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 실패, 첫 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>, 변경 없음, 대상이 상한보다 많은 경우를 각각 돌린다.</li>
+<li><span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 실패, 첫 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>, 변경 없음, 대상이 51건 이상인 경우를 각각 돌린다.</li>
 </ol>
 </div></section>
 <section class="field"><h4>Expected Result</h4><div class="field-body">
-<p>월요일 메일 한 통만 나가고 기간이 금요일부터 월요일이다. 본문에 번호·제목·이전·이후 값·댓글 작성자와 시각이 있다. 댓글 본문, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 설명·재현 절차·원인·조치 문장, <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 본문 문장이 없다. 실패·첫 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>·변경 없음·상한 초과는 &quot;안 될 때&quot; 표의 문구대로다.</p>
+<p>월요일 메일 한 통만 나가고 기간이 금요일부터 월요일이다. 본문에 번호·제목·이전·이후 값·댓글 작성자와 시각이 있다. 댓글 본문, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 설명·재현 절차·원인·조치 문장, <span class="term" title="소프트웨어 요구사항 사양 항목 하나. Polarion 의 Work Item 이며 VP-1234 모양의 번호를 갖는다" tabindex="0">SRS</span> 본문 문장이 없다. 실패·첫 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>·변경 없음은 &quot;안 될 때&quot; 표의 문구대로다. 대상이 51건 이상이어도 모두 실리고 &quot;나머지 &lt;n&gt;건&quot; 문구가 없다.</p>
 </div></section>
 </section>
 <section class="card kind-test" id="TEST-ALMCHG-005">

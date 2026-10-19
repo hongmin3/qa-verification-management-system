@@ -93,7 +93,7 @@ def test_comment_author_and_time_without_comment_body(tmp_path):
     report = build_change_report(cfg, store, "2026-10-16", "2026-10-19", schedule=SCHEDULE)
     assert report.issues[0].lines[0].comment_text                      # 화면은 본문을 갖고 있다
     subject, text, html = change_mail.build_change_email(
-        report, product="VXvue", page_url="http://x/c", ai_state={"label": "켜짐", "deferred": 0}, max_items=50)
+        report, product="VXvue", page_url="http://x/c", ai_state={"label": "켜짐", "deferred": 0})
     for body in (text, html):
         assert "BODY-SECRET" not in body
         assert "이영희" in body
@@ -152,16 +152,20 @@ def test_empty_day_respects_send_when_empty(tmp_path, send_when_empty, expected)
         assert outcome["summary"]["change_mail"]["status"] == "skipped"
 
 
-def test_max_items_cuts_with_link(tmp_path):
+# Validates: REQ-ALMCHG-004
+def test_mail_lists_every_issue_and_srs_without_cut(tmp_path):
     cfg, store = setup(tmp_path)
     save(store, KIND_ISSUES, "2026-10-16", [])
+    save(store, KIND_SRS, "2026-10-16", [])
     save(store, KIND_ISSUES, "2026-10-19", [issue(f"VP-{n}") for n in range(1, 52)])
+    save(store, KIND_SRS, "2026-10-19", [srs(f"VP-{n}") for n in range(501, 552)])
     report = build_change_report(cfg, store, "2026-10-16", "2026-10-19", schedule=SCHEDULE)
     subject, text, html = change_mail.build_change_email(
-        report, product="VXvue", page_url="http://x/changes", ai_state={"label": "켜짐", "deferred": 0}, max_items=50)
-    assert "이슈 51건" in subject
-    assert "나머지 1건은 화면에서 보기: http://x/changes" in text
-    assert "나머지 1건은" in html and html.count("VP-") >= 50
+        report, product="VXvue", page_url="http://x/changes", ai_state={"label": "켜짐", "deferred": 0})
+    assert "이슈 51건" in subject and "SRS 51건" in subject
+    for n in [*range(1, 52), *range(501, 552)]:
+        assert f"VP-{n} VP-{n} " in text and f"VP-{n} VP-{n} " in html
+    assert "나머지" not in text and "나머지" not in html
 
 
 def test_disabled_setting_sends_nothing(tmp_path):
@@ -204,7 +208,7 @@ def test_settings_defaults_and_config():
     from app.modules.daily_qa.settings import load
 
     cfg = load()
-    assert cfg.change_report == ChangeReportSettings(enabled=True, send_when_empty=True, max_items=50)
+    assert cfg.change_report == ChangeReportSettings(enabled=True, send_when_empty=True)
 
 
 @pytest.mark.parametrize("trigger", ["scheduled", "collect"])
@@ -280,7 +284,7 @@ def _grouped_report(tmp_path):
 def test_issues_grouped_by_reporter_name_unknown_last(tmp_path):
     report = _grouped_report(tmp_path)
     subject, text, html = change_mail.build_change_email(
-        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0}, max_items=50)
+        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0})
     groups = [line for line in text.splitlines() if line.startswith("■ ")]
     assert groups == ["■ 김철수 (이슈 1건)", "■ 이영희 (이슈 2건)", "■ 작성자 미확인 (이슈 1건)"]
     assert text.index("VP-1 VP-1 제목") < text.index("VP-4 VP-4 제목")   # 같은 작성자 안에서는 최근 변경 순
@@ -288,10 +292,17 @@ def test_issues_grouped_by_reporter_name_unknown_last(tmp_path):
 
 
 # Validates: REQ-ALMCHG-004
-def test_reporter_groups_respect_max_items(tmp_path):
-    report = _grouped_report(tmp_path)
+def test_reporter_group_keeps_all_issues_of_older_numbers(tmp_path):
+    """2026-10-20 운영 기록과 같은 모양: 71건이 같은 날 바뀌고, 한 작성자의 13건은 번호가 오래됐다."""
+    cfg, store = setup(tmp_path)
+    mine = [issue(f"VP-{6700 + n}", reporter_id="u9", reporter_name="김홍민") for n in range(13)]
+    others = [issue(f"VP-{7300 + n}", reporter_id="u1", reporter_name="이은경B") for n in range(58)]
+    save(store, KIND_ISSUES, "2026-10-19", mine + others)
+    save(store, KIND_ISSUES, "2026-10-20", [dict(item, status="B") for item in mine + others])
+    report = build_change_report(cfg, store, "2026-10-19", "2026-10-20", schedule=SCHEDULE)
     subject, text, html = change_mail.build_change_email(
-        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0}, max_items=2)
+        report, product="VXvue", page_url="http://x/c", ai_state={"label": "꺼짐", "deferred": 0})
     groups = [line for line in text.splitlines() if line.startswith("■ ")]
-    assert sum(int(g.split("이슈 ")[1].split("건")[0]) for g in groups) == 2
-    assert "나머지 2건은 화면에서 보기" in text
+    assert groups == ["■ 김홍민 (이슈 13건)", "■ 이은경B (이슈 58건)"]
+    assert all(f"{item['id']} {item['title']}" in text for item in mine)
+    assert "나머지" not in text

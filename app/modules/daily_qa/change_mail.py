@@ -149,16 +149,12 @@ def _text_body(view: dict) -> str:
                 out += [f"    {_pad(row)}  {row['text']}" for row in block["rows"]]
                 if block["link"]:
                     out.append(f"    Polarion: {block['link']}")
-        if view["issue_more"]:
-            out.append(f"나머지 {view['issue_more']}건은 화면에서 보기: {view['url']}")
         out += ["", "[SRS 변경]"]
         if not view["srs"]:
             out.append(NO_CHANGE)
         for row in view["srs"]:
             line = f"{row['word']}  {row['id']} {row['title']}".rstrip()
             out.append(line + (f" · 바뀐 곳: {row['where']}" if row["where"] else ""))
-        if view["srs_more"]:
-            out.append(f"나머지 {view['srs_more']}건은 화면에서 보기: {view['url']}")
         out += ["", f"[확인 범위] {' / '.join(view['notices'])}"]
     if view["url"]:
         out.append(f"전체 보기: {view['url']}")
@@ -172,10 +168,9 @@ def _render(view: dict) -> tuple[str, str]:
     return _text_body(view), html
 
 
-def build_change_email(report: ChangeReport, *, product: str, page_url: str, ai_state: dict, max_items: int,
+def build_change_email(report: ChangeReport, *, product: str, page_url: str, ai_state: dict,
                        times: tuple[str, str] = ("", "")) -> tuple[str, str, str]:
-    """(제목, 글 본문, HTML 본문)."""
-    max_items = max(1, int(max_items))
+    """(제목, 글 본문, HTML 본문). 이슈·SRS 를 건수로 자르지 않고 모두 싣는다 (REQ-ALMCHG-004)."""
     subject = mail_subject(product, f"변경 리포트 · {day_label(report.since)}~{day_label(report.until)}"
                                     f" · 이슈 {len(report.issues)}건 · SRS {len(report.srs)}건")
     compared = sorted({day for days in report.compared_days.values() for day in days})
@@ -188,10 +183,8 @@ def build_change_email(report: ChangeReport, *, product: str, page_url: str, ai_
     view = {
         "mode": "report", "heading": f"{product} 변경 리포트", "period": period, "ai": ai,
         "issue_summary": _counts(report, ISSUE_SUMMARY), "srs_summary": _counts(report, SRS_SUMMARY),
-        "issue_groups": _issue_groups(report.issues[:max_items]),
-        "issue_more": max(0, len(report.issues) - max_items),
-        "srs": [_srs_row(entity) for entity in report.srs[:max_items]],
-        "srs_more": max(0, len(report.srs) - max_items),
+        "issue_groups": _issue_groups(report.issues),
+        "srs": [_srs_row(entity) for entity in report.srs],
         "notices": notices or [NO_GAP], "url": page_url,
     }
     text, html = _render(view)
@@ -244,7 +237,7 @@ def compose_for_period(cfg, store, snapshots, since: str, until: str, *,
     report = build_change_report(cfg, snapshots, since, until, mail_base=mail_base)
     subject, text, html = build_change_email(
         report, product=cfg.product, page_url=page_url(cfg, cfg.product, since, until), ai_state=ai_state(store, cfg),
-        max_items=cfg.change_report.max_items, times=period_times(snapshots, report))
+        times=period_times(snapshots, report))
     return subject, text, html, report
 
 

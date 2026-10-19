@@ -394,7 +394,7 @@ def _sample_change_report() -> tuple[str, str, str]:
     report = change_mail.sample_report(today)
     url = f"{base}/qa-agent/changes?product=예시&since={today.isoformat()}&until={today.isoformat()}"
     subject, text, html_body = change_mail.build_change_email(
-        report, product="예시", page_url=url, ai_state={"label": "꺼짐", "deferred": 0}, max_items=50)
+        report, product="예시", page_url=url, ai_state={"label": "꺼짐", "deferred": 0})
     subject = mail_subject("", f"[시험] {subject.removeprefix(SUBJECT_PREFIX).strip()}")
     notice_html = (f"<div style='padding:10px 24px;background:#fef3c7;color:#92400e;font:14px sans-serif'>"
                    f"<b>{_TEST_NOTICE}</b> {_CHANGE_SAMPLE_NOTICE}</div>")

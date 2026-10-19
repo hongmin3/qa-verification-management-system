@@ -68,7 +68,6 @@ class ChangeReportSettings:
 
     enabled: bool = True
     send_when_empty: bool = True
-    max_items: int = 50
 
 
 @dataclass(frozen=True)
@@ -224,15 +223,9 @@ def _flag(value, default: bool) -> bool:
 
 
 def _change_report(get) -> ChangeReportSettings:
-    defaults = ChangeReportSettings()
-    try:
-        max_items = int(get("daily_qa.change_report.max_items", defaults.max_items))
-    except (TypeError, ValueError):
-        max_items = defaults.max_items
     return ChangeReportSettings(
         enabled=_flag(get("daily_qa.change_report.enabled", True), True),
-        send_when_empty=_flag(get("daily_qa.change_report.send_when_empty", True), True),
-        max_items=max_items if max_items >= 1 else defaults.max_items)
+        send_when_empty=_flag(get("daily_qa.change_report.send_when_empty", True), True))
 
 
 def _intelligence(get) -> IntelligenceSettings:

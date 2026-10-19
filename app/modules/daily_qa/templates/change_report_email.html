@@ -40,13 +40,11 @@
 </td></tr>
 {% endfor %}
 {% endfor %}
-{% if view.issue_more %}<tr><td style="padding:8px 24px 0 24px;">나머지 {{ view.issue_more }}건은 <a href="{{ view.url }}" style="color:#2563eb;">화면에서 보기</a></td></tr>{% endif %}
 {{ heading('SRS 변경') }}
 {% if not view.srs %}<tr><td style="padding:0 24px;color:#6b7280;">{{ no_change }}</td></tr>{% endif %}
 {% for row in view.srs %}
 <tr><td style="padding:4px 24px 0 24px;"><b>{{ row.word }}</b> {{ row.id }} {{ row.title }}{% if row.where %} · 바뀐 곳: {{ row.where }}{% endif %}{% if row.link %} <a href="{{ row.link }}" style="color:#2563eb;font-size:12px;">Polarion 바로가기</a>{% endif %}</td></tr>
 {% endfor %}
-{% if view.srs_more %}<tr><td style="padding:8px 24px 0 24px;">나머지 {{ view.srs_more }}건은 <a href="{{ view.url }}" style="color:#2563eb;">화면에서 보기</a></td></tr>{% endif %}
 {{ heading('확인 범위') }}
 <tr><td style="padding:0 24px;">{% for note in view.notices %}<div>{{ note }}</div>{% endfor %}</td></tr>
 {% endif %}
