@@ -8,7 +8,11 @@
 - PC 재설치(2026-10-19 15:37, 관리자 PowerShell): `-CheckOnly` 통과 뒤 설치했다. 원래 예약 백업은 `backups/knowledge-schedule-20261019-153751`, 새 실행본은 `data/knowledge_retry/worker-5b3bcf66642d869a/` 이다. `retry_product_knowledge.py` 해시가 저장소 판과 같다. 1분 반복과 PC 시작 트리거가 남아 있고, 15:38 실행 결과는 0 이다. 마지막 `HTTP Request` 줄은 이전 실행본의 15:37:03 이고, 15:38~15:42 실행은 줄을 남기지 않았다. 운영 서버 배포는 필요 없다(서버 코드 변경 없음).
 - 지식 폴더 정리 뒤 전수 점검(15:40 KST, 읽기 전용): 폴더 26개 파일 중 24개가 규약대로 분류된다. 운영 서버 등록 문서 20건(사양서 7, 매뉴얼 9, TC 4)을 내려받아 비교했고, 모두 폴더 파일과 바이트가 같다. 사양서 6건은 03:30 자동 수집본(`output/srs_crawler/2026-10-19`)과도 해시가 같다. `[Skill 지침] VXvue.md` 는 자동 생성 형식이 맞고 설치된 플러그인 1.2.2 와 내용이 같다. QA 규칙 MD 는 229절로 해석된다(통합 형식이라 개정 번호 없음).
 - 아직 서버에 없는 것: 15:30 동기화 뒤 폴더에 들어온 Shimadzu 연동 가이드 2건(`(매뉴얼) How to Integrate VXvue with Shimadzu Mobile System.V1.0.6W2_KO_확인완료.docx`, `(매뉴얼) How to Integrate VXvue with Shimadzu System.V1.0.7W2_EN.docx`)이다. 다음 08:00 업로드나 화면 `지금 수집` 으로 올라간다.
-- 수집하지 않는 파일 2건(사용자 결정 대기): `(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx` 는 해당 자료 종류가 없어 `unknown` 으로 빠진다. `(이슈) Polarion Issue Report_VP-767 lab_fixed.pdf` 는 원래 `polarion_query_backup.pdf` 였다. 이름이 바뀌면서 `vxvue.yaml` 제외 패턴(`polarion_query_backup*`)에 더는 맞지 않아, 제외 목록에 `unknown` 으로 보인다.
+- 사용자 결정(2026-10-19): 릴리즈노트는 규약에 넣고, 이슈 PDF 는 지운다.
+- 이슈 PDF: `(이슈) Polarion Issue Report_VP-767 lab_fixed.pdf` 를 지식 폴더에서 휴지통으로 옮겼다. 서버에는 업로드된 적이 없었다(수집 제외 목록에만 보였다). 업로드 뒤 서버 자산 목록과 수집 제외 목록에 남아 있지 않다. `vxvue.yaml` 의 `polarion_query_backup*` 제외 패턴은 같은 보고서가 다시 들어올 때를 위해 그대로 둔다.
+- 릴리즈노트(`196f52f`, REQ-KNOW-008·009·003·018, REQ-VXVUECHATBOT-006): 새 자료 종류 `release_note` 를 더했다. 관련 시험 402건 중 1건만 실패했다. 실패한 것은 실제 폴더 분류 시험으로, 이슈 PDF 때문이었고 그 파일을 지운 뒤 62건 모두 통과했다.
+- 운영 반영(16:00 KST): 사전 대조에서 서버 대상 파일 9개가 모두 변경 직전 판과 같았다. 실행 중 작업 0건을 확인하고 `backups/deploy-release-note-20261019T065934Z.tgz` 로 백업했다. 9개를 반영해 해시가 모두 일치했고, 서버 시험 123건 통과(2건 건너뜀), 재기동 뒤 health ok 였다.
+- 수동 업로드: `scripts/sync_product_knowledge.py --product VXvue --upload-to http://10.13.0.222:24357` 결과 SUCCESS(업로드 1건 7.0MB, 등록 1건, 미변경 22건). Shimadzu 연동 가이드 2건은 15:49 예약 실행(화면 `지금 수집` 요청)으로 이미 올라가 있었다. 운영 화면에 릴리즈노트 구역이 생겼고 `(릴리즈노트) Release Note_VXvue 1.1.0 Rev03.docx` 에 교체·삭제·새 문서 등록이 보인다. 수집 제외는 0건이다. vxvue-ai 지식 판 `1ea3f1c5f84957f60b820742` 는 25개 파일을 모두 색인했고(실패 0) 릴리즈노트는 492조각이다.
 
 ## 2026-10-19 Knowledge 상세 지금 수집·VXvue 매뉴얼 화면 등록·지침 프롬프트 숨김
 
