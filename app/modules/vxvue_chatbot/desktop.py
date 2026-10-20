@@ -292,7 +292,7 @@ def dispatch(message, context=None):
                 parsed = urlsplit(base)
                 # Generated download routes are infrastructure, not source-document excerpts.
                 # Preserve only these validated links; all quoted document content stays masked.
-                if parsed.scheme in ('http', 'https') and parsed.netloc and not parsed.username and not parsed.query and not parsed.fragment:
+                if parsed.scheme in ('http', 'https') and parsed.netloc and parsed.username is None and parsed.password is None and not parsed.query and not parsed.fragment:
                     for row, original in zip(masked['files'], data['files']):
                         row['url'] = base + original['url']
                 content = [{'type': 'text', 'text': json.dumps(masked, ensure_ascii=False)}]

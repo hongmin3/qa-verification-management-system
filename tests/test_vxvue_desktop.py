@@ -269,3 +269,28 @@ def test_tool_error_hides_server_path_containing_qa_identifier(monkeypatch):
     text = " ".join(item["text"] for item in reply["content"])
     assert "/home/" not in text and "[SERVER_PATH]" in text
     assert "VP-1234" in text
+
+
+@pytest.mark.parametrize("base, expected_prefix", [
+    ("http://10.1.2.3:24357", "http://10.1.2.3:24357"),
+    ("https://user:secret@example.test", ""),
+    ("https://:secret@example.test", ""),
+    ("https://example.test?secret=value", ""),
+])
+def test_review_download_link_keeps_only_validated_server_address(monkeypatch, base, expected_prefix):
+    """Validates: REQ-MANUAL-021, REQ-VXVUECHATBOT-011, NFR-PRIV-001."""
+    route = "/vxvue-desktop/manual-review/files/report-123/review.html"
+    monkeypatch.setattr(desktop, "call", lambda name, args: {
+        "files": [{"name": "review.html", "url": route}],
+        "note": "10.2.3.4 /home/ubuntu/reviews/VP-1234/report.txt",
+    })
+    reply = desktop.dispatch({"method": "tools/call", "params": {
+        "name": "make_manual_review_report", "arguments": {},
+    }}, {"base_url": base})
+    assert reply["isError"] is False
+    data = json.loads(reply["content"][0]["text"])
+    assert data["files"][0]["url"] == expected_prefix + route
+    assert "[IP_ADDRESS]" in data["note"] and "[SERVER_PATH]" in data["note"]
+    assert "VP-1234" in data["note"]
+    assert "/home/" not in data["note"] and "report.txt" not in data["note"]
+    assert "secret" not in reply["content"][0]["text"]
