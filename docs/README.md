@@ -11,6 +11,7 @@
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
 | **매일 어떤 자동화가 돌고 어디로 보고되는지** | [SPEC 4절](../SPEC.md#4-전체-자동화-흐름) · 설치·실행 확인 결과는 [progress](../progress.md) |
 | 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |
+| master 통합·운영 배포 상태 | [진행 상태](../progress.md) · 2026-10-20 브랜치 이력·운영 차이 대조·통합 시험·배포 확인 |
 | 전체 시험 경고·DB 초기화와 남은 확인사항 | [잔여 작업](../NEXT_STEPS.md) · [진행 상태](../progress.md) (2026-10-20 규칙 80절·의존성 경고·Windows 초기화 점검) |
 | 화면에서 사양서 읽기·목차와 요구사항 검색 | [HTML 사양서](SPEC.html) · 긴 표와 명령은 줄바꿈하며 작은 화면의 넓은 표는 세로 목록으로 표시 |
 | **기능별 사용법을 알기** | [사용 안내](USER_GUIDE.md) → 각 화면의 `사용법` 메뉴 |
@@ -41,6 +42,7 @@
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |
 | **에이전트와 개발할 때 폴더·지식을 어떻게 관리하는지** | [Context Engineering](CONTEXT_ENGINEERING.md) |
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
+| **Claude 메모리 사용과 캡처 잔존 확인** | [운영 점검](OPERATIONS.md#claude-메모리와-캡처-정리) · [사양 REQ-OPS-005](../SPEC.md#req-ops-005-claude-메모리-점검과-캡처-잔존-정리) |
 | **2026-10-13 후속 작업·다른 세션용 프롬프트(서버 실행 오류·진행 표시·남은 일)** | [후속 작업 프롬프트](local/CONTINUE_2026-10-13.md) |
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
 | **AI 모델·추론 정도 화면 설정** | [모델 설정 화면 계획](superpowers/plans/2026-10-13-ai-model-settings-ui.md) · [SPEC REQ-AICALL-007](../SPEC.md) (서버 안에서만 저장, 외부는 읽기 전용) |

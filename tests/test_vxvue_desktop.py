@@ -254,3 +254,18 @@ def test_status_connection_guide_keeps_the_server_address(monkeypatch):
     data = json.loads(reply["content"][0]["text"])
     assert data["connection"]["guide"] == "http://10.13.0.222:24357/vxvue-desktop"
     assert data["note"] == "장비 [IP_ADDRESS]"
+
+
+def test_tool_error_hides_server_path_containing_qa_identifier(monkeypatch):
+    """Validates: REQ-VXVUECHATBOT-011, NFR-PRIV-001."""
+    from app.modules.vxvue_chatbot import desktop
+
+    def unavailable(name, args):
+        raise ValueError("자료 읽기 실패: /home/ubuntu/qa/VP-1234.xlsx")
+
+    monkeypatch.setattr(desktop, "call", unavailable)
+    reply = desktop.dispatch({"method": "tools/call", "params": {"name": "get_document", "arguments": {}}})
+    assert reply["isError"] is True
+    text = " ".join(item["text"] for item in reply["content"])
+    assert "/home/" not in text and "[SERVER_PATH]" in text
+    assert "VP-1234" in text

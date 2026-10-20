@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import app_self_url  # noqa: E402
+from app.core.claude_resources import inspect_claude_resources  # noqa: E402
 
 
 def fetch_json(url: str) -> dict:
@@ -118,6 +119,13 @@ def main() -> int:
     if 0 <= free_gb < args.min_free_gb:
         alerts.append("disk_low")
 
+    try:
+        resources = inspect_claude_resources()
+    except Exception as exc:  # 다른 상태 점검 결과도 항상 남긴다.
+        resources = {"status": "alert", "errors": [type(exc).__name__]}
+    if resources.get("status") == "alert":
+        alerts.append("claude_resource_alert")
+
     print(json.dumps({
         "status": "alert" if alerts else "ok",
         "alerts": alerts,
@@ -125,6 +133,7 @@ def main() -> int:
         "daily_token_usage": token,
         "operations": operations,
         "checks": checks,
+        "claude_resources": resources,
     }, ensure_ascii=False))
     return 1 if alerts else 0
 
