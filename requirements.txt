@@ -1,10 +1,10 @@
-fastapi==0.116.1
-uvicorn[standard]==0.35.0
+fastapi==0.117.0
+uvicorn[standard]==0.36.0
 jinja2==3.1.6
 python-multipart==0.0.20
 pydantic>=2.12.5,<3
 pydantic-settings>=2.12.0,<3
-PyMuPDF==1.26.4
+PyMuPDF==1.26.6
 openpyxl==3.1.5
 rank-bm25==0.2.2
 google-genai==1.31.0

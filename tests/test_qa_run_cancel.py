@@ -244,7 +244,7 @@ def test_cancel_actual_http_and_native_worker(tmp_path, monkeypatch):
     listener = socket.socket()
     listener.bind(('127.0.0.1', 0))
     listener.listen(128)
-    server = uvicorn.Server(uvicorn.Config(app, log_level='error', lifespan='off', proxy_headers=False))
+    server = uvicorn.Server(uvicorn.Config(app, log_level='error', lifespan='off', proxy_headers=False, ws='none'))
     thread = threading.Thread(target=server.run, kwargs={'sockets': [listener]}, daemon=True)
     thread.start()
     worker = subprocess.Popen([sys.executable, str(worker_script), '--product', 'VXvue'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)

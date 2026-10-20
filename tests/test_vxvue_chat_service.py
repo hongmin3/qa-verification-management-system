@@ -85,6 +85,8 @@ def test_service_stores_ai_title(tmp_path, monkeypatch):
     chat = store.vxchat_create("owner")
     job = store.vxchat_submit("owner", chat["id"], "첫 질문", [])
     result = {"text": "답변", "title": "Theme 설정 사양", "citations": [], "usage": {"total_tokens": 1}, "model": "fake", "metrics": {}}
+    # 제목 저장을 확인한다. 실제 파일 준비는 위 통합 시험과 지식 사본 시험에서 검증한다.
+    monkeypatch.setattr(service, "prepare_knowledge", lambda *a, **k: {})
     monkeypatch.setattr(service.agent, "run", lambda *a, **k: result)
     service.run_job(store, SimpleNamespace(root=tmp_path), {**job, "owner": "owner"}, threading.Event())
     got = store.vxchat_get("owner", chat["id"])

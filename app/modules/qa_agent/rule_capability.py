@@ -78,7 +78,8 @@ def _cap(section: str, title: str, mode: str, status: str, where: str = "", note
     return section, RuleCapability(section=section, title=title, mode=mode, status=status, where=where, note=note)
 
 
-# 규칙 Rev1.18 기준 79개 최상위 절(1~56 은 Rev1.12 때, 57~79 는 2026-09-28 에 분류). 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
+# 최상위 절 1~79는 Rev1.18 기준이며, 통합 QA 규칙에 추가된 §80은 2026-10-20에 분류했다.
+# 절 번호는 제품 규칙 문서의 최상위 번호를 그대로 쓴다.
 # Rev1.18(2026-10-06)은 최상위 절을 더하지 않았다. §3.9 S09 를 Generator/Device 상태 동기화로 넓히고 §3·§17·§22·§29·§52·§62·§76 안에
 # Generator 문단을 더했다. 새 문단은 모두 Generator 쪽이라 아래 분류(§22~§26 S09 확장 시)는 그대로다.
 RULE_CAPABILITY: dict[str, RuleCapability] = dict(
@@ -236,6 +237,9 @@ RULE_CAPABILITY: dict[str, RuleCapability] = dict(
         _cap("78", "Rev.1.17 최종 자체검토 추가 항목", MODE_CODE, STATUS_PLANNED, note="QA Agent 미반영."),
         _cap("79", "Rev.1.17 핵심 강화 사항", MODE_OUT_OF_SCOPE, STATUS_NOT_PLANNED,
              note="규칙 문서의 변경 이력. 구현 대상이 아니다."),
+        _cap("80", "검증 완료 후 Issue 댓글·변경사항 Checklist TC 검토", MODE_DRAFT_ONLY, STATUS_NOT_PLANNED,
+             note="사용자 수행 결과와 최신 Checklist 원본을 대조해 댓글·이번 결과 기록·TC 보완을 제안하는 대화형 후속 업무다. "
+                  "규칙 원문 제공만으로 구현됨으로 보지 않는다. 수행 결과를 직접 확인하거나 Excel·Polarion을 자동 변경하는 기능은 없다."),
     ]
 )
 

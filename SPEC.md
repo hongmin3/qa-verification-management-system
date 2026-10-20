@@ -5470,6 +5470,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 2. `analyses`, `manual_changes`, `manual_release_findings`, `manual_revisions` 에 새로 생긴 열이 없으면 `ALTER TABLE … ADD COLUMN` 으로 더한다. 열을 지우거나 이름을 바꾸지 않는다.
 3. 기본 제품 `VXvue`, `Bellalun Viewer` 를 없을 때만 넣는다.
 4. 일일 QA 표(`daily_qa_*`)도 같은 방식으로 만든다.
+5. Windows에서 초기화 중 `SQLITE_CANTOPEN`(코드 14)이 발생하면 같은 DB로 최대 5회 시도한다. 다시 시도하기 전 0.05·0.10·0.15·0.20초를 차례로 기다린다. 마지막에도 실패하거나 다른 오류이면 원래 오류를 전달한다.
 
 | 표 | 담는 것 | 주인 |
 |---|---|---|
@@ -5486,6 +5487,8 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **지킬 것**
 
+- 재시도 때문에 기존 DB를 지우거나 새 파일로 바꾸지 않는다. 표 만들기·열 보강·기본값 등록은 다시 실행해도 기존 기록을 보존해야 한다.
+- 일반 조회·저장 작업에 초기화 재시도를 적용하지 않는다.
 - 모듈은 표를 직접 다루지 않는다. `app/core/storage.py` 에 메서드를 더해 쓴다.
 - 기능 전용 표는 다른 기능과 겹치지 않는 앞글자(`manual_`, `daily_qa_`)를 쓴다.
 - 운영 인스턴스나 개발자가 늘면 버전 관리되는 DB 변경 도구로 옮긴다. 이것은 문서 방침이고, 지금은 그런 도구가 없다.
@@ -9424,6 +9427,8 @@ REQ-CONF-001 은 자동 테스트가 따로 없다(`tests/test_backup.py`, `test
 
 REQ-STORE-002, 003 을 `tests/test_persistent_analyses.py` 로 확인한다: 저장 객체를 새로 만들어도 결과가 남음, 재시작 후 미완료 작업 실패 처리, `RUNNING` 만 실패 처리, 단계 기록 초기화·진행, 요청 입력 보존, 동시 작업 수 세기, 기능별 이력 분리, `module` 없는 옛 줄의 처리.
 
+REQ-STORE-002의 Windows 초기화 재시도는 `tests/test_storage_initialization.py`로 확인한다. 실제 Windows 파일 접근 제한, 초기화 단계별 일시 오류와 기존 기록 보존, 영구 오류의 종료, 다른 오류·다른 운영체제에서 재시도하지 않는 경우를 검사한다.
+
 `test_startup_releases_retired_queue_and_preserves_other_jobs`는 앱을 두 번 시작해 옛 Regression 대기만 종료하고, 요청·완료 결과·현재 기능의 대기를 보존하는지 확인한다.
 
 ### TEST-AICALL-001
@@ -10063,7 +10068,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
 | REQ-STORE-001 | `app/core/storage.py`, `app/core/config.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
-| REQ-STORE-002 | `app/core/storage.py`, `app/core/daily_qa_storage.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
+| REQ-STORE-002 | `app/core/storage.py`, `app/core/daily_qa_storage.py` | TEST-STORE-001: `tests/test_persistent_analyses.py`, `tests/test_storage_initialization.py` | implemented |
 | REQ-STORE-003 | `app/core/storage.py`, `app/main.py`, `app/modules/qa_agent/router.py`, `app/modules/manual_review/router.py` | TEST-STORE-001: `tests/test_persistent_analyses.py` | implemented |
 | REQ-AICALL-001 | `app/core/gemini_client.py`, `app/core/prompt_manager.py`, `app/core/claude_cli.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, TEST-AICALL-004: `tests/test_claude_cli_provider.py` | implemented |
 | REQ-AICALL-002 | `app/core/gemini_client.py`, `app/core/storage.py` | TEST-AICALL-001: `tests/test_gemini_client.py`, `tests/test_gemini_client_core.py` | implemented |

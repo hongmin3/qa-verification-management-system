@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -18,11 +20,20 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExe
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.initialize()
-        self._initialize_daily_qa()
-        self._initialize_qa_execution()
-        self._initialize_vxchat()
-        self._initialize_vxdesk()
+        for attempt in range(5):
+            try:
+                self.initialize()
+                self._initialize_daily_qa()
+                self._initialize_qa_execution()
+                self._initialize_vxchat()
+                self._initialize_vxdesk()
+                return
+            except sqlite3.OperationalError as exc:
+                # Windows can briefly deny opening the transaction journal.
+                # Initialization is repeatable; existing records stay in place.
+                if os.name != "nt" or getattr(exc, "sqlite_errorcode", None) != sqlite3.SQLITE_CANTOPEN or attempt == 4:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.db_path)
