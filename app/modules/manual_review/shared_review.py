@@ -323,6 +323,13 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
         kind = finding.get('kind', 'manual')
         if kind not in ('manual', 'proposal', 'source') or not targets and kind == 'manual':
             raise ValueError('원문 문단 또는 추가 제안·근거문서 구분이 필요합니다.')
+        if kind == 'source':
+            # 근거 문서의 문단 번호는 이 매뉴얼의 같은 번호 문단으로 해석되므로 받지 않는다.
+            if targets or finding.get('quote_paragraphs'):
+                raise ValueError(f'{finding["id"]}: 근거 문서 자체 검토 항목에는 검토 대상 매뉴얼의 문단 번호를 넣지 마세요. '
+                                 '근거 문서의 이름과 위치는 location에 쓰고, 매뉴얼 위치는 별도 manual 항목으로 만드세요.')
+            if not isinstance(finding.get('location'), str) or not finding['location'].strip():
+                raise ValueError(f'{finding["id"]}.location: 근거 문서 자체 검토 항목은 근거 문서 이름과 위치가 필요합니다.')
         if any(by_number[n].get('unsupported_symbols') for n in quote_numbers):
             raise ValueError('인용 문단에 글꼴 특수 기호가 있습니다. 해당 기호를 원본에서 확인하고 인용 문단을 분리하세요.')
         quotes = [{'paragraph': n, 'text': by_number[n]['text'], 'has_strike': by_number[n]['has_strike']}

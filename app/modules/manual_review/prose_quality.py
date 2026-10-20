@@ -12,6 +12,10 @@ _FILE_PATH = re.compile(
     r'''(?:[^\\/\r\n<>:"|?*]+?[\\/])*[^\\/\r\n<>:"|?*]+?\.[A-Za-z0-9]{1,10}'''
     r'''(?=$|[\s),;\]}>"'])''')
 _PATH = re.compile(r'''(?<!\w)(?:[A-Za-z]:[\\/]|\\\\|\.{1,2}[\\/]|/)[^\s<>"']+''')
+# 한글 바로 뒤에 붙은 숫자(예: 최대200개). 문서 이름(사양서4)과 서수(제2절)는 정상 표기다.
+_GLUED_DIGIT = re.compile(r'(?<=[가-힣])(?<!사양서)(?<!사양)\d')
+_ORDINAL = re.compile(r'(?:^|(?<=[\s(\[]))제(?=\d)')
+_QUOTED = re.compile(r'"[^"\n]*"|“[^”\n]*”|‘[^’\n]*’')
 
 
 def spacing_candidates(text):
@@ -21,7 +25,10 @@ def spacing_candidates(text):
     inspected = unicodedata.normalize('NFC', text)
     for pattern in (_CODE, _URL, _FILE_PATH, _PATH):
         inspected = pattern.sub(' ', inspected)
-    return [match.group() for match in _RUN.finditer(inspected)]
+    found = [match.group() for match in _RUN.finditer(inspected)]
+    unquoted = _ORDINAL.sub('#', _QUOTED.sub(' ', inspected))
+    found += [unquoted[max(0, m.start() - 4):m.end() + 2] for m in _GLUED_DIGIT.finditer(unquoted)]
+    return found
 
 
 def validate_report_prose(title, findings, memo_review, release_review, inventory):
@@ -48,6 +55,6 @@ def validate_report_prose(title, findings, memo_review, release_review, inventor
     if issues:
         labels = ', '.join(issues[:20]) + (' 등' if len(issues) > 20 else '')
         raise ValueError(f'분석 문장 띄어쓰기 확인 필요: {labels}. '
-                         f'한글 {MIN_KOREAN_RUN}자 이상이 공백 없이 이어지는 표현을 검토하고 다시 생성하세요. '
+                         f'한글 {MIN_KOREAN_RUN}자 이상이 공백 없이 이어지거나 한글 바로 뒤에 숫자가 붙은 표현(예: 최대200개)을 검토하고 다시 생성하세요. '
                          '현재 문구는 원문 그대로 유지하며 제품명·UI·코드·경로를 임의로 교정하지 마세요. '
                          '이 검사는 일반 맞춤법 전체를 판정하지 않습니다.')

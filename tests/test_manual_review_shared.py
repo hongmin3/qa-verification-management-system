@@ -224,3 +224,24 @@ def test_pdf_context_is_immutable_between_users(tmp_path):
     report = build_report(store, a['source_id'], [finding('R01', [1])])
     text = (Path(report['directory']) / 'manual_review.html').read_text('utf-8')
     assert '원본 SHA-256: ' + source['sha256'] in text
+
+
+# Validates: REQ-MANUAL-021 (근거 문서 자체 검토 항목의 위치)
+def test_source_finding_rejects_paragraph_numbers_of_another_document(tmp_path):
+    store, source = store_source(tmp_path)
+    sid = source['source_id']
+    for numbers in ({'paragraphs': [1]}, {'paragraphs': [], 'quote_paragraphs': [1]}):
+        item = dict(finding('SRC1', [], kind='source', location='릴리즈노트 문단 192'), **numbers)
+        with pytest.raises(ValueError, match='근거 문서'):
+            build_report(store, sid, [item])
+    assert not (store.base / 'reports').exists()
+
+
+def test_source_finding_requires_its_own_location_and_shows_no_manual_quote(tmp_path):
+    store, source = store_source(tmp_path)
+    sid = source['source_id']
+    with pytest.raises(ValueError, match='location'):
+        build_report(store, sid, [finding('SRC1', [], kind='source')])
+    result = build_report(store, sid, [finding('SRC1', [], kind='source', location='릴리즈노트 문단 192')])
+    row = json.loads((Path(result['directory']) / 'report.json').read_text('utf-8'))['findings'][0]
+    assert row['quotes'] == [] and row['location'] == '릴리즈노트 문단 192' and row['pages_final'] == '해당 없음'

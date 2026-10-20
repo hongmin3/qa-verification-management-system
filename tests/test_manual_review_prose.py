@@ -110,3 +110,20 @@ def test_local_cli_uses_same_check(tmp_path, capsys):
     path.write_text(json.dumps([finding(proposed=BAD)], ensure_ascii=False), encoding='utf-8')
     assert main(['report', '--workspace-root', str(tmp_path), '--source-id', sid, '--findings', str(path)]) == 2
     assert 'proposed' in capsys.readouterr().out
+
+
+# Validates: REQ-MANUAL-022 (한글 바로 뒤에 붙은 숫자)
+@pytest.mark.parametrize('text', ['최대200개까지 입력합니다.', '문단1149의 설명을 유지합니다.', '선택지의50일을60일로 고칩니다.'])
+def test_number_glued_to_hangul_requires_review(tmp_path, text):
+    store, sid = source(tmp_path)
+    with pytest.raises(ValueError, match=r'R01\.proposed'):
+        build_report(store, sid, [finding(proposed=text)])
+    assert not (store.base / 'reports').exists()
+
+
+def test_document_names_ordinals_and_quotes_keep_their_digits(tmp_path):
+    store, sid = source(tmp_path)
+    basis = '(사양서) VXvue 사양서4(261019).pdf 26쪽, VP-665와 제2절을 확인했습니다. 원문 "최대200개" 표기는 인용입니다.'
+    result = build_report(store, sid, [finding(basis=basis)])
+    payload = json.loads((Path(result['directory']) / 'report.json').read_text('utf-8'))
+    assert payload['findings'][0]['basis'] == basis
