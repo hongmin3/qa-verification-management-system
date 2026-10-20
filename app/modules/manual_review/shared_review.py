@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .source_inventory import MAX_FILE_BYTES, extract_inventory
+from .prose_quality import validate_report_prose
 
 _LOCK = threading.RLock()
 DECISIONS = ('수정 필수', '추가 필요', '보강 권장', '사양 확인 필요', '유지', '타 문서 위임 적절')
@@ -335,9 +336,10 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
                    pages_final=_page_text(selected, 'final', inventory['source_kind']))
         rows.append(row)
     rows.sort(key=lambda r: (r['kind'] == 'source', r['document_order'], r['id']))
+    validate_report_prose(title, rows, memo_review, release_review, inventory)
     key = _digest(json.dumps({'source_id': source_id, 'pdfs': inventory['pdfs'], 'title': title,
                               'findings': rows, 'memo_review': memo_review, 'release_review': release_review,
-                              'format_version': 1}, ensure_ascii=False, sort_keys=True).encode())
+                              'format_version': 2}, ensure_ascii=False, sort_keys=True).encode())
     folder = store.base / 'reports' / key
     folder.mkdir(parents=True, exist_ok=True)
     payload = {'source_id': source_id, 'source_sha256': inventory['sha256'], 'source_name': inventory['name'], 'source_kind': inventory['source_kind'],

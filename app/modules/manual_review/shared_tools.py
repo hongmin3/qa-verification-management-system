@@ -16,7 +16,7 @@ def definitions():
              'view': {'type': 'string', 'enum': ['summary', 'paragraphs', 'comments', 'page', 'images']}, 'offset': {'type': 'integer', 'minimum': 0},
              'limit': {'type': 'integer', 'minimum': 1, 'maximum': 40}, 'paragraphs': numbers,
              'page': {'type': 'integer', 'minimum': 1}, 'basis': {'type': 'string', 'enum': ['source', 'saved', 'final']}}, 'additionalProperties': False}},
-        {'name': 'make_manual_review_report', 'description': '사용자가 요청한 매뉴얼 검토보고서 HTML·Excel 생성. 원본 수정 없음. 현재 문구는 지정한 quote_paragraphs(생략 시 paragraphs)의 원문에서 서버가 직접 채움. 임의 요약문 전달 불가. 원문 순서 정렬, ID 유지, 실제 쪽수/문단 구분. source/proposal은 문단 없는 항목도 가능.',
+        {'name': 'make_manual_review_report', 'description': '사용자가 요청한 매뉴얼 검토보고서 HTML·Excel 생성. 원본 수정 없음. 현재 문구는 지정한 quote_paragraphs(생략 시 paragraphs)의 원문에서 서버가 직접 채움. 임의 요약문 전달 불가. 수정안·근거·이유·설명·메모·릴리즈 대조는 자연스러운 띄어쓰기로 작성. 띄어쓰기 확인 오류는 해당 필드를 교정한 뒤 다시 생성하며 원문·제품명은 임의 변경하지 않기. 원문 순서 정렬, ID 유지, 실제 쪽수/문단 구분. source/proposal은 문단 없는 항목도 가능.',
          'inputSchema': {'type': 'object', 'properties': {'source_id': {'type': 'string'}, 'title': {'type': 'string'},
              'memo_review': {'type': 'array', 'maxItems': 1000, 'items': {'type': 'object'}},
              'release_review': {'type': 'array', 'maxItems': 1000, 'items': {'type': 'object'}},

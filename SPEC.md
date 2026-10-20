@@ -3290,6 +3290,19 @@ JSON 답의 내용이다.
 
 **지킬 것** 원본·지식 목록·제품 DB·이슈는 변경하지 않는다. 새 업로드와 생성 보고서는 별도 작업 폴더에만 저장한다. 자료 경로를 직접 입력받지 않으며 파일 형식·크기·자료 ID·문단 범위·해시를 검사한다. 민감정보 보호로 조회 문구가 바뀌면 정확한 원문 인용과 구분한다. 파일 생성은 사용자가 요청했을 때만 수행한다.
 
+### REQ-MANUAL-022 분석 문장의 띄어쓰기 검사
+
+**하는 일** 보고서의 원문 인용과 AI가 작성한 설명을 구분한다. 수정안·근거·이유·검토 설명·메모와 릴리즈 대조 설명에 공백 없이 이어진 긴 한글 표현이 있으면 파일 생성 전에 재검토를 요청한다.
+
+**순서**
+
+1. 공용 보고서 생성과 로컬 CLI는 같은 검사를 수행한다. 보고서 제목과 항목 제목·수정안·근거·공통 대조·이유·검토 설명, 메모·릴리즈 대조의 텍스트 값을 검사한다.
+2. 한글 음절 12자 이상이 공백 없이 이어지면 의심 후보로 식별하고 항목 ID·필드와 함께 교정 요청을 반환한다. 임의의 공백을 넣거나 AI를 자동 재호출하지 않는다. 일반 맞춤법 전체를 판정하는 기능은 아니다.
+3. 서버에서 직접 채우는 현재 문구와 변경 추적·메모 원문은 교정하지 않는다. 원본과 완전히 같은 인용 값, 코드·파일 경로·URL은 구분한다. 제품명·UI·식별자를 자동으로 바꾸지 않는다.
+4. 검사를 통과한 동일 데이터로 HTML·Excel을 만든다. 실패한 입력으로 일부 보고서 파일을 먼저 생성하지 않는다. 교정한 문장과 원문 인용은 각자의 공백을 그대로 유지한다.
+
+**운영 지침** 통합 QA 원문은 자연스러운 한국어와 원문 인용 보존 기준을 별도로 관리한다. 기존 연결은 다음 작업에서 상태와 최신 지침을 끝까지 읽어 변경된 업무 규칙을 받는다. 지침 리비전과 연결 프로그램 버전을 구별한다.
+
 ### 5.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)
 
 **이 기능은**
@@ -10041,6 +10054,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-MANUAL-019 | `app/modules/manual_review/intake.py`, `app/modules/manual_review/router.py`, `app/modules/manual_review/templates/index.html` | TEST-MANUAL-022: `tests/test_manual_review_intake.py`, `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-020 | `app/modules/manual_review/text_checks.py`, `app/modules/manual_review/reviewer.py`, `app/modules/manual_review/local_review.py`, `app/modules/manual_review/comment_writer.py` | TEST-MANUAL-023: `tests/test_manual_review_text_checks.py`, `tests/test_manual_review_reviewer.py`, `tests/test_manual_review_local.py` | implemented |
 | REQ-MANUAL-021 | `app/modules/manual_review/source_inventory.py`, `app/modules/manual_review/shared_review.py`, `app/modules/vxvue_chatbot/desktop.py` | `tests/test_manual_review_shared.py` | implemented |
+| REQ-MANUAL-022 | `app/modules/manual_review/prose_quality.py`, `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py` | `tests/test_manual_review_prose.py` | implemented |
 | NFR-MANUAL-001 | `app/core/manual_hub_client.py`, `app/modules/manual_review/cross_manual.py` | TEST-MANUAL-018: `tests/test_manual_hub_client.py`, `tests/test_cross_manual.py` | implemented |
 | NFR-MANUAL-002 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/srs_evidence.py` | TEST-MANUAL-020: `tests/test_manual_review_ai_client.py` | implemented |
 | NFR-MANUAL-003 | `app/modules/manual_review/comment_writer.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-020: `tests/test_comment_writer.py` | implemented |
