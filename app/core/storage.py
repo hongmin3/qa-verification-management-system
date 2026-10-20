@@ -15,6 +15,9 @@ from app.core.vxdesk_storage import VxDeskStorageMixin
 
 from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
 
+#: 한 번만 보내는 알림을 선점한 뒤 이만큼 지나도 보낸 기록이 없으면 버려진 선점으로 본다 (REQ-QAINTEL-049).
+STALE_CLAIM_MINUTES = 30
+
 
 class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExecutionStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
@@ -833,12 +836,19 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExe
 
         `last_claimed_at` 을 갱신하므로 발송이 실패해도 쿨다운이 걸린다 — 메일 서버가 죽어
         있을 때 매 실행마다 SMTP 접속을 시도하지 않게 하기 위함이다.
+
+        한 번만 보내는 알림(`cooldown_before_iso=""`)은 선점한 뒤 보내기 전에 프로세스가 죽으면 보낸 기록 없이
+        남는다. 선점한 지 `STALE_CLAIM_MINUTES` 가 지나도 보낸 기록이 없으면 다시 선점하게 한다 (REQ-QAINTEL-049).
         """
-        now = datetime.now(timezone.utc).isoformat()
+        now_at = datetime.now(timezone.utc)
+        now = now_at.isoformat()
+        stale_before = (now_at - timedelta(minutes=STALE_CLAIM_MINUTES)).isoformat()
         with self.connect() as db:
-            row = db.execute("SELECT last_claimed_at FROM notifications WHERE kind=?", (kind,)).fetchone()
+            row = db.execute("SELECT last_claimed_at, last_sent_at FROM notifications WHERE kind=?", (kind,)).fetchone()
             if row is not None and row["last_claimed_at"] > cooldown_before_iso:
-                return False
+                abandoned = not cooldown_before_iso and row["last_sent_at"] is None and row["last_claimed_at"] < stale_before
+                if not abandoned:
+                    return False
             db.execute(
                 "INSERT INTO notifications(kind,last_sent_at,last_claimed_at,sent_count) VALUES(?,NULL,?,0) "
                 "ON CONFLICT(kind) DO UPDATE SET last_claimed_at=excluded.last_claimed_at",

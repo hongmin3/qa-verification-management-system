@@ -306,3 +306,25 @@ def test_reporter_group_keeps_all_issues_of_older_numbers(tmp_path):
     assert groups == ["■ 김홍민 (이슈 13건)", "■ 이은경B (이슈 58건)"]
     assert all(f"{item['id']} {item['title']}" in text for item in mine)
     assert "나머지" not in text
+
+
+def test_sent_auto_mail_records_message_id_and_masked_recipient(tmp_path):
+    """자동 메일을 보내면 실행 기록에 발송 시각·가린 수신 주소·Message-ID 가 남는다 (REQ-ALMCHG-004)."""
+    h = make(tmp_path)
+    h.run(FRI, trigger="collect")
+    h.issues = [issue_item("VP-100", "2026-10-17T00:00:00Z", ["VP-10"], review="", status="closed", title="저장 오류")]
+    h.send_result = {"status": "sent", "message_id": "<m1@example>", "recipient_masks": ["qa***@example.com"]}
+    outcome = h.run(MON, trigger="collect")
+    mail = outcome["summary"]["change_mail"]
+    assert mail["status"] == "sent" and mail["message_id"] == "<m1@example>"
+    assert mail["note"].startswith("발송 ") and "수신 qa***@example.com" in mail["note"]
+    assert mail["note"].endswith("Message-ID <m1@example>")
+
+
+def test_unsent_auto_mail_has_no_send_note(tmp_path):
+    h = make(tmp_path)
+    h.run(FRI, trigger="collect")
+    h.send_result = {"status": "failed", "error": "smtp"}
+    h.issues = [issue_item("VP-100", "2026-10-17T00:00:00Z", ["VP-10"], review="", status="closed", title="저장 오류")]
+    mail = h.run(MON, trigger="collect")["summary"]["change_mail"]
+    assert mail["status"] == "failed" and "note" not in mail and "message_id" not in mail

@@ -55,6 +55,8 @@ class Harness:
         self.usage: dict | None = None
         self.outcome_override = None
         self.sent: list = []
+        #: 가짜 발송기가 돌려줄 발송 결과. Message-ID 기록 시험이 바꾼다.
+        self.send_result: dict = {"status": "sent"}
         self.polarion: FakePolarion | None = None
 
     # -- 가짜 Claude --------------------------------------------------------------
@@ -89,7 +91,7 @@ class Harness:
             kwargs['rules_state'] = rules_ok(self.tmp)
         kwargs.setdefault("spec_chunks_loader", lambda: ([], {}, []))
         return run_daily(self.cfg, today=day, polarion_factory=lambda: self.polarion, inputs=self.inputs, store=self.store,
-                         send_email=lambda *args: self.sent.append(args) or {"status": "sent"}, **kwargs)
+                         send_email=lambda *args: self.sent.append(args) or dict(self.send_result), **kwargs)
 
     @property
     def summary_sent(self) -> list:

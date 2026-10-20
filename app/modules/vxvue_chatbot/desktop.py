@@ -9,6 +9,7 @@ import threading
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
+from starlette.requests import ClientDisconnect
 
 from app.core.config import get_settings
 from app.core.security_filter import mask_text
@@ -147,6 +148,33 @@ def snapshot(snapshot_id=None):
         return _current
 
 
+_PATH_KEYS = ("file", "path", "root")
+
+
+def _client_path(key, value, root):
+    """Server paths become paths inside the knowledge folder; anything outside it keeps only its file name."""
+    text = value.replace("\\", "/")
+    if not (text.startswith("/") or text.startswith("//") or (len(text) > 2 and text[1] == ":" and text[2] == "/")):
+        return value
+    if key == "root":
+        return ""
+    for base in (f"{root}/original/", f"{root}/"):
+        if text.startswith(base):
+            return text[len(base):]
+    return text.rsplit("/", 1)[-1]
+
+
+def client_paths(value, root):
+    """No server directory layout reaches a desktop client (REQ-VXVUECHATBOT-011)."""
+    root = str(root).replace("\\", "/").rstrip("/")
+    if isinstance(value, list):
+        return [client_paths(item, root) for item in value]
+    if isinstance(value, dict):
+        return {k: _client_path(k, v, root) if k in _PATH_KEYS and isinstance(v, str) else client_paths(v, root)
+                for k, v in value.items()}
+    return value
+
+
 class DesktopTools(KnowledgeTools):
     def _decorate(self, value):
         result = super()._decorate(value)
@@ -156,7 +184,7 @@ class DesktopTools(KnowledgeTools):
             if isinstance(v, dict):
                 return {k: clean(x) for k, x in v.items() if k not in ("reference_url", "file_path")}
             return v
-        return clean(result)
+        return client_paths(clean(result), self.snapshot["root"])
 
     def _write_trace(self, citations):
         pass  # No web conversation or browser source URL belongs to a desktop client.
@@ -248,7 +276,12 @@ def dispatch(message, context=None):
         try:
             data = call(params["name"], params.get("arguments") or {})
             if params["name"] == "get_status" and isinstance(data, dict):
-                data = {**data, "connection": connection_info(context)}
+                # The guide points at the server this client is already connected to, so it is added after
+                # protection; every other value in the status is still protected.
+                from app.core.security_filter import mask_payload
+                masked, _ = mask_payload(data)
+                text = json.dumps({**masked, "connection": connection_info(context)}, ensure_ascii=False, separators=(",", ":"))
+                return {"content": [{"type": "text", "text": text}], "isError": False}
             if isinstance(data, list):
                 content = data
             elif params['name'] == 'make_manual_review_report':
@@ -259,7 +292,7 @@ def dispatch(message, context=None):
                 parsed = urlsplit(base)
                 # Generated download routes are infrastructure, not source-document excerpts.
                 # Preserve only these validated links; all quoted document content stays masked.
-                if parsed.scheme in ('http', 'https') and parsed.netloc and not parsed.username and not parsed.query and not parsed.fragment:
+                if parsed.scheme in ('http', 'https') and parsed.netloc and parsed.username is None and parsed.password is None and not parsed.query and not parsed.fragment:
                     for row, original in zip(masked['files'], data['files']):
                         row['url'] = base + original['url']
                 content = [{'type': 'text', 'text': json.dumps(masked, ensure_ascii=False)}]
@@ -311,7 +344,12 @@ async def _handle(request, notification_status):
         identity = await run_in_threadpool(_authorize, request)
     except enroll.AccessError as error:
         return _denied(error)
-    message = await _read_message(request)
+    try:
+        message = await _read_message(request)
+    except ClientDisconnect:
+        # The client gave up mid-request (Desktop restart, network drop). Nothing to answer; not a server fault.
+        logger.info("vxvue-desktop client disconnected before the request was read")
+        return Response(status_code=499)
     if message is None:
         return Response(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "올바른 MCP 요청이 필요합니다."}}), media_type="application/json", status_code=400)
     if "id" not in message:

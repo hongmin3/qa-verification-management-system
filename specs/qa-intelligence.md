@@ -1746,6 +1746,9 @@ Windows에서 소유한 하위 프로세스까지 종료할 준비가 실패하�
 - 본문: 실행 번호, 남은 대기 건수, 증거 파일 이름(있을 때), 이번 실행의 사용량(실행 전·후 5시간·주간 사용률, 호출 수, 초기화 시각). 값을 읽지 못한 칸은 `사용률 미확인`으로 쓴다.
 - 같은 한도 묶음(`limit_evidence.episode_key`가 같은 한도, 즉 종류와 초기화 시각이 같은 한도)에는 다시 보내지 않는다. 보낸 묶음은 `notifications` 표에 남겨 프로세스가 달라도 지켜진다.
 - 사용률 기준으로 멈춘 경우의 묶음은 `USAGE:<창>:<초기화 시각>`이다. 같은 창이 초기화되기 전에는 한 번만 보낸다.
+- 보낼 차례를 잡은 뒤 보내기 전에 프로세스가 끝나면(재시작·강제 종료) 그 묶음은 보낸 기록이 없이 남는다. 잡은 지 30분이 지나도 보낸 기록이 없으면 다음 멈춤이 다시 보낼 수 있다.
+
+  이유: 배포 때 서비스를 강제로 끝낸 적이 있다. 이 규칙이 없으면 그 묶음의 알림은 다시는 나가지 않는다.
 - 메일을 못 보내도 점검은 멈추지 않는다.
 
 **이어 하기** 한도가 풀릴 초기화 시각 5분 뒤(`daily_qa.intelligence.catchup_delay_minutes`)에 이어 하도록 기록하고, 10분마다 도는 `qa_agent_limit_catchup`이 그 시각이 지난 제품의 점검을 다시 띄운다. 절약 모드에서도 동작한다. 자동 점검이 꺼졌거나(`off`), 주간 모드이거나, 예약 자체를 끈 서버에서는 이어 하지 않는다. 초기화 시각을 모르는 한도는 이어 하기 기록을 남기지 않는다.
@@ -2168,7 +2171,7 @@ REQ-QAINTEL-039
 | REQ-QAINTEL-046 | `app/modules/daily_qa/target_reuse.py`, `app/core/qa_execution_storage.py`, `app/modules/qa_agent/result_views.py`, `app/modules/qa_agent/templates/results.html`, `app/modules/qa_agent/templates/_result_card.html`, `app/modules/qa_agent/templates/_result_filters.html` | `tests/test_qa_target_reuse.py`, `tests/test_qa_issue_reporter.py`, TEST-QAINTEL-029: `tests/test_qa_results_reader.py` | implemented |
 | REQ-QAINTEL-047 | `app/modules/qa_agent/router.py`, `app/modules/qa_agent/templates/finding_detail.html` | `tests/test_qa_results_reader.py`, `tests/test_qa_finding_explanation.py` | implemented |
 | REQ-QAINTEL-048 | `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/report.py`, `app/modules/daily_qa/templates/report_email.html`, `app/core/claude_usage.py`, `app/core/qa_execution_storage.py` | `tests/test_qa_savings_workflow.py`, `tests/test_qa_workflow_email.py`, `tests/test_claude_usage.py` | implemented |
-| REQ-QAINTEL-049 | `app/core/notifier.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py` | `tests/test_qa_limit_alert.py`, `tests/test_notifier.py` | implemented |
+| REQ-QAINTEL-049 | `app/core/notifier.py`, `app/core/storage.py`, `app/modules/daily_qa/pipeline.py`, `app/modules/daily_qa/automation_policy.py`, `app/modules/daily_qa/scheduled_jobs.py` | `tests/test_qa_limit_alert.py`, `tests/test_notifier.py` | implemented |
 | NFR-QAINTEL-001 | `app/modules/daily_qa/pipeline.py` | TEST-QAINTEL-005: `tests/test_qa_intel_pipeline.py` | verified |
 | NFR-QAINTEL-002 | `app/modules/daily_qa/product_adapter.py`, `docs/PRODUCT_ONBOARDING.md` | TEST-QAINTEL-002: `tests/test_qa_intel_products.py` | verified |
 

@@ -144,3 +144,79 @@ def test_payload_is_masked_recursively() -> None:
 def test_payload_keys_are_not_masked() -> None:
     masked, _ = mask_payload({"patient_id": "P1"})
     assert "patient_id" in masked
+
+
+# --- 버전과 IP 구분 (NFR-PRIV-001) -----------------------------------------------
+# 운영 Desktop 응답에서 `1.0.0.3`·`VSS.Vieworks 1.0.2.3` 같은 제품 버전이 `[IP_ADDRESS]` 로 바뀌어
+# 버전별 이력을 읽을 수 없었다(2026-10-19 get_status·get_generator_evidence 확인).
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "V1.0.0.3 대신 1.0.0.3 으로 적은 열",
+        "VSS.Vieworks 1.0.2.3\nVXvue 1.1.0.1",
+        "ECORAY 결과 VSS 1.0.12.3",
+        "1.0.10.14",
+        "제너레이터 F/W 2.38.1.4",
+    ],
+)
+def test_bare_four_part_versions_survive(text: str) -> None:
+    assert _mask(text) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("서버 10.13.0.222 접속", "서버 [IP_ADDRESS] 접속"),
+        ("장비 172.20.1.5 와 연결", "장비 [IP_ADDRESS] 와 연결"),
+        ("Console 192.168.0.10", "Console [IP_ADDRESS]"),
+        ("loopback 127.0.0.1", "loopback [IP_ADDRESS]"),
+        ("주소 http://8.8.4.4/x", "주소 http://[IP_ADDRESS]/x"),
+        ("host=1.2.3.4", "host=[IP_ADDRESS]"),
+        ("DNS 서버 IP: 8.8.8.8", "DNS 서버 IP: [IP_ADDRESS]"),
+        ("1.2.3.4:8080 로 연결", "[IP_ADDRESS]:8080 로 연결"),
+        ("대역 3.4.5.0/24", "대역 [IP_ADDRESS]/24"),
+    ],
+)
+def test_network_addresses_are_still_masked(text: str, expected: str) -> None:
+    assert _mask(text) == expected
+
+
+# --- 서버 경로 -------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Ambiguous latest revision: /home/ubuntu/ai-regression-impact-analyzer/data/x.xlsx",
+        "읽기 실패 /opt/qa-manual-hub/logs/backup.log",
+        "/srv/qa/original/(TC) 목록.xlsx",
+    ],
+)
+def test_server_paths_are_masked(text: str) -> None:
+    masked = _mask(text)
+    assert "[SERVER_PATH]" in masked and "/home/" not in masked and "/opt/" not in masked and "/srv/" not in masked
+
+
+@pytest.mark.parametrize("path,tokens", [
+    ("/home/ubuntu/qa/VP-1234.xlsx", ["VP-1234"]),
+    ("/opt/qa/V1.0.11/report.txt", ["V1.0.11"]),
+    ("/srv/qa/0x30402/report.txt", ["0x30402"]),
+    ("/home/ubuntu/VP-1234/V1.0.11/report.txt", ["VP-1234", "V1.0.11"]),
+    ("/home/ubuntu/qa/(0010,0010)/report.txt", ["(0010,0010)"]),
+    ("/srv/qa/( 0010 , 0010 )/VP-1234/report.txt", ["( 0010 , 0010 )", "VP-1234"]),
+])
+def test_server_path_with_qa_identifiers_hides_layout_and_keeps_tokens(path, tokens):
+    """Validates: NFR-PRIV-001. 경로 보호와 QA 식별자 보존을 함께 확인한다."""
+    masked, report = mask_text("읽기 실패 " + path)
+    assert "[SERVER_PATH]" in masked
+    assert not any(prefix in masked for prefix in ("/home/", "/opt/", "/srv/"))
+    assert all(token in masked for token in tokens)
+    assert "report.txt" not in masked
+    assert report.counts["server_path"] == 1
+
+
+@pytest.mark.parametrize("text", ["http://10.13.0.222:24357/qa-agent/changes", "/qa-agent/runs/1 화면", "docs/OPERATIONS.md"])
+def test_web_paths_are_not_server_paths(text: str) -> None:
+    assert "[SERVER_PATH]" not in _mask(text)

@@ -100,7 +100,7 @@ def _sentence(key: str, stage: dict, dry_run: bool) -> str:
     return ""
 
 
-def _change_mail_line(mail) -> str:
+def change_mail_line(mail) -> str:
     """수집·저장 직후 보낸 변경 리포트 메일의 결과 한 줄 (REQ-ALMCHG-004). 보낸 기록이 없으면 빈 문자열."""
     if not isinstance(mail, dict) or not mail.get("status"):
         return ""
@@ -108,7 +108,8 @@ def _change_mail_line(mail) -> str:
     reason = str(mail.get("reason") or "").strip()
     if reason and not label.endswith(")"):
         label = f"{label}({reason})"
-    return f"변경 리포트 메일: {label}"
+    note = str(mail.get("note") or "").strip() if mail["status"] == "sent" else ""
+    return f"변경 리포트 메일: {label}" + (f" · {note}" if note else "")
 
 
 def _tile(label: str, value, hint: str = "") -> dict:
@@ -293,7 +294,7 @@ def build(run: dict, events: list[dict], cards: list[dict], files: list[str]) ->
         "mail": MAIL_LABELS.get(run.get("email_status") or "", run.get("email_status") or "-"),
         "trigger": "요청 점검" if "on_demand" in stages else TRIGGER_LABELS.get(summary.get("trigger", ""), summary.get("trigger", "") or "-"),
         "dry_run": dry_run,
-        "change_mail": _change_mail_line(summary.get("change_mail")),
+        "change_mail": change_mail_line(summary.get("change_mail")),
         "audit": audit_box,
         "audit_remaining": summary.get("issue_audit_remaining"),
     }

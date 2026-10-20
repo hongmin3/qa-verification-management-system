@@ -28,10 +28,11 @@ from dataclasses import dataclass, field
 # 네 자리 점 표기 버전(`1.1.0.001`)은 여기 두지 않는다 — 보호 대상으로 넣으면 같은 모양의
 # IPv4(`10.13.0.222`)까지 함께 보호돼 IP 가 그대로 나간다. 버전과 IP 의 구분은 `ip` 규칙의
 # `skip_if` 가 한다.
+_DICOM_TAG_PATTERN = re.compile(r"\(\s*[0-9A-Fa-f]{4}\s*,\s*[0-9A-Fa-f]{4}\s*\)")
 KEEP_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\b[A-Z]{2,5}-\d{1,6}\b"),  # VP-1234, SRS-1234
     re.compile(r"\b0[xX][0-9A-Fa-f]+\b"),  # 0x1234
-    re.compile(r"\(\s*[0-9A-Fa-f]{4}\s*,\s*[0-9A-Fa-f]{4}\s*\)"),  # DICOM Tag
+    _DICOM_TAG_PATTERN,
     re.compile(r"\b[Vv]\d+(?:\.\d+)+(?:[A-Za-z]\d*)?\b"),  # V1.0.11 (v 접두사가 붙은 것만)
 )
 
@@ -45,6 +46,35 @@ def _looks_like_version(value: str) -> bool:
     return any(len(part) > 1 and part.startswith("0") for part in value.split("."))
 
 
+# 사내망·자기 PC 주소 범위. 이 범위의 값은 앞뒤 글과 상관없이 주소로 보고 가린다.
+_PRIVATE_FIRST = {"10", "127"}
+_PRIVATE_PAIRS = {("192", "168"), ("169", "254")} | {("172", str(n)) for n in range(16, 32)}
+# 바로 앞에 이런 말이 있으면 주소다: `http://`, `서버 IP:`, `host=` 같은 것.
+_ADDRESS_BEFORE = re.compile(
+    r"(?:://|\\\\|(?i:\b(?:ip|ipv4|host|hostname|server|addr|address|gateway|dns|netmask|subnet))"
+    r"|주소|서버|호스트|게이트웨이|서브넷)\s*[:=]?\s*$"
+)
+# 바로 뒤에 포트(`:8080`)나 대역(`/24`)이 붙으면 주소다.
+_ADDRESS_AFTER = re.compile(r"^(?::\d{1,5}\b|/\d{1,2}\b)")
+
+
+def _ip_is_version(text: str, start: int, end: int) -> bool:
+    """점 네 개짜리 숫자가 제품 버전인지 판단한다 (NFR-PRIV-001).
+
+    `1.0.0.3`·`VSS.Vieworks 1.0.2.3` 같은 제품 버전은 모양이 IPv4 와 같다. 그래서 주소일 때만 가린다.
+    사내망 범위(10.x, 172.16~31.x, 192.168.x, 127.x, 169.254.x)이거나 앞뒤에 주소라는 표시가 있으면 주소다.
+    """
+    value = text[start:end]
+    if _looks_like_version(value):
+        return True
+    parts = value.split(".")
+    if parts[0] in _PRIVATE_FIRST or (parts[0], parts[1]) in _PRIVATE_PAIRS:
+        return False
+    if _ADDRESS_BEFORE.search(text[max(0, start - 24):start]) or _ADDRESS_AFTER.match(text[end:end + 6]):
+        return False
+    return True
+
+
 @dataclass(frozen=True)
 class MaskRule:
     code: str
@@ -52,7 +82,7 @@ class MaskRule:
     pattern: re.Pattern[str]
     #: 정규식 그룹 번호. 0이면 전체 일치를 바꾼다.
     group: int = 0
-    #: 일치했지만 마스킹하지 않을 조건. 규칙별 예외 판정에 쓴다.
+    #: 일치했지만 마스킹하지 않을 조건. `(전체 글, 시작, 끝)` 을 받아 참이면 건너뛴다.
     skip_if: object = None
 
 
@@ -62,14 +92,17 @@ MASK_RULES: tuple[MaskRule, ...] = (
     # 사내 절대 경로. 부서 폴더 체계가 그대로 나가지 않게 한다.
     MaskRule("unc_path", "[NETWORK_PATH]", re.compile(r"\\\\[\w.-]+(?:\\[^\s\\|]+)+")),
     MaskRule("local_path", "[LOCAL_PATH]", re.compile(r"\b[A-Za-z]:\\(?:[^\s\\|]+\\){1,}[^\s\\|]*")),
+    # 서버의 절대 경로. 배포 폴더 구성이 응답·오류 문구로 나가지 않게 한다. 웹 주소의 경로(`http://x/home`)는 제외한다.
+    MaskRule("server_path", "[SERVER_PATH]",
+             re.compile(rf"(?<![\w.:/~-])/(?:home|opt|srv|var|tmp|root|mnt|usr|etc)/(?:{_DICOM_TAG_PATTERN.pattern}|[^\s\"'|,;])+")),
     # 이메일이 가장 확실한 신호다 (도메인에 병원명이 들어가는 경우도 함께 가려진다).
     MaskRule("email", "[EMAIL]", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")),
-    # IPv4. 각 옥텟을 0~255로 제한하고, 0으로 채운 자리가 있으면 버전으로 보고 건너뛴다.
+    # IPv4. 각 옥텟을 0~255로 제한한다. 사내망 범위이거나 앞뒤에 주소 표시가 있을 때만 가리고 나머지는 버전으로 둔다.
     MaskRule(
         "ip",
         "[IP_ADDRESS]",
         re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b"),
-        skip_if=_looks_like_version,
+        skip_if=_ip_is_version,
     ),
     # 라벨이 붙은 값만 잡는다. 라벨 없는 사람 이름은 오탐이 커서 대상으로 두지 않는다.
     MaskRule("patient_id", "[PATIENT_ID]", re.compile(r"(?i)\b(?:patient\s*id|환자\s*(?:등록)?번호|PID)\s*[:=]?\s*([\w-]{2,32})"), group=1),
@@ -134,12 +167,17 @@ def mask_text(text: str, rules: tuple[MaskRule, ...] = MASK_RULES) -> tuple[str,
         changed = 0
         for match in rule.pattern.finditer(result):
             start, end = match.span(rule.group)
-            if start < 0 or _overlaps((start, end), keep):
+            if start < 0 or (rule.code != "server_path" and _overlaps((start, end), keep)):
                 continue
-            if rule.skip_if is not None and rule.skip_if(result[start:end]):
+            if rule.skip_if is not None and rule.skip_if(result, start, end):
                 continue
             pieces.append(result[cursor:start])
             pieces.append(rule.placeholder)
+            if rule.code == "server_path":
+                # 경로는 가리고 그 안의 QA 식별자는 경로 밖에 남긴다.
+                tokens = [result[a:b] for a, b in sorted(keep) if start <= a and b <= end]
+                if tokens:
+                    pieces.append(" " + " ".join(tokens))
             cursor = end
             changed += 1
         if changed:
