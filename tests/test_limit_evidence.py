@@ -19,6 +19,39 @@ NOW = datetime(2026, 10, 14, 11, 26, 0, tzinfo=timezone.utc)   # 20:26 KST
 SESSION = claude_limits.LimitInfo(claude_limits.KIND_SESSION, "2026-10-14T13:00:00+00:00", "You've hit your session limit · resets 10pm")
 
 
+def test_terminal_timeout_stops_capture_scope_and_display(monkeypatch, tmp_path):
+    """창만 종료해서 script/Claude를 남기는 기존 경로를 막는다."""
+    from app.core import claude_resources
+    stopped, launched = [], []
+    class Process:
+        def __init__(self, args, **kwargs):
+            self.args = args
+            self.returncode = None
+            launched.append(self)
+        def terminate(self):
+            self.returncode = -15
+        def kill(self):
+            self.returncode = -9
+        def wait(self, timeout=None):
+            self.returncode = 0 if self.returncode is None else self.returncode
+            return self.returncode
+        def poll(self):
+            return self.returncode
+    monkeypatch.setattr(limit_evidence.subprocess, "Popen", Process)
+    monkeypatch.setattr(limit_evidence, "_wait_screen", lambda *a: "")
+    monkeypatch.setattr(limit_evidence, "_free_display", lambda: 95)
+    monkeypatch.setattr(Path, "exists", lambda p: True)
+    monkeypatch.setattr(Path, "mkdir", lambda *a, **kw: None)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(claude_resources, "stop_scope", stopped.append)
+    result = limit_evidence.run_xterm(tmp_path, "claude", 60)
+    assert result.reason == "timeout"
+    assert len(stopped) == 1
+    assert len(launched) == 2
+    assert launched[0].returncode is not None
+    assert launched[1].args[0] == "systemd-run"
+
+
 class FakeSettings:
     def __init__(self, root: Path, **values):
         self.root = root

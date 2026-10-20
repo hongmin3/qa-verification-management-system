@@ -29,11 +29,12 @@ from typing import Callable
 
 from app.modules.daily_qa import claude_limits
 from app.core.claude_cli import build_env
+from app.core import claude_resources
 
 logger = logging.getLogger("regression_analyzer")
 
 COLS, ROWS = 120, 36
-TOOLS = ("Xvfb", "xterm", "xdotool", "import", "script")
+TOOLS = ("Xvfb", "xterm", "xdotool", "import", "script", "systemd-run", "systemctl")
 CAPTURE_KINDS = (claude_limits.KIND_SESSION, claude_limits.KIND_WEEKLY, claude_limits.KIND_UNKNOWN)
 LIMIT_NAMES = {"session": "세션한도", "week": "주간한도"}
 LEDGER = "episodes.json"
@@ -254,9 +255,11 @@ def _evidence_text(limit, moment: datetime, usage: dict, screen: str) -> str:
     return "\n".join(lines)
 
 
-def _wait_screen(raw: Path, check: Callable[[str], bool], deadline: float) -> str:
+def _wait_screen(raw: Path, check: Callable[[str], bool], deadline: float, process=None) -> str:
     """원본 출력을 다시 그려 check 가 참이 될 때까지 기다린다. 시간을 넘기면 빈 문자열."""
     while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            return ""
         try:
             text = screen_text(raw.read_bytes())
         except OSError:
@@ -285,7 +288,8 @@ def run_xterm(work: Path, claude_command: str, timeout: int, *, claude_token: st
     """가상 디스플레이의 xterm 안에서 Claude CLI `/usage` 를 열고 창을 찍는다."""
     deadline = time.monotonic() + timeout
     number = _free_display()
-    env = {**terminal_env(claude_token), "DISPLAY": f":{number}", "TZ": "Asia/Seoul"}
+    env = claude_resources.manager_env({**terminal_env(claude_token), "DISPLAY": f":{number}", "TZ": "Asia/Seoul"})
+    scope = claude_resources.new_scope()
     raw = work / "claude.raw"
     png = work / "usage.png"
     # 폴더 신뢰 확인이 매번 나오지 않게 고정 폴더에서 연다. 저장소 밖이라 저장소의 CLAUDE.md 를 읽지 않는다.
@@ -310,9 +314,12 @@ def run_xterm(work: Path, claude_command: str, timeout: int, *, claude_token: st
                    "-xrm", "XTerm*allowTitleOps: false", "-geometry", f"{COLS}x{ROWS}+0+0",
                    "-fa", "DejaVu Sans Mono", "-fs", "11", "-bg", "#0c0c0c", "-fg", "#cccccc", "-T", title,
                    "-e", "script", "-q", "-f", str(raw), "-c", claude_command]
+        command = claude_resources.scope_command(command, scope, timeout)
         processes.append(subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
-        text = _wait_screen(raw, lambda t: TRUST_MARK in t or "❯" in t, deadline)
+        text = _wait_screen(raw, lambda t: TRUST_MARK in t or "❯" in t, deadline, processes[-1])
         if not text:
+            if processes[-1].poll() not in (None, 0):
+                return Shot(None, reason="resource_scope_unavailable")
             return Shot(None, reason="timeout")
         window = xdotool("search", "--sync", "--name", f"^{title}$").splitlines()
         if not window:
@@ -339,12 +346,23 @@ def run_xterm(work: Path, claude_command: str, timeout: int, *, claude_token: st
         xdotool("key", "Escape")
         return Shot(png, screen)
     finally:
+        cleanup_error = None
+        try:
+            claude_resources.stop_scope(scope)
+        except (OSError, subprocess.SubprocessError, RuntimeError) as exc:
+            cleanup_error = exc
         for process in reversed(processes):
-            process.terminate()
             try:
+                if process.poll() is None:
+                    process.terminate()
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
+                process.wait(timeout=5)
+            except ProcessLookupError:
+                pass
+        if cleanup_error is not None:
+            raise RuntimeError("캡처 프로세스 정리 실패") from cleanup_error
 
 
 def list_evidence(settings=None) -> list[dict]:
