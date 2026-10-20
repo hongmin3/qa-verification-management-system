@@ -23,6 +23,12 @@ OK_CONFIG = {"daily_token_usage": {"used": 10, "limit": 0, "exceeded": False}}
 OK_OPERATIONS = {"database_integrity": "ok", "stale_jobs": 0, "last_sync": {"status": "DONE"}}
 
 
+@pytest.fixture(autouse=True)
+def isolated_claude_probe(monkeypatch):
+    """다른 서버 작업의 메모리와 종료 대상은 이 시험에 섞지 않는다."""
+    monkeypatch.setattr(monitor_health, "inspect_claude_resources", lambda: {"status": "ok"})
+
+
 def fake_urls(mapping: dict[str, object]):
     """URL → 응답(dict) 또는 예외 인스턴스로 매핑하는 fetch_json 대역."""
 
@@ -35,6 +41,19 @@ def fake_urls(mapping: dict[str, object]):
         return value  # type: ignore[return-value]
 
     return fetch
+
+
+def test_periodic_monitor_records_claude_memory_alert(monkeypatch, capsys):
+    """Validates: REQ-OPS-005. 기존 cron의 진입점에서 새 점검이 실행되어야 한다."""
+    monkeypatch.setattr(monitor_health, "inspect_claude_resources", lambda: {
+        "status": "alert", "count": 1, "rss_bytes": 2 * 1024 ** 3, "swap_bytes": 0,
+        "captures": [], "errors": []}, raising=False)
+    mapping = {BASE_URL + "/health": OK_HEALTH, BASE_URL + "/config/status": OK_CONFIG,
+               BASE_URL + "/operations/status": OK_OPERATIONS}
+    code, report = run(monkeypatch, capsys, mapping, ["--base-url", BASE_URL])
+    assert report["claude_resources"]["count"] == 1
+    assert "claude_resource_alert" in report["alerts"]
+    assert code == 1
 
 
 def run(monkeypatch, capsys, mapping, argv):

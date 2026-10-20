@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="7324502723b5d56730d30281afc40a44b4305df9f6e2b7e04860469bf046f109">
+<meta name="spec-source-sha256" content="b1a9a2511e5bf68338b9ca658685ebc5f8d56b7b6de7f6ce1f34d8014436fc61">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>306</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>193</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>219</b><span>implemented</span></div><div class="stat st-verified"><b>68</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>307</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>193</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>219</b><span>implemented</span></div><div class="stat st-verified"><b>69</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -285,6 +285,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-WEB-007">REQ-WEB-007 <span>공통 상단 메뉴</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-WEB-008">REQ-WEB-008 <span>설정 탭과 관리자 로그인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-001">REQ-OPS-001 <span>운영 상태 점검</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-OPS-005">REQ-OPS-005 <span>Claude 메모리 점검과 캡처 잔존 정리</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-002">REQ-OPS-002 <span>백업 만들기와 확인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-003">REQ-OPS-003 <span>앱 로그</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-OPS-004">REQ-OPS-004 <span>지식 폴더 마운트 설정 만들기</span></a></li>
@@ -872,6 +873,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></td><td data-label="이름">설정 탭과 관리자 로그인</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">OPS</span> 운영 점검·백업·로그</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="이름">운영 상태 점검</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a></td><td data-label="이름">Claude 메모리 점검과 캡처 잔존 정리</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="이름">백업 만들기와 확인</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-003">REQ-OPS-003</a></td><td data-label="이름">앱 로그</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/logger.py</code>, <code>deploy/systemd/qa-verification.service</code></td><td data-label="테스트"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a></td><td data-label="이름">지식 폴더 마운트 설정 만들기</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>scripts/make_knowledge_mount.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-OPS-003">TEST-OPS-003</a>: <code>tests/test_knowledge_mount.py</code></td></tr>
@@ -1196,7 +1198,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <div class="table-wrap"><table class="responsive">
 <thead><tr><th>시각</th><th>어디서</th><th>무엇이</th><th>하는 일</th><th>결과가 남는 곳</th><th>알리는 방법</th><th>요구사항</th></tr></thead>
 <tbody>
-<tr><td data-label="시각">10분마다 (매일)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">운영 상태 점검(<code>scripts/monitor_health.py</code>)</td><td data-label="하는 일">앱 상태, DB, <span class="term" title="RUNNING 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다" tabindex="0">멈춘 작업</span>, 마지막 동기화, 디스크 남은 용량을 본다</td><td data-label="결과가 남는 곳"><code>output/logs/monitor.log</code></td><td data-label="알리는 방법">없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td></tr>
+<tr><td data-label="시각">10분마다 (매일)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">운영 상태 점검(<code>scripts/monitor_health.py</code>)</td><td data-label="하는 일">앱 상태, DB, <span class="term" title="RUNNING 인데 정해진 시간 동안 단계 기록이 바뀌지 않은 분석 작업이다" tabindex="0">멈춘 작업</span>, 마지막 동기화, 디스크, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 메모리와 캡처 잔존을 본다</td><td data-label="결과가 남는 곳"><code>output/logs/monitor.log</code></td><td data-label="알리는 방법">없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a>, <a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a></td></tr>
 <tr><td data-label="시각">14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15)</td><td data-label="어디서">운영 서버 cron</td><td data-label="무엇이">백업(<code>scripts/backup_data.py</code>)</td><td data-label="하는 일">DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 일수가 지난 백업과 일일 QA <span class="term" title="실행 하나의 결과 파일을 모아 두는 폴더다(output/daily_qa/&lt;실행 ID&gt;/)" tabindex="0">실행 폴더</span>를 지운다</td><td data-label="결과가 남는 곳"><code>backups/</code>, <code>output/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a>, <a class="idref" href="#NFR-DAILY-002">NFR-DAILY-002</a></td></tr>
 <tr><td data-label="시각">14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30)</td><td data-label="어디서">운영 서버 cron(<code>/etc/cron.d/qa-manual-hub-backup</code>)</td><td data-label="무엇이">QA Manual Hub 백업(<code>scripts/backup.sh</code>)</td><td data-label="하는 일"><span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다</td><td data-label="결과가 남는 곳"><code>&lt;APP_ROOT&gt;/logs/backup.log</code></td><td data-label="알리는 방법">없음</td><td data-label="요구사항"><a class="idref" href="#REQ-HUBOPS-009">REQ-HUBOPS-009</a></td></tr>
 <tr><td data-label="시각">10분마다 (매일)</td><td data-label="어디서">운영 서버 앱 내장 예약(<code>qa_agent_limit_catchup</code>)</td><td data-label="무엇이"><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 사용량 한도 뒤 다시 돌기</td><td data-label="하는 일">한도(<span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간)가 풀린 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>이 있으면 그 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 점검을 한 번 다시 띄운다</td><td data-label="결과가 남는 곳">아래 04:00 줄과 같다</td><td data-label="알리는 방법">아래 04:00 줄과 같다</td><td data-label="요구사항"><a class="idref" href="#REQ-QAINTEL-025">REQ-QAINTEL-025</a></td></tr>
@@ -8629,7 +8631,12 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 </section>
 <section class="card kind-req" id="REQ-OPS-001">
 <h3><span class="idtag">REQ-OPS-001</span> 운영 상태 점검</h3>
-<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-20 Claude 캡처 메모리 제한과 잔존 정리</span> <a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a>, <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a>: 기존 10분 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>에 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> RAM·스왑 사용량과 캡처 정리 결과를 더했다. 시간 상한을 넘긴 이 앱의 캡처만 종료하며, 일반 분석과 사용자 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>은 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>만 남긴다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> cron 이 10분마다 앱과 주변 경로를 점검하고, 결과를 JSON 한 줄로 남긴다. 문제가 하나라도 있으면 종료 코드 1 로 끝난다.</p>
 <p><strong>언제</strong> 서버 cron 이 10분마다 다음 명령을 부른다.</p>
 <pre><code class="language-text">python scripts/monitor_health.py --disk-path . [--base-url URL] [--check 이름=URL]… [--min-free-gb 2.0]
@@ -8649,8 +8656,9 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li><code>/health</code>, <code>/config/status</code>, <code>/operations/status</code> 를 각각 부른다(제한 10초). 하나가 실패해도 나머지를 본다.</li>
 <li><code>--check</code> 주소는 응답에 <code>status</code> 가 있으면 그 값이 <code>ok</code> 인지까지 본다. 없으면 200 응답인지만 본다.</li>
 <li>디스크 남은 용량을 본다.</li>
+<li><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 메모리 점검과 캡처 잔존 정리(<a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a>)를 실행한다. 실패해도 다른 점검 결과를 남긴다.</li>
 </ol>
-<p><strong>결과</strong> <code>{&quot;status&quot;: &quot;ok&quot;|&quot;alert&quot;, &quot;alerts&quot;: [...], &quot;free_gb&quot;, &quot;daily_token_usage&quot;, &quot;operations&quot;, &quot;checks&quot;}</code> 한 줄이 남는다.</p>
+<p><strong>결과</strong> <code>{&quot;status&quot;: &quot;ok&quot;|&quot;alert&quot;, &quot;alerts&quot;: [...], &quot;free_gb&quot;, &quot;daily_token_usage&quot;, &quot;operations&quot;, &quot;checks&quot;, &quot;claude_resources&quot;}</code> 한 줄이 남는다.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>알림 이름</th><th>조건</th></tr></thead>
 <tbody>
@@ -8662,6 +8670,7 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <tr><td><code>last_sync_failed</code></td><td>마지막 <span class="term" title="동기화 한 번의 시작·끝·상태를 적는 DB 표(sync_log)다" tabindex="0">동기화 기록</span>이 <code>FAILED</code></td></tr>
 <tr><td><code>check_failed:&lt;이름&gt;</code></td><td>더 본 주소 실패</td></tr>
 <tr><td><code>disk_unreadable</code> / <code>disk_low</code></td><td>용량을 못 읽음 / 기준보다 적음</td></tr>
+<tr><td><code>claude_resource_alert</code></td><td><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>의 높은 메모리 사용 또는 캡처 묶음 조회·정리 오류</td></tr>
 </tbody>
 </table></div>
 <p><strong>지킬 것</strong></p>
@@ -8669,6 +8678,26 @@ python scripts/test_notification.py --send --kind gemini_model_unavailable
 <li>점검 대상이 죽어도 스택 추적으로 끝나지 않고 알림 이름으로 남긴다.</li>
 <li><code>/operations/status</code> 를 못 불렀을 때 DB 검사 실패 같은 가짜 알림을 만들지 않는다.</li>
 </ul>
+</section>
+<section class="card kind-req" id="REQ-OPS-005">
+<h3><span class="idtag">REQ-OPS-005</span> Claude 메모리 점검과 캡처 잔존 정리</h3>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a>, <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-20 Claude 캡처 메모리 제한과 잔존 정리</span> <a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a>, <a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a>: 기존 10분 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>에 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> RAM·스왑 사용량과 캡처 정리 결과를 더했다. 시간 상한을 넘긴 이 앱의 캡처만 종료하며, 일반 분석과 사용자 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>은 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>만 남긴다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>의 RAM·스왑 사용량을 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>하고, 이 앱의 사용량 화면 캡처가 남긴 프로세스를 정리한다.</p>
+<p><strong>언제</strong> 기존 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>이 서버에서 10분마다 실행한다. 별도 예약이나 메일 발송은 추가하지 않는다.</p>
+<p><strong>순서</strong></p>
+<ol>
+<li>같은 실행 계정의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 개수, RSS 합계, 스왑 합계와 1GiB 이상을 점유한 PID를 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>한다. RSS와 스왑을 더해 기준을 판단한다. 읽지 못한 정보는 오류로 남긴다.</li>
+<li>이 앱이 만든 <code>qa-verification-usage-&lt;32자리 16진수&gt;.scope</code> 중 설명이 <code>QA Claude usage capture</code>인 묶음만 자동 정리 대상으로 삼는다.</li>
+<li>설정된 실행 시간 상한을 넘긴 묶음은 종료하고 결과를 남긴다. 다른 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>와 사용자 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>은 메모리가 많아도 종료하지 않는다.</li>
+<li>조회 또는 정리에 실패하거나 높은 메모리 사용이 있으면 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>의 알림과 종료 코드 1로 알린다. Linux 이외 환경에서는 지원하지 않음을 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>하고 종료 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 하지 않는다.</li>
+</ol>
+<p><strong>결과</strong> 기존 점검 JSON의 <code>claude_resources</code>에 사용량·캡처별 조치·오류를 넣는다. <code>output/logs/monitor.log</code>의 기존 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span> 정책을 따른다. 명령 인자·프롬프트·인증값은 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>하지 않는다.</p>
+<p><strong>지킬 것</strong> PID 이름만으로 종료하지 않는다. 프로세스 번호가 재사용되어도 다른 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 종료하지 않도록 systemd 묶음 단위로 정리한다. 오래된 시험 프로세스는 별도 확인 후 한 번 정리하며, 과거 임시 경로를 상시 자동 종료 기준으로 쓰지 않는다.</p>
 </section>
 <section class="card kind-req" id="REQ-OPS-002">
 <h3><span class="idtag">REQ-OPS-002</span> 백업 만들기와 확인</h3>
@@ -12715,6 +12744,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-007">REQ-WEB-007</a></td><td data-label="Implementation"><code>app/web/templates/_nav.html</code>, <code>app/web/static/app.css</code>, <code>app/modules/qa_agent/templates/dashboard.html</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-001">TEST-WEB-001</a>: <code>tests/test_web.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-WEB-008">REQ-WEB-008</a></td><td data-label="Implementation"><code>app/core/admin_auth.py</code>, <code>app/core/setting_overrides.py</code>, <code>app/web/settings_router.py</code>, <code>app/web/templates/settings.html</code>, <code>app/web/templates/admin_login.html</code>, <code>app/modules/daily_qa/settings.py</code>, <code>app/core/notifier.py</code></td><td data-label="Test"><a class="idref" href="#TEST-WEB-003">TEST-WEB-003</a>: <code>tests/test_admin_auth.py</code>, <code>tests/test_settings_screen.py</code>, <code>tests/test_settings_api.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-001">REQ-OPS-001</a></td><td data-label="Implementation"><code>scripts/monitor_health.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-001">TEST-OPS-001</a>: <code>tests/test_monitor_health.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a></td><td data-label="Implementation"><code>app/core/claude_resources.py</code>, <code>scripts/monitor_health.py</code></td><td data-label="Test"><code>tests/test_claude_resources.py</code>, <code>tests/test_monitor_health.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-002">REQ-OPS-002</a></td><td data-label="Implementation"><code>scripts/backup_data.py</code>, <code>app/core/retention.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-002">TEST-OPS-002</a>: <code>tests/test_backup.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-003">REQ-OPS-003</a></td><td data-label="Implementation"><code>app/core/logger.py</code>, <code>deploy/systemd/qa-verification.service</code></td><td data-label="Test"><a class="idref" href="#TEST-SCHED-001">TEST-SCHED-001</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a></td><td data-label="Implementation"><code>scripts/make_knowledge_mount.py</code></td><td data-label="Test"><a class="idref" href="#TEST-OPS-003">TEST-OPS-003</a>: <code>tests/test_knowledge_mount.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
@@ -14864,8 +14894,9 @@ AI가 분석한 것
 <section class="card kind-req" id="REQ-QAINTEL-039">
 <h3><span class="idtag">REQ-QAINTEL-039</span> 사용량 한도 증거 캡처</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/daily_qa/limit_evidence.py</code>, <code>app/modules/daily_qa/pipeline.py</code>, <code>app/main.py</code>, <code>scripts/capture_limit_evidence.py</code>, <code>scripts/sync_limit_evidence.ps1</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a>: <code>tests/test_limit_evidence.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-QAINTEL-024">TEST-QAINTEL-024</a></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 4</summary>
 <ul>
+<li><span class="hist">2026-10-20 Claude 캡처 메모리 제한과 잔존 정리</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 사용량 화면 캡처가 끝날 때 <code>script</code>와 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>까지 함께 종료한다. 전용 systemd 묶음에서 RAM 1GiB·스왑 256MiB·설정 시간에 30초를 더한 실행 상한을 적용한다. 커널의 상한을 확인하지 못하면 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>를 실행하지 않는다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: Windows PowerShell에서 한글 증거 파일명이 깨져 복사에 실패하던 문제를 고쳤다. 목록 응답에 UTF-8을 지정해 파일명을 그대로 읽는다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 캡처에 분석과 같은 인증을 전달하고 사용량 조회를 허용한다. 터미널 제목을 고정해 실제 창을 찾으며, 계정과 초기화 시각이 같은 한도만 중복을 막는다. 초기화 시각을 모르면 다음 감지 때 다시 확인한다. 공유폴더 복사는 임시 파일의 SHA256을 확인한 뒤 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>해 불완전한 기존 파일도 복구한다.</li>
 <li><span class="hist">2026-10-14</span> <a class="idref" href="#REQ-QAINTEL-039">REQ-QAINTEL-039</a>: 서버 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 계정이 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>·주간 한도에 걸리면 그 순간의 <code>/usage</code> 화면을 실제 터미널 창(가상 디스플레이의 xterm)에서 찍어 <code>data/limit_evidence/</code> 에 PNG와 화면 글자 TXT로 남긴다. 화면이 100% 일 때만 남기고 같은 계정·초기화 시각의 한도는 한 번만 찍는다. 파일 이름은 <code>스크린샷 YYYY-MM-DD HHMMSS_Claude13_세션한도.png</code> 형식이다. <code>/claude/limit-evidence</code> 에서 사진을 보고, <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 예약 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>(<code>scripts/install_limit_evidence_sync.ps1</code>)이 10분마다 팀 공유폴더로 복사한다. 공유폴더 비밀번호는 서버에 두지 않는다(사용자 결정).</li>
@@ -14880,7 +14911,13 @@ AI가 분석한 것
 <ol>
 <li>점검과 같은 인증정보로 화면 없는 가상 디스플레이(<code>Xvfb</code>)에 실제 터미널 프로그램(<code>xterm</code>)을 띄우고, 그 안에서 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span> 를 연다. 표시 시간대는 한국 시간(<code>TZ=Asia/Seoul</code>)이다.</li>
 <li>폴더 신뢰 확인이 나오면 &quot;Yes&quot; 를 고른다. 입력 칸이 뜨면 <code>/usage</code> 를 입력한다. 키 입력은 <code>xdotool</code> 이 실제 키보드 입력처럼 보낸다.</li>
-<li>사용량 패널이 그려지면 터미널 창의 픽셀을 그대로 PNG로 저장한다(<code>import -window</code>). 같은 순간의 화면 글자는 CLI 원본 출력(<code>script</code>)을 터미널 화면으로 다시 그려(<code>pyte</code>) 얻는다.</li>
+<li>사용량 패널이 그려지면 터미널 창의 픽셀을 그대로 PNG로 저장한다(<code>import -window</code>). 같은 순간의 화면 글자는 CLI 원본 출력(<code>script</code>)을 터미널 화면으로 다시 그려(<code>pyte</code>) 얻는다.
+<ul>
+<li><p>터미널과 그 아래 <code>script</code>·<span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>는 전용 systemd 사용자 묶음에서 실행한다. 메모리 512MiB부터 회수를 유도하고 RAM 1GiB·스왑 256MiB를 상한으로 둔다.</p></li>
+<li><p>묶음 실행 시간 상한은 <code>timeout_seconds + 30</code>초다. 성공·실패·시간 초과 후에는 묶음 전체와 가상 화면을 종료한다. 앱이 종료되어도 systemd의 실행 시간 상한은 유지된다.</p></li>
+<li><p>systemd 사용자 관리자나 자원 제한을 사용할 수 없으면 캡처를 건너뛰고 이유를 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>한다. 제한 없이 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>를 실행하지 않는다. 주기 확인은 <a class="idref" href="#REQ-OPS-005">REQ-OPS-005</a>가 맡는다.</p></li>
+</ul>
+</li>
 <li>화면 글자에서 <code>Current session</code> 또는 <code>Current week</code> 가 <code>100% used</code> 인지 확인한다. 둘 다 100% 가 아니면 증거 폴더에 넣지 않고 이유를 로그에 남긴다.</li>
 <li>증거 폴더(<code>data/limit_evidence/</code>)에 PNG 와 <code>.txt</code> 를 저장한다. <code>.txt</code> 에는 화면 글자, 감지한 한도 문장 원문, 한국 시간, 계정 표시가 들어간다. <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 값은 넣지 않는다.</li>
 <li>사람이 웹 화면 <code>/claude/limit-evidence</code> 에서 목록과 사진을 본다.</li>

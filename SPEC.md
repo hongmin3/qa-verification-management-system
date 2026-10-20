@@ -123,7 +123,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 �
 
 | 시각 | 어디서 | 무엇이 | 하는 일 | 결과가 남는 곳 | 알리는 방법 | 요구사항 |
 |---|---|---|---|---|---|---|
-| 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크 남은 용량을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001 |
+| 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크, Claude 메모리와 캡처 잔존을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001, REQ-OPS-005 |
 | 14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
 | 14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
@@ -6332,8 +6332,9 @@ python scripts/monitor_health.py --disk-path . [--base-url URL] [--check 이름=
 1. `/health`, `/config/status`, `/operations/status` 를 각각 부른다(제한 10초). 하나가 실패해도 나머지를 본다.
 2. `--check` 주소는 응답에 `status` 가 있으면 그 값이 `ok` 인지까지 본다. 없으면 200 응답인지만 본다.
 3. 디스크 남은 용량을 본다.
+4. Claude 메모리 점검과 캡처 잔존 정리(REQ-OPS-005)를 실행한다. 실패해도 다른 점검 결과를 남긴다.
 
-**결과** `{"status": "ok"|"alert", "alerts": [...], "free_gb", "daily_token_usage", "operations", "checks"}` 한 줄이 남는다.
+**결과** `{"status": "ok"|"alert", "alerts": [...], "free_gb", "daily_token_usage", "operations", "checks", "claude_resources"}` 한 줄이 남는다.
 
 | 알림 이름 | 조건 |
 |---|---|
@@ -6345,11 +6346,29 @@ python scripts/monitor_health.py --disk-path . [--base-url URL] [--check 이름=
 | `last_sync_failed` | 마지막 동기화 기록이 `FAILED` |
 | `check_failed:<이름>` | 더 본 주소 실패 |
 | `disk_unreadable` / `disk_low` | 용량을 못 읽음 / 기준보다 적음 |
+| `claude_resource_alert` | Claude의 높은 메모리 사용 또는 캡처 묶음 조회·정리 오류 |
 
 **지킬 것**
 
 - 점검 대상이 죽어도 스택 추적으로 끝나지 않고 알림 이름으로 남긴다.
 - `/operations/status` 를 못 불렀을 때 DB 검사 실패 같은 가짜 알림을 만들지 않는다.
+
+### REQ-OPS-005 Claude 메모리 점검과 캡처 잔존 정리
+
+**하는 일** Claude의 RAM·스왑 사용량을 기록하고, 이 앱의 사용량 화면 캡처가 남긴 프로세스를 정리한다.
+
+**언제** 기존 운영 점검이 서버에서 10분마다 실행한다. 별도 예약이나 메일 발송은 추가하지 않는다.
+
+**순서**
+
+1. 같은 실행 계정의 Claude 개수, RSS 합계, 스왑 합계와 1GiB 이상을 점유한 PID를 기록한다. RSS와 스왑을 더해 기준을 판단한다. 읽지 못한 정보는 오류로 남긴다.
+2. 이 앱이 만든 `qa-verification-usage-<32자리 16진수>.scope` 중 설명이 `QA Claude usage capture`인 묶음만 자동 정리 대상으로 삼는다.
+3. 설정된 실행 시간 상한을 넘긴 묶음은 종료하고 결과를 남긴다. 다른 Claude와 사용자 세션은 메모리가 많아도 종료하지 않는다.
+4. 조회 또는 정리에 실패하거나 높은 메모리 사용이 있으면 운영 점검의 알림과 종료 코드 1로 알린다. Linux 이외 환경에서는 지원하지 않음을 기록하고 종료 작업을 하지 않는다.
+
+**결과** 기존 점검 JSON의 `claude_resources`에 사용량·캡처별 조치·오류를 넣는다. `output/logs/monitor.log`의 기존 보관 정책을 따른다. 명령 인자·프롬프트·인증값은 기록하지 않는다.
+
+**지킬 것** PID 이름만으로 종료하지 않는다. 프로세스 번호가 재사용되어도 다른 작업을 종료하지 않도록 systemd 묶음 단위로 정리한다. 오래된 시험 프로세스는 별도 확인 후 한 번 정리하며, 과거 임시 경로를 상시 자동 종료 기준으로 쓰지 않는다.
 
 ### REQ-OPS-002 백업 만들기와 확인
 
@@ -10111,6 +10130,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-WEB-007 | `app/web/templates/_nav.html`, `app/web/static/app.css`, `app/modules/qa_agent/templates/dashboard.html` | TEST-WEB-001: `tests/test_web.py` | verified |
 | REQ-WEB-008 | `app/core/admin_auth.py`, `app/core/setting_overrides.py`, `app/web/settings_router.py`, `app/web/templates/settings.html`, `app/web/templates/admin_login.html`, `app/modules/daily_qa/settings.py`, `app/core/notifier.py` | TEST-WEB-003: `tests/test_admin_auth.py`, `tests/test_settings_screen.py`, `tests/test_settings_api.py` | verified |
 | REQ-OPS-001 | `scripts/monitor_health.py` | TEST-OPS-001: `tests/test_monitor_health.py` | implemented |
+| REQ-OPS-005 | `app/core/claude_resources.py`, `scripts/monitor_health.py` | `tests/test_claude_resources.py`, `tests/test_monitor_health.py` | verified |
 | REQ-OPS-002 | `scripts/backup_data.py`, `app/core/retention.py` | TEST-OPS-002: `tests/test_backup.py` | implemented |
 | REQ-OPS-003 | `app/core/logger.py`, `deploy/systemd/qa-verification.service` | TEST-SCHED-001 | implemented |
 | REQ-OPS-004 | `scripts/make_knowledge_mount.py` | TEST-OPS-003: `tests/test_knowledge_mount.py` | implemented |
