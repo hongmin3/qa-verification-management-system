@@ -20,7 +20,8 @@ from .report_explanations import EXPLANATION_FIELDS, LANGUAGE_CONTEXTS, evidence
 _LOCK = threading.RLock()
 DECISIONS = ('수정 필수', '추가 필요', '보강 권장', '사양 확인 필요', '유지', '타 문서 위임 적절')
 FINDING_KEYS = {'id', 'title', 'decision', 'priority', 'paragraphs', 'quote_paragraphs', 'proposed', 'basis',
-                'coverage', 'reason', 'location', 'kind', 'note'} | EXPLANATION_FIELDS
+                'coverage', 'reason', 'location', 'kind', 'note', 'review_scope'} | EXPLANATION_FIELDS
+REVIEW_SCOPES = {'main': '본 검토', 'reference': '참고'}
 
 
 def _write(path, value):
@@ -321,6 +322,9 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
             if not isinstance(numbers, list) or len(numbers) > 40 or any(type(n) is not int or n not in by_number for n in numbers):
                 raise ValueError('원본에 있는 문단 번호를 40개 이하로 지정하세요.')
         kind = finding.get('kind', 'manual')
+        scope = finding.get('review_scope', 'main')
+        if scope not in REVIEW_SCOPES:
+            raise ValueError(f'{finding["id"]}.review_scope: main(본 검토) 또는 reference(참고)만 사용할 수 있습니다.')
         if kind not in ('manual', 'proposal', 'source') or not targets and kind == 'manual':
             raise ValueError('원문 문단 또는 추가 제안·근거문서 구분이 필요합니다.')
         if kind == 'source':
@@ -338,7 +342,7 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
         if len(current) > 32767:
             raise ValueError('현재 문구가 Excel 셀 제한보다 깁니다. 인용 문단을 나누세요.')
         selected = [by_number[n] for n in targets]
-        row = dict(finding, kind=kind, quotes=quotes, current_text=current,
+        row = dict(finding, kind=kind, review_scope=scope, quotes=quotes, current_text=current,
                    document_order=min(targets) if targets else 100000000,
                    section=by_number[min(targets)]['section'] if targets else '근거 사양 자체 검토',
                    pages_saved=_page_text(selected, 'saved', inventory['source_kind']),
@@ -385,10 +389,17 @@ def _write_html(path, payload):
             details += '<dt>검토 설명</dt><dd>' + e(row['note']) + '</dd>'
         comment = ('<h3>한국어 검토 코멘트</h3><pre class="review-comment">' + e(row['short_comment'])
                    + '</pre><button type="button" data-copy="short-comment" onclick="copyReviewText(this)">한국어 검토 코멘트 복사</button>') if row.get('short_comment') else '<p>짧은 메모 미작성</p>'
-        cards.append(f'<article id="{e(row["id"])}"><small>{e(row["id"])} · {e(row["decision"])} · {e(row["priority"])}</small>'
+        cards.append(f'<article id="{e(row["id"])}" data-scope="{row["review_scope"]}"><small>{REVIEW_SCOPES[row["review_scope"]]} · {e(row["id"])} · {e(row["decision"])} · {e(row["priority"])}</small>'
                      f'<h2>{e(row["title"])}</h2><p>{e(row.get("location") or row["section"])} · 문단 {e(row["paragraphs"])}</p>'
                      f'<p>원본/변경추적 표시: {e(row["pages_saved"])} · 최종본: {e(row["pages_final"])}</p>'
                      f'<h3>현재 문구 · 원문 그대로</h3>{quotes}{explanation}<dl>{details}</dl>{comment}</article>')
+    counts = {scope: sum(r['review_scope'] == scope for r in payload['findings']) for scope in REVIEW_SCOPES}
+    filters = ''
+    if counts['reference']:
+        filters = ('<nav class="scope-filter">' + f'<button type="button" data-filter="all">전체 {len(payload["findings"])}건</button>'
+                   + ''.join(f'<button type="button" data-filter="{k}">{v} {counts[k]}건</button>' for k, v in REVIEW_SCOPES.items())
+                   + '</nav><script>document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{const f=b.dataset.filter;'
+                   'document.querySelectorAll("article[data-scope]").forEach(a=>{a.hidden=f!=="all"&&a.dataset.scope!==f;});}));</script>')
     appendix = ''
     for title, records in [('기존 메모 검토', payload['memo_review']), ('릴리즈 항목 대조', payload['release_review'])]:
         if records:
@@ -399,7 +410,7 @@ def _write_html(path, payload):
 <style>body{{font:15px/1.65 'Malgun Gothic',sans-serif;background:#f5f6f8;color:#182334}}main{{max-width:1100px;margin:auto;padding:24px}}article{{background:white;border:1px solid #d6dde7;padding:24px;margin:18px 0;break-inside:avoid}}h2{{font-size:20px}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:8px 0}}figure{{margin:14px 0;border-left:3px solid #607d9b;padding:12px}}figcaption,small{{color:#53647b}}dl{{display:grid;grid-template-columns:170px 1fr;gap:12px}}dd{{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}}dt{{font-weight:bold}}button{{padding:5px 12px}}@media print{{button{{display:none}}}}</style><main><h1>{e(payload['title'])}</h1>
 <p>{e(payload['source_name'])} · 검토 {len(payload['findings'])}건 · 매뉴얼 순서, 기존 ID 유지</p>
 <p>현재 문구는 원본에서 직접 인용했습니다. 인용 안의 공백·기호를 보존하며, 문단 번호는 쪽수가 아닙니다. 쪽수는 대응 PDF의 물리 페이지입니다. 쪽수 미확인 항목은 절과 문단으로 찾으십시오.</p>
-{''.join(cards)}{appendix}<p>원본 SHA-256: {payload['source_sha256']}</p></main>
+{filters}{''.join(cards)}{appendix}<p>원본 SHA-256: {payload['source_sha256']}</p></main>
 <style>body{{overflow-wrap:anywhere}}dl{{grid-template-columns:170px minmax(0,1fr)}}@media(max-width:640px){{main{{padding:12px}}article{{padding:16px}}dl{{grid-template-columns:minmax(0,1fr);gap:6px}}dd{{margin-bottom:12px}}}}</style>
 <script>async function copyReviewText(button){{const text=button.previousElementSibling.textContent;try{{if(navigator.clipboard && window.isSecureContext){{await navigator.clipboard.writeText(text);}}else{{const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const copied=document.execCommand('copy');area.remove();if(!copied)throw new Error('copy');}}button.textContent='복사 완료';}}catch(error){{button.textContent='복사 실패: 위 문구를 선택해 복사';}}}}</script></html>'''
     path.write_text(body, encoding='utf-8')
@@ -411,11 +422,12 @@ def _write_excel(path, payload, inventory):
     from openpyxl.worksheet.table import Table, TableStyleInfo
     headers = ['ID', '판정', '우선순위', '절·문단 위치', '실제 쪽수 (원본/변경추적 표시)', '실제 쪽수 (최종본)',
                '검토 항목', '현재 문구 (원문 그대로)', '수정안 또는 리뷰 요청', '근거', '공통 및 타 문서 대조', '이유', '인용 문단', '검토 설명',
-               '현재 원문의 한국어 뜻', '근거 원문과 해설', '한국어 검토 코멘트', '언어 문맥']
+               '현재 원문의 한국어 뜻', '근거 원문과 해설', '한국어 검토 코멘트', '언어 문맥', '검토 구분']
     findings = [[r['id'], r['decision'], r['priority'], (r.get('location') or r['section']) + ' · 문단 ' + str(r['paragraphs']),
                  r['pages_saved'], r['pages_final'], r['title'], r['current_text'], r['proposed'], r['basis'], r['coverage'], r['reason'],
                  ', '.join(str(q['paragraph']) for q in r['quotes']), r.get('note', ''), r.get('current_meaning', ''),
-                 evidence_text(r.get('evidence', [])), r.get('short_comment', ''), LANGUAGE_CONTEXTS.get(r.get('language_context'), '')] for r in payload['findings']]
+                 evidence_text(r.get('evidence', [])), r.get('short_comment', ''), LANGUAGE_CONTEXTS.get(r.get('language_context'), ''),
+                 REVIEW_SCOPES[r['review_scope']]] for r in payload['findings']]
     comments = [[c['id'], str(c['paragraphs']), c['text'], '반영·해결 상태 별도 검토'] for c in inventory['comments']]
     changes = [[p['number'], p['section'], p['before'], p['text'], p['inserted'], p['deleted'], str(p['comment_ids'])]
                for p in inventory['paragraphs'] if p['inserted'] or p['deleted']]

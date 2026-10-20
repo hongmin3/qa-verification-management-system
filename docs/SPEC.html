@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="954a3867d55136442632fead686b75f64498e203163b319446a361d977824394">
+<meta name="spec-source-sha256" content="0346a8233682748388ac10e53b619f64fb264facd231e7dbc8657c999025ca0d">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>310</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>194</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>221</b><span>implemented</span></div><div class="stat st-verified"><b>70</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>311</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>194</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>222</b><span>implemented</span></div><div class="stat st-verified"><b>70</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -206,6 +206,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-MANUAL-021">REQ-MANUAL-021 <span>공용 매뉴얼 검토 자료와 원문 인용 보고서</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-MANUAL-023">REQ-MANUAL-023 <span>한국어로 읽는 근거 설명과 짧은 검토 메모</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-MANUAL-022">REQ-MANUAL-022 <span>분석 문장의 띄어쓰기 검사</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-MANUAL-024">REQ-MANUAL-024 <span>본 검토와 참고 항목 구분 필터</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-DAILY-001">REQ-DAILY-001 <span>일일 점검 실행 순서</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-DAILY-002">REQ-DAILY-002 <span>Polarion 읽기 전용 수집</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-DAILY-003">REQ-DAILY-003 <span>사양 변경 영향 검토</span></a></li>
@@ -773,6 +774,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-MANUAL-021">REQ-MANUAL-021</a></td><td data-label="이름">공용 매뉴얼 검토 자료와 원문 인용 보고서</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/manual_review/source_inventory.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code></td><td data-label="테스트"><code>tests/test_manual_review_shared.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-MANUAL-023">REQ-MANUAL-023</a></td><td data-label="이름">한국어로 읽는 근거 설명과 짧은 검토 메모</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/manual_review/report_explanations.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code>, <code>app/modules/manual_review/prose_quality.py</code>, <code>app/prompts/manual_revision_quick.yaml</code>, <code>app/prompts/manual_revision_detail.yaml</code></td><td data-label="테스트"><code>tests/test_manual_review_readable.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-MANUAL-022">REQ-MANUAL-022</a></td><td data-label="이름">분석 문장의 띄어쓰기 검사</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/manual_review/prose_quality.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="테스트"><code>tests/test_manual_review_prose.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-MANUAL-024">REQ-MANUAL-024</a></td><td data-label="이름">본 검토와 참고 항목 구분 필터</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="테스트"><code>tests/test_manual_review_scope.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">NFR MANUAL</span> 매뉴얼 개정 검토</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-MANUAL-001">NFR-MANUAL-001</a></td><td data-label="이름">매뉴얼 서버 연동의 경계와 장애 격리</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/core/manual_hub_client.py</code>, <code>app/modules/manual_review/cross_manual.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-MANUAL-018">TEST-MANUAL-018</a>: <code>tests/test_manual_hub_client.py</code>, <code>tests/test_cross_manual.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#NFR-MANUAL-002">NFR-MANUAL-002</a></td><td data-label="이름">AI 호출을 줄이는 설계</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/manual_review/change_filter.py</code>, <code>app/modules/manual_review/ai_client.py</code>, <code>app/modules/manual_review/srs_evidence.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-MANUAL-020">TEST-MANUAL-020</a>: <code>tests/test_manual_review_ai_client.py</code></td></tr>
@@ -4943,7 +4945,7 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-MANUAL-021">
 <h3><span class="idtag">REQ-MANUAL-021</span> 공용 매뉴얼 검토 자료와 원문 인용 보고서</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/manual_review/source_inventory.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_manual_review_shared.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MANUAL-023">REQ-MANUAL-023</a>, <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/manual_review/source_inventory.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_manual_review_shared.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-MANUAL-023">REQ-MANUAL-023</a>, <a class="idref" href="#REQ-MANUAL-024">REQ-MANUAL-024</a>, <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a></span></div>
 <details class="history"><summary>변경 이력 5</summary>
 <ul>
 <li><span class="hist">2026-10-20 판별 매뉴얼 검토 범위와 근거 문서 위치</span> <a class="idref" href="#REQ-MANUAL-021">REQ-MANUAL-021</a>: <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 자체를 지적하는 항목은 문단 번호를 받지 않고 그 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>의 이름과 위치를 받는다. 다른 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>의 문단 번호가 검토 대상 매뉴얼의 같은 번호 문단으로 표시되던 위험을 막는다.</li>
@@ -5011,6 +5013,25 @@ python scripts/rule_capability_report.py --markdown
 <li>검사를 통과한 동일 데이터로 HTML·Excel을 만든다. 실패한 입력으로 일부 보고서 파일을 먼저 생성하지 않는다. 교정한 문장과 원문 인용은 각자의 공백을 그대로 유지한다.</li>
 </ol>
 <p><strong>운영 지침</strong> 통합 QA 원문은 자연스러운 한국어와 원문 인용 보존 기준을 별도로 관리한다. 기존 연결은 다음 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>에서 상태와 최신 지침을 끝까지 읽어 변경된 업무 규칙을 받는다. 지침 <span class="term" title="검증에 한 번 올린 개정본 한 건이다. 검증 이력의 한 줄이 된다" tabindex="0">리비전</span>과 연결 프로그램 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>을 구별한다.</p>
+</section>
+<section class="card kind-req" id="REQ-MANUAL-024">
+<h3><span class="idtag">REQ-MANUAL-024</span> 본 검토와 참고 항목 구분 필터</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_manual_review_scope.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-21 본 검토와 참고 항목 필터</span> <a class="idref" href="#REQ-MANUAL-024">REQ-MANUAL-024</a>: 검토 항목에 검토 구분(본 검토·참고)을 넣으면 HTML 상단 버튼과 Excel &quot;검토 구분&quot; 열로 참고 항목을 걸러 볼 수 있다. 생략하면 본 검토이며 기존 호출 결과는 같다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 검토보고서에서 본 검토 항목과 참고 항목을 나누어 보여 준다. 사용자는 HTML에서 버튼으로, Excel에서 열 필터로 참고 항목을 걸러 낸다. 예를 들어 시마주판 매뉴얼에서 시마주 기능 항목만 보거나 일반 기능 참고 항목만 볼 수 있다.</p>
+<p><strong>입력</strong> 검토 항목마다 검토 구분(<code>review_scope</code>)을 <code>main</code>(본 검토) 또는 <code>reference</code>(참고)로 선택 입력한다. 생략하면 본 검토다.</p>
+<p><strong>결과</strong></p>
+<ol>
+<li>HTML 항목에 검토 구분이 표시된다. 참고 항목이 하나 이상 있으면 상단에 &quot;전체 / 본 검토 / 참고&quot; 버튼과 건수가 보이고, 누른 구분의 항목만 보인다.</li>
+<li>Excel 검토결과 시트의 기존 열 뒤에 &quot;검토 구분&quot; 열이 생긴다. 표의 자동 필터로 거를 수 있다.</li>
+<li>보고서 JSON에 항목별 검토 구분이 남는다.</li>
+</ol>
+<p><strong>안 될 때</strong> 정해진 두 값 외의 검토 구분은 파일을 만들기 전에 거절한다.</p>
+<p><strong>지킬 것</strong> 정렬은 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 순서(<a class="idref" href="#REQ-MANUAL-021">REQ-MANUAL-021</a>)를 유지하며 검토 구분으로 순서를 바꾸지 않는다. 검토 구분이 없는 기존 호출의 결과는 바뀌지 않는다.</p>
 </section>
 <h3>5.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)</h3>
 <p><strong>이 기능은</strong></p>
@@ -12738,6 +12759,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-MANUAL-021">REQ-MANUAL-021</a></td><td data-label="Implementation"><code>app/modules/manual_review/source_inventory.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code></td><td data-label="Test"><code>tests/test_manual_review_shared.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-MANUAL-022">REQ-MANUAL-022</a></td><td data-label="Implementation"><code>app/modules/manual_review/prose_quality.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="Test"><code>tests/test_manual_review_prose.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-MANUAL-023">REQ-MANUAL-023</a></td><td data-label="Implementation"><code>app/modules/manual_review/report_explanations.py</code>, <code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code>, <code>app/modules/manual_review/prose_quality.py</code>, <code>app/prompts/manual_revision_quick.yaml</code>, <code>app/prompts/manual_revision_detail.yaml</code></td><td data-label="Test"><code>tests/test_manual_review_readable.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-MANUAL-024">REQ-MANUAL-024</a></td><td data-label="Implementation"><code>app/modules/manual_review/shared_review.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="Test"><code>tests/test_manual_review_scope.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-MANUAL-001">NFR-MANUAL-001</a></td><td data-label="Implementation"><code>app/core/manual_hub_client.py</code>, <code>app/modules/manual_review/cross_manual.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MANUAL-018">TEST-MANUAL-018</a>: <code>tests/test_manual_hub_client.py</code>, <code>tests/test_cross_manual.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-MANUAL-002">NFR-MANUAL-002</a></td><td data-label="Implementation"><code>app/modules/manual_review/change_filter.py</code>, <code>app/modules/manual_review/ai_client.py</code>, <code>app/modules/manual_review/srs_evidence.py</code></td><td data-label="Test"><a class="idref" href="#TEST-MANUAL-020">TEST-MANUAL-020</a>: <code>tests/test_manual_review_ai_client.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#NFR-MANUAL-003">NFR-MANUAL-003</a></td><td data-label="Implementation"><code>app/modules/manual_review/comment_writer.py</code>, <code>app/core/storage.py</code>, <code>app/modules/manual_review/templates/revision.html</code></td><td data-label="Test"><a class="idref" href="#TEST-MANUAL-020">TEST-MANUAL-020</a>: <code>tests/test_comment_writer.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>

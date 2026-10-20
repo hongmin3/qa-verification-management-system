@@ -30,7 +30,7 @@ def test_current_quote_first_visible_and_copy_contains_only_short_memo(tmp_path)
     payload = json.loads((folder / 'report.json').read_text('utf-8'))
     row = payload['findings'][0]
     document = (folder / 'manual_review.html').read_text('utf-8')
-    card = re.search(r'<article id="R01">(.*?)</article>', document, re.S)[1]
+    card = re.search(r'<article id="R01"[^>]*>(.*?)</article>', document, re.S)[1]
     assert html.unescape(re.search(r'<pre>(.*?)</pre>', card, re.S)[1]) == row['current_text']
     assert '<details' not in card and ' hidden' not in card
     assert card.index(row['current_meaning']) > card.index('현재 문구')

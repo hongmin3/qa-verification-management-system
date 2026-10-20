@@ -3322,6 +3322,22 @@ JSON 답의 내용이다.
 
 **운영 지침** 통합 QA 원문은 자연스러운 한국어와 원문 인용 보존 기준을 별도로 관리한다. 기존 연결은 다음 작업에서 상태와 최신 지침을 끝까지 읽어 변경된 업무 규칙을 받는다. 지침 리비전과 연결 프로그램 버전을 구별한다.
 
+### REQ-MANUAL-024 본 검토와 참고 항목 구분 필터
+
+**하는 일** 검토보고서에서 본 검토 항목과 참고 항목을 나누어 보여 준다. 사용자는 HTML에서 버튼으로, Excel에서 열 필터로 참고 항목을 걸러 낸다. 예를 들어 시마주판 매뉴얼에서 시마주 기능 항목만 보거나 일반 기능 참고 항목만 볼 수 있다.
+
+**입력** 검토 항목마다 검토 구분(`review_scope`)을 `main`(본 검토) 또는 `reference`(참고)로 선택 입력한다. 생략하면 본 검토다.
+
+**결과**
+
+1. HTML 항목에 검토 구분이 표시된다. 참고 항목이 하나 이상 있으면 상단에 "전체 / 본 검토 / 참고" 버튼과 건수가 보이고, 누른 구분의 항목만 보인다.
+2. Excel 검토결과 시트의 기존 열 뒤에 "검토 구분" 열이 생긴다. 표의 자동 필터로 거를 수 있다.
+3. 보고서 JSON에 항목별 검토 구분이 남는다.
+
+**안 될 때** 정해진 두 값 외의 검토 구분은 파일을 만들기 전에 거절한다.
+
+**지킬 것** 정렬은 문서 순서(REQ-MANUAL-021)를 유지하며 검토 구분으로 순서를 바꾸지 않는다. 검토 구분이 없는 기존 호출의 결과는 바뀌지 않는다.
+
 ### 5.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)
 
 **이 기능은**
@@ -10090,6 +10106,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-MANUAL-021 | `app/modules/manual_review/source_inventory.py`, `app/modules/manual_review/shared_review.py`, `app/modules/vxvue_chatbot/desktop.py` | `tests/test_manual_review_shared.py` | implemented |
 | REQ-MANUAL-022 | `app/modules/manual_review/prose_quality.py`, `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py` | `tests/test_manual_review_prose.py` | implemented |
 | REQ-MANUAL-023 | `app/modules/manual_review/report_explanations.py`, `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py`, `app/modules/manual_review/prose_quality.py`, `app/prompts/manual_revision_quick.yaml`, `app/prompts/manual_revision_detail.yaml` | `tests/test_manual_review_readable.py` | implemented |
+| REQ-MANUAL-024 | `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py` | `tests/test_manual_review_scope.py` | implemented |
 | NFR-MANUAL-001 | `app/core/manual_hub_client.py`, `app/modules/manual_review/cross_manual.py` | TEST-MANUAL-018: `tests/test_manual_hub_client.py`, `tests/test_cross_manual.py` | implemented |
 | NFR-MANUAL-002 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/srs_evidence.py` | TEST-MANUAL-020: `tests/test_manual_review_ai_client.py` | implemented |
 | NFR-MANUAL-003 | `app/modules/manual_review/comment_writer.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-020: `tests/test_comment_writer.py` | implemented |
