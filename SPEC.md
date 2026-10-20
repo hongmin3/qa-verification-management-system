@@ -3276,6 +3276,21 @@ JSON 답의 내용이다.
 - 매뉴얼 개정 검토, QA Agent, Knowledge 화면 메뉴에 "AI 사용량" 링크가 있다.
 - 대시보드와 사용법 화면 메뉴에서 QA 홈, QA Agent, 매뉴얼 검증, Knowledge 로 돌아갈 수 있다.
 
+### REQ-MANUAL-021 공용 매뉴얼 검토 자료와 원문 인용 보고서
+
+**하는 일** 파트원이 기존 VXvue AI 연결에서 같은 추출·쪽수 대조·보고서 생성 도구를 사용한다. 서버에 등록된 매뉴얼과 새 DOCX·PDF 업로드를 모두 지원한다. 사양 해석과 검토 판정은 사용자의 AI와 QA가 담당한다.
+
+**순서**
+
+1. 서버는 원본을 읽기 전용으로 수집하고 파일 해시, 전체 문단, 변경 추적, 일반·상속 취소선, 기존 메모와 그림 위치를 기록한다. 원본을 수정하지 않는다. 문단 번호는 1부터이며 기존 변경 추출의 0부터인 인덱스와 구분한다.
+2. `get_manual_review`가 전체 요약, 문단, 메모와 원본 이미지를 나누어 제공한다. 긴 목록은 끝까지 이어 읽을 수 있다. 등록 문서는 기존 지식 판 안의 ID로 선택하고 새 파일은 서버 업로드 화면에서 받은 자료 ID로 선택한다.
+3. DOCX의 실제 쪽수는 함께 제공한 PDF의 원문과 대응할 때만 기록한다. 변경추적 표시본과 최종본을 구별하고 출력본 해시를 남긴다. 자료 ID는 원본과 PDF 조합을 고정하여 다른 업로드가 기존 쪽수를 바꾸지 않는다. 저장된 Pages 값이나 문단 번호로 실제 쪽수를 만들지 않는다. 반복 문구나 문서 순서 모순으로 위치가 불명확하면 미확인으로 남긴다. PDF 자체가 대상이면 물리 페이지를 표시하고 변경추적 유효성은 별도 확인 대상으로 남긴다.
+4. `make_manual_review_report`는 검토 항목의 문단 참조를 받아 원본에서 현재 문구를 직접 채운다. 띄어쓰기·문장부호·대소문자·기호를 요약하거나 교정하지 않는다. 호출자가 현재 문구를 임의로 전달할 수 없다. 글꼴 기호처럼 정확한 문자 변환이 제한되는 문단은 원본 확인을 요청한다. 삭제된 문구와 원문 인용에 대한 해설은 현재 문구 밖에서 구분한다.
+5. 보고서는 기존 항목 ID를 유지하여 매뉴얼의 장·절과 원문 등장 순서로 정렬한다. 사양 자체 검토는 별도 구역으로 표시한다. HTML과 Excel은 같은 검토 자료를 사용하며 원본·판정·근거·수정안·공통 및 타 문서 대조·이유를 구분한다.
+6. 기존 확장은 서버에서 도구 목록을 다시 받는다. 연결 확장 재설치와 서버 도구 갱신을 구분한다. 현재 채팅에서 목록이 캐시되어 있으면 연결 갱신이나 새 대화가 필요할 수 있다.
+
+**지킬 것** 원본·지식 목록·제품 DB·이슈는 변경하지 않는다. 새 업로드와 생성 보고서는 별도 작업 폴더에만 저장한다. 자료 경로를 직접 입력받지 않으며 파일 형식·크기·자료 ID·문단 범위·해시를 검사한다. 민감정보 보호로 조회 문구가 바뀌면 정확한 원문 인용과 구분한다. 파일 생성은 사용자가 요청했을 때만 수행한다.
+
 ### 5.4 QA Intelligence Agent 일일 점검 (옛 VXvue 일일 QA 점검)
 
 **이 기능은**
@@ -10041,6 +10056,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-MANUAL-018 | `scripts/manual_review_local.py`, `.claude/skills/vxvue-manual-revision-review/SKILL.md`, `app/modules/manual_review/local_review.py` | TEST-MANUAL-021: `tests/test_manual_review_local.py` | implemented |
 | REQ-MANUAL-019 | `app/modules/manual_review/intake.py`, `app/modules/manual_review/router.py`, `app/modules/manual_review/templates/index.html` | TEST-MANUAL-022: `tests/test_manual_review_intake.py`, `tests/test_manual_review_router.py` | implemented |
 | REQ-MANUAL-020 | `app/modules/manual_review/text_checks.py`, `app/modules/manual_review/reviewer.py`, `app/modules/manual_review/local_review.py`, `app/modules/manual_review/comment_writer.py` | TEST-MANUAL-023: `tests/test_manual_review_text_checks.py`, `tests/test_manual_review_reviewer.py`, `tests/test_manual_review_local.py` | implemented |
+| REQ-MANUAL-021 | `app/modules/manual_review/source_inventory.py`, `app/modules/manual_review/shared_review.py`, `app/modules/vxvue_chatbot/desktop.py` | `tests/test_manual_review_shared.py` | implemented |
 | NFR-MANUAL-001 | `app/core/manual_hub_client.py`, `app/modules/manual_review/cross_manual.py` | TEST-MANUAL-018: `tests/test_manual_hub_client.py`, `tests/test_cross_manual.py` | implemented |
 | NFR-MANUAL-002 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/srs_evidence.py` | TEST-MANUAL-020: `tests/test_manual_review_ai_client.py` | implemented |
 | NFR-MANUAL-003 | `app/modules/manual_review/comment_writer.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-020: `tests/test_comment_writer.py` | implemented |

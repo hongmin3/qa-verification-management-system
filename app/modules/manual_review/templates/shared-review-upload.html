@@ -1,0 +1,11 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VXvue AI 매뉴얼 검토 자료</title><style>
+body{font:16px/1.7 'Malgun Gothic',sans-serif;background:#f5f6f8;color:#182334}main{max-width:850px;margin:40px auto;padding:28px;background:white;border:1px solid #d6dde7}label{display:block;margin:20px 0 7px;font-weight:bold}input,select,button{font:inherit;max-width:100%;padding:9px}select{width:100%}small{display:block;color:#53647b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef2f7;padding:14px}.result{border-top:2px solid #31547d;margin-top:28px}.error{color:#a42020}button{margin-top:24px;background:#233a55;color:white;border:0;cursor:pointer}</style>
+<main><h1>매뉴얼 검토 자료 준비</h1><p>등록된 매뉴얼을 선택하거나 PC의 DOCX·PDF를 올리세요. 준비된 자료 ID를 VXvue AI 대화에 전달하면 공통 검토 도구를 사용할 수 있습니다.</p>
+<form method="post" action="/vxvue-desktop/manual-review/upload" enctype="multipart/form-data">
+<label for="document">등록된 매뉴얼</label><select id="document" name="document_id"><option value="">선택 안 함</option>{{OPTIONS}}</select>
+<label for="manual">또는 새 매뉴얼</label><input id="manual" name="manual" type="file" accept=".docx,.pdf"><small>파일별 최대 128MB. 원본을 변경하지 않습니다.</small>
+<label for="saved">Word에서 저장한 변경내용 표시 PDF (선택)</label><input id="saved" name="saved_pdf" type="file" accept=".pdf">
+<label for="final">Word에서 저장한 최종본 PDF (선택)</label><input id="final" name="final_pdf" type="file" accept=".pdf"><small>DOCX의 실제 쪽수는 대응 PDF에서 확인합니다. PDF가 없거나 위치가 불명확하면 쪽수 미확인으로 표시합니다.</small>
+<button type="submit">검토 자료 준비</button></form>{{RESULT}}
+<p><a href="/vxvue-desktop">VXvue AI 연결 안내</a></p></main></html>

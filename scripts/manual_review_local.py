@@ -30,4 +30,7 @@ configure_stdout()
 from app.modules.manual_review.local_review import main  # noqa: E402
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] in ('inventory', 'pages', 'report'):
+        from app.modules.manual_review.shared_cli import main as common_main
+        raise SystemExit(common_main(sys.argv[1:]))
     raise SystemExit(main())

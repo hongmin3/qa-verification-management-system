@@ -66,3 +66,5 @@ data/vxvue_desktop/
 output/vxvue_desktop/
 data/knowledge_retry/
 .superpowers/sdd/vxvue-ai-chatbot/
+data/manual_review_tools/
+data/shared_rollout/
