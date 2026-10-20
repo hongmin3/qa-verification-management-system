@@ -15,11 +15,12 @@ from pathlib import Path
 
 from .source_inventory import MAX_FILE_BYTES, extract_inventory
 from .prose_quality import validate_report_prose
+from .report_explanations import EXPLANATION_FIELDS, LANGUAGE_CONTEXTS, evidence_text, validate_explanations
 
 _LOCK = threading.RLock()
 DECISIONS = ('수정 필수', '추가 필요', '보강 권장', '사양 확인 필요', '유지', '타 문서 위임 적절')
 FINDING_KEYS = {'id', 'title', 'decision', 'priority', 'paragraphs', 'quote_paragraphs', 'proposed', 'basis',
-                'coverage', 'reason', 'location', 'kind', 'note'}
+                'coverage', 'reason', 'location', 'kind', 'note'} | EXPLANATION_FIELDS
 
 
 def _write(path, value):
@@ -313,6 +314,7 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
         if finding['id'] in ids or len(finding['id']) > 80:
             raise ValueError('검토 항목 ID가 중복되거나 너무 깁니다.')
         ids.add(finding['id'])
+        validate_explanations(finding)
         targets = finding.get('paragraphs')
         quote_numbers = finding.get('quote_paragraphs', targets)
         for numbers in (targets, quote_numbers):
@@ -339,7 +341,7 @@ def build_report(store, source_id, findings, title='매뉴얼 검토보고서', 
     validate_report_prose(title, rows, memo_review, release_review, inventory)
     key = _digest(json.dumps({'source_id': source_id, 'pdfs': inventory['pdfs'], 'title': title,
                               'findings': rows, 'memo_review': memo_review, 'release_review': release_review,
-                              'format_version': 2}, ensure_ascii=False, sort_keys=True).encode())
+                              'format_version': 4}, ensure_ascii=False, sort_keys=True).encode())
     folder = store.base / 'reports' / key
     folder.mkdir(parents=True, exist_ok=True)
     payload = {'source_id': source_id, 'source_sha256': inventory['sha256'], 'source_name': inventory['name'], 'source_kind': inventory['source_kind'],
@@ -362,14 +364,24 @@ def _write_html(path, payload):
                          + f'</figcaption><pre>{e(q["text"])}</pre><button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)">원문 복사</button></figure>' for q in row['quotes'])
         if not quotes:
             quotes = '<p>인용할 현재 문구 없음. 추가 제안·삭제 이력·근거문서 검토를 구분하여 확인하십시오.</p>'
+        explanation = '<h3>현재 원문의 한국어 뜻</h3><p>' + e(row.get('current_meaning', '한국어 뜻 미작성')) + '</p>'
+        if row.get('language_context'):
+            explanation += '<p>언어 문맥: ' + e(LANGUAGE_CONTEXTS[row['language_context']]) + '</p>'
+        evidence = ''.join('<figure><figcaption>' + e(item['source']) + ' · ' + e(item['location'])
+                           + '</figcaption><pre class="evidence-quote">' + e(item['quote'])
+                           + '</pre><p>한국어 뜻: ' + e(item['meaning']) + '</p><p>대조 관계 (검토자 해설): '
+                           + e(item['relation']) + '</p></figure>' for item in row.get('evidence', []))
+        explanation += '<h3>확인한 근거 (검토자 입력)</h3><p>' + e(row['basis']) + '</p>' + evidence
         details = ''.join(f'<dt>{label}</dt><dd>{e(row[field])}</dd>' for label, field in (
-            ('수정안 또는 리뷰 요청', 'proposed'), ('근거', 'basis'), ('공통 및 타 문서 대조', 'coverage'), ('이유', 'reason')))
+            ('대조 판단 (AI 분석)', 'reason'), ('수정안 또는 리뷰 요청', 'proposed'), ('공통 및 타 문서 대조', 'coverage')))
         if row.get('note'):
             details += '<dt>검토 설명</dt><dd>' + e(row['note']) + '</dd>'
+        comment = ('<h3>한국어 검토 코멘트</h3><pre class="review-comment">' + e(row['short_comment'])
+                   + '</pre><button type="button" data-copy="short-comment" onclick="copyReviewText(this)">한국어 검토 코멘트 복사</button>') if row.get('short_comment') else '<p>짧은 메모 미작성</p>'
         cards.append(f'<article id="{e(row["id"])}"><small>{e(row["id"])} · {e(row["decision"])} · {e(row["priority"])}</small>'
                      f'<h2>{e(row["title"])}</h2><p>{e(row.get("location") or row["section"])} · 문단 {e(row["paragraphs"])}</p>'
                      f'<p>원본/변경추적 표시: {e(row["pages_saved"])} · 최종본: {e(row["pages_final"])}</p>'
-                     f'<h3>현재 문구 · 원문 그대로</h3>{quotes}<dl>{details}</dl></article>')
+                     f'<h3>현재 문구 · 원문 그대로</h3>{quotes}{explanation}<dl>{details}</dl>{comment}</article>')
     appendix = ''
     for title, records in [('기존 메모 검토', payload['memo_review']), ('릴리즈 항목 대조', payload['release_review'])]:
         if records:
@@ -380,7 +392,9 @@ def _write_html(path, payload):
 <style>body{{font:15px/1.65 'Malgun Gothic',sans-serif;background:#f5f6f8;color:#182334}}main{{max-width:1100px;margin:auto;padding:24px}}article{{background:white;border:1px solid #d6dde7;padding:24px;margin:18px 0;break-inside:avoid}}h2{{font-size:20px}}pre{{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:8px 0}}figure{{margin:14px 0;border-left:3px solid #607d9b;padding:12px}}figcaption,small{{color:#53647b}}dl{{display:grid;grid-template-columns:170px 1fr;gap:12px}}dd{{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}}dt{{font-weight:bold}}button{{padding:5px 12px}}@media print{{button{{display:none}}}}</style><main><h1>{e(payload['title'])}</h1>
 <p>{e(payload['source_name'])} · 검토 {len(payload['findings'])}건 · 매뉴얼 순서, 기존 ID 유지</p>
 <p>현재 문구는 원본에서 직접 인용했습니다. 인용 안의 공백·기호를 보존하며, 문단 번호는 쪽수가 아닙니다. 쪽수는 대응 PDF의 물리 페이지입니다. 쪽수 미확인 항목은 절과 문단으로 찾으십시오.</p>
-{''.join(cards)}{appendix}<p>원본 SHA-256: {payload['source_sha256']}</p></main></html>'''
+{''.join(cards)}{appendix}<p>원본 SHA-256: {payload['source_sha256']}</p></main>
+<style>body{{overflow-wrap:anywhere}}dl{{grid-template-columns:170px minmax(0,1fr)}}@media(max-width:640px){{main{{padding:12px}}article{{padding:16px}}dl{{grid-template-columns:minmax(0,1fr);gap:6px}}dd{{margin-bottom:12px}}}}</style>
+<script>async function copyReviewText(button){{const text=button.previousElementSibling.textContent;try{{if(navigator.clipboard && window.isSecureContext){{await navigator.clipboard.writeText(text);}}else{{const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();const copied=document.execCommand('copy');area.remove();if(!copied)throw new Error('copy');}}button.textContent='복사 완료';}}catch(error){{button.textContent='복사 실패: 위 문구를 선택해 복사';}}}}</script></html>'''
     path.write_text(body, encoding='utf-8')
 
 
@@ -389,10 +403,12 @@ def _write_excel(path, payload, inventory):
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.worksheet.table import Table, TableStyleInfo
     headers = ['ID', '판정', '우선순위', '절·문단 위치', '실제 쪽수 (원본/변경추적 표시)', '실제 쪽수 (최종본)',
-               '검토 항목', '현재 문구 (원문 그대로)', '수정안 또는 리뷰 요청', '근거', '공통 및 타 문서 대조', '이유', '인용 문단', '검토 설명']
+               '검토 항목', '현재 문구 (원문 그대로)', '수정안 또는 리뷰 요청', '근거', '공통 및 타 문서 대조', '이유', '인용 문단', '검토 설명',
+               '현재 원문의 한국어 뜻', '근거 원문과 해설', '한국어 검토 코멘트', '언어 문맥']
     findings = [[r['id'], r['decision'], r['priority'], (r.get('location') or r['section']) + ' · 문단 ' + str(r['paragraphs']),
                  r['pages_saved'], r['pages_final'], r['title'], r['current_text'], r['proposed'], r['basis'], r['coverage'], r['reason'],
-                 ', '.join(str(q['paragraph']) for q in r['quotes']), r.get('note', '')] for r in payload['findings']]
+                 ', '.join(str(q['paragraph']) for q in r['quotes']), r.get('note', ''), r.get('current_meaning', ''),
+                 evidence_text(r.get('evidence', [])), r.get('short_comment', ''), LANGUAGE_CONTEXTS.get(r.get('language_context'), '')] for r in payload['findings']]
     comments = [[c['id'], str(c['paragraphs']), c['text'], '반영·해결 상태 별도 검토'] for c in inventory['comments']]
     changes = [[p['number'], p['section'], p['before'], p['text'], p['inserted'], p['deleted'], str(p['comment_ids'])]
                for p in inventory['paragraphs'] if p['inserted'] or p['deleted']]

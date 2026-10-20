@@ -3,7 +3,7 @@ import re
 import unicodedata
 
 MIN_KOREAN_RUN = 12
-GENERATED_FIELDS = ('title', 'proposed', 'basis', 'coverage', 'reason', 'note')
+GENERATED_FIELDS = ('title', 'proposed', 'basis', 'coverage', 'reason', 'note', 'current_meaning', 'short_comment')
 _RUN = re.compile(r'[가-힣]{' + str(MIN_KOREAN_RUN) + r',}')
 _CODE = re.compile(r'(`+).*?\1', re.S)
 _URL = re.compile(r'https?://[^\s<>]+', re.I)
@@ -38,6 +38,9 @@ def validate_report_prose(title, findings, memo_review, release_review, inventor
     for finding in findings:
         for field in GENERATED_FIELDS:
             check(f'{finding["id"]}.{field}', finding.get(field))
+        for number, item in enumerate(finding.get('evidence', []), 1):
+            for field in ('meaning', 'relation'):
+                check(f'{finding["id"]}.evidence[{number}].{field}', item[field])
     for name, records in (('memo_review', memo_review), ('release_review', release_review)):
         for number, record in enumerate(records or [], 1):
             for field, value in record.items():

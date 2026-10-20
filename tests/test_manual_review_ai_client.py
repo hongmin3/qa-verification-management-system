@@ -82,6 +82,6 @@ def test_prompts_follow_document_change_review_rules():
 
     for name in ("manual_revision_quick", "manual_revision_detail"):
         prompt = load_prompt(name)
-        assert prompt.version == 3
+        assert prompt.version == 4
         for phrase in ("공통 설정 Coverage 규칙", "Manual-worthy Gate", "COVERED_ELSEWHERE", "NOT_MANUAL_WORTHY", "SPEC_CONFLICT", "section_heading"):
             assert phrase in prompt.system_instruction, (name, phrase)

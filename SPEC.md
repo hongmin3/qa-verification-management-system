@@ -3291,6 +3291,22 @@ JSON 답의 내용이다.
 
 **지킬 것** 원본·지식 목록·제품 DB·이슈는 변경하지 않는다. 새 업로드와 생성 보고서는 별도 작업 폴더에만 저장한다. 자료 경로를 직접 입력받지 않으며 파일 형식·크기·자료 ID·문단 범위·해시를 검사한다. 민감정보 보호로 조회 문구가 바뀌면 정확한 원문 인용과 구분한다. 파일 생성은 사용자가 요청했을 때만 수행한다.
 
+### REQ-MANUAL-023 한국어로 읽는 근거 설명과 짧은 검토 메모
+
+**하는 일** 영문 매뉴얼도 한국어 독자가 수정 위치와 이유를 이해할 수 있게 설명한다. 공용 보고서는 현재 원문을 항목 상단에 펼쳐 표시하고, 한국어 뜻·공식 근거·대조 판단·수정 요청·짧은 메모를 구분한다.
+
+**입력** 기존 검토 항목에 한국어 뜻(`current_meaning`), 근거 목록(`evidence`), 짧은 메모(`short_comment`), 언어 문맥(`language_context`)을 선택 입력한다. 근거는 문서명·VP 등 출처, 절·쪽수, 원문 인용, 한국어 뜻과 대조 관계를 담는다. 함수는 입력한 근거를 보관하며 외부 문서를 검증하거나 번역을 생성하지 않는다.
+
+**순서**
+
+1. 실제 수정 대상의 절·제목·문단과 확인된 쪽수를 표시한다. 원문은 토글 없이 분석보다 먼저 보이며 한국어 뜻을 별도로 표시한다.
+2. 근거 인용과 해설을 분리하고 AI의 대조 판단임을 표시한다. 기존 `basis`와 공통·타 문서 비교도 유지한다. 근거가 불충분하면 공식 사양을 재확인할 대상으로 분류한다.
+3. 수정 요청은 한국어로 구체적인 변경 내용을 적는다. 짧은 메모는 위치에 바로 붙일 1~3문장으로 쓰며 위치·상세 배경을 반복하지 않는다. `-요` 대신 `수정 요청 드립니다`, `설명 추가 필요` 등 댓글 문체를 따른다.
+4. 복사 버튼은 입력한 짧은 메모만 복사한다. 메모를 입력하지 않으면 장문 수정안으로 대신 만들지 않고 미작성 상태를 표시한다. HTML·JSON·Excel은 같은 입력을 사용하고 Excel 기존 A:N 열 뒤에 새 열을 추가한다.
+5. 완결된 한국어 절·표·연속 문단과 연결된 목차·개정 이력은 번역 전 초안으로 취급한다. 한국어가 있다는 이유만으로 수정 대상으로 세지 않는다. 영문 사이의 뜬금없는 조각·작업 메모·오타는 문맥으로 검토하며 UI·고유명·인용은 구별한다. 초안 안의 기능·수치·사양 오류는 계속 검토한다.
+
+**지킬 것** 언어 문맥은 검토자가 입력하며 코드가 언어 비율로 결함을 확정하거나 기능 판정을 자동 제외하지 않는다. 선택 필드가 없는 기존 호출도 유지한다. 원문·기존 ID·정렬·쪽수·취소선 기준은 REQ-MANUAL-021을 따른다.
+
 ### REQ-MANUAL-022 분석 문장의 띄어쓰기 검사
 
 **하는 일** 보고서의 원문 인용과 AI가 작성한 설명을 구분한다. 수정안·근거·이유·검토 설명·메모와 릴리즈 대조 설명에 공백 없이 이어진 긴 한글 표현이 있으면 파일 생성 전에 재검토를 요청한다.
@@ -10071,6 +10087,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-MANUAL-020 | `app/modules/manual_review/text_checks.py`, `app/modules/manual_review/reviewer.py`, `app/modules/manual_review/local_review.py`, `app/modules/manual_review/comment_writer.py` | TEST-MANUAL-023: `tests/test_manual_review_text_checks.py`, `tests/test_manual_review_reviewer.py`, `tests/test_manual_review_local.py` | implemented |
 | REQ-MANUAL-021 | `app/modules/manual_review/source_inventory.py`, `app/modules/manual_review/shared_review.py`, `app/modules/vxvue_chatbot/desktop.py` | `tests/test_manual_review_shared.py` | implemented |
 | REQ-MANUAL-022 | `app/modules/manual_review/prose_quality.py`, `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py` | `tests/test_manual_review_prose.py` | implemented |
+| REQ-MANUAL-023 | `app/modules/manual_review/report_explanations.py`, `app/modules/manual_review/shared_review.py`, `app/modules/manual_review/shared_tools.py`, `app/modules/manual_review/prose_quality.py`, `app/prompts/manual_revision_quick.yaml`, `app/prompts/manual_revision_detail.yaml` | `tests/test_manual_review_readable.py` | implemented |
 | NFR-MANUAL-001 | `app/core/manual_hub_client.py`, `app/modules/manual_review/cross_manual.py` | TEST-MANUAL-018: `tests/test_manual_hub_client.py`, `tests/test_cross_manual.py` | implemented |
 | NFR-MANUAL-002 | `app/modules/manual_review/change_filter.py`, `app/modules/manual_review/ai_client.py`, `app/modules/manual_review/srs_evidence.py` | TEST-MANUAL-020: `tests/test_manual_review_ai_client.py` | implemented |
 | NFR-MANUAL-003 | `app/modules/manual_review/comment_writer.py`, `app/core/storage.py`, `app/modules/manual_review/templates/revision.html` | TEST-MANUAL-020: `tests/test_comment_writer.py` | implemented |

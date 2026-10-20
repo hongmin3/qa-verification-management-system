@@ -1,5 +1,6 @@
 """MCP surface for immutable review sources and derived report files."""
 from .shared_review import ReviewStore, build_report, read_review
+from .report_explanations import explanation_schema
 
 
 def definitions():
@@ -7,7 +8,7 @@ def definitions():
     strings['decision']['enum'] = ['수정 필수', '추가 필요', '보강 권장', '사양 확인 필요', '유지', '타 문서 위임 적절']
     strings['priority']['enum'] = ['높음', '보통', '낮음']
     numbers = {'type': 'array', 'maxItems': 40, 'items': {'type': 'integer', 'minimum': 1}}
-    item = {'type': 'object', 'properties': {**strings, 'paragraphs': numbers, 'quote_paragraphs': numbers,
+    item = {'type': 'object', 'properties': {**strings, **explanation_schema(), 'paragraphs': numbers, 'quote_paragraphs': numbers,
             'kind': {'type': 'string', 'enum': ['manual', 'proposal', 'source']}},
             'required': ['id', 'title', 'decision', 'priority', 'paragraphs', 'proposed', 'basis', 'coverage', 'reason'], 'additionalProperties': False}
     return [
@@ -16,7 +17,7 @@ def definitions():
              'view': {'type': 'string', 'enum': ['summary', 'paragraphs', 'comments', 'page', 'images']}, 'offset': {'type': 'integer', 'minimum': 0},
              'limit': {'type': 'integer', 'minimum': 1, 'maximum': 40}, 'paragraphs': numbers,
              'page': {'type': 'integer', 'minimum': 1}, 'basis': {'type': 'string', 'enum': ['source', 'saved', 'final']}}, 'additionalProperties': False}},
-        {'name': 'make_manual_review_report', 'description': '사용자가 요청한 매뉴얼 검토보고서 HTML·Excel 생성. 원본 수정 없음. 현재 문구는 지정한 quote_paragraphs(생략 시 paragraphs)의 원문에서 서버가 직접 채움. 임의 요약문 전달 불가. 수정안·근거·이유·설명·메모·릴리즈 대조는 자연스러운 띄어쓰기로 작성. 띄어쓰기 확인 오류는 해당 필드를 교정한 뒤 다시 생성하며 원문·제품명은 임의 변경하지 않기. 원문 순서 정렬, ID 유지, 실제 쪽수/문단 구분. source/proposal은 문단 없는 항목도 가능.',
+        {'name': 'make_manual_review_report', 'description': '요청한 검토보고서 HTML·Excel 생성. 현재 문구는 quote_paragraphs(생략 시 paragraphs) 원문에서 서버가 채우며 상단에 펼쳐 표시. current_meaning에 한국어 뜻, evidence에 확인한 공식 근거의 위치·원문·한국어 해설, reason에 AI 대조 판단, proposed에 구체적 한국어 수정 요청을 작성. short_comment는 위치에 붙일 짧은 한국어 메모이며 이 값만 복사. 한국어 초안과 뜬금없는 한국어 조각을 language_context로 구분하되 기능 오류 검토는 유지. 문체·판정은 최신 통합 QA MD 35절 적용. 생성 문장의 띄어쓰기 오류는 교정 후 재생성. 원본 수정 없음. 원문 순서·기존 ID·실제 쪽수와 문단 구분 유지. 선택 필드 없는 기존 호출도 지원.',
          'inputSchema': {'type': 'object', 'properties': {'source_id': {'type': 'string'}, 'title': {'type': 'string'},
              'memo_review': {'type': 'array', 'maxItems': 1000, 'items': {'type': 'object'}},
              'release_review': {'type': 'array', 'maxItems': 1000, 'items': {'type': 'object'}},
