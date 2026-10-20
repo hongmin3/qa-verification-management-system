@@ -482,3 +482,19 @@ def test_cli_passes_since_and_until_to_pipeline(monkeypatch):
 
     assert module.main() == 0
     assert captured["since"] == date(2026, 9, 25) and captured["until"] == date(2026, 9, 29)
+
+
+def test_cli_prints_change_mail_line(monkeypatch, capsys):
+    """실행 로그에 변경 리포트 메일 결과 한 줄을 남긴다 (REQ-ALMCHG-004)."""
+    path = Path(__file__).resolve().parents[1] / "scripts" / "run_daily_qa.py"
+    spec = importlib.util.spec_from_file_location("run_daily_qa_for_change_mail_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    note = "발송 2026-10-19 04:00 · 수신 hon***@vieworks.com · Message-ID <m1@example>"
+    outcome = {"run_id": "r1", "status": "SUCCESS", "email": {"status": "skipped"}, "stages": {},
+               "summary": {"change_mail": {"status": "sent", "note": note}}}
+    monkeypatch.setattr(module, "load", lambda product=None: SimpleNamespace(enabled=True))
+    monkeypatch.setattr(module, "run_daily", lambda cfg, **kwargs: outcome)
+    monkeypatch.setattr(sys, "argv", ["run_daily_qa.py"])
+    assert module.main() == 0
+    assert f"  변경 리포트 메일: 보냄 · {note}" in capsys.readouterr().out.splitlines()

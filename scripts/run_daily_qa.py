@@ -118,6 +118,10 @@ def main() -> int:
     for name, stage in outcome["stages"].items():
         print(f"  - {name}: {stage['status']} {stage.get('note', '')}")
     summary = outcome.get("summary") or {}
+    change_mail = summary.get("change_mail")
+    if isinstance(change_mail, dict) and change_mail.get("status"):
+        from app.modules.qa_agent.run_view import change_mail_line
+        print(f"  {change_mail_line(change_mail)}")
     print(f"  Claude 호출 {summary.get('claude_calls', 0)}회 · 이벤트 {summary.get('events') or '없음'}")
     if summary.get("claude_limit"):
         print(f"  ※ {summary['claude_limit'].get('description', '')}")

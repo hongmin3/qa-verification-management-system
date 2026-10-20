@@ -355,3 +355,43 @@ def test_send_test_report_uses_the_real_summary_layout(configured) -> None:
         assert section in text, section
     assert message.get_body(("html",)) is not None
     assert "qa.person" not in text
+
+
+# --- 한 번만 보내는 알림의 끊긴 선점 (REQ-QAINTEL-049) ------------------------------
+
+
+def _age_claim(storage: Storage, kind: str, minutes: int) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    old = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
+    with storage.connect() as db:
+        db.execute("UPDATE notifications SET last_claimed_at=? WHERE kind=?", (old, kind))
+
+
+def test_dedupe_claim_left_unsent_by_a_killed_process_is_reclaimed_after_30_minutes(storage: Storage) -> None:
+    kind = "claude_usage_limit:WEEKLY:2026-10-17T16:00:00+00:00"
+    assert storage.claim_notification(kind, "")          # 선점한 뒤 보내기 전에 프로세스가 죽었다
+    assert not storage.claim_notification(kind, "")      # 아직 다른 발송이 진행 중일 수 있다
+    _age_claim(storage, kind, 29)
+    assert not storage.claim_notification(kind, "")
+    _age_claim(storage, kind, 31)
+    assert storage.claim_notification(kind, "")          # 30분이 지나 보낸 기록이 없으면 다시 잡는다
+
+
+def test_sent_dedupe_notification_is_never_reclaimed(storage: Storage) -> None:
+    kind = "claude_usage_limit:USAGE:7d:2026-10-17T16:00:00+00:00"
+    assert storage.claim_notification(kind, "")
+    storage.mark_notification_sent(kind)
+    _age_claim(storage, kind, 600)
+    assert not storage.claim_notification(kind, "")
+
+
+def test_cooldown_claim_is_unchanged_by_the_stale_rule(storage: Storage) -> None:
+    """쿨다운 알림은 실패해도 쿨다운이 걸린다는 기존 규칙을 지킨다."""
+    from datetime import datetime, timedelta, timezone
+
+    kind = "claude_usage_limit"
+    assert storage.claim_notification(kind, "")
+    _age_claim(storage, kind, 31)
+    cooldown_before = (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()
+    assert not storage.claim_notification(kind, cooldown_before)
