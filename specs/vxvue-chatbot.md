@@ -33,7 +33,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 - 대화 시작·이력: REQ-VXVUECHATBOT-001·002
 - 첨부·실행: REQ-VXVUECHATBOT-003·004
 - 근거·규칙·지식: REQ-VXVUECHATBOT-005·006
-- 개인 PC의 Claude에서 쓰기: Desktop·Cowork 연결 REQ-VXVUECHATBOT-011, Polarion 수집 REQ-VXVUECHATBOT-012, 입력 없는 자동 연결 REQ-VXVUECHATBOT-013, Claude Code CLI 설치 REQ-VXVUECHATBOT-014
+- 개인 PC의 Claude에서 쓰기: Desktop·Cowork 연결 REQ-VXVUECHATBOT-011, Polarion 수집 REQ-VXVUECHATBOT-012, 입력 없는 자동 연결 REQ-VXVUECHATBOT-013, Claude Code CLI 설치 REQ-VXVUECHATBOT-014, 한 PC의 Claude·Codex Skill 맞춤 REQ-VXVUECHATBOT-015
 - 자동 최신화: 상위 REQ-SYNC-002
 
 ### REQ-VXVUECHATBOT-001 챗봇 화면
@@ -273,6 +273,44 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 **안 될 때** 인증·권한·필터·경로·네트워크 실패를 오류로 표시한다. 실패를 0건으로 처리하지 않는다. 조회 결과는 24시간 보관하며 오래된 결과는 재수집한다.
 
+### REQ-VXVUECHATBOT-015 한 PC의 Claude·Codex 연결 Skill 맞춤
+
+**하는 일** 한 PC에서 Claude Code와 Codex를 함께 쓰면 연결 Skill(`vxvue-ai`) 사본이 여러 곳에 있다. 어느 쪽에서 Skill을 개선해 서버에 배포하든, 다음 세션을 시작할 때 이 PC의 모든 사본이 서버 배포본과 같아진다.
+
+**언제** Claude Code와 Codex의 세션 시작 훅이 실행한다. 사람이 `scripts/sync_vxvue_local_skill.py`를 직접 실행해도 된다.
+
+**입력** 서버의 Skill ZIP(`<서버>/vxvue-desktop/skill.zip`)이다. Claude Desktop ZIP·Claude Code 설치 명령과 같은 원본(`deploy/claude-desktop/skill/vxvue-ai/SKILL.md`)에서 만든다. 서버 주소는 실행 옵션, 없으면 이 PC에 등록된 `vxvue-ai` 연결 주소에서 읽는다.
+
+**맞추는 사본**
+
+| 사용처 | 위치 |
+|---|---|
+| Claude Code | `~/.claude/skills/vxvue-ai/SKILL.md` |
+| Codex 사용자 Skill | `~/.codex/skills/vxvue-ai/SKILL.md` |
+| Codex 플러그인 원본 | `~/.codex/local-marketplaces/vxvue-server-local/plugins/vxvue-server-ai/skills/vxvue-ai/SKILL.md` |
+| Codex 플러그인 설치본 | `~/.codex/plugins/cache/vxvue-server-local/vxvue-server-ai/<최신 버전>/skills/vxvue-ai/SKILL.md` |
+
+**순서**
+
+1. 서버 ZIP을 받아 `vxvue-ai/SKILL.md` 하나만 꺼낸다. 이름 `vxvue-ai`와 관리 표시(`vxvue-ai-managed`)가 없으면 아무 사본도 바꾸지 않는다.
+2. 이미 있는 사본만 맞춘다. 관리 표시가 없는 같은 이름의 Skill은 다른 Skill로 보고 건드리지 않는다.
+3. 줄바꿈만 다른 사본은 같은 내용으로 본다. 내용이 다르면 이전 판을 백업한 뒤 바꾼다.
+4. 사본이 지난번에 맞춘 판과도, 서버 판과도 다르면 이 PC에서 직접 고친 것이다. 이 사본은 덮어쓰지 않고 알린다. 처음 맞추는 사본은 관리 표시만 확인하고 바꾼다.
+5. 바꾼 사본과 직접 고친 사본이 있을 때만 세션 화면에 한 줄로 알린다.
+
+**결과** 바꾼 사본·같은 사본·건너뛴 사본 수와 이유. 상태 파일은 `~/.vxvue-ai/skill-sync-state.json`, 백업은 `~/.vxvue-ai/backups/`에 둔다.
+
+**안 될 때** 서버에 연결하지 못하거나 ZIP이 잘못되면 사본을 바꾸지 않는다. 훅에서는 세션을 막지 않고 30분 동안 다시 시도하지 않는다.
+
+**지킬 것**
+
+- Skill 개선은 원본(`deploy/claude-desktop/skill/vxvue-ai/SKILL.md`)을 고쳐 서버에 배포한다. 이 PC의 사본을 직접 고치지 않는다.
+- 업무 판단 규칙은 연결 Skill이 아니라 통합 QA MD에 둔다. 통합 QA MD는 두 프로그램이 같은 서버의 `get_workflow`로 읽으므로 따로 맞출 필요가 없다.
+- 연결 키와 설정의 다른 값은 읽거나 출력하지 않는다. 연결 주소만 읽는다.
+- 연결 프로그램 코드(`.mcpb`, Codex 플러그인의 `server.cjs`)는 맞추지 않는다. 그 변경은 새 설치가 필요하다.
+
+> **참고** 훅 등록은 `--install-hooks`로 한다. 여러 번 실행해도 결과가 같고, 다른 훅 항목은 바꾸지 않는다. `--uninstall-hooks`는 이 도구의 항목만 지운다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -299,6 +337,10 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 합성 등록 번호로 한 번 사용·만료·허용되지 않은 네트워크 거절, 해시 저장, 연결 키 취소·유휴 만료, 이전 팀 토큰 호환을 확인한다. 실제 Node 전달기로 첫 등록, 재시작 후 키 재사용, 서버 중지·연결 거부·인증 거절의 안내 문구를 확인한다. 설치 파일과 스크립트에 장기 키가 없는지 확인한다. 실제 Claude CLI·Desktop 일반 채팅·Cowork 확인은 `progress.md`에 각각 기록한다.
 
+### TEST-VXVUECHATBOT-007 한 PC의 Skill 사본 맞춤
+
+임시 홈과 합성 서버 응답으로 네 사본 갱신, 줄바꿈만 다른 사본 유지, 관리 표시 없는 Skill 보존, 직접 고친 사본 보호, 잘못된 ZIP·연결 실패 시 무변경, 훅 출력 형식, 훅 등록의 반복 실행과 다른 항목 보존을 확인한다. 실제 서버 ZIP으로 이 PC의 사본을 맞추고 Claude·Codex 훅 실행 결과를 `progress.md`에 기록한다.
+
 ## 12. 요구사항 추적성
 
 <!-- Skill 동기화 시험은 문서 DB 등록 없이 실제 자산 확정 경로를 사용한다. -->
@@ -309,6 +351,7 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-012 | `app/modules/vxvue_chatbot/desktop_polarion.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
 | REQ-VXVUECHATBOT-013 | `app/modules/vxvue_chatbot/desktop_enroll.py`, `app/core/vxdesk_storage.py`, `deploy/claude-desktop/server.cjs`, `scripts/vxvue_desktop_devices.py` | TEST-VXVUECHATBOT-006: `tests/test_vxvue_desktop_enroll.py`, `tests/test_vxvue_desktop_bridge.py` | implemented |
 | REQ-VXVUECHATBOT-014 | `app/modules/vxvue_chatbot/desktop.py`, `deploy/claude-desktop/install-claude-code.ps1` | TEST-VXVUECHATBOT-006: `tests/test_vxvue_desktop_enroll.py` | implemented |
+| REQ-VXVUECHATBOT-015 | `scripts/sync_vxvue_local_skill.py` | TEST-VXVUECHATBOT-007: `tests/test_sync_vxvue_local_skill.py` | verified |
 | REQ-VXVUECHATBOT-001 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/templates/chat.html`, `app/web/router.py`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-002 | `app/core/vxchat_storage.py`, `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/service.py`, `app/prompts/vxvue_chatbot.yaml`, `app/web/static/vxvue-chatbot.js` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_storage.py`, `tests/test_vxvue_chat_agent.py`, `tests/test_vxvue_chat_service.py` | verified |
 | REQ-VXVUECHATBOT-003 | `app/modules/vxvue_chatbot/router.py`, `app/modules/vxvue_chatbot/mcp_server.py` | TEST-VXVUECHATBOT-001: `tests/test_vxvue_chat_router.py` | verified |

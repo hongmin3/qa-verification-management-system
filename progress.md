@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-10-20 한 PC의 Claude·Codex 연결 Skill 맞춤 (REQ-VXVUECHATBOT-015)
+
+- 원인: Codex 세션이 연결 Skill 1.2.3을 Codex 사본에만 설치해 Claude Code 사본(`~/.claude/skills/vxvue-ai`)이 10/15 판으로 남아 있었다. 서버 ZIP과 Codex 사본은 줄바꿈 외에 같았다. 업무 규칙(통합 QA MD)은 두 프로그램이 같은 서버 `get_workflow`로 읽으므로 영향이 없었다.
+- `scripts/sync_vxvue_local_skill.py`를 추가하고 이 PC의 Claude `settings.json`·Codex `hooks.json` 세션 시작 훅에 등록했다. 다른 훅 항목은 바꾸지 않았고, 키트 훅 설치기 dry-run도 바뀔 내용이 없었다.
+- 시험 14건이 통과했다. 직접 고친 사본 보호와 관리 표시 확인을 일부러 망가뜨리면 해당 시험이 실패하는 것을 확인했다.
+- 실제 확인: 서버 ZIP 기준 4곳 모두 같음. Claude 사본을 옛 판으로 되돌린 뒤 실제 `claude -p` 세션 시작으로 Claude·Codex 사본이 함께 서버 판이 됐다. 같은 훅 명령을 bash·cmd·PowerShell에서 실행해 모두 맞췄다.
+- Codex는 사용자가 승인한 훅만 실행한다(`config.toml`의 `hooks.state`). 승인 전 `codex exec`에서는 이 훅이 실행되지 않았고, 1회 승인 우회 실행에서는 사본 2개를 맞췄다. Codex `/hooks`에서 새 훅과 위치가 바뀐 키트 훅을 한 번 승인해야 한다. 승인 전에도 Claude 세션을 시작하면 Codex 사본까지 맞춰진다.
+
 ## 2026-10-20 한국어 매뉴얼 검토 기준과 운영 반영 (REQ-MANUAL-023)
 
 - 통합 QA MD를 `2026-10-20.3`으로 개정했다. 35.10~35.12에 영문 원문의 한국어 뜻, 실제 수정 위치, 공식 근거 원문·한국어 해설, AI 대조 판단 구분, 짧은 메모와 댓글 문체, 한국어 초안과 편집 오류의 구별을 추가했다. 초안 안의 기능·수치·사양 오류 검토는 유지한다.

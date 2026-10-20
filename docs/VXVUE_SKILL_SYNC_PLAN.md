@@ -6,6 +6,7 @@ QA 담당자가 편집하는 업무 지침은 지식폴더의 `[QA 작성 규칙
 |---|---|
 | QA 업무 규칙 | 통합 MD의 운영 지침·상세 규칙을 수정하고 기존 지식 동기화 실행 |
 | 연결 방법 | `vxvue-server-ai@vxvue-server-local`의 `vxvue-ai` Skill |
+| 한 PC의 Claude·Codex 연결 Skill 사본 | 원본 `deploy/claude-desktop/skill/vxvue-ai/SKILL.md`를 고쳐 서버에 배포. 세션 시작 훅(`scripts/sync_vxvue_local_skill.py`)이 사본을 맞추며, 사본을 직접 고치지 않음 |
 | 자동 생성 연결 지침 | `[Skill 지침] VXvue.md`, 직접 편집하지 않음 |
 | 서버 사본·질문별 원본 판 | 동기화와 질문 준비가 자동 관리 |
 | 구형 로컬 직접 조회·TXT | VXvue 운영 입력에서 제외, 복구본은 지식폴더 밖에 보관 |

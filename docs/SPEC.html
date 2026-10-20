@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="8b37331d36fbf648e8e23afe555155ef36d0ca70438af7b09388b43dadb58217">
+<meta name="spec-source-sha256" content="df1467336d903e143023a79ec84082f65f554d84ff3293cda4c725f7a8e1e52c">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>309</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>193</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>221</b><span>implemented</span></div><div class="stat st-verified"><b>69</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>310</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>194</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>221</b><span>implemented</span></div><div class="stat st-verified"><b>70</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -634,6 +634,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013 <span>사용자 입력 없는 자동 연결</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014 <span>Claude Code CLI 연결 설치</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012 <span>Polarion 번호·필터로 현재 자료 수집</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015 <span>한 PC의 Claude·Codex 연결 Skill 맞춤</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -641,6 +642,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-004">TEST-VXVUECHATBOT-004 <span>사용량 절감과 근거 보존</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-005">TEST-VXVUECHATBOT-005 <span>Skill 자동 반영과 자산 연결</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006 <span>자동 연결과 실패 안내</span></a></li>
+<li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007 <span>한 PC의 Skill 사본 맞춤</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-12">12. 요구사항 추적성</a></li>
 <li class="toc-2"><a href="#doc-alm-change-report">QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</a></li>
 <li class="toc-2"><a href="#doc-alm-change-report-sec-1">1. 목적</a></li>
@@ -1037,6 +1039,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a></td><td data-label="이름">사용자 입력 없는 자동 연결</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop_enroll.py</code>, <code>app/core/vxdesk_storage.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/vxvue_desktop_devices.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code>, <code>tests/test_vxvue_desktop_bridge.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a></td><td data-label="이름">Claude Code CLI 연결 설치</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/install-claude-code.ps1</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></td><td data-label="이름">Polarion 번호·필터로 현재 자료 수집</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop_polarion.py</code></td><td data-label="테스트"><code>tests/test_vxvue_desktop_polarion.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></td><td data-label="이름">한 PC의 Claude·Codex 연결 Skill 맞춤</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>scripts/sync_vxvue_local_skill.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -15836,7 +15839,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li>대화 시작·이력: <a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a>·002</li>
 <li>첨부·실행: <a class="idref" href="#REQ-VXVUECHATBOT-003">REQ-VXVUECHATBOT-003</a>·004</li>
 <li><span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>·규칙·지식: <a class="idref" href="#REQ-VXVUECHATBOT-005">REQ-VXVUECHATBOT-005</a>·006</li>
-<li>개인 PC의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>에서 쓰기: Desktop·Cowork 연결 <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a>, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> <a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a>, 입력 없는 자동 연결 <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code CLI 설치 <a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a></li>
+<li>개인 PC의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>에서 쓰기: Desktop·Cowork 연결 <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a>, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> <a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a>, 입력 없는 자동 연결 <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code CLI 설치 <a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a>, 한 PC의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>·Codex <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 맞춤 <a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></li>
 <li>자동 최신화: 상위 <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></li>
 </ul>
 <section class="card kind-req" id="REQ-VXVUECHATBOT-001">
@@ -16166,6 +16169,49 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>지킬 것</strong> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>과 AI 분석을 구분한다. 서버에서 AI를 호출하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 서버에 두고 PC로 보내지 않는다.</p>
 <p><strong>안 될 때</strong> 인증·권한·필터·경로·네트워크 실패를 오류로 표시한다. 실패를 0건으로 처리하지 않는다. 조회 결과는 24시간 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>하며 오래된 결과는 재<span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-015">
+<h3><span class="idtag">REQ-VXVUECHATBOT-015</span> 한 PC의 Claude·Codex 연결 Skill 맞춤</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>scripts/sync_vxvue_local_skill.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></span></div>
+<details class="history"><summary>변경 이력 2</summary>
+<ul>
+<li><span class="hist">2026-10-20 한 PC의 Claude·Codex 연결 Skill 맞춤</span> <a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a>: <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code·Codex <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 시작하면 이 PC의 <code>vxvue-ai</code> 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 사본 4곳을 서버 배포본과 맞춘다. 어느 쪽에서 개선해 서버에 배포해도 다음 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>부터 두 프로그램이 같은 판을 쓴다. 관리 표시가 없는 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>과 이 PC에서 직접 고친 사본은 덮어쓰지 않고 알린다.</li>
+<li><span class="hist">2026-10-20 한 PC의 Claude·Codex 연결 Skill 맞춤</span> <a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a>: 서버 연결이 안 되거나 받은 ZIP이 잘못되면 아무 사본도 바꾸지 않는다. 훅은 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 막지 않고 30분 뒤 다시 시도하며, 마지막 실행 결과를 상태 파일에 남긴다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 한 PC에서 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code와 Codex를 함께 쓰면 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>(<code>vxvue-ai</code>) 사본이 여러 곳에 있다. 어느 쪽에서 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>을 개선해 서버에 배포하든, 다음 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 시작할 때 이 PC의 모든 사본이 서버 배포본과 같아진다.</p>
+<p><strong>언제</strong> <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code와 Codex의 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span> 시작 훅이 실행한다. 사람이 <code>scripts/sync_vxvue_local_skill.py</code>를 직접 실행해도 된다.</p>
+<p><strong>입력</strong> 서버의 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> ZIP(<code>&lt;서버&gt;/vxvue-desktop/skill.zip</code>)이다. <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop ZIP·<span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code 설치 명령과 같은 원본(<code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code>)에서 만든다. 서버 주소는 실행 옵션, 없으면 이 PC에 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 <code>vxvue-ai</code> 연결 주소에서 읽는다.</p>
+<p><strong>맞추는 사본</strong></p>
+<div class="table-wrap"><table>
+<thead><tr><th>사용처</th><th>위치</th></tr></thead>
+<tbody>
+<tr><td><span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code</td><td><code>~/.claude/skills/vxvue-ai/SKILL.md</code></td></tr>
+<tr><td>Codex 사용자 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span></td><td><code>~/.codex/skills/vxvue-ai/SKILL.md</code></td></tr>
+<tr><td>Codex 플러그인 원본</td><td><code>~/.codex/local-marketplaces/vxvue-server-local/plugins/vxvue-server-ai/skills/vxvue-ai/SKILL.md</code></td></tr>
+<tr><td>Codex 플러그인 설치본</td><td><code>~/.codex/plugins/cache/vxvue-server-local/vxvue-server-ai/&lt;최신 버전&gt;/skills/vxvue-ai/SKILL.md</code></td></tr>
+</tbody>
+</table></div>
+<p><strong>순서</strong></p>
+<ol>
+<li>서버 ZIP을 받아 <code>vxvue-ai/SKILL.md</code> 하나만 꺼낸다. 이름 <code>vxvue-ai</code>와 관리 표시(<code>vxvue-ai-managed</code>)가 없으면 아무 사본도 바꾸지 않는다.</li>
+<li>이미 있는 사본만 맞춘다. 관리 표시가 없는 같은 이름의 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 다른 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>로 보고 건드리지 않는다.</li>
+<li>줄바꿈만 다른 사본은 같은 내용으로 본다. 내용이 다르면 이전 판을 백업한 뒤 바꾼다.</li>
+<li>사본이 지난번에 맞춘 판과도, 서버 판과도 다르면 이 PC에서 직접 고친 것이다. 이 사본은 덮어쓰지 않고 알린다. 처음 맞추는 사본은 관리 표시만 확인하고 바꾼다.</li>
+<li>바꾼 사본과 직접 고친 사본이 있을 때만 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span> 화면에 한 줄로 알린다.</li>
+</ol>
+<p><strong>결과</strong> 바꾼 사본·같은 사본·건너뛴 사본 수와 이유. 상태 파일은 <code>~/.vxvue-ai/skill-sync-state.json</code>, 백업은 <code>~/.vxvue-ai/backups/</code>에 둔다.</p>
+<p><strong>안 될 때</strong> 서버에 연결하지 못하거나 ZIP이 잘못되면 사본을 바꾸지 않는다. 훅에서는 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 막지 않고 30분 동안 다시 시도하지 않는다.</p>
+<p><strong>지킬 것</strong></p>
+<ul>
+<li><span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 개선은 원본(<code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code>)을 고쳐 서버에 배포한다. 이 PC의 사본을 직접 고치지 않는다.</li>
+<li>업무 판단 규칙은 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>이 아니라 통합 QA MD에 둔다. 통합 QA MD는 두 프로그램이 같은 서버의 <code>get_workflow</code>로 읽으므로 따로 맞출 필요가 없다.</li>
+<li>연결 키와 설정의 다른 값은 읽거나 출력하지 않는다. 연결 주소만 읽는다.</li>
+<li>연결 프로그램 코드(<code>.mcpb</code>, Codex 플러그인의 <code>server.cjs</code>)는 맞추지 않는다. 그 변경은 새 설치가 필요하다.</li>
+</ul>
+<aside class="callout callout-info"><span class="callout-label">참고</span>
+<p>훅 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>은 <code>--install-hooks</code>로 한다. 여러 번 실행해도 결과가 같고, 다른 훅 항목은 바꾸지 않는다. <code>--uninstall-hooks</code>는 이 도구의 항목만 지운다.</p>
+</aside>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -16193,6 +16239,10 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <h3><span class="idtag">TEST-VXVUECHATBOT-006</span> 자동 연결과 실패 안내</h3>
 <p>합성 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 번호로 한 번 사용·만료·허용되지 않은 네트워크 거절, 해시 저장, 연결 키 취소·유휴 만료, 이전 팀 <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span> 호환을 확인한다. 실제 Node 전달기로 첫 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>, 재시작 후 키 재사용, 서버 중지·연결 거부·인증 거절의 안내 문구를 확인한다. 설치 파일과 스크립트에 장기 키가 없는지 확인한다. 실제 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span>·Desktop 일반 채팅·Cowork 확인은 <code>progress.md</code>에 각각 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>한다.</p>
 </section>
+<section class="card kind-test" id="TEST-VXVUECHATBOT-007">
+<h3><span class="idtag">TEST-VXVUECHATBOT-007</span> 한 PC의 Skill 사본 맞춤</h3>
+<p>임시 홈과 합성 서버 응답으로 네 사본 갱신, 줄바꿈만 다른 사본 유지, 관리 표시 없는 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 보존, 직접 고친 사본 보호, 잘못된 ZIP·연결 실패 시 무변경, 훅 출력 형식, 훅 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>의 반복 실행과 다른 항목 보존을 확인한다. 실제 서버 ZIP으로 이 PC의 사본을 맞추고 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>·Codex 훅 실행 결과를 <code>progress.md</code>에 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>한다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-12">
 <h2>12. 요구사항 추적성</h2>
@@ -16203,6 +16253,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop_polarion.py</code></td><td data-label="Test"><code>tests/test_vxvue_desktop_polarion.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop_enroll.py</code>, <code>app/core/vxdesk_storage.py</code>, <code>deploy/claude-desktop/server.cjs</code>, <code>scripts/vxvue_desktop_devices.py</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code>, <code>tests/test_vxvue_desktop_bridge.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/install-claude-code.ps1</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></td><td data-label="Implementation"><code>scripts/sync_vxvue_local_skill.py</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-001">REQ-VXVUECHATBOT-001</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/templates/chat.html</code>, <code>app/web/router.py</code>, <code>app/web/static/vxvue-chatbot.js</code>, <code>app/web/static/vxvue-chatbot.css</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-002">REQ-VXVUECHATBOT-002</a></td><td data-label="Implementation"><code>app/core/vxchat_storage.py</code>, <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/service.py</code>, <code>app/prompts/vxvue_chatbot.yaml</code>, <code>app/web/static/vxvue-chatbot.js</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_storage.py</code>, <code>tests/test_vxvue_chat_agent.py</code>, <code>tests/test_vxvue_chat_service.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-003">REQ-VXVUECHATBOT-003</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/router.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001</a>: <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
