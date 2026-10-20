@@ -188,8 +188,10 @@ def definitions():
          {"result_id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["result_id"]),
     ]
     result.extend({"name": n, "description": d, "inputSchema": {"type": "object", "properties": p, "required": r, "additionalProperties": False}} for n, d, p, r in extra)
+    from app.modules.manual_review.shared_tools import definitions as review_definitions
+    result.extend(review_definitions())
     for tool in result:
-        tool["annotations"] = {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
+        tool["annotations"] = {"readOnlyHint": tool['name'] != 'make_manual_review_report', "destructiveHint": False, "openWorldHint": False}
     return result
 
 
@@ -210,6 +212,9 @@ def call(name, arguments):
         return polarion_lookup().item(**arguments)
     if name == "read_polarion_result":
         return PolarionLookup(get_settings().root, None).read(**arguments)
+    if name in ('get_manual_review', 'make_manual_review_report'):
+        from app.modules.manual_review.shared_tools import call as review_call
+        return review_call(name, arguments, get_settings().root, snapshot)
     args = dict(arguments)
     sid = args.pop("snapshot_id", None)
     if name != "get_status" and not isinstance(sid, str):
@@ -246,6 +251,18 @@ def dispatch(message, context=None):
                 data = {**data, "connection": connection_info(context)}
             if isinstance(data, list):
                 content = data
+            elif params['name'] == 'make_manual_review_report':
+                from urllib.parse import urlsplit
+                from app.core.security_filter import mask_payload
+                masked, _ = mask_payload(data)
+                base = str((context or {}).get('base_url', '')).rstrip('/')
+                parsed = urlsplit(base)
+                # Generated download routes are infrastructure, not source-document excerpts.
+                # Preserve only these validated links; all quoted document content stays masked.
+                if parsed.scheme in ('http', 'https') and parsed.netloc and not parsed.username and not parsed.query and not parsed.fragment:
+                    for row, original in zip(masked['files'], data['files']):
+                        row['url'] = base + original['url']
+                content = [{'type': 'text', 'text': json.dumps(masked, ensure_ascii=False)}]
             elif params["name"] in ("get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result"):
                 # These are already protected before slicing. Replacing text after slicing
                 # would change offsets and could corrupt a JSON value across chunk boundaries.
@@ -379,3 +396,7 @@ def download_skill():
     from scripts.build_vxvue_desktop import skill_bytes
     return Response(skill_bytes(), media_type="application/zip",
                     headers={"Content-Disposition": 'attachment; filename="vxvue-ai-skill.zip"', "Cache-Control": "no-store"})
+
+
+from app.modules.manual_review.shared_routes import review_router
+router.include_router(review_router(lambda: get_settings().root), prefix='/manual-review')

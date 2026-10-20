@@ -23,6 +23,7 @@
 | **이미 분석한 이슈 재사용·상세 화면 정리·작성자 검색** | [결과 재사용과 화면 정리 계획](superpowers/plans/2026-10-14-qa-result-reuse-and-reading.md) · 기간 확대 시 기존 결과 연결, 실제 작성자 이름, 번호·작성자 필터(설계안) |
 | **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·진행·결과](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검토](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
+| **파트원 공용 매뉴얼 검토·원문 인용 보고서** | [사양 REQ-MANUAL-021](../SPEC.md#req-manual-021-공용-매뉴얼-검토-자료와-원문-인용-보고서) · 자료 준비와 사용 순서는 앱의 `/vxvue-desktop` 및 `/vxvue-desktop/manual-review` |
 | **Claude Desktop·Claude Code에 VXvue AI 배포하기** | [사양 REQ-VXVUECHATBOT-011~014](../specs/vxvue-chatbot.md) · 입력 없는 설치·CLI 설치 명령·연결 실패 안내는 앱의 `/vxvue-desktop` · 연결된 PC 목록·취소는 `scripts/vxvue_desktop_devices.py` · [구현 계획](superpowers/plans/2026-10-15-vxvue-claude-desktop.md) |
 | **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합(완료), 메일 재구성·사용률 기준 호출, 관리자 설정, 상세·목록 재구성(2026-10-15 운영 배포) |
 | **ALM 이슈·SRS 변경 리포트(매일 수집·기간 비교·메일)** | [사양 REQ-ALMCHG-001~005](../specs/alm-change-report.md) · [구현 계획](superpowers/plans/2026-10-16-alm-change-report.md) · AI 설정과 상관없는 매 업무일 수집, `/qa-agent/changes` 화면, 변경 리포트 메일, [밀린 변경 분석] |
