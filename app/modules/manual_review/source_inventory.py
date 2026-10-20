@@ -73,12 +73,14 @@ def _paragraph(para, styles):
             prop = node.find(W + 'rPr')
             run_style = prop.find(W + 'rStyle') if prop is not None else None
             run_name = run_style.get(W + 'val', '') if run_style is not None else ''
-            strike = any(_style_flag(styles, item, flag) for item in (style, run_name) for flag in ('strike', 'double'))
+            flags = {flag: _style_flag(styles, style, flag) ^ _style_flag(styles, run_name, flag)
+                     for flag in ('strike', 'double')}
             if prop is not None:
-                direct = [prop.find(W + 'strike'), prop.find(W + 'dstrike')]
-                present = [n for n in direct if n is not None]
-                if present:
-                    strike = any(_on(n) for n in present)
+                for flag, tag in (('strike', 'strike'), ('double', 'dstrike')):
+                    direct = prop.find(W + tag)
+                    if direct is not None:
+                        flags[flag] = _on(direct)
+            strike = any(flags.values())
         if node.tag in (W + 'commentRangeStart', W + 'commentRangeEnd', W + 'commentReference'):
             events.append((node.tag.split('}')[1], node.get(W + 'id', '')))
         if node.tag == A + 'blip' and node.get(R + 'embed'):

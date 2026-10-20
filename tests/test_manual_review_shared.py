@@ -184,6 +184,16 @@ def test_special_characters_are_literal_and_unknown_font_symbols_block_quote(tmp
         build_report(store, source['source_id'], [finding('R01', [1])])
 
 
+def test_single_and_double_strike_overrides_remain_independent():
+    from app.modules.manual_review.source_inventory import _paragraph, W
+    from xml.etree import ElementTree as ET
+    styles = {'Single': {'name': '', 'base': '', 'strike': ET.fromstring(f'<w:strike xmlns:w="{W[1:-1]}"/>'), 'double': None}}
+    para = ET.fromstring(f'<w:p xmlns:w="{W[1:-1]}"><w:pPr><w:pStyle w:val="Single"/></w:pPr><w:r><w:rPr><w:dstrike w:val="0"/></w:rPr><w:t>Visible strike</w:t></w:r></w:p>')
+    assert _paragraph(para, styles)['has_strike'] is True
+    para.find(W+'r/'+W+'rPr').append(ET.fromstring(f'<w:strike xmlns:w="{W[1:-1]}" w:val="0"/>'))
+    assert _paragraph(para, styles)['has_strike'] is False
+
+
 def test_pdf_spanning_pages_never_selects_earlier_duplicate():
     import fitz
     from app.modules.manual_review.shared_review import map_pdf
