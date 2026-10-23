@@ -204,7 +204,20 @@ def test_delete_document_removes_row_and_file(tmp_path, monkeypatch):
 
 
 def test_delete_automatic_source_document_is_refused_without_its_source(tmp_path, monkeypatch):
-    """Validates: REQ-KNOW-005 — ALM 자동 자료는 사람이 지울 수 없고, 동기화(source=alm_crawler)만 지운다."""
+    """Validates: REQ-KNOW-005 — ALM 자동 자료는 사람이 지울 수 없고, 동기화(source=alm_crawler)만 지운다.
+
+    화면 등록을 열지 않은 경우(`allow_manual` 없음, REQ-KNOW-018)를 보려고 실제 vxvue.yaml 에서 그 줄을 뺀 사본을 쓴다.
+    """
+    from pathlib import Path
+
+    import app.core.product_config as product_config
+
+    products = tmp_path / "products"
+    products.mkdir()
+    source = Path(__file__).resolve().parents[1] / "config" / "products" / "vxvue.yaml"
+    kept = [line for line in source.read_text(encoding="utf-8").splitlines(keepends=True) if not line.strip().startswith("allow_manual:")]
+    (products / "vxvue.yaml").write_text("".join(kept), encoding="utf-8")
+    monkeypatch.setattr(product_config, "_products_dir", lambda root=None: products)
     storage = Storage(tmp_path / "app.db")
     file_path = tmp_path / "spec.pdf"
     file_path.write_bytes(b"%PDF-")

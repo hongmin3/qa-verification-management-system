@@ -15,7 +15,7 @@ import hashlib
 import logging
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -23,6 +23,8 @@ import httpx
 from app.core.config import get_settings
 from app.core.product_config import ProductConfig, load_product_config
 from app.parsers.document_parser import extract_document_text
+
+KST = timezone(timedelta(hours=9))
 
 DATE_DIR_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DATE_SUFFIX_RE = re.compile(r"\(\d{6}\)(?=\.pdf$)", re.IGNORECASE)
@@ -173,18 +175,45 @@ def report_sync_log(target_url: str, product: str, kind: str, source: str, statu
         (logger or _configure_logging()).warning("sync-log 보고 실패 (동기화 자체는 %s로 진행됨): %s", status, exc)
 
 
-def run(target_url: str, dry_run: bool = False) -> dict:
+def missing_weekdays(latest: date, today: date) -> int:
+    """`latest` 다음 날부터 `today` 전날까지의 평일(월~금) 수. 공휴일도 평일로 센다 (REQ-SYNC-001)."""
+    days = (today - latest).days - 1
+    return sum(1 for offset in range(1, days + 1) if (latest + timedelta(days=offset)).weekday() < 5)
+
+
+def run(target_url: str, dry_run: bool = False, today: date | None = None) -> dict:
     """반환값: {"status": ..., "detail": ...} — 실패해도 예외를 올리지 않고 기존 데이터는 그대로 둔다.
 
     이 함수는 sync 로그를 스스로 기록하지 않는다 (호출자가 직접 DB에 쓸 수 있으면 Storage로,
     원격 서버 대상이면 report_sync_log()로 별도 보고한다).
+
+    고른 수집본이 오래됐으면(사이에 빠진 평일이 있으면) 성공이어도 `PARTIAL` 로 바꾼다. 수집이 멈추면
+    매일 "변경 없음" 성공으로 끝나 아무도 알아채지 못했다(2026-10-20~23).
     """
+    result, date_tag = _run(target_url, dry_run)
+    if not date_tag or result["status"] not in ("SUCCESS", "PARTIAL"):
+        return result
+    today = today or datetime.now(KST).date()
+    try:
+        latest = date.fromisoformat(date_tag)
+    except ValueError:
+        return result
+    missing = missing_weekdays(latest, today)
+    if not missing:
+        return result
+    notice = f"최신 수집본이 오래됐습니다(마지막 완료 {date_tag}, 빠진 평일 {missing}일). SRS 수집(QA_SRS_Collect)을 확인하세요. / "
+    _configure_logging().warning(notice.rstrip(" /"))
+    return {"status": "PARTIAL", "detail": notice + result["detail"]}
+
+
+def _run(target_url: str, dry_run: bool = False) -> tuple[dict, str]:
+    """(결과, 고른 날짜 폴더 이름). 날짜 폴더를 고르기 전에 끝나면 날짜는 빈 문자열이다."""
     logger = _configure_logging()
     target_url = target_url.rstrip("/")
     lock_file, state_file, _ = _paths()
     config = load_product_config("vxvue")
     if config is None or config.specification.source != "alm_crawler":
-        return {"status": "NEEDS_CONFIG", "detail": "config/products/vxvue.yaml에 specification.source=alm_crawler 설정이 없습니다."}
+        return {"status": "NEEDS_CONFIG", "detail": "config/products/vxvue.yaml에 specification.source=alm_crawler 설정이 없습니다."}, ""
 
     crawler_output = Path(config.specification.crawler_output_dir)
     native_output = get_settings().root / 'output/srs_crawler'
@@ -194,13 +223,13 @@ def run(target_url: str, dry_run: bool = False) -> dict:
     if latest_dir is None:
         detail = f"크롤러 output 폴더에서 날짜 폴더를 찾지 못했습니다: {crawler_output}"
         logger.error(detail)
-        return {"status": "FAILED", "detail": detail}
+        return {"status": "FAILED", "detail": detail}, ""
 
     pdfs = _matching_pdfs(latest_dir / "pdf", config.specification.filename_patterns)
     if not pdfs:
         detail = f"최신 폴더 {latest_dir}에서 조건에 맞는 PDF를 찾지 못했습니다."
         logger.warning(detail)
-        return {"status": "SUCCESS", "detail": detail}
+        return {"status": "SUCCESS", "detail": detail}, latest_dir.name
 
     date_tag = latest_dir.name
     root = get_settings().root
@@ -223,10 +252,10 @@ def run(target_url: str, dry_run: bool = False) -> dict:
     if dry_run:
         for pdf in changed:
             logger.info("[dry-run] 변경 감지: %s", pdf.name)
-        return {"status": "DRY_RUN", "detail": f"변경 {len(changed)}건 감지 (미실행)"}
+        return {"status": "DRY_RUN", "detail": f"변경 {len(changed)}건 감지 (미실행)"}, date_tag
 
     if not changed:
-        return {"status": "SUCCESS", "detail": f"변경 없음 (미변경 {unchanged}건, 날짜 {date_tag})"}
+        return {"status": "SUCCESS", "detail": f"변경 없음 (미변경 {unchanged}건, 날짜 {date_tag})"}, date_tag
 
     original_dir.mkdir(parents=True, exist_ok=True)
     normalized_dir.mkdir(parents=True, exist_ok=True)
@@ -253,7 +282,7 @@ def run(target_url: str, dry_run: bool = False) -> dict:
 
     _save_state(state_file, state)
     logger.info("동기화 종료: %s", detail)
-    return {"status": status, "detail": detail}
+    return {"status": status, "detail": detail}, date_tag
 
 
 def acquire_lock() -> bool:

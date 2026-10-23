@@ -9,13 +9,25 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
 from app.core import document_cache
 from app.core.product_config import KIND_LABELS, SOURCE_ALM, SOURCE_EXTERNAL, ProductConfig, registration_refusal
-from app.core.product_knowledge import REGISTERABLE_KINDS, classify, document_logical_key, is_strictly_older_name, parse_asset_name
+from app.core.product_knowledge import (
+    DATE_REVISION_RE,
+    REGISTERABLE_KINDS,
+    REV_REVISION_RE,
+    VERSION_REVISION_RE,
+    classify,
+    document_logical_key,
+    is_strictly_older_name,
+    parse_asset_name,
+)
 
 SPEC_EXTENSIONS = {".pdf", ".docx"}
+#: 사양서는 Excel 로 관리하는 문서(VSS Specification 등)도 있다. 파서가 `.xlsx` 본문을 읽는다 (REQ-KNOW-018).
+SPECIFICATION_EXTENSIONS = SPEC_EXTENSIONS | {".xlsx"}
 TC_EXTENSIONS = {".xlsx"}
 #: 등록 부가 정보의 출처 가운데 사람이 올리지 않은 것. 나머지(`upload`, 빈 값)는 사람이 올린 등록이다 (REQ-KNOW-005).
 AUTOMATIC_DOCUMENT_SOURCES = frozenset({"product_knowledge", SOURCE_ALM, SOURCE_EXTERNAL})
@@ -45,7 +57,36 @@ class Registration:
 
 
 def extensions_for(kind: str) -> set[str]:
-    return TC_EXTENSIONS if kind == "testcase" else SPEC_EXTENSIONS
+    if kind == "testcase":
+        return TC_EXTENSIONS
+    return SPECIFICATION_EXTENSIONS if kind == "specification" else SPEC_EXTENSIONS
+
+
+_REVISION_PATTERNS = {"date": DATE_REVISION_RE, "version": VERSION_REVISION_RE, "rev": REV_REVISION_RE}
+
+
+def _revision_value(revision: str, revision_kind: str) -> str:
+    """`parse_asset_name` 의 리비전 값을 정규식 첫 묶음에 들어갈 글자로 바꾼다 (`Rev1.18` → `1.18`)."""
+    return revision[3:] if revision_kind == "rev" else revision
+
+
+def replacement_name(target_name: str, uploaded_name: str, today: date) -> str:
+    """`교체` 로 올린 파일의 등록 이름. 대상 이름에서 리비전만 바꾸고 확장자는 올린 파일을 따른다 (REQ-KNOW-023)."""
+    target_path, uploaded_path = Path(target_name), Path(uploaded_name)
+    stem, extension = target_path.stem, uploaded_path.suffix.lower() or target_path.suffix
+    target, uploaded = parse_asset_name(target_name), parse_asset_name(uploaded_name)
+    kind = target["revision_kind"]
+    pattern = _REVISION_PATTERNS.get(kind)
+    match = pattern.search(stem) if pattern else None
+    if match is None:
+        return stem + extension
+    if uploaded["revision_kind"] == kind:
+        value = _revision_value(uploaded["revision"], kind)
+    elif kind == "date":
+        value = today.strftime("%y%m%d")
+    else:
+        return stem + extension
+    return stem[: match.start(1)] + value + stem[match.end(1):] + extension
 
 
 def kind_mismatch(config: ProductConfig, kind: str, file_name: str) -> str | None:
@@ -193,6 +234,7 @@ def register_uploaded(storage, config: ProductConfig, kind: str, saved_path: Pat
         saved_path.unlink(missing_ok=True)
         raise RegistrationError(500, f"등록 중 오류가 나 되돌렸습니다: {exc}") from exc
 
+    storage.forget_deleted(config.product, kind, name)
     replaced = []
     for target in targets.values():
         storage.delete_document(target["id"])

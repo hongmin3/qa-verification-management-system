@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -18,11 +20,12 @@ from app.core.knowledge_registry import (
     extensions_for,
     register_uploaded,
     registered_by_person,
+    replacement_name,
 )
 from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
-from app.core.product_config import SOURCE_LABELS, SOURCE_MANUAL, normalize_source
+from app.core.product_config import SOURCE_LABELS, SOURCE_MANUAL, can_manual_upload, normalize_source
 from app.core.product_knowledge import REGISTERABLE_KINDS, load_manifest, resolve_config, scan_source, source_available, sync_and_register
 from app.core.storage import Storage
 from app.core.uploads import save_upload
@@ -101,7 +104,7 @@ def collect_product_knowledge(slug: str):
         return _sync_now(config)
     requested_at = request_collect(config.product)
     return {"status": "REQUESTED", "requested_at": requested_at,
-            "detail": "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 1~2분 뒤 새로고침하세요."}
+            "detail": "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다."}
 
 
 @router.get("/knowledge/product-knowledge/request")
@@ -131,13 +134,18 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
     """등록·교체 공통 처리 (REQ-KNOW-003·004). 출처 확인은 파일을 저장하기 전에 한다. 성공하면 제품 상세로 303."""
     if kind not in REGISTERABLE_KINDS:
         raise HTTPException(400, f"등록할 수 없는 종류입니다: {kind}")
+    uploaded_name = file.filename or ""
     try:
-        target = check_request(storage, config, kind, source, replace_id, file_name=file.filename or "")
+        target = check_request(storage, config, kind, source, replace_id, file_name=uploaded_name)
+        if target is not None and uploaded_name:
+            # `교체` 는 대상 문서의 이름 형식으로 바꿔 등록한다 (REQ-KNOW-023).
+            uploaded_name = replacement_name(target["name"], uploaded_name, datetime.now(ZoneInfo("Asia/Seoul")).date())
+            check_request(storage, config, kind, source, replace_id, file_name=uploaded_name)
     except RegistrationError as exc:
         raise HTTPException(exc.status, exc.message)
     directory = get_settings().path("storage.testcase_dir" if kind == "testcase" else "storage.specification_dir")
     path = save_upload(file, directory, extensions_for(kind))
-    original_name = file.filename or path.name
+    original_name = uploaded_name or path.name
     try:
         outcome = register_uploaded(storage, config, kind, path, original_name, replace_target=target, declared_source=source,
                                     version=version, owned_dirs=_owned_dirs())
@@ -385,10 +393,14 @@ def delete_document(document_id: int, source: str = Form(""), next: str = Form("
     if config is not None and document["kind"] in REGISTERABLE_KINDS and not registered_by_person(document):
         configured = config.source_of(document["kind"])
         declared = normalize_source(source) if source.strip() else SOURCE_MANUAL
-        if configured != SOURCE_MANUAL and declared != configured:
+        allowed = can_manual_upload(config, document["kind"]) if declared == SOURCE_MANUAL else declared == configured
+        if not allowed:
             raise HTTPException(409, f"자동으로 관리하는 자료는 여기서 지울 수 없습니다. {SOURCE_LABELS.get(configured, configured)}에서 관리하세요.")
     storage.delete_document(document_id)
     document_cache.delete(document_id)
+    if not source.strip() or normalize_source(source) == SOURCE_MANUAL:
+        # 사람이 지운 이름은 지식 폴더 수집이 되살리지 않는다. 자동 출처의 옛 판 정리는 적지 않는다 (REQ-KNOW-022).
+        storage.remember_deleted(document["product"], document["kind"], document["name"])
     path = Path(document["path"])
     if path.exists():
         path.unlink()

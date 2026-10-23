@@ -224,6 +224,41 @@ def test_completion_manifest_write_failure_is_recorded_failed(tmp_path, monkeypa
     assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text(encoding='utf-8'))['run_id'] == prior['run_id']
 
 
+def test_failure_records_the_error_message_for_diagnosis(tmp_path, monkeypatch, caplog):
+    """Validates: REQ-SYNC-003. 2026-10-21 실패는 'OSError' 만 남아 원인을 알 수 없었다."""
+    engine, cfg, _ = pipeline_fixture(tmp_path, monkeypatch)
+    engine.run(cfg)
+    write_json = engine._json
+    def fail_public(path, value):
+        if path.parent.name == 'public': raise PermissionError(13, '다른 프로세스가 파일을 사용 중', str(path))
+        return write_json(path, value)
+    monkeypatch.setattr(engine, '_json', fail_public)
+    with caplog.at_level('ERROR', logger='srs_automation'), pytest.raises(OSError):
+        engine.run(cfg, force=True)
+    failed = [json.loads(p.read_text(encoding='utf-8')) for p in (cfg.base_dir/'.runs').glob('*/manifest.json')]
+    [record] = [r for r in failed if r['status'] == 'FAILED']
+    assert record['error'] == 'PermissionError'
+    assert '다른 프로세스가 파일을 사용 중' in record['error_detail'] and 'manifest.json' in record['error_detail']
+    assert any('다른 프로세스가 파일을 사용 중' in r.getMessage() for r in caplog.records)
+
+
+def test_failure_detail_hides_secret_looking_text(tmp_path, monkeypatch):
+    """Validates: REQ-SYNC-003. 비밀 값이 들어 있을 수 있는 문구는 가린다."""
+    engine, cfg, _ = pipeline_fixture(tmp_path, monkeypatch)
+    engine.run(cfg)
+    write_json = engine._json
+    def fail_public(path, value):
+        if path.parent.name == 'public': raise OSError('Authorization: Bearer abc123')
+        return write_json(path, value)
+    monkeypatch.setattr(engine, '_json', fail_public)
+    with pytest.raises(OSError):
+        engine.run(cfg, force=True)
+    failed = [json.loads(p.read_text(encoding='utf-8')) for p in (cfg.base_dir/'.runs').glob('*/manifest.json')]
+    [record] = [r for r in failed if r['status'] == 'FAILED']
+    assert 'abc123' not in json.dumps(record, ensure_ascii=False)
+    assert record['error_detail'].startswith('[가림')
+
+
 def test_crawler_does_not_retry_invalid_comment_request(tmp_path, monkeypatch):
     import httpx
     import time
@@ -271,3 +306,13 @@ def test_failed_public_readback_restores_both_deployment_locations(tmp_path, mon
     assert failed
     assert before == {p.name:p.read_bytes() for p in cfg.knowledge_folder.iterdir()}
     assert json.loads((cfg.base_dir/prior['date']/'manifest.json').read_text(encoding='utf-8'))['run_id'] == prior['run_id']
+
+
+def test_collect_schedule_retries_a_failed_start():
+    """Validates: REQ-SYNC-003. 2026-10-23 09:00 은 PC 재시작 중이라 시작하지 못했고 다음 실행이 사흘 뒤였다."""
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / 'scripts' / 'install_srs_schedule.ps1').read_text(encoding='utf-8-sig')
+    settings = next(line for line in script.splitlines() if line.strip().startswith('$settings = New-ScheduledTaskSettingsSet'))
+    assert '-RestartCount 3' in settings
+    assert '-RestartInterval (New-TimeSpan -Minutes 10)' in settings
+    assert '-StartWhenAvailable' in settings and '-MultipleInstances IgnoreNew' in settings

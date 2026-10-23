@@ -151,6 +151,8 @@ VXvue는 업로드 전에 활성 로컬 Skill의 최신 설치 캐시에서 지�
 09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 다음 평일 03:30 PC 사양서 동기화 -> 서버 신규 사양서 등록
 ```
 
+`QA_SRS_Collect`는 시작에 실패하면(PC 재시작 중 등) 10분 뒤 최대 3번 다시 시도한다. 설치 스크립트(`scripts/install_srs_schedule.ps1`)가 이 설정을 넣으며 관리자 PowerShell에서만 바뀐다. 03:30 동기화가 고른 수집본과 오늘 사이에 빠진 평일이 있으면 `PARTIAL`로 보고해 Knowledge 화면 사양서 구역이 `주의`가 된다(REQ-SYNC-001).
+
 서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않는다. 일일 모드는 Claude 한도(세션·주간)나 사용률 기준에 걸려 멈추면 초기화 5분 뒤 자동으로 이어 하고(REQ-QAINTEL-049) 주간 모드는 다음 주 첫 업무일 또는 수동 실행에서 이어 간다. 자동 점검 중지나 서버 예약 비활성화는 모든 자동 실행을 막는다. PC 쪽 작업이 멈추면 서버의
 TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화면에 보인다.
 

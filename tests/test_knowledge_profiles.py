@@ -44,12 +44,20 @@ qa_rules:
 """
 
 
+def _without_allow_manual(path: Path) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    path.write_text("".join(line for line in lines if not line.strip().startswith("allow_manual:")), encoding="utf-8")
+
+
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     products = tmp_path / "config" / "products"
     products.mkdir(parents=True)
     for name in ("vxvue.yaml", "bellalun-viewer.yaml"):
         shutil.copy(ROOT / "config" / "products" / name, products / name)
+    # 이 파일은 화면 등록을 열지 않은 ALM 출처(REQ-KNOW-005·018)를 VXvue 사양서로 확인한다.
+    # 실제 vxvue.yaml 의 allow_manual 은 빼고 쓴다. 허용한 경우는 test_knowledge_manual_spec.py 가 본다.
+    _without_allow_manual(products / "vxvue.yaml")
     (products / "fake-product.yaml").write_text(FAKE_YAML, encoding="utf-8")
     monkeypatch.setattr(product_config, "_products_dir", lambda root=None: products)
     monkeypatch.setattr(product_knowledge, "get_settings", lambda: SimpleNamespace(root=tmp_path))

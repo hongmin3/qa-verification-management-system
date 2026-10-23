@@ -56,14 +56,18 @@ def suggest_columns(headers: list[object]) -> dict[int, str]:
 
 def preview_workbook(path: Path, max_rows: int = 15) -> dict[str, list[list[str]]]:
     """시트명 -> 상위 max_rows행의 셀 값(문자열) 목록. 수동 컬럼/시트 매핑 UI의 미리보기용."""
+    # 읽기 전용 통합 문서는 close() 전까지 파일을 열어 둔다. Windows 에서는 교체 때 옛 파일을 지우지 못한다.
     workbook = load_workbook(path, read_only=True, data_only=True)
-    preview: dict[str, list[list[str]]] = {}
-    for sheet in workbook.worksheets:
-        rows = []
-        for row in sheet.iter_rows(min_row=1, max_row=min(sheet.max_row, max_rows), values_only=True):
-            rows.append(["" if value is None else str(value) for value in row])
-        preview[sheet.title] = rows
-    return preview
+    try:
+        preview: dict[str, list[list[str]]] = {}
+        for sheet in workbook.worksheets:
+            rows = []
+            for row in sheet.iter_rows(min_row=1, max_row=min(sheet.max_row, max_rows), values_only=True):
+                rows.append(["" if value is None else str(value) for value in row])
+            preview[sheet.title] = rows
+        return preview
+    finally:
+        workbook.close()
 
 
 def _find_header(sheet, mapping: dict[str, str] | None) -> tuple[int | None, dict[str, int] | None]:
@@ -84,6 +88,7 @@ def parse_testcases(
     """`sheet_name`/`header_row`를 둘 다 지정하면 자동 탐지를 건너뛰고 그 위치를 헤더로
     강제 사용한다(수동 매핑 UI 경유) — 이 경우 컬럼을 찾지 못하면 다른 시트로 넘어가지
     않고 바로 실패해 사용자가 원인을 즉시 알 수 있게 한다."""
+    workbook = None
     try:
         workbook = load_workbook(path, read_only=True, data_only=True)
         cases: list[TestCase] = []
@@ -120,3 +125,6 @@ def parse_testcases(
         raise
     except Exception as exc:
         raise ValueError(f"Excel을 읽을 수 없습니다: {path.name}") from exc
+    finally:
+        if workbook is not None:
+            workbook.close()

@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -35,8 +36,18 @@ STATE_FILENAME = "render_problem_state.json"
 _RENDER_PIPELINE_FILES = ("render.py", "pdf_worker.py")
 
 
-def content_hash(content_html: str | None) -> str:
+# 이미지는 실행마다 새 폴더(`.runs/<실행 번호>/_images/`)에 내려받는다. 그 앞부분이 본문 해시에 들어가면
+# 본문이 같아도 해시가 매번 달라져 문제 SRS를 매일 다시 렌더링한다 (2026-10-20~23, REQ-SYNC-003).
+_IMAGE_FOLDER_RE = re.compile(r"""(\bsrc=["'])[^"']*?/_images/""")
+
+
+def _raw_hash(content_html: str | None) -> str:
     return hashlib.sha256((content_html or "").encode("utf-8")).hexdigest()
+
+
+def content_hash(content_html: str | None) -> str:
+    """본문 해시. 이미지 주소는 `_images/` 뒤의 SRS·파일 이름만 남겨 비교한다."""
+    return _raw_hash(_IMAGE_FOLDER_RE.sub(r"\1_images/", content_html or ""))
 
 
 def render_pipeline_hash() -> str:
@@ -87,7 +98,8 @@ class ProblemState:
         entry = self.entries.get(uid)
         if not entry:
             return False
-        if entry.get("content_sha256") != content_hash(current_content_html):
+        # 경로를 떼기 전에 적은 기록(경로 포함 해시)도 같은 본문이면 인정한다.
+        if entry.get("content_sha256") not in (content_hash(current_content_html), _raw_hash(current_content_html)):
             return False
         recorded_pipeline = entry.get("render_pipeline_sha256")
         if recorded_pipeline != render_pipeline_hash():

@@ -23,7 +23,7 @@
   {% if health.advanced.source_dir %}
   <form method="post" action="/knowledge/products/{{ health.slug }}/collect" class="kn-upload knowledge-sync-form">
     <button type="submit">지금 수집</button>
-    <span class="hint">지식 폴더 전체를 지금 다시 수집합니다.{% if collect_pending %} · 수집 요청 대기 중 (<span data-utc-time="{{ collect_pending }}">{{ collect_pending[:16].replace('T', ' ') }} UTC</span> 요청){% endif %}</span>
+    <span class="hint">지식 폴더 전체를 지금 다시 수집합니다.{% if collect_pending %} · <span id="kn-collect-pending" data-product="{{ health.product }}" data-requested="{{ collect_pending }}">수집 요청 대기 중 (<span data-utc-time="{{ collect_pending }}">{{ collect_pending[:16].replace('T', ' ') }} UTC</span> 요청) <span id="kn-collect-elapsed"></span></span>{% endif %}</span>
   </form>
   {% endif %}
 </section>
@@ -152,5 +152,26 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
     }
   });
 });
+// 남은 수집 요청이 끝나면 저절로 새로 고친다 (REQ-KNOW-021). 담당자 PC 가 1분마다 요청을 보고 올린다.
+(() => {
+  const pending = document.getElementById('kn-collect-pending');
+  if (!pending) return;
+  const requested = Date.parse(pending.dataset.requested);
+  const elapsed = document.getElementById('kn-collect-elapsed');
+  const showElapsed = () => {
+    const minutes = Math.max(0, Math.floor((Date.now() - requested) / 60000));
+    elapsed.textContent = `· ${minutes}분 지남` + (minutes >= 10 ? ' · 담당자 PC 가 꺼져 있거나 올리기가 오래 걸리고 있습니다.' : '');
+  };
+  showElapsed();
+  const check = async () => {
+    showElapsed();
+    try {
+      const response = await fetch(`/knowledge/product-knowledge/request?product=${encodeURIComponent(pending.dataset.product)}`);
+      if (response.ok && !(await response.json()).requested_at) { location.reload(); return; }
+    } catch (error) { /* 다음 확인에서 다시 묻는다 */ }
+    setTimeout(check, 15000);
+  };
+  setTimeout(check, 15000);
+})();
 </script>
 {% endblock %}

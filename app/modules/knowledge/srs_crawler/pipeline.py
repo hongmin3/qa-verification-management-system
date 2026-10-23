@@ -10,7 +10,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .collector import CollectStats, collect_project
-from .logging_setup import setup_logging
+from .logging_setup import RedactingFilter, setup_logging
 from .partition import assign_file_groups
 from .polarion_client import PolarionClient
 from .problem_state import ProblemState
@@ -27,6 +27,14 @@ def _json(path: Path, value):
     temporary = path.with_suffix('.json.part')
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
     temporary.replace(path)
+
+
+def _error_detail(exc: BaseException) -> str:
+    """실패 원인 문구. 토큰·비밀번호로 보이는 말이 있으면 통째로 가린다 (REQ-SYNC-003)."""
+    text = str(exc).strip() or type(exc).__name__
+    if any(key in text.lower() for key in RedactingFilter.REDACT_KEYS):
+        return '[가림 - 민감정보 포함 가능성]'
+    return text[:1000]
 
 
 def run(config, snapshot_date: str | None = None, force: bool = False, publish: bool = True) -> dict:
@@ -158,7 +166,9 @@ def run(config, snapshot_date: str | None = None, force: bool = False, publish: 
         except Exception as exc:
             result.update(status='FAILED', published=False)
             result['error'] = type(exc).__name__
-            logger.error('SRS 수집·배포 실패: %s', type(exc).__name__)
+            # 종류만 남기면 원인을 알 수 없다(2026-10-21 'OSError'). 문구와 경로를 함께 남기되 비밀로 보이면 가린다.
+            result['error_detail'] = _error_detail(exc)
+            logger.error('SRS 수집·배포 실패: %s: %s', type(exc).__name__, result['error_detail'])
             raise
         finally:
             _json(work / 'manifest.json', result)

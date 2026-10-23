@@ -47,6 +47,8 @@ class KnowledgeAssetSource(BaseModel):
     required: bool | None = None
     #: 제품 상세 화면과 상태 판정에서 이 구역을 뺀다. 수집은 그대로 한다 (REQ-KNOW-018).
     hidden: bool = False
+    #: 출처가 자동이어도 사람이 화면에서 등록·교체·삭제할 수 있다. 자동 수집은 그대로 돈다 (REQ-KNOW-018).
+    allow_manual: bool = False
 
 
 def _folder_source() -> KnowledgeAssetSource:
@@ -225,7 +227,10 @@ def can_manual_upload(config: ProductConfig, kind: str) -> bool:
 
     화면 버튼과 등록 주소가 이 함수 하나로 판단한다 — 버튼만 숨기고 주소는 열어 두는 일을 막는다.
     """
-    return kind in UPLOADABLE_KINDS and config.source_of(kind) == SOURCE_MANUAL
+    if kind not in UPLOADABLE_KINDS:
+        return False
+    source = config.source_of(kind)
+    return source == SOURCE_MANUAL or (source != SOURCE_UNKNOWN and config.asset_source(kind).allow_manual)
 
 
 def registration_refusal(config: ProductConfig, kind: str, declared_source: str = "") -> str:
@@ -238,7 +243,7 @@ def registration_refusal(config: ProductConfig, kind: str, declared_source: str 
         return f"{kind} 자료는 지식 폴더로만 관리합니다."
     configured = config.source_of(kind)
     declared = normalize_source(declared_source) if declared_source.strip() else SOURCE_MANUAL
-    if configured == SOURCE_MANUAL and declared == SOURCE_MANUAL:
+    if declared == SOURCE_MANUAL and can_manual_upload(config, kind):
         return ""
     if configured in AUTOMATIC_SOURCES and declared == configured:
         return ""

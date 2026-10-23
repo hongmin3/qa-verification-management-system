@@ -47,7 +47,8 @@ try {
     $collectAction = New-ScheduledTaskAction -Execute $Python -Argument $collectArgs -WorkingDirectory $ProjectRoot
     $principal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType S4U -RunLevel Limited
     $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '09:00'
-    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4)
+    # 시작 실패(PC 재시작 중 등)는 10분 뒤 최대 3번 다시 시도한다 (REQ-SYNC-003). 2026-10-23 09:00 이 그렇게 빠졌다.
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 10)
     $settings.Enabled = $true
     if ($oldCollect) {
         Set-ScheduledTask -TaskName $oldCollect.TaskName -TaskPath $oldCollect.TaskPath -Action $collectAction -Principal $principal -Trigger $trigger -Settings $settings | Out-Null

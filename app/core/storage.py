@@ -122,6 +122,11 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExe
                     created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
                     UNIQUE(analysis_id, claim_kind, claim_label)
                 );
+                CREATE TABLE IF NOT EXISTS deleted_documents (
+                    product TEXT NOT NULL, kind TEXT NOT NULL, name_key TEXT NOT NULL,
+                    name TEXT NOT NULL, deleted_at TEXT NOT NULL,
+                    PRIMARY KEY (product, kind, name_key)
+                );
                 CREATE TABLE IF NOT EXISTS manual_cross_impacts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     revision_id INTEGER NOT NULL REFERENCES manual_revisions(id),
@@ -222,6 +227,24 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExe
     def delete_document(self, document_id: int) -> None:
         with self.connect() as db:
             db.execute("DELETE FROM documents WHERE id=?", (document_id,))
+
+    # 화면에서 지운 문서 이름. 지식 폴더 수집이 같은 이름을 다시 등록하지 않게 한다 (REQ-KNOW-022).
+    def remember_deleted(self, product: str, kind: str, name: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connect() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO deleted_documents(product,kind,name_key,name,deleted_at) VALUES(?,?,?,?,?)",
+                (product, kind, name.casefold(), name, now),
+            )
+
+    def forget_deleted(self, product: str, kind: str, name: str) -> None:
+        with self.connect() as db:
+            db.execute("DELETE FROM deleted_documents WHERE product=? AND kind=? AND name_key=?", (product, kind, name.casefold()))
+
+    def deleted_names(self, product: str, kind: str) -> set[str]:
+        with self.connect() as db:
+            rows = db.execute("SELECT name_key FROM deleted_documents WHERE product=? AND kind=?", (product, kind))
+            return {row["name_key"] for row in rows}
 
     def update_document_metadata(self, document_id: int, metadata: dict) -> None:
         with self.connect() as db:

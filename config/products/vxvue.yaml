@@ -34,6 +34,8 @@ knowledge_source:
 specification:
   # alm_crawler: 이 프로젝트의 SRS 수집기가 만든 완료 PDF를 읽는다.
   source: alm_crawler
+  # ALM 이 만들지 않는 사양서(VSS Specification 등)를 화면에서 등록·교체·삭제한다 (REQ-KNOW-018).
+  allow_manual: true
   # 프로젝트 루트 기준 경로. 완료 manifest가 없는 날짜는 동기화하지 않는다.
   crawler_output_dir: "output/srs_crawler"
   filename_patterns:

@@ -337,3 +337,39 @@ def test_render_pipeline_hash_is_deterministic_and_nonempty():
     h = render_pipeline_hash()
     assert len(h) == 64
     assert h == render_pipeline_hash()
+
+
+def _with_run_images(run_id: str) -> str:
+    prefix = f"file:///C:/Users/qa/project/data/srs_crawler/snapshots/.runs/{run_id}/_images/VXvue/VP-1277"
+    return f'<p>본문</p><img src="{prefix}/25-screenshot.png"><img src="{prefix}/26-screenshot.png">'
+
+
+def test_problem_state_ignores_the_run_specific_image_folder(tmp_path):
+    """Validates: REQ-SYNC-003. 실행 번호만 다른 이미지 경로는 본문 변경이 아니다 (2026-10-20~23 매일 재확인)."""
+    from app.modules.knowledge.srs_crawler.problem_state import ProblemState
+
+    state = ProblemState.load(tmp_path)
+    state.record("VXvue/VP-1277", content_html=_with_run_images("20261021-2219f3c357f2"), title="t")
+    state.save()
+
+    reloaded = ProblemState.load(tmp_path)
+    assert reloaded.is_still_valid("VXvue/VP-1277", _with_run_images("20261023-f1c7fff2755d")) is True
+    changed = _with_run_images("20261023-f1c7fff2755d").replace("본문", "바뀐 본문")
+    assert reloaded.is_still_valid("VXvue/VP-1277", changed) is False
+    other_image = _with_run_images("20261023-f1c7fff2755d").replace("26-screenshot", "27-screenshot")
+    assert reloaded.is_still_valid("VXvue/VP-1277", other_image) is False
+
+
+def test_problem_state_accepts_a_record_written_before_the_path_fix(tmp_path):
+    """Validates: REQ-SYNC-003. 고치기 전 기록(경로 포함 해시)도 같은 본문이면 그대로 인정한다."""
+    import hashlib
+    import json
+
+    from app.modules.knowledge.srs_crawler.problem_state import STATE_FILENAME, ProblemState, render_pipeline_hash
+
+    html = _with_run_images("20261023-f1c7fff2755d")
+    legacy = {"VXvue/VP-1277": {"content_sha256": hashlib.sha256(html.encode("utf-8")).hexdigest(),
+                                "render_pipeline_sha256": render_pipeline_hash(), "recorded_at": "2026-10-23T10:01:35"}}
+    (tmp_path / STATE_FILENAME).write_text(json.dumps(legacy), encoding="utf-8")
+
+    assert ProblemState.load(tmp_path).is_still_valid("VXvue/VP-1277", html) is True

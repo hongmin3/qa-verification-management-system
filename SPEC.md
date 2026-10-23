@@ -4816,19 +4816,19 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 |---|---|
 | 없는 문서 번호 | "문서를 찾을 수 없습니다."(404) |
 | 내려받기에서 원본 파일이 없음 | "원본 파일을 찾을 수 없습니다."(404) |
-| 그 제품·종류의 출처가 `manual` 이 아니고, 보낸 `source` 가 설정의 출처와 다르고, 그 등록이 사람이 올린 등록도 아님 | "자동으로 관리하는 자료는 여기서 지울 수 없습니다. <출처 이름>에서 관리하세요."(409) |
+| 그 제품·종류의 출처가 `manual` 이 아니고, `allow_manual` 도 아니고, 보낸 `source` 가 설정의 출처와 다르고, 그 등록이 사람이 올린 등록도 아님 | "자동으로 관리하는 자료는 여기서 지울 수 없습니다. <출처 이름>에서 관리하세요."(409) |
 
 **지킬 것**
 
 - 지우기는 되돌릴 수 없다. 화면은 지우기 전에 "<이름> 파일을 삭제할까요? 되돌릴 수 없습니다."로 확인을 받아야 한다.
-- 화면은 출처가 `manual` 인 자료와, 다른 출처 구역에 있는 사람이 올린 등록에만 `삭제` 를 보인다. 교체가 기본 동작이고 삭제는 잘못 올린 문서를 뺄 때만 쓴다.
+- 화면은 출처가 `manual` 이거나 `allow_manual: true` 인 자료와, 다른 출처 구역에 있는 사람이 올린 등록에만 `삭제` 를 보인다. 교체가 기본 동작이고 삭제는 잘못 올린 문서를 뺄 때만 쓴다.
 - 사람이 올린 등록은 등록 부가 정보의 출처가 지식 폴더(`product_knowledge`)·`alm_crawler`·`external_sync` 가 아닌 등록이다. 문서 표의 출처 칸에 `사람이 등록` 으로 보인다. 자동 출처 구역에 있어도 지울 수 있다.
 
   > **예시** VXvue 사양서는 `alm_crawler` 로 관리한다. 출처를 바꾸기 전에 사람이 올린 `(매뉴얼) … API Protocol Manual_EN 1.pdf` 가 사양서 구역에 남아 있으면 그 줄에만 `삭제` 가 보인다. ALM 이 올린 사양서 줄에는 보이지 않는다.
 
   이유: 자동 수집은 사람이 올린 등록을 교체하거나 지우지 않는다. 이 길이 없으면 잘못 올린 문서를 화면에서 뺄 방법이 없다.
 - 제품 설정이 없는 옛 등록은 출처를 판단할 수 없으므로 지우기를 막지 않는다.
-- 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보낸다.
+- 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보내지만, 서버는 지운 이름을 기억해 두었으므로 다시 등록하지 않는다(REQ-KNOW-022).
 
 이유: REQ-SYNC-002 에서 서버가 가진 파일 목록은 디스크에 있는 파일을 기준으로 만든다.
 
@@ -5185,7 +5185,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 제품마다 자료 종류별로 어디서 들어오는지와 꼭 있어야 하는지를 제품 설정 파일에 적는다. 공통 코드는 제품 이름이 아니라 이 값으로 등록 허용·화면 버튼·상태 판정을 정한다.
 
-> **예시** `vxvue.yaml` 의 `specification.source` 가 `alm_crawler` 라서 VXvue 사양서에는 업로드 버튼이 없고 업로드 주소도 409 로 거절한다. `bellalun-viewer.yaml` 은 `manual` 이라서 `새 문서 등록` 과 `교체` 가 보인다. 코드에는 두 제품 이름이 나오지 않는다.
+> **예시** `vxvue.yaml` 의 `specification.source` 는 `alm_crawler` 다. `allow_manual` 을 적지 않았다면 VXvue 사양서에는 업로드 버튼이 없고 업로드 주소도 409 로 거절한다. `bellalun-viewer.yaml` 은 `manual` 이라서 `새 문서 등록` 과 `교체` 가 보인다. 코드에는 두 제품 이름이 나오지 않는다.
 
 **입력** 제품 설정 파일(REQ-CONF-003)의 여섯 키다. 모두 같은 모양(`source`, `required`)이다.
 
@@ -5206,6 +5206,12 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 > **주의** 숨김은 화면과 상태 판정에만 쓴다. 지식 폴더 수집과 업로드(REQ-KNOW-011, REQ-SYNC-002)는 숨긴 종류의 파일도 그대로 수집한다. 그 파일을 쓰는 다른 기능이 있을 수 있기 때문이다.
 
+화면 등록 허용(`allow_manual`, 기본값 `false`)도 더 적을 수 있다. `true` 면 출처가 `manual` 이 아니어도 사람이 화면에서 그 종류를 등록·교체·삭제할 수 있다. 자동 수집은 그대로 돈다.
+
+> **예시** VXvue 사양서는 `alm_crawler` 로 관리하지만 `VSS Specification` 처럼 ALM 이 만들지 않는 사양서가 있다. `vxvue.yaml` 의 `specification` 에 `allow_manual: true` 를 적으면 사양서 구역 모든 줄에 `교체`·`삭제` 가, 구역 아래에 `새 문서 등록` 이 보인다.
+
+> **주의** 화면에서 ALM 사양서를 교체해도 다음 날 ALM 동기화가 새 날짜 판을 올리면 그 판이 최신이 된다. 화면 등록은 자동 수집을 멈추지 않는다.
+
 `source` 값과 그 값이 정하는 동작:
 
 | `source` | 화면 등록·교체 | 등록 주소가 받는 요청 | 지우기 | 상태 판정이 보는 동기화 기록 |
@@ -5220,14 +5226,15 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 1. `source` 값은 앞뒤 공백을 지우고 소문자로 본다. `alm` 은 `alm_crawler` 와 같게 본다.
 2. 표에 없는 값은 "알 수 없는 출처" 로 보고 화면 등록을 막는다. 상태 판정은 `주의` 로 한다.
 3. `qa_rules`, `instruction_prompt` 는 `source` 가 `manual` 이어도 화면 등록을 두지 않는다. 규칙 로더(REQ-RULE-001)는 수집 기록만 읽기 때문이다. 화면에는 "지식 폴더로 관리합니다"를 보인다.
-4. 공통 함수 `can_manual_upload(설정, 종류)` 가 화면 버튼과 등록 주소의 판단을 함께 맡는다.
+4. 공통 함수 `can_manual_upload(설정, 종류)` 가 화면 버튼과 등록 주소의 판단을 함께 맡는다. 출처가 `manual` 이거나 `allow_manual: true` 이면 참이다. 출처를 알 수 없으면 `allow_manual` 이 있어도 거짓이다.
+5. `allow_manual: true` 인 종류는 위 표의 출처별 요청에 더해 `source` 를 보내지 않았거나 `manual` 인 등록·지우기 요청도 받는다.
 
 **지킬 것**
 
 - 공통 Knowledge 코드(`app/core/knowledge_*.py`, `app/core/product_knowledge.py`, `app/modules/knowledge/`)에 제품 이름으로 나뉘는 조건문을 두지 않는다.
 - 같은 뜻의 값을 두 곳에 적지 않는다. 사양서 출처는 예전부터 있던 `specification.source` 를 그대로 쓴다.
 - 지식 폴더 수집(REQ-KNOW-011, REQ-SYNC-002)은 출처와 관계없이 폴더에 있는 자료를 등록한다. VXvue 사양서처럼 ALM 산출물이 지식 폴더를 거쳐 오는 경우도 자동 경로로 본다.
-- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서·매뉴얼·릴리즈노트는 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
+- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서는 `.pdf`·`.docx`·`.xlsx`, 매뉴얼·릴리즈노트는 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
 
 ### REQ-KNOW-019 제품별 Knowledge 상태 판정
 
@@ -5293,6 +5300,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | `alm_crawler` | "ALM 에서 자동으로 수집합니다. 여기서 올릴 수 없습니다." 와 마지막 동기화 시각·결과. 업로드 버튼 없음 |
 | `external_sync` | "다른 자동화가 보내는 자료입니다." 와 마지막 동기화 결과 |
 | `knowledge_folder` | "담당자 PC 의 지식 폴더에서 수집합니다." 와 마지막 수집 시각 |
+| `allow_manual: true` 인 자동 출처(REQ-KNOW-018) | 위 출처 안내 문구 뒤에 "이 화면에서 새 문서를 등록하거나 현재 문서를 교체할 수도 있습니다." 를 붙인다. `manual` 과 같이 문서마다 `교체`·`삭제`, 구역 아래 `새 문서 등록` 이 보인다 |
 
    제품 설정에 지식 폴더(`knowledge_source.dir`)가 있으면 화면 머리에 `지금 수집` 버튼이 하나 있다(REQ-KNOW-021). 구역마다 따로 두지 않는다.
    `hidden: true` 인 자료 종류(REQ-KNOW-018)는 구역을 그리지 않는다.
@@ -5316,7 +5324,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 담당자가 지식 폴더에 새 파일을 넣은 뒤 제품 상세 화면의 `지금 수집` 을 누르면, 그 시점의 지식 폴더 전체가 수집·등록된다. 다음 날 08:00 예약을 기다리지 않아도 된다.
 
-> **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 1~2분 뒤 새로고침하면 새 매뉴얼이 목록에 있다.
+> **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 올리기가 끝나면 화면이 저절로 새로 고쳐지고 새 매뉴얼이 목록에 있다.
 
 **언제** 제품 상세 화면 머리의 `지금 수집`(`POST /knowledge/products/<slug>/collect`). 제품 설정에 지식 폴더가 있을 때만 버튼이 보인다.
 
@@ -5325,7 +5333,10 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 1. 이 서버가 지식 폴더를 읽을 수 있으면 바로 수집하고 등록한다(REQ-KNOW-011, REQ-KNOW-012). 결과 문구를 알림 창으로 보인다.
 2. 읽을 수 없으면 수집 요청을 남긴다. 요청 시각은 `data/product_knowledge/<slug>/collect_request.json` 에 쓴다. 이미 요청이 있으면 시각만 새로 쓴다.
 3. 담당자 PC 의 예약 작업(REQ-SYNC-002)이 1분마다 `GET /knowledge/product-knowledge/request?product=` 로 남은 요청을 묻는다.
-4. 남은 요청이 있고 PC 가 아직 처리하지 않은 요청이면, 그날 업로드를 이미 마쳤어도 바로 올린다. 처리한 요청 시각을 PC 상태 파일에 적어 같은 요청을 두 번 처리하지 않는다.
+4. 남은 요청이 있고 PC 가 아직 처리하지 않은 요청이면, 그날 업로드를 이미 마쳤어도 바로 올린다. 올리기 결과가 서버에 닿았으면(`FAILED` 가 아니면) 그 요청 시각을 PC 상태 파일에 적어 같은 요청을 두 번 처리하지 않는다.
+   - `FAILED` 이면 요청 시각을 적지 않는다. 15분 뒤 같은 요청을 다시 처리한다.
+
+   이유: 올리기 전에 처리했다고 적으면, 서버에 닿지 못한 실패 뒤에 PC 는 끝난 요청으로, 서버는 남은 요청으로 본다. 그 요청은 다시 처리되지 않고 화면에 "대기 중"이 계속 남는다.
 5. 업로드 확정이나 실패 보고가 동기화 기록(REQ-KNOW-016)에 남으면 그 요청은 끝난 것으로 본다.
 
 "남은 요청"은 요청 시각이 그 제품의 마지막으로 끝난 지식 폴더 동기화 기록(`product_knowledge`)보다 늦은 요청이다.
@@ -5335,8 +5346,9 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 경우 | 사용자에게 보이는 것 |
 |---|---|
 | 서버가 바로 수집함 | 수집·등록 결과 문구(REQ-KNOW-011) |
-| 요청을 남김 | "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 1~2분 뒤 새로고침하세요." |
-| 남은 요청이 있을 때 화면 | 버튼 옆에 "수집 요청 대기 중 (요청 시각)" |
+| 요청을 남김 | "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다." |
+| 남은 요청이 있을 때 화면 | 버튼 옆에 "수집 요청 대기 중 (요청 시각)" 과 지난 시간("N분 지남"). 화면이 15초마다 남은 요청을 묻고, 요청이 끝나면 새로 고친다 |
+| 남은 요청이 10분 넘게 끝나지 않음 | 대기 문구 뒤에 "담당자 PC 가 꺼져 있거나 올리기가 오래 걸리고 있습니다." 를 붙인다 |
 
 **안 될 때**
 
@@ -5353,6 +5365,54 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 - 요청은 서버 폴더 안 파일 하나로 끝낸다. 요청 때문에 PC 가 이미 가진 업로드 경로(REQ-SYNC-002)와 다른 길로 올리지 않는다.
 - PC 가 요청을 물을 때 서버에 닿지 않으면 요청이 없는 것으로 보고 평소 일정대로 동작한다.
+
+### REQ-KNOW-022 화면에서 지운 문서 기억
+
+**하는 일** 사람이 화면에서 지운 문서를 지식 폴더 수집이 다시 등록하지 않게 한다. 지식 폴더에 같은 파일이 남아 있어도 지운 상태가 유지된다.
+
+> **예시** 사양서 구역에서 `(사양서) VSS Specification (261006).xlsx` 를 지웠는데 담당자 PC 의 지식 폴더에 그 파일이 남아 있다. 다음 날 08:00 업로드가 그 파일을 다시 보내도 서버는 등록하지 않는다. 폴더에 `(사양서) VSS Specification (261023).xlsx` 가 생기면 이름이 다르므로 그 판은 등록한다.
+
+**순서**
+
+1. 사람이 지우기(REQ-KNOW-005)를 하면 지운 기록 표(`deleted_documents`)에 제품·종류·파일 이름·지운 시각을 적는다. 자동 출처를 밝힌 지우기 요청(`source=alm_crawler` 등)은 적지 않는다.
+2. 지식 폴더 수집본을 등록할 때(REQ-KNOW-012, REQ-SYNC-002 8번) 같은 제품·종류에 같은 이름(대소문자 무시)의 지운 기록이 있으면 그 파일은 등록하지 않는다.
+3. 같은 이름의 파일을 화면이나 동기화 주소로 다시 등록하면 그 지운 기록을 지운다.
+
+**결과** 등록 결과 문구에 "지운 문서라 건너뜀 N건" 이 붙는다.
+
+**지킬 것**
+
+- 파일 이름이 같을 때만 건너뛴다. 날짜·버전이 다른 새 판은 막지 않는다.
+- 지운 기록은 등록만 막는다. 지식 폴더의 파일과 서버의 수집 사본은 건드리지 않는다.
+
+이유: 지식 폴더는 담당자 PC 에 있어 서버가 지울 수 없다. 기억하지 않으면 지운 문서가 다음 날 되살아난다.
+
+### REQ-KNOW-023 교체 파일 이름 맞추기
+
+**하는 일** 화면의 `교체` 로 올린 파일을 교체 대상 문서의 이름 형식으로 바꿔 등록한다. 사람이 파일 이름을 규약에 맞게 고치지 않아도 된다.
+
+> **예시** `(사양서) VSS Specification (261006).xlsx` 의 `교체` 로 `VSS_spec_최종.xlsx` 를 2026-10-23 에 올리면 `(사양서) VSS Specification (261023).xlsx` 로 등록된다.
+
+**언제** 제품 상세 화면의 `교체`(`POST /knowledge/products/<slug>/documents` 에 `replace_id` 가 있을 때). `새 문서 등록` 과 동기화 주소의 등록은 올린 이름을 그대로 쓴다.
+
+**순서**
+
+1. 교체 대상 이름에서 리비전 표기를 찾는다(REQ-KNOW-009 의 날짜 `(YYMMDD)`, 버전 `V1.0.12`, `Rev1.12`).
+2. 리비전은 다음 순서로 정한다.
+   - 올린 파일 이름에 대상과 같은 형식의 리비전이 있으면 그 값을 쓴다.
+   - 없고 대상이 날짜 형식이면 오늘 날짜(한국 시간 `YYMMDD`)를 쓴다.
+   - 그 밖에는 대상 이름의 리비전을 그대로 둔다.
+3. 새 이름은 대상 이름에서 리비전만 바꾸고, 확장자는 올린 파일의 것을 쓴다.
+4. 그 이름으로 받을 수 있는지(REQ-KNOW-003 1·2단계) 보고 등록한다. 문서 표와 내려받기 이름이 새 이름이 된다.
+
+| 교체 대상 | 올린 파일 | 등록 이름 (2026-10-23) |
+|---|---|---|
+| `(사양서) VSS Specification (261006).xlsx` | `VSS_spec_최종.xlsx` | `(사양서) VSS Specification (261023).xlsx` |
+| `(사양서) VSS Specification (261006).xlsx` | `VSS(261020).xlsx` | `(사양서) VSS Specification (261020).xlsx` |
+| `(매뉴얼) VXvue User Manual V1.0.11_KO.pdf` | `manual_new_V1.0.12.pdf` | `(매뉴얼) VXvue User Manual V1.0.12_KO.pdf` |
+| `(TC) RA16-148-002_VXvue_TestCase.xlsx` | `tc.xlsx` | `(TC) RA16-148-002_VXvue_TestCase.xlsx` |
+
+**지킬 것** 올린 파일의 내용은 바꾸지 않는다. 이름만 바꾼다.
 
 ### REQ-CONF-001 설정 파일 읽기
 
@@ -5476,6 +5536,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | `knowledge_source.dir` | 빈 값 | 지식 폴더 경로. `${환경변수}`·`${환경변수:-기본값}` 을 쓸 수 있다 |
 | `knowledge_source.classify` / `extensions` / `ignore` | REQ-KNOW-008 | 분류 규약 바꾸기·확장자·제외 패턴 |
 | `specification.source` / `required` | `manual` / 예 | 사양서 출처와 꼭 있어야 하는지(REQ-KNOW-018). `alm_crawler` 이면 사양서 동기화 대상(REQ-SYNC-001) |
+| `<종류>.allow_manual` | `false` | 출처가 자동이어도 화면 등록·교체·삭제를 허용한다(REQ-KNOW-018). VXvue 는 `specification` 만 `true` |
 | `specification.crawler_output_dir` | 빈 값 | ALM 크롤러 output 폴더 |
 | `specification.filename_patterns` | 빈 목록 | 사양서로 볼 PDF 이름 패턴 |
 | `testcase.source` / `required` | `manual` / 예 | TC 출처와 꼭 있어야 하는지 |
@@ -6700,12 +6761,20 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 | 상태 | 뜻 | CLI 종료 코드 |
 |---|---|---|
 | `SUCCESS` | 모두 올림, 또는 바뀐 것 없음, 또는 맞는 PDF 없음 | 0 |
-| `PARTIAL` | 일부 파일 실패 | 1 |
+| `PARTIAL` | 일부 파일 실패, 또는 수집본이 오래됨(아래) | 1 |
 | `FAILED` | 모두 실패, 또는 날짜 폴더 없음 | 1 |
 | `NEEDS_CONFIG` | 제품 설정이 `alm_crawler` 가 아님 | 1 |
 | `DRY_RUN` | 미리보기 | 0 |
 
 상세 문구는 "업로드 N건, 이전 리비전 삭제 N건, 실패 N건, 미변경 N건 (날짜 …) / 실패 파일: …"이다.
+
+고른 날짜 폴더가 오래됐으면 수집이 멈춘 것으로 본다. 그 날짜 다음 날부터 오늘 전날(한국 시간)까지 사이에 평일(월~금)이 하루라도 있으면, 업로드 결과가 성공이어도 상태를 `PARTIAL` 로 바꾼다. 상세 문구 앞에 "최신 수집본이 오래됐습니다(마지막 완료 YYYY-MM-DD, 빠진 평일 N일). SRS 수집(QA_SRS_Collect)을 확인하세요. / "를 붙인다.
+
+> **예시** 2026-10-23(금) 03:30 에 고른 날짜가 2026-10-19(월)이면 10-20·21·22 사흘이 빠졌으므로 `PARTIAL` 이다. 2026-10-26(월) 03:30 에 고른 날짜가 10-23(금)이면 사이에 평일이 없으므로 그대로 `SUCCESS` 다.
+
+> **참고** 공휴일도 평일로 센다. 공휴일 다음 날에는 경고가 한 번 뜰 수 있다.
+
+이유: 수집이 멈추면 동기화는 매일 "변경 없음" 성공으로 끝나 화면의 마지막 갱신이 오늘로 보인다. 2026-10-20~23 에 나흘 동안 아무도 알아채지 못했다. `PARTIAL` 은 Knowledge 화면에 `수집 실패(일부)`·`주의` 로 보인다(REQ-KNOW-019).
 
 **안 될 때**
 
@@ -6729,7 +6798,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 **하는 일** 담당자 PC가 Polarion SRS를 직접 수집해 사양서 PDF를 만들고, 읽을 수 있는 최신본을 지식 폴더와 동기화 출력에 배포한다. 다른 저장소의 코드나 설정에 의존하지 않는다.
 
-**언제** 평일 09:00 PC 작업 `QA_SRS_Collect`가 `scripts/collect_srs_spec.py`를 실행한다. PC가 꺼져 놓친 실행은 사용 가능한 시점에 만회한다. 운영 전환은 실제 수집·배포·서버 읽기를 확인한 뒤 한다.
+**언제** 평일 09:00 PC 작업 `QA_SRS_Collect`가 `scripts/collect_srs_spec.py`를 실행한다. PC가 꺼져 놓친 실행은 사용 가능한 시점에 만회한다. 작업이 시작에 실패하면(예: PC 재시작 중) 10분 뒤 다시 시도하고, 최대 3번까지 한다. 운영 전환은 실제 수집·배포·서버 읽기를 확인한 뒤 한다.
 
 **입력** 기존 `POLARION_HOST`·`POLARION_TOKEN` 비밀 설정, `config/srs-crawler.yaml`의 프로젝트·본문 필드·문서 분할 구성, 제품 설정의 지식 폴더.
 
@@ -6737,7 +6806,11 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 1. OS 파일 잠금을 획득한다. 중복 실행은 실패로 끝나며 기존 자료를 건드리지 않는다. 프로세스가 끝나면 잠금은 해제된다.
 2. Polarion REST API를 읽어 프로젝트별 예상 건수와 실제 건수를 비교하고 SRS·본문·이미지·댓글을 저장한다. 같은 날짜 완료본이 있으면 다시 수집하지 않는다. `--force`는 다시 수집한다.
-3. 기존 ALM의 문서 분할과 HTML·PDF 렌더링 복구를 사용한다. SRS가 한 문서에만 배정됐는지, 이전 대비 건수가 95% 이상인지, 모든 비어 있지 않은 문서의 PDF가 1페이지 이상인지 검사한다.
+3. 기존 ALM의 문서 분할과 HTML·PDF 렌더링 복구를 사용한다. 렌더링 문제로 기록한 SRS는 본문이 바뀌었을 때만 다시 확인한다. 이때 본문 비교에서 실행마다 달라지는 이미지 폴더 경로(`.runs/<실행 번호>/`)는 뺀다.
+
+   > **예시** 2026-10-20~23 에 `VXvue/VP-1277` 본문은 그대로였지만 이미지 경로의 실행 번호만 달라 매일 5분 넘게 다시 렌더링했다. 경로를 빼면 다시 확인하지 않는다.
+
+   SRS가 한 문서에만 배정됐는지, 이전 대비 건수가 95% 이상인지, 모든 비어 있지 않은 문서의 PDF가 1페이지 이상인지 검사한다.
 4. 준비 폴더는 일반 디렉터리 생성으로 상위 폴더 권한을 상속한다. 기존 파일의 복구 사본을 준비한 후 새 PDF를 배포한다. 최종 경로에서 다시 읽어 페이지 수와 SHA-256이 원본과 같은지 확인한다.
 5. 실패하면 기존 파일을 복구한다. 정상 배포 후에만 완료 manifest와 날짜별 PDF를 `output/srs_crawler/YYYY-MM-DD/`에 공개한다. 진행 중 산출물은 동기화 대상에 넣지 않는다.
 6. 03:30 사양서 동기화와 10:00 지식 폴더 업로드가 완료본을 서버로 보낸다. 기존 문서 보관본은 자동 삭제하지 않는다.
@@ -6746,7 +6819,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 **설정** `--check`는 설정·필요 라이브러리를 확인한다. `--dry-run`은 설정만 읽고 수집·배포하지 않는다. `--from-snapshot YYYY-MM-DD`는 이미 저장된 그 날짜의 자료로 PDF를 다시 만든다. `--no-publish`는 지식 폴더 배포와 완료본 공개를 모두 생략한다.
 
-**안 될 때** 이미지 실패·서식 단순화는 실행 manifest에 경고로 남긴다. 수집·PDF·최종 배포 검증 실패는 성공으로 기록하지 않는다. 날짜 폴더가 있어도 완료 manifest가 없으면 동기화하지 않는다.
+**안 될 때** 이미지 실패·서식 단순화는 실행 manifest에 경고로 남긴다. 실행이 실패하면 오류 종류와 함께 오류 문구(파일 경로 포함)를 로그와 실행 manifest(`error_detail`)에 남긴다. 비밀 값이 들어 있을 수 있는 문구는 가린다. 수집·PDF·최종 배포 검증 실패는 성공으로 기록하지 않는다. 날짜 폴더가 있어도 완료 manifest가 없으면 동기화하지 않는다.
 
 **지킬 것** 원본 TC·매뉴얼·QA 규칙·운영 DB를 바꾸지 않는다. Polarion은 읽기만 한다. AI·메일은 호출하지 않고 기존 QA Agent의 분석·메일 기능을 사용한다. 실제 문서·인증·예약 XML은 커밋하지 않는다.
 
@@ -9485,15 +9558,28 @@ REQ-KNOW-002, 003, 005, 018, 019, 020 을 `tests/test_knowledge_profiles.py` 로
 python -m pytest tests/test_knowledge_profiles.py -q
 ```
 
+### TEST-KNOW-009
+
+REQ-KNOW-018 의 화면 등록 허용(`allow_manual`), REQ-KNOW-020, REQ-KNOW-022, REQ-KNOW-023 을 `tests/test_knowledge_manual_spec.py` 로 확인한다. 설정·DB·파싱 저장본·수집 기록·업로드 폴더는 모두 임시 폴더다. 사양서가 `alm_crawler` 이고 `allow_manual: true` 인 가짜 제품을 쓴다.
+
+1. 허용: 사양서 구역 모든 줄에 `교체`·`삭제`, 구역 아래 `새 문서 등록` 이 보이고 `.xlsx` 를 고를 수 있다. 출처 안내 문구 뒤에 화면 등록 안내가 붙는다. `allow_manual` 이 없는 제품은 지금처럼 409 로 거절한다.
+2. 등록: `source` 없는 `.xlsx` 사양서 등록이 성공하고 검색 대상이 된다. `source=alm_crawler` 동기화 등록도 그대로 된다. 지식 폴더 수집본을 화면에서 지우면 지워진다.
+3. 삭제 기억: 화면에서 지운 지식 폴더 문서는 같은 수집 기록으로 다시 등록해도 등록되지 않고 결과에 "지운 문서라 건너뜀" 이 붙는다. 날짜가 다른 새 판은 등록된다. `source=alm_crawler` 지우기는 기록하지 않는다. 같은 이름을 화면에서 다시 올리면 기록이 지워지고 이후 수집이 그 이름을 막지 않는다.
+4. 이름 맞추기: REQ-KNOW-023 의 표 네 줄을 함수로 확인하고, `교체` 요청으로 올린 파일이 맞춘 이름으로 등록되고 대상 문서가 빠지는지 본다. `새 문서 등록` 은 이름을 바꾸지 않는다.
+
+```text
+python -m pytest tests/test_knowledge_manual_spec.py -q
+```
+
 ### TEST-KNOW-008
 
 REQ-KNOW-021 과 REQ-KNOW-018 의 화면 숨김을 `tests/test_knowledge_collect_request.py` 로 확인한다. 설정·DB·수집 기록은 모두 임시 폴더다.
 
-1. 폴더를 읽을 수 없는 서버에서 `지금 수집` 은 요청을 남기고(`REQUESTED`), 남은 요청 조회가 그 시각을 돌려준다. 상세 화면에 "수집 요청 대기 중"이 보인다.
+1. 폴더를 읽을 수 없는 서버에서 `지금 수집` 은 요청을 남기고(`REQUESTED`), 남은 요청 조회가 그 시각을 돌려준다. 상세 화면에 "수집 요청 대기 중"이 보이고, 15초마다 남은 요청을 묻는 스크립트와 10분 안내 문구가 있다. 실제 브라우저에서 요청이 끝나면 새로 고쳐지는지는 배포 뒤 운영 화면으로 확인한다.
 2. 요청 뒤에 지식 폴더 동기화 기록이 끝나면 남은 요청이 없다.
 3. 폴더를 읽을 수 있는 서버에서는 바로 수집한다.
 4. 지식 폴더 설정이 없는 제품은 400, 설정 없는 제품은 404 다.
-5. PC 쪽(`run_due`): 그날 업로드를 마쳤어도 처리하지 않은 요청이 있으면 한 번 올리고, 같은 요청은 다시 올리지 않는다. 요청 조회가 실패하면 평소 일정대로 동작한다.
+5. PC 쪽(`run_due`): 그날 업로드를 마쳤어도 처리하지 않은 요청이 있으면 한 번 올리고, 같은 요청은 다시 올리지 않는다. 요청 조회가 실패하면 평소 일정대로 동작한다. 올리기가 `FAILED` 이면 같은 요청을 15분 뒤 다시 처리한다(`tests/test_product_knowledge_retry.py`).
 6. `hidden: true` 인 종류는 상세 화면 구역과 상태 판정에서 빠진다. VXvue 상세에는 `지침 프롬프트` 구역이 없고 매뉴얼 구역에 `새 문서 등록` 이 있다.
 
 ```text
@@ -9682,11 +9768,15 @@ python -m pytest tests/test_vxvue_spec_sync.py -q
 
 `PARTIAL` 의 종료 코드 1 은 `tests/test_sync_vxvue_spec_cli.py::test_spec_sync_exit_code` 가 본다.
 
+수집본이 오래됐을 때의 `PARTIAL` 판정(빠진 평일이 있으면 `PARTIAL`, 주말만 사이에 있으면 `SUCCESS`, 변경 없음 결과에도 적용)도 같은 파일이 본다.
+
 > **참고** 최신 날짜 폴더 고르기와 잠금 파일은 자동 테스트가 없다. 담당자 PC 에서 `--dry-run` 으로 "변경 N건 감지"를 확인하고, 작업 스케줄러의 마지막 결과가 0 인지 본다.
 
 ### TEST-SYNC-003
 
-REQ-SYNC-003을 `tests/test_srs_crawler.py`와 `tests/srs_crawler/`의 합성 자료로 검사한다. 최종 PDF 손상·잘못된 PDF·완료본 공개 실패 때 이전 파일을 복구하는지, 제한된 임시 폴더를 사용하지 않는지, OS 잠금과 강제 재수집·미배포 실행·부분 수집 기록이 맞는지 본다. 통합 worker로 HTML을 PDF로 만들고 본문을 읽는다.
+REQ-SYNC-003을 `tests/test_srs_crawler.py`와 `tests/srs_crawler/`의 합성 자료로 검사한다. 실행 번호만 다른 이미지 경로의 본문은 렌더링 문제 기록이 유효한지, 실패 manifest에 `error_detail`이 남는지, 예약 설치 스크립트가 시작 실패 재시도(10분, 3번)를 설정하는지도 본다.
+
+최종 PDF 손상·잘못된 PDF·완료본 공개 실패 때 이전 파일을 복구하는지, 제한된 임시 폴더를 사용하지 않는지, OS 잠금과 강제 재수집·미배포 실행·부분 수집 기록이 맞는지 본다. 통합 worker로 HTML을 PDF로 만들고 본문을 읽는다.
 
 실제 실행에서는 Polarion 예상 건수와 수집 건수, 생성본·최종 배포본의 페이지·해시를 대조하고 서버에서 내려받아 읽는다. 이 결과와 PC 작업 전환 상태는 `progress.md`에 기록한다.
 
@@ -10148,7 +10238,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-002 | `app/modules/knowledge/router.py`, `app/main.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_manual_review_router.py`, `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-003 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/core/uploads.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-007: `tests/test_knowledge_profiles.py`, `tests/test_knowledge_screens.py` | verified |
 | REQ-KNOW-004 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/testcase_mapping.html` | TEST-KNOW-002: `tests/test_knowledge_testcase_mapping.py` | verified |
-| REQ-KNOW-005 | `app/modules/knowledge/router.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_status.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-003, TEST-KNOW-007: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py`, `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-005 | `app/modules/knowledge/router.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_status.py`, `app/modules/knowledge/templates/product.html`, `app/core/storage.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-003, TEST-KNOW-007: `tests/test_persistent_analyses.py`, `tests/test_page_scripts.py`, `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-006 | `app/core/knowledge_documents.py`, `app/core/storage.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py` | implemented |
 | REQ-KNOW-007 | `app/core/document_cache.py`, `app/core/product_knowledge.py` | TEST-KNOW-004: `tests/test_document_cache.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-008 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
@@ -10161,10 +10251,12 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-015 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-016 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/main.py` | TEST-KNOW-003: `tests/test_persistent_analyses.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
 | REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
-| REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py`, `app/core/knowledge_status.py` | TEST-KNOW-007, TEST-KNOW-008: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py`, `tests/test_knowledge_collect_request.py` | verified |
+| REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py`, `app/core/knowledge_status.py`, `config/products/vxvue.yaml` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-007, TEST-KNOW-008: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py`, `tests/test_knowledge_collect_request.py` | verified |
 | REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/knowledge_registry.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
-| REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html` | TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
-| REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py` | verified |
+| REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/product_config.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
+| REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py`, `tests/test_product_knowledge_retry.py` | verified |
+| REQ-KNOW-022 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
+| REQ-KNOW-023 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
@@ -10205,7 +10297,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DEPLOY-003 | `deploy/systemd/qa-verification.service` | TEST-DEPLOY-002 | implemented |
 | REQ-DEPLOY-004 | `deploy/nginx/qa-platform.conf` | TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
 | REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py`, `config/products/vxvue.yaml` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
-| REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
+| REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml`, `app/modules/knowledge/srs_crawler/problem_state.py`, `scripts/install_srs_schedule.ps1` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |

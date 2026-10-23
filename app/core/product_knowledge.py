@@ -584,6 +584,7 @@ class RegisterOutcome:
     skipped_older: list[str] = field(default_factory=list)
     #: 리비전 비교는 안 되지만 사람이 화면에서 같은 논리 문서를 등록해 두어 등록하지 않은 수집본 (REQ-KNOW-012).
     skipped_person: list[str] = field(default_factory=list)
+    skipped_deleted: list[str] = field(default_factory=list)
     detail: str = ""
 
 
@@ -683,9 +684,14 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
     registered_paths = {str((base / "original" / kind / asset["file_name"]).resolve()).casefold() for kind in kinds for asset in collected_assets(product, kind=kind, root=root)}
 
     for kind in kinds:
+        deleted = storage.deleted_names(product, kind)
         for asset in collected_assets(product, kind=kind, root=root):
             path = base / "original" / kind / asset["file_name"]
             if not path.is_file():
+                continue
+            # 사람이 화면에서 지운 이름은 지식 폴더에 남아 있어도 다시 등록하지 않는다 (REQ-KNOW-022).
+            if asset["file_name"].casefold() in deleted:
+                outcome.skipped_deleted.append(asset["file_name"])
                 continue
             resolved = str(path.resolve()).casefold()
             already = next((document for document in existing_all if str(Path(document["path"]).resolve()).casefold() == resolved), None)
@@ -799,6 +805,8 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
         outcome.detail += f", 등록된 판이 더 최신이라 건너뜀 {len(outcome.skipped_older)}건"
     if outcome.skipped_person:
         outcome.detail += f", 화면 등록본 우선으로 건너뜀 {len(outcome.skipped_person)}건"
+    if outcome.skipped_deleted:
+        outcome.detail += f", 지운 문서라 건너뜀 {len(outcome.skipped_deleted)}건"
     return outcome
 
 

@@ -53,7 +53,7 @@ SOURCE_MESSAGES = {
 }
 #: 등록 부가 정보의 출처 → 문서 행의 출처 이름 (REQ-KNOW-020).
 DOCUMENT_SOURCE_LABELS = {"product_knowledge": "지식 폴더", SOURCE_ALM: "ALM 자동", SOURCE_EXTERNAL: "외부 자동화"}
-UPLOAD_ACCEPT = {"specification": ".pdf,.docx", "manual": ".pdf,.docx", "release_note": ".pdf,.docx", "testcase": ".xlsx"}
+UPLOAD_ACCEPT = {"specification": ".pdf,.docx,.xlsx", "manual": ".pdf,.docx", "release_note": ".pdf,.docx", "testcase": ".xlsx"}
 
 
 @dataclass
@@ -206,6 +206,17 @@ def _rule_rows(ctx: _Context, kind: str) -> list[DocumentRow]:
     return rows
 
 
+def _source_message(config: ProductConfig, kind: str, source: str) -> str:
+    """출처 안내 문구. 자동 출처에 화면 등록을 열어 두면 그 안내를 붙인다 (REQ-KNOW-020)."""
+    if source == SOURCE_MANUAL or not can_manual_upload(config, kind):
+        return SOURCE_MESSAGES[source]
+    automatic = SOURCE_MESSAGES[source].replace(" 여기서 올릴 수 없습니다.", "")
+    return f"{automatic} {MANUAL_TOO_MESSAGE}"
+
+
+MANUAL_TOO_MESSAGE = "이 화면에서 새 문서를 등록하거나 현재 문서를 교체할 수도 있습니다."
+
+
 def _judge(ctx: _Context, kind: str) -> AssetStatus:
     config, source = ctx.config, ctx.config.source_of(kind)
     required = config.is_required(kind)
@@ -264,7 +275,7 @@ def _judge(ctx: _Context, kind: str) -> AssetStatus:
     return AssetStatus(
         kind=kind, label=KIND_LABELS[kind], source=source, source_label=SOURCE_LABELS[source],
         managed="자동 관리(로컬 Skill)" if kind == "skill_instruction" and source == SOURCE_FOLDER else MANAGED_LABELS[source],
-        message="로컬 Skill 지침과 참조 MD를 자동으로 내보내 지식폴더에서 동기화합니다." if kind == "skill_instruction" and source == SOURCE_FOLDER else SOURCE_MESSAGES[source], required=required,
+        message="로컬 Skill 지침과 참조 MD를 자동으로 내보내 지식폴더에서 동기화합니다." if kind == "skill_instruction" and source == SOURCE_FOLDER else _source_message(config, kind, source), required=required,
         count=len(rows), status=status, level=level, reason=reason, last_updated=_latest(times),
         last_sync=last_sync, can_upload=can_manual_upload(config, kind), accept=UPLOAD_ACCEPT.get(kind, ""),
         documents=rows,

@@ -17,12 +17,14 @@ def _page(path: str) -> str:
 
 
 # Validates: REQ-SYNC-001, REQ-KNOW-020
-def test_alm_specification_shows_status_without_upload():
+def test_alm_specification_shows_status_and_manual_upload():
+    """VXvue 사양서는 ALM 자동이면서 `allow_manual: true` 다. 자동 안내와 화면 등록이 함께 보인다 (REQ-KNOW-018·020)."""
     text = _page("/knowledge/products/vxvue")
     assert "매주 월요일 07:30" not in text
-    assert "ALM 에서 자동으로 수집합니다" in text
     section = text[text.index('id="kind-specification"'):text.index('id="kind-testcase"')]
-    assert "새 문서 등록" not in section and 'type="file"' not in section
+    assert "ALM 에서 자동으로 수집합니다. 이 화면에서 새 문서를 등록하거나 현재 문서를 교체할 수도 있습니다." in section
+    assert "여기서 올릴 수 없습니다" not in section
+    assert "새 문서 등록" in section and 'accept=".pdf,.docx,.xlsx"' in section
 
 
 # Validates: REQ-SYNC-002, REQ-KNOW-017
@@ -43,6 +45,6 @@ def test_dashboard_has_no_upload_forms_and_manual_source_detail_has():
     assert 'type="file"' not in page and 'action="/knowledge/products"' not in page
     detail = _page("/knowledge/products/bellalun-viewer")
     section = detail[detail.index('id="kind-specification"'):detail.index('id="kind-testcase"')]
-    assert "새 문서 등록" in section and 'accept=".pdf,.docx"' in section
+    assert "새 문서 등록" in section and 'accept=".pdf,.docx,.xlsx"' in section   # 사양서는 Excel 도 받는다 (REQ-KNOW-018)
     manual = detail[detail.index('id="kind-manual"'):detail.index('id="kind-qa_rules"')]
     assert 'type="file"' not in manual                       # 매뉴얼은 지식 폴더 자료 (SPEC 13.5)

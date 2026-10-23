@@ -56,6 +56,11 @@ def test_collect_without_folder_access_leaves_a_request(env):
     assert pending["requested_at"]
     page = env.client.get("/knowledge/products/vxvue").text
     assert "수집 요청 대기 중" in page
+    assert "끝나면 화면이 저절로 새로 고쳐집니다" in body["detail"]
+    # 화면이 15초마다 남은 요청을 묻고, 끝나면 새로 고친다. 10분이 지나면 PC 상태 안내를 붙인다.
+    assert f'id="kn-collect-pending" data-product="VXvue" data-requested="{pending["requested_at"]}"' in page
+    assert "/knowledge/product-knowledge/request?product=" in page and "setTimeout(check, 15000)" in page
+    assert "담당자 PC 가 꺼져 있거나 올리기가 오래 걸리고 있습니다." in page
 
 
 def test_finished_folder_sync_after_request_clears_it(env):

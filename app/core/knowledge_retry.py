@@ -49,22 +49,29 @@ def run_due(product, target_url, *, state_dir, now=None, push=None, check_reques
             due_date = today if now.astimezone(KST).hour >= 8 else today - timedelta(days=1)
             # A screen request the PC has not handled yet runs now, whatever the daily schedule says.
             request = _requested(check_request)
+            next_retry = state.get("next_retry_at")
+            waiting = bool(next_retry and now < datetime.fromisoformat(next_retry))
             if request and request != state.get("handled_request"):
-                state["handled_request"] = request
+                # 실패 뒤 같은 요청도 15분 재시도 간격을 지킨다. 매분 실패를 되풀이하지 않는다 (REQ-KNOW-021).
+                if waiting:
+                    return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
             else:
+                request = ""
                 # First installation before 08:00 waits for today's schedule.
                 if not state and now.astimezone(KST).hour < 8:
                     return {"status": "NOT_DUE", "detail": "오전 8시 실행 대기"}
                 if state.get("completed_date", "") >= due_date.isoformat():
                     return {"status": "NOT_DUE", "detail": "해당 일정 동기화 완료"}
-                next_retry = state.get("next_retry_at")
-                if next_retry and now < datetime.fromisoformat(next_retry):
+                if waiting:
                     return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
             try:
                 result = (push or push_product)(product, target_url)
             except Exception as exc:
                 result = {"status": "FAILED", "detail": f"동기화 실패: {type(exc).__name__}"}
             state.update(last_attempt_at=now.isoformat(), status=result["status"], detail=result.get("detail", ""))
+            # 결과가 서버에 닿았을 때만 요청을 끝낸 것으로 적는다. 닿지 못한 실패는 같은 요청을 다시 처리한다 (REQ-KNOW-021).
+            if request and result["status"] != "FAILED":
+                state["handled_request"] = request
             if result["status"] == "SUCCESS":
                 state.update(completed_date=due_date.isoformat(), last_success_at=now.isoformat(), next_retry_at=None)
             else:
