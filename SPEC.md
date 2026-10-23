@@ -8623,7 +8623,10 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 - 이 서비스는 핵심 앱의 코드를 가져다 쓰지 않고 핵심 앱 DB를 읽지 않는다. 핵심 앱도 이 서비스의 코드와 DB를 쓰지 않는다.
 - 이 서비스 아래(`services/qa-manual-hub/`)에 `akela.json`이나 `knowledge/`를 따로 만들지 않는다. 지식 파일은 저장소 루트 `knowledge/manual-hub-*.md`에 둔다.
-- 테스트와 CI는 따로 돈다(`.github/workflows/manual-hub.yml`). 이 서비스 파일이 바뀔 때만 백엔드 테스트와 두 가지 화면 빌드를 확인한다.
+- 테스트는 따로 돈다. 이 서비스 파일이 바뀌면 백엔드 테스트와 두 가지 화면 빌드를 로컬에서 확인한다.
+- 워크플로 파일(`.github/workflows/manual-hub.yml`)은 남아 있지만 GitHub Actions 에서 꺼 두었다(2026-10-23).
+
+이유: GitHub Actions 는 무료 시간과 실패 알림 메일을 쓴다. 검증은 로컬 게이트로 한다.
 
 <!-- spec-index: v1 -->
 
@@ -10037,7 +10040,7 @@ Dashboard, Recent Updates, Settings를 확인한다(REQ-HUB-001, 009, 010). 파�
 
 ### TEST-HUB-006
 
-두 가지 설치 형태를 확인한다(REQ-HUB-013, NFR-HUB-008). CI(`.github/workflows/manual-hub.yml`)가 두 빌드를 모두 돌린다. 사람이 확인할 때는 아래를 한다.
+두 가지 설치 형태를 확인한다(REQ-HUB-013, NFR-HUB-008). GitHub Actions 는 꺼져 있으므로(NFR-HUB-008) 서비스 파일을 바꾸면 아래를 로컬에서 한다.
 
 ```text
 cd services/qa-manual-hub/frontend

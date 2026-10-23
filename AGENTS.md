@@ -15,7 +15,7 @@ Follow `akela/PROTOCOL.md` for every task.
 | 위치 | `app/` (기능은 `app/modules/<name>/`) | `services/<name>/` |
 | 스택 | FastAPI + Jinja2 + SQLite, 단일 uvicorn | 자체 스택 (예: React SPA + PostgreSQL) |
 | 테스트 | 루트 `pytest` (`pytest.ini` testpaths=tests) | 자기 디렉터리에서 따로 실행 |
-| CI | `.github/workflows/ci.yml` | `.github/workflows/<name>.yml` |
+| CI | 로컬 검증만 (`.github/workflows/ci.yml` 은 GitHub 에서 꺼 둠) | 로컬 검증만 (`.github/workflows/<name>.yml` 은 꺼 둠) |
 
 `services/*` 는 핵심 앱과 프로세스도 DB도 공유하지 않는다. 코드를 import 하거나 같은 DB를
 읽는 방식으로 결합하지 않는다 — 연결은 URL 링크(`config.yaml` `services.*`)와 nginx

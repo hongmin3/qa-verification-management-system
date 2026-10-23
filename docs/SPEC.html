@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="dc9f6c8dcec163daa31864fe4469cbc4e8fd72ed04b539892cd90e78358c1262">
+<meta name="spec-source-sha256" content="12b4659653020e1f75460d9ec5e8b1d5aa16b7891894cabf6e2e48290e911b3d">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -11252,13 +11252,20 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-nfr" id="NFR-HUB-008">
 <h3><span class="idtag">NFR-HUB-008</span> 서비스 경계</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>.github/workflows/manual-hub.yml</code>, <code>services/qa-manual-hub/AGENTS.md</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-HUB-006">TEST-HUB-006</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-HUB-006">TEST-HUB-006</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>.github/workflows/manual-hub.yml</code>, <code>services/qa-manual-hub/AGENTS.md</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-HUB-006">TEST-HUB-006</a></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-HUB-006">TEST-HUB-006</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-23 GitHub Actions 끔</span> <a class="idref" href="#NFR-HUB-008">NFR-HUB-008</a>: 저장소의 <code>Core App CI</code>·<code>Manual Hub CI</code> 워크플로를 GitHub 에서 껐다. 10-20 부터 푸시마다 GitHub 서버에서만 실패하는 시험 1건(<code>tests/test_claude_resources.py::test_real_terminal_timeout_leaves_no_capture_scope</code>, 그 환경에 실행 범위 기능이 없음) 때문에 실패 메일이 왔다. 검증은 로컬 게이트로 한다. 워크플로 파일은 남겨 두었고 <code>gh workflow enable</code> 로 되돌릴 수 있다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 핵심 앱과 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>는 코드, DB, 테스트를 따로 관리한다.</p>
 <ul>
 <li>이 서비스는 핵심 앱의 코드를 가져다 쓰지 않고 핵심 앱 DB를 읽지 않는다. 핵심 앱도 이 서비스의 코드와 DB를 쓰지 않는다.</li>
 <li>이 서비스 아래(<code>services/qa-manual-hub/</code>)에 <code>akela.json</code>이나 <code>knowledge/</code>를 따로 만들지 않는다. 지식 파일은 저장소 루트 <code>knowledge/manual-hub-*.md</code>에 둔다.</li>
-<li>테스트와 CI는 따로 돈다(<code>.github/workflows/manual-hub.yml</code>). 이 서비스 파일이 바뀔 때만 백엔드 테스트와 두 가지 화면 빌드를 확인한다.</li>
+<li>테스트는 따로 돈다. 이 서비스 파일이 바뀌면 백엔드 테스트와 두 가지 화면 빌드를 로컬에서 확인한다.</li>
+<li>워크플로 파일(<code>.github/workflows/manual-hub.yml</code>)은 남아 있지만 GitHub Actions 에서 꺼 두었다(2026-10-23).</li>
 </ul>
+<p class="why"><span class="why-label">이유</span> GitHub Actions 는 무료 시간과 실패 알림 메일을 쓴다. 검증은 로컬 게이트로 한다.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>기능</th><th>사양 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span></th><th>상태</th></tr></thead>
 <tbody>
@@ -12716,7 +12723,7 @@ python -m pytest tests -q
 </section>
 <section class="card kind-test" id="TEST-HUB-006">
 <h3><span class="idtag">TEST-HUB-006</span></h3>
-<p>두 가지 설치 형태를 확인한다(<a class="idref" href="#REQ-HUB-013">REQ-HUB-013</a>, <a class="idref" href="#NFR-HUB-008">NFR-HUB-008</a>). CI(<code>.github/workflows/manual-hub.yml</code>)가 두 빌드를 모두 돌린다. 사람이 확인할 때는 아래를 한다.</p>
+<p>두 가지 설치 형태를 확인한다(<a class="idref" href="#REQ-HUB-013">REQ-HUB-013</a>, <a class="idref" href="#NFR-HUB-008">NFR-HUB-008</a>). GitHub Actions 는 꺼져 있으므로(<a class="idref" href="#NFR-HUB-008">NFR-HUB-008</a>) 서비스 파일을 바꾸면 아래를 로컬에서 한다.</p>
 <pre><code class="language-text">cd services/qa-manual-hub/frontend
 npm ci
 npm run build

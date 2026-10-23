@@ -529,8 +529,8 @@ npm run build            # 단독 배포용   (base '/')
 npm run build:platform   # 플랫폼 하위용 (base '/manual-hub/')
 ```
 
-경로를 하드코딩하지 말고 `import.meta.env.BASE_URL` 을 쓰십시오. 두 빌드 모두 CI 에서
-검증합니다 (`.github/workflows/manual-hub.yml`).
+경로를 하드코딩하지 말고 `import.meta.env.BASE_URL` 을 쓰십시오. 두 빌드 모두 로컬에서
+확인합니다 (`.github/workflows/manual-hub.yml` 은 GitHub Actions 에서 꺼 두었습니다).
 
 ### 테스트
 

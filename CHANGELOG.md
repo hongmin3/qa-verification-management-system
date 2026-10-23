@@ -1,5 +1,9 @@
 # 변경 이력
 
+## 2026-10-23 GitHub Actions 끔
+
+- NFR-HUB-008: 저장소의 `Core App CI`·`Manual Hub CI` 워크플로를 GitHub 에서 껐다. 10-20 부터 푸시마다 GitHub 서버에서만 실패하는 시험 1건(`tests/test_claude_resources.py::test_real_terminal_timeout_leaves_no_capture_scope`, 그 환경에 실행 범위 기능이 없음) 때문에 실패 메일이 왔다. 검증은 로컬 게이트로 한다. 워크플로 파일은 남겨 두었고 `gh workflow enable` 로 되돌릴 수 있다.
+
 ## 2026-10-23 사양서 화면 등록·삭제 기억·수집 멈춤 경고
 
 - REQ-KNOW-018: 자료 종류마다 `allow_manual` 을 적을 수 있다. VXvue 사양서는 ALM 자동 수집을 유지하면서 화면에서 등록·교체·삭제할 수 있다. VSS Specification 처럼 ALM 이 만들지 않는 사양서를 위한 것이다.

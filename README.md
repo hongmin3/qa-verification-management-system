@@ -470,7 +470,7 @@ Unit Test는 AI Mock Response(가짜 CLI 실행기 포함)를 사용하므로 �
 | 테스트 | pytest | pytest (실제 PostgreSQL 필요) |
 | 배포 | uvicorn / systemd | systemd + rsync 또는 Docker Compose |
 
-공통: Python 3.12, nginx, GitHub Actions
+공통: Python 3.12, nginx. GitHub Actions 워크플로는 꺼 두었고 검증은 로컬에서 합니다.
 
 ---
 
