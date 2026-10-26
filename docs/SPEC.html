@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="7bfc6a131d0a313d915f6e678ed2433912e8644f8dbd8960e813479f168106f9">
+<meta name="spec-source-sha256" content="b404695f083f5f00e5308afbfa82e7631e21466bf02b81debc55964260a3f624">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>313</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>195</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>222</b><span>implemented</span></div><div class="stat st-verified"><b>72</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>315</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>195</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>224</b><span>implemented</span></div><div class="stat st-verified"><b>72</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -639,6 +639,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014 <span>Claude Code CLI 연결 설치</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012 <span>Polarion 번호·필터로 현재 자료 수집</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015 <span>한 PC의 Claude·Codex 연결 Skill 맞춤</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016 <span>Redmine 이슈 읽기와 범위 확인</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017 <span>상태 재시도와 승인된 로그 경로</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1047,6 +1049,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a></td><td data-label="이름">Claude Code CLI 연결 설치</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop.py</code>, <code>deploy/claude-desktop/install-claude-code.ps1</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006</a>: <code>tests/test_vxvue_desktop_enroll.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></td><td data-label="이름">Polarion 번호·필터로 현재 자료 수집</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop_polarion.py</code></td><td data-label="테스트"><code>tests/test_vxvue_desktop_polarion.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></td><td data-label="이름">한 PC의 Claude·Codex 연결 Skill 맞춤</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>scripts/sync_vxvue_local_skill.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a></td><td data-label="이름">Redmine 이슈 읽기와 범위 확인</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="테스트"><code>tests/test_vxvue_redmine.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="이름">상태 재시도와 승인된 로그 경로</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="테스트"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -15986,7 +15990,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-2">
 <h2>2. 범위</h2>
-<p>사양·매뉴얼 질의응답, <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토, Generator 분석, Issue·메일 초안, 대화 이력과 첨부를 포함한다. 로그인, 사용자 간 공유, 실시간 Redmine 조회, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·메일 발송·원본 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 수정은 첫 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 범위 밖이다.</p>
+<p>사양·매뉴얼 질의응답, <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 검토, Generator 분석, Issue·메일 초안, 대화 이력과 첨부를 포함한다. 로그인, 사용자 간 공유, <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·메일 발송·원본 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 수정은 첫 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 범위 밖이다.</p>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-5">
 <h2>5. 기능 요구사항</h2>
@@ -16374,6 +16378,35 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p>훅 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>은 <code>--install-hooks</code>로 한다. 여러 번 실행해도 결과가 같고, 다른 훅 항목은 바꾸지 않는다. <code>--uninstall-hooks</code>는 이 도구의 항목만 지운다.</p>
 </aside>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-016">
+<h3><span class="idtag">REQ-VXVUECHATBOT-016</span> Redmine 이슈 읽기와 범위 확인</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_redmine.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-26 VXvue Redmine 공용 조회와 연결 지침</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: Desktop·HTTP MCP와 웹 챗봇에 Redmine 상세·다중 프로젝트 제목/전문 검색을 연결했다. 61·29·107 프로젝트의 공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>만 읽고 페이지 잔여와 실패를 구분한다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> Redmine 상세와 여러 프로젝트의 검색 목록을 읽는다. Desktop 전달기와 HTTP MCP, 웹 챗봇이 같은 읽기 도구를 제공한다.</p>
+<p><strong>입력</strong> 양의 정수 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 번호 또는 검색어, 프로젝트 번호 목록, 상태, 페이지다. 허용 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 기본 상태는 전체다.</p>
+<ol>
+<li>제목 검색은 프로젝트별 <code>/issues.json</code>을 읽는다. 전문 검색은 프로젝트별 <code>/search.json</code>의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 결과를 읽고 프로젝트·상태·제목을 확인한다. 공개 제목·본문·댓글에서 검색어를 다시 확인하고, 확인되지 않은 후보의 번호·제목은 반환하지 않는다.</li>
+<li>목록에는 번호·프로젝트·상태·제목만 반환한다. 프로젝트별 다음 후보 페이지와 전송·응답 오류를 알린다. 비공개 자료의 존재를 건수로 드러내지 않도록 전체 건수는 항상 null이고 complete는 항상 false다. 비공개·공개 본문 일치 확인 불가 후보의 번호·제목·제외 건수는 알리지 않는다.</li>
+<li>상세는 본문·공개 journals·attachments·relations를 읽는다. 비공개 댓글은 저장·반환 전에 제외한다. 제외 여부·건수는 응답과 저장본에 넣지 않고 항상 같은 범위 안내를 제공한다. 첨부 본문은 받지 않는다. 보호한 전체 결과를 저장하고 잘린 내용은 결과 번호와 문자 위치로 이어 읽는다.</li>
+<li>서버에 설정한 호스트와 키만 쓴다. GET만 사용하고 redirect를 따르지 않는다. 요청당 20초·새 요청 시작 예산 55초, 응답 10 MiB, 페이지 최대 100개다. 허용 외 프로젝트와 비공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>는 반환하지 않는다.</li>
+</ol>
+<p><strong>안 될 때</strong> 설정 누락·인증 실패·전송 실패·손상 응답을 빈 검색으로 숨기지 않는다. 오류에 비밀값·호스트를 넣지 않는다. <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·수정·상태 변경을 제공하지 않는다.</p>
+</section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-017">
+<h3><span class="idtag">REQ-VXVUECHATBOT-017</span> 상태 재시도와 승인된 로그 경로</h3>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-10-26 VXvue Redmine 공용 조회와 연결 지침</span> <a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a>: 상태 timeout의 총 3회 재시도와 대체 연결 전 사용자 승인을 관리 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>에 반영했다. 승인된 QA 29.8 로그 템플릿만 해당 지침·원문 전달에서 보존하고 나머지 경로 보호를 유지한다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 get_status의 timeout만 1초 간격으로 총 3회까지 재시도한다. 계속 실패하거나 다른 오류이면 원인과 확인사항을 알린다. 로컬 색인·rawfile·다른 연결로 옮기기 전에 사용자 승인을 받는다.</p>
+<p><strong>지킬 것</strong> 승인된 QA 통합 원문의 29.8절에 있는 정확한 로그 공유 템플릿만 해당 지침과 원문 전달에서 보존한다. 일반 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>·대화·다른 UNC·고객 경로에는 예외를 적용하지 않는다. 전문을 보호한 뒤 자르고 보호 결과의 문자 위치와 전체 길이를 유지한다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -16425,6 +16458,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-007">REQ-VXVUECHATBOT-007</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/agent.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/core/vxchat_storage.py</code>, <code>config.yaml</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-004">TEST-VXVUECHATBOT-004</a>: <code>tests/test_vxvue_chat_cost.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-008">REQ-VXVUECHATBOT-008</a></td><td data-label="Implementation"><code>app/core/skill_knowledge.py</code>, <code>app/modules/vxvue_chatbot/knowledge.py</code>, <code>app/core/knowledge_push.py</code>, <code>app/modules/vxvue_chatbot/router.py</code>, <code>app/web/static/vxvue-chatbot.js</code>, <code>app/web/static/vxvue-chatbot.css</code></td><td data-label="Test"><a class="idref" href="#TEST-VXVUECHATBOT-005">TEST-VXVUECHATBOT-005</a>: <code>tests/test_skill_knowledge.py</code>, <code>tests/test_vxvue_chat_knowledge.py</code>, <code>tests/test_vxvue_chat_router.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-010">REQ-VXVUECHATBOT-010</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/prompts/vxvue_chatbot.yaml</code></td><td data-label="Test"><code>tests/test_vxvue_chat_retrieval.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="Test"><code>tests/test_vxvue_redmine.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="Test"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
 </section>

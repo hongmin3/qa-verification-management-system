@@ -126,13 +126,27 @@ class KnowledgeTools:
         return text_content({"name": a["name"], "results": chunks[offset:offset + limit], "warnings": warnings, "truncated": offset + limit < len(chunks), "next_offset": offset + limit, "untrusted_attachment": True})
 
     def call(self, name, arguments):
+        if name in ("get_redmine_issue", "search_redmine_issues", "read_redmine_result"):
+            from app.modules.vxvue_chatbot.redmine import call as redmine_call
+            return redmine_call(name, arguments)
         arguments = dict(arguments)
         if name in ("search_documents", "find_testcases", "trace_requirements", "compare_packages"):
             arguments.setdefault("limit", 6)
         elif name == "get_document":
             arguments.setdefault("limit", 4)
         if name == "batch_lookup":
-            return self.batch_lookup(arguments.get("requests"))
+            requests = arguments.get("requests")
+            value = self.batch_lookup(requests)
+            protected, _ = mask_payload(value)
+            preserve = False
+            for index, request in enumerate(requests):
+                doc = request.get("arguments", {}).get("document_id")
+                if request["tool"] == "get_document" and any(d.get("document_id") == doc and d.get("kind") == "qa_rules" for d in self.snapshot["documents"]):
+                    from app.modules.vxvue_chatbot.qa_protection import mask_qa_payload
+                    rules = self._source(doc).read_text(encoding="utf-8-sig")
+                    protected["results"][index] = mask_qa_payload(value["results"][index], rules)
+                    preserve = True
+            return [{"type":"text", "text":json.dumps(protected, ensure_ascii=False)}] if preserve else value
         if name == "get_status":
             status = self.corpus.get_status()
             status.pop("latest_rules", None)  # full latest rules already in system prompt
@@ -170,7 +184,12 @@ class KnowledgeTools:
         allowed = {"search_documents", "get_document", "find_testcases", "compare_packages", "trace_requirements"}
         if name not in allowed:
             raise ValueError("허용되지 않은 도구입니다.")
-        return compact_response(self._decorate(getattr(self.corpus, name)(**arguments)))
+        value = compact_response(self._decorate(getattr(self.corpus, name)(**arguments)))
+        if name == "get_document" and any(d.get("document_id") == arguments.get("document_id") and d.get("kind") == "qa_rules" for d in self.snapshot["documents"]):
+            from app.modules.vxvue_chatbot.qa_protection import mask_qa_payload
+            rules = self._source(arguments["document_id"]).read_text(encoding="utf-8-sig")
+            return [{"type": "text", "text": json.dumps(mask_qa_payload(value, rules), ensure_ascii=False)}]
+        return value
 
     def batch_lookup(self, requests):
         allowed = {"search_documents", "get_document", "find_testcases", "compare_packages", "trace_requirements", "get_generator_evidence", "read_attachment"}
@@ -281,7 +300,8 @@ def tools():
         ("get_generator_evidence", "Generator 모델별 사양·TC 셀의 역할을 보존해 조회", {"query": string, "model": string, "limit": integer}, []),
         ("read_attachment", "현재 대화의 첨부 원문·표·이미지를 읽는다. PDF 이미지는 page를 지정.", {"attachment_id": string, "offset": integer, "limit": integer, "page": {"type": "integer", "minimum": 1}}, ["attachment_id"]),
     ]
-    return [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
+    from app.modules.vxvue_chatbot.redmine import definitions as redmine_definitions
+    return redmine_definitions() + [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
 
 
 def serve(session, source=sys.stdin, target=sys.stdout):

@@ -20,7 +20,7 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 
 ## 2. 범위
 
-사양·매뉴얼 질의응답, TC 검토, Generator 분석, Issue·메일 초안, 대화 이력과 첨부를 포함한다. 로그인, 사용자 간 공유, 실시간 Redmine 조회, 이슈 등록·메일 발송·원본 TC 수정은 첫 버전 범위 밖이다.
+사양·매뉴얼 질의응답, TC 검토, Generator 분석, Issue·메일 초안, 대화 이력과 첨부를 포함한다. 로그인, 사용자 간 공유, 이슈 등록·메일 발송·원본 TC 수정은 첫 버전 범위 밖이다.
 
 ## 5. 기능 요구사항
 
@@ -311,6 +311,25 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 > **참고** 훅 등록은 `--install-hooks`로 한다. 여러 번 실행해도 결과가 같고, 다른 훅 항목은 바꾸지 않는다. `--uninstall-hooks`는 이 도구의 항목만 지운다.
 
+### REQ-VXVUECHATBOT-016 Redmine 이슈 읽기와 범위 확인
+
+**하는 일** Redmine 상세와 여러 프로젝트의 검색 목록을 읽는다. Desktop 전달기와 HTTP MCP, 웹 챗봇이 같은 읽기 도구를 제공한다.
+
+**입력** 양의 정수 이슈 번호 또는 검색어, 프로젝트 번호 목록, 상태, 페이지다. 허용 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 기본 상태는 전체다.
+
+1. 제목 검색은 프로젝트별 `/issues.json`을 읽는다. 전문 검색은 프로젝트별 `/search.json`의 이슈 결과를 읽고 프로젝트·상태·제목을 확인한다. 공개 제목·본문·댓글에서 검색어를 다시 확인하고, 확인되지 않은 후보의 번호·제목은 반환하지 않는다.
+2. 목록에는 번호·프로젝트·상태·제목만 반환한다. 프로젝트별 다음 후보 페이지와 전송·응답 오류를 알린다. 비공개 자료의 존재를 건수로 드러내지 않도록 전체 건수는 항상 null이고 complete는 항상 false다. 비공개·공개 본문 일치 확인 불가 후보의 번호·제목·제외 건수는 알리지 않는다.
+3. 상세는 본문·공개 journals·attachments·relations를 읽는다. 비공개 댓글은 저장·반환 전에 제외한다. 제외 여부·건수는 응답과 저장본에 넣지 않고 항상 같은 범위 안내를 제공한다. 첨부 본문은 받지 않는다. 보호한 전체 결과를 저장하고 잘린 내용은 결과 번호와 문자 위치로 이어 읽는다.
+4. 서버에 설정한 호스트와 키만 쓴다. GET만 사용하고 redirect를 따르지 않는다. 요청당 20초·새 요청 시작 예산 55초, 응답 10 MiB, 페이지 최대 100개다. 허용 외 프로젝트와 비공개 이슈는 반환하지 않는다.
+
+**안 될 때** 설정 누락·인증 실패·전송 실패·손상 응답을 빈 검색으로 숨기지 않는다. 오류에 비밀값·호스트를 넣지 않는다. 이슈 등록·수정·상태 변경을 제공하지 않는다.
+
+### REQ-VXVUECHATBOT-017 상태 재시도와 승인된 로그 경로
+
+**하는 일** 연결 Skill은 get_status의 timeout만 1초 간격으로 총 3회까지 재시도한다. 계속 실패하거나 다른 오류이면 원인과 확인사항을 알린다. 로컬 색인·rawfile·다른 연결로 옮기기 전에 사용자 승인을 받는다.
+
+**지킬 것** 승인된 QA 통합 원문의 29.8절에 있는 정확한 로그 공유 템플릿만 해당 지침과 원문 전달에서 보존한다. 일반 문서·대화·다른 UNC·고객 경로에는 예외를 적용하지 않는다. 전문을 보호한 뒤 자르고 보호 결과의 문자 위치와 전체 길이를 유지한다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -361,3 +380,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-007 | `app/modules/vxvue_chatbot/agent.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/core/vxchat_storage.py`, `config.yaml` | TEST-VXVUECHATBOT-004: `tests/test_vxvue_chat_cost.py` | verified |
 | REQ-VXVUECHATBOT-008 | `app/core/skill_knowledge.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/core/knowledge_push.py`, `app/modules/vxvue_chatbot/router.py`, `app/web/static/vxvue-chatbot.js`, `app/web/static/vxvue-chatbot.css` | TEST-VXVUECHATBOT-005: `tests/test_skill_knowledge.py`, `tests/test_vxvue_chat_knowledge.py`, `tests/test_vxvue_chat_router.py` | verified |
 | REQ-VXVUECHATBOT-010 | `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/prompts/vxvue_chatbot.yaml` | `tests/test_vxvue_chat_retrieval.py` | verified |
+| REQ-VXVUECHATBOT-016 | `app/modules/vxvue_chatbot/redmine.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_vxvue_redmine.py` | implemented |
+| REQ-VXVUECHATBOT-017 | `app/modules/vxvue_chatbot/qa_protection.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_qa_protection.py`, `tests/test_vxvue_redmine.py` | implemented |

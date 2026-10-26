@@ -30,10 +30,11 @@ _fingerprint = None
 _current = None
 INSTRUCTIONS = """VXvue 공용 지식 연결입니다. VP-로 시작하는 번호(예: VP-7282)는 Jira가 아니라 Polarion의
 VXvue 항목이므로 이 연결의 get_polarion_item으로 조회하세요. Jira·Atlassian 연결은 필요 없습니다.
+get_status가 timeout이면 1초 간격으로 총 3회까지 시도합니다. 계속 실패하면 원인과 확인사항을 알리고 중단하며 로컬 색인·rawfile로 바꾸기 전에 사용자 승인을 받습니다.
 VXvue 사양·TC·Issue·Polarion 질문에는 먼저 get_status로
 snapshot_id를 받고 get_workflow를 next_offset이 없을 때까지 읽어 최신 Skill·QA 지침을 적용하세요.
 원본 Skill에 적힌 개인 PC 경로·로컬 명령은 이 서버 연결에서 실행하지 마세요.
-이 연결의 문서 조회는 아래 읽기 도구만 사용합니다. 원본의 Redmine 로컬 설정은 제공하지 않습니다.
+이 연결의 문서 조회는 아래 읽기 도구만 사용합니다. Redmine은 서버에 설정한 get_redmine_issue·search_redmine_issues로 읽습니다.
 같은 작업의 문서 조회에는 같은 snapshot_id를 쓰세요. VP 번호는 get_polarion_item,
 필터는 polarion_query로 현재 사양·이슈를 수집하세요. 필터는 임의 수정하지 마세요.
 전체 수집 요청은 next_page가 없을 때까지 수집하고 read_polarion_result로 잘린 본문을 이어 읽으세요.
@@ -200,11 +201,13 @@ def definitions():
         tool = json.loads(json.dumps(tool))
         if tool["name"] == "get_status":
             tool["description"] = ("VXvue AI: VXvue 사양·매뉴얼·TC·Generator·Polarion(VP-번호) 질문의 첫 단계. 서버 연결 상태와 snapshot_id를 받는다. "
-                                   "이어서 get_workflow로 최신 Skill·QA 규칙을 끝까지 읽고 적용한다.")
+                                   "timeout만 1초 간격 총 3회 재시도. 실패 시 원인 안내 후 로컬 색인·rawfile 전환은 사용자 승인 필요. 이어서 get_workflow로 최신 Skill·QA 규칙을 끝까지 읽고 적용한다.")
         if tool["name"] != "get_status":
             tool["inputSchema"]["properties"]["snapshot_id"] = {"type": "string"}
             tool["inputSchema"].setdefault("required", []).append("snapshot_id")
         result.append(tool)
+    from .redmine import definitions as redmine_definitions
+    result.extend(redmine_definitions())
     extra = [
         ("get_workflow", "최신 Skill·QA 규칙 전문. truncated면 next_offset으로 끝까지 읽기.",
          {"snapshot_id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["snapshot_id"]),
@@ -234,6 +237,9 @@ def polarion_lookup():
 def call(name, arguments):
     if name not in {t["name"] for t in definitions()}:
         raise ValueError("허용되지 않은 읽기 도구입니다.")
+    if name in ("get_redmine_issue", "search_redmine_issues", "read_redmine_result"):
+        from .redmine import call as redmine_call
+        return redmine_call(name, arguments)
     if name == "polarion_query":
         return polarion_lookup().query(**arguments)
     if name == "get_polarion_item":
@@ -252,7 +258,8 @@ def call(name, arguments):
         offset, limit = args.get("offset", 0), args.get("limit", 12000)
         integer(offset, 0, 10_000_000)
         integer(limit, 1, 12000)
-        body, protection = mask_text(INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n" + current["rules"])
+        from .qa_protection import mask_qa_text
+        body, protection = mask_qa_text(INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n" + current["rules"], current["rules"])
         end = min(offset + limit, len(body))
         return {"snapshot_id": current["id"], "skill_version": (current["skill_metadata"] or {}).get("version"),
                 "text": body[offset:end], "protection": protection.as_dict(), "total_chars": len(body), "truncated": end < len(body),
@@ -296,7 +303,7 @@ def dispatch(message, context=None):
                     for row, original in zip(masked['files'], data['files']):
                         row['url'] = base + original['url']
                 content = [{'type': 'text', 'text': json.dumps(masked, ensure_ascii=False)}]
-            elif params["name"] in ("get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result"):
+            elif params["name"] in ("get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result", "get_redmine_issue", "read_redmine_result"):
                 # These are already protected before slicing. Replacing text after slicing
                 # would change offsets and could corrupt a JSON value across chunk boundaries.
                 from app.core.security_filter import mask_payload

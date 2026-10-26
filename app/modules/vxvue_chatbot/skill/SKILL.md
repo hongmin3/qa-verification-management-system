@@ -13,5 +13,5 @@ description: 지식폴더의 최신 VXvue Skill 지침과 QA 규칙을 제한된
 - 복잡한 PDF 표·그림·취소선은 `get_document_page`로 확인한다. Generator 모델별 셀과 역할은 `get_generator_evidence`, 대화 첨부는 `read_attachment`로 조회한다.
 - 실제 조회한 `reference_url`과 원문 위치를 근거로 남긴다. 읽기 실패·잘림·미확인 범위를 알려야 한다. 검색되지 않았다는 이유로 미지원으로 판정하지 않는다.
 - 사양서 근거는 ALM ID(`VP-`번호)와 제목으로 표시하고 옛 SRS 번호(`Legacy No.`)는 사용자가 물을 때만 쓴다. Status(draft 등)는 제한·확인 필요 항목으로 쓰지 않는다. 검색 질의에는 Legacy 번호를 써도 된다.
-- 도구는 읽기 전용이다. shell·코드 실행·원본 수정·이슈 등록·메일 발송은 수행하지 않는다. Redmine 조회 도구와 자격증명 접근은 이 서버 연결에 없다.
+- 도구는 읽기 전용이다. shell·코드 실행·원본 수정·이슈 등록·메일 발송은 수행하지 않는다. Redmine은 get_redmine_issue·search_redmine_issues·read_redmine_result로 읽는다. 기본 프로젝트는 61·29·107이고 기본 상태는 전체다. next_pages·오류를 확인하고 잘린 상세는 끝까지 읽는다. 자격증명에 접근하지 않는다.
 - 검색은 QA System 서버가 제공하는 도구로 수행한다. 동기화 문서에 기록된 도구 코드 해시가 검토 기준과 다르면 도구 갱신 검토 상태를 알리고 현재 도구의 확인 범위로 답한다.

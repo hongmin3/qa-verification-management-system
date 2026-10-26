@@ -172,7 +172,8 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
         system += "\n\n" + (module / "skill" / "references" / "generator-integration.md").read_text(encoding="utf-8")
     system += "\n\n# 서버의 현재 QA 업무 지침 전문\n" + snapshot["rules"]
     prompt_file, context_file, config_file = (workdir / name for name in ("system.txt", "context.json", "mcp.json"))
-    system, system_mask = mask_text(system)
+    from .qa_protection import mask_qa_text
+    system, system_mask = mask_qa_text(system, snapshot["rules"])
     prompt_file.write_text(system, encoding="utf-8")
     context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text", "conversation_meta")}, "attachments": attachments, "job_id": job_id,
                                         "batch_token_budget": int(settings.get("vxvue_chatbot.batch_token_budget", 30000))}, ensure_ascii=False), encoding="utf-8")

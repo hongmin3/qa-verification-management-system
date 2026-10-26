@@ -206,3 +206,19 @@ def test_bridge_runs_when_loaded_through_an_electron_wrapper(tmp_path):
     reply = json.loads(process.stdout.splitlines()[0])
     assert reply["id"] == 1 and reply["result"]["serverInfo"]["name"] == "vxvue-ai"
     assert "start " + desktop.BRIDGE_VERSION in (tmp_path / "bridge.log").read_text(encoding="utf-8")
+
+
+def test_existing_bridge_discovers_and_calls_new_redmine_tool(setup, monkeypatch):
+    """A previously installed bridge uses the live catalogue without reinstalling."""
+    from app.modules.vxvue_chatbot import redmine
+    seen=[]
+    def call(name, arguments):
+        seen.append((name,arguments))
+        return {'items':[{'id':42,'project':{'id':61,'name':'Integration'},'status':{'id':1,'name':'Open'},'subject':'verified'}],'complete':True}
+    monkeypatch.setattr(redmine,'call',call)
+    _,proxy,tmp,_=setup
+    messages=[HANDSHAKE[0],{'jsonrpc':'2.0','id':3,'method':'tools/list'}, {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'search_redmine_issues','arguments':{'keywords':'verified'}}}]
+    replies,log=run(BRIDGE,{'VXVUE_SERVER_URL':proxy.url,'VXVUE_ACCESS_TOKEN':'x'*48},tmp/'old-home',messages)
+    assert {'get_redmine_issue','search_redmine_issues','read_redmine_result'} <= {t['name'] for t in replies[1]['result']['tools']}
+    assert json.loads(tool_text(replies[2]))['items'][0]['id']==42
+    assert seen==[('search_redmine_issues',{'keywords':'verified'})]

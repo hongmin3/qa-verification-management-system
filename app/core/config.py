@@ -35,6 +35,8 @@ class Secrets(BaseModel):
     smtp_user: str = DEFAULTS["smtp_user"]
     smtp_password: str = DEFAULTS["smtp_password"]
     # 일일 QA 점검 (app/modules/daily_qa). 비어 있으면 해당 단계가 건너뜀으로 남는다.
+    redmine_host: str = DEFAULTS["redmine_host"]
+    redmine_api_key: str = DEFAULTS["redmine_api_key"]
     polarion_host: str = DEFAULTS["polarion_host"]
     polarion_token: str = DEFAULTS["polarion_token"]
     claude_code_oauth_token: str = DEFAULTS["claude_code_oauth_token"]

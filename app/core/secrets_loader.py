@@ -38,6 +38,8 @@ DEFAULTS: dict[str, str] = {
     "smtp_password": "",
     # 일일 QA 점검 (app/modules/daily_qa). 비어 있으면 해당 단계가 건너뜀으로 남는다.
     # Polarion 주소는 사내 호스트라 공개 저장소의 config.yaml 에 두지 않는다.
+    "redmine_host": "",
+    "redmine_api_key": "",
     "polarion_host": "",
     "polarion_token": "",
     "claude_code_oauth_token": "",
