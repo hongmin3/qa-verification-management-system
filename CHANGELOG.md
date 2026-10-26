@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-10-26 사양서 수집·동기화를 PC 가 켜진 뒤로 옮김
+
+- REQ-SYNC-003: `QA_SRS_Collect` 예약을 평일 09:00 에서 평일 10:20 으로 옮기고, 로그온 15분 뒤에도 한 번 돌게 했다. 담당자 PC 는 평일 10:00 쯤 켜진다. 10-26 에는 놓친 09:00 실행을 부팅 직후 만회하려다 도메인 로그온에 실패해(0x8007051F) 그날 사양서를 받지 못했다.
+- REQ-SYNC-001: 사양서 동기화는 `QA_SRS_Collect` 의 두 번째 동작으로 수집 바로 뒤에 돈다. 그날 사양서가 그날 서버에 올라간다. 옛 03:30 작업 `AIRegressionAnalyzer_VXvueSpecSync` 는 끈다.
+- REQ-SYNC-001: 수집본이 오래됐는지 볼 때 오늘도 센다. 평일에 그날 수집본 없이 동기화하면 `PARTIAL` 로 알린다.
+- REQ-SYNC-003: ALM 이슈 수집 예약(`ALM_QA_Automation_Daily`)도 평일 09:00 에서 11:00 으로 옮긴다.
+
 ## 2026-10-23 GitHub Actions 끔
 
 - NFR-HUB-008: 저장소의 `Core App CI`·`Manual Hub CI` 워크플로를 GitHub 에서 껐다. 10-20 부터 푸시마다 GitHub 서버에서만 실패하는 시험 1건(`tests/test_claude_resources.py::test_real_terminal_timeout_leaves_no_capture_scope`, 그 환경에 실행 범위 기능이 없음) 때문에 실패 메일이 왔다. 검증은 로컬 게이트로 한다. 워크플로 파일은 남겨 두었고 `gh workflow enable` 로 되돌릴 수 있다.

@@ -19,9 +19,9 @@ $oldCollect = Get-ScheduledTask -TaskName 'QA_SRS_Collect' -ErrorAction Silently
 $issueArgs = '"{0}\run.py" issues --config "{0}\apps\issue-export\config.yaml" --out "{0}\apps\issue-export\polarion_backup" --timestamp' -f $AlmRoot
 $syncArgs = '"{0}\scripts\sync_vxvue_spec.py" --target-url "{1}"' -f $ProjectRoot, $TargetUrl
 $collectArgs = '"{0}\scripts\collect_srs_spec.py"' -f $ProjectRoot
-Write-Output "ALM_QA_Automation_Daily: 이슈 수집만 실행 / $issueArgs"
-Write-Output "AIRegressionAnalyzer_VXvueSpecSync: $syncArgs"
-Write-Output "QA_SRS_Collect: 평일 09:00 / $collectArgs"
+Write-Output "ALM_QA_Automation_Daily: 평일 11:00, 이슈 수집만 실행 / $issueArgs"
+Write-Output "AIRegressionAnalyzer_VXvueSpecSync: 끔 (QA_SRS_Collect 두 번째 동작으로 옮김)"
+Write-Output "QA_SRS_Collect: 평일 10:20, 로그온 15분 뒤 / $collectArgs -> $syncArgs"
 if ($CheckOnly) { Write-Output '계획 확인 완료. 예약은 변경하지 않았습니다.'; exit 0 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $windowsPrincipal = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -39,23 +39,32 @@ foreach ($task in @($oldAlm, $oldSync, $oldCollect)) {
 $changed = @()
 try {
     $almAction = New-ScheduledTaskAction -Execute $oldAlm.Actions[0].Execute -Argument $issueArgs -WorkingDirectory $AlmRoot
-    Set-ScheduledTask -TaskName $oldAlm.TaskName -TaskPath $oldAlm.TaskPath -Action $almAction | Out-Null
+    # 이슈 수집도 PC 가 켜진 뒤로 옮긴다. SRS 수집(10:20)과 Polarion 조회가 겹치지 않게 11:00 에 돈다.
+    $almTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '11:00'
+    Set-ScheduledTask -TaskName $oldAlm.TaskName -TaskPath $oldAlm.TaskPath -Action $almAction -Trigger $almTrigger | Out-Null
     $changed += $oldAlm
     $syncAction = New-ScheduledTaskAction -Execute $Python -Argument $syncArgs -WorkingDirectory $ProjectRoot
-    Set-ScheduledTask -TaskName $oldSync.TaskName -TaskPath $oldSync.TaskPath -Action $syncAction | Out-Null
-    $changed += $oldSync
     $collectAction = New-ScheduledTaskAction -Execute $Python -Argument $collectArgs -WorkingDirectory $ProjectRoot
     $principal = New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType S4U -RunLevel Limited
-    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '09:00'
+    # 담당자 PC 는 평일 10:00 에 켜진다(2026-10-26 사용자 결정). 켜진 뒤 20분에 수집하고, 끝나면 바로
+    # 사양서를 서버에 올린다(REQ-SYNC-001). 부팅 직후 만회 실행은 도메인 로그온에 실패할 수 있어
+    # (2026-10-26 10:01 0x8007051F) 로그온 15분 뒤에도 한 번 돈다. 같은 날 완료본은 다시 수집하지 않는다.
+    $weekly = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At '10:20'
+    $logon = New-ScheduledTaskTrigger -AtLogOn -User $identity.Name
+    $logon.Delay = 'PT15M'
+    $trigger = @($weekly, $logon)
     # 시작 실패(PC 재시작 중 등)는 10분 뒤 최대 3번 다시 시도한다 (REQ-SYNC-003). 2026-10-23 09:00 이 그렇게 빠졌다.
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 4) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 10)
     $settings.Enabled = $true
     if ($oldCollect) {
-        Set-ScheduledTask -TaskName $oldCollect.TaskName -TaskPath $oldCollect.TaskPath -Action $collectAction -Principal $principal -Trigger $trigger -Settings $settings | Out-Null
+        Set-ScheduledTask -TaskName $oldCollect.TaskName -TaskPath $oldCollect.TaskPath -Action @($collectAction, $syncAction) -Principal $principal -Trigger $trigger -Settings $settings | Out-Null
         $changed += $oldCollect
     } else {
-        Register-ScheduledTask -TaskName 'QA_SRS_Collect' -Action $collectAction -Trigger $trigger -Settings $settings -Principal $principal | Out-Null
+        Register-ScheduledTask -TaskName 'QA_SRS_Collect' -Action @($collectAction, $syncAction) -Trigger $trigger -Settings $settings -Principal $principal | Out-Null
     }
+    # 옛 03:30 동기화 예약은 지우지 않고 끈다. 되돌릴 때는 백업 XML 이나 Enable-ScheduledTask 를 쓴다.
+    Disable-ScheduledTask -TaskName $oldSync.TaskName -TaskPath $oldSync.TaskPath | Out-Null
+    $changed += $oldSync
 } catch {
     $failure = $_
     foreach ($task in $changed) {
@@ -65,6 +74,6 @@ try {
     throw $failure
 }
 Get-ScheduledTask -TaskName 'ALM_QA_Automation_Daily','AIRegressionAnalyzer_VXvueSpecSync','QA_SRS_Collect' |
-    Select-Object TaskName,@{Name='LogonType';Expression={$_.Principal.LogonType}},@{Name='Arguments';Expression={$_.Actions.Arguments}} |
+    Select-Object TaskName,State,@{Name='LogonType';Expression={$_.Principal.LogonType}},@{Name='Arguments';Expression={$_.Actions.Arguments}} |
     Format-List
 Write-Output "예약 전환 완료. 원래 예약 백업: $backup"

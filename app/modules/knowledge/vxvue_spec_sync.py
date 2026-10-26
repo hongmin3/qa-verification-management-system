@@ -176,8 +176,9 @@ def report_sync_log(target_url: str, product: str, kind: str, source: str, statu
 
 
 def missing_weekdays(latest: date, today: date) -> int:
-    """`latest` 다음 날부터 `today` 전날까지의 평일(월~금) 수. 공휴일도 평일로 센다 (REQ-SYNC-001)."""
-    days = (today - latest).days - 1
+    """`latest` 다음 날부터 `today` 까지의 평일(월~금) 수. 공휴일도 평일로 센다 (REQ-SYNC-001).
+    동기화는 같은 날 수집 바로 뒤에 돌므로 오늘 수집본이 없는 것도 빠진 날로 센다."""
+    days = (today - latest).days
     return sum(1 for offset in range(1, days + 1) if (latest + timedelta(days=offset)).weekday() < 5)
 
 

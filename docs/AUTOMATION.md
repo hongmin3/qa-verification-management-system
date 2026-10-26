@@ -33,8 +33,8 @@ scripts/sync_vxvue_spec.py (Windows 작업 스케줄러)   ├─ BackgroundSche
 
 VXvue 최신 사양서는 별도 프로젝트 ALM-QA-Automation 의 srs-spec 앱
 (`C:\Users\2024980\Documents\자동화\projects\ALM-QA-Automation\apps\srs-spec`, 통합 전 이름
-`vxvue-srs-spec-automation`)이 **Polarion ALM REST API**로 평일 09:00 에 자동 수집한다
-(작업 스케줄러 `ALM_QA_Automation_Daily`). 이 프로젝트를 재구현하지 않고 그 결과물
+`vxvue-srs-spec-automation`)이 **Polarion ALM REST API**로 자동 수집했다
+(작업 스케줄러 `ALM_QA_Automation_Daily`). 지금은 이 저장소의 `QA_SRS_Collect`가 평일 10:20 에 수집한다(REQ-SYNC-003). 이 프로젝트를 재구현하지 않고 그 결과물
 (`output/<날짜>/pdf/`)만 읽는다.
 
 ```text
@@ -97,12 +97,13 @@ data/specifications/<uuid>.pdf                       Knowledge 등록용 실제 
 - 2026-09-28 에 ALM 수집이 주 1회(월 07:00)에서 평일 통합 수집(09:00)으로 바뀌어, 그 40분 뒤
   평일마다 돌도록 옮겼다. 옛 시각(월 07:30)을 그대로 두면 월요일에 지난주 사양서를 올리게 된다.
   사양서가 바뀌지 않은 날은 다시 올리지 않고 미변경 건수만 기록하므로 매일 돌아도 부담이 없다.
-- **Windows 작업 스케줄러에 실제 등록 완료**(`Register-ScheduledTask`로 생성, 예시 아님):
+- **2026-10-26 부터 사양서 동기화는 `QA_SRS_Collect` 작업의 두 번째 동작이다.** 담당자 PC 는 평일
+  10:00 쯤 켜지므로, 수집(10:20)이 끝나면 같은 작업이 바로 `scripts\sync_vxvue_spec.py` 를 실행한다.
+  옛 03:30 작업 `AIRegressionAnalyzer_VXvueSpecSync` 는 지우지 않고 끈다(`Disabled`). 설치는 관리자
+  PowerShell 에서 `scripts\install_srs_schedule.ps1` 로 한다. 아래 표는 끄기 전 03:30 작업의 기록이다.
 
 ```powershell
-Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List TaskName, State
-# TaskName : AIRegressionAnalyzer_VXvueSpecSync
-# State    : Ready
+Get-ScheduledTask -TaskName "QA_SRS_Collect" | Select-Object TaskName, State, @{n='Actions';e={$_.Actions.Arguments}}
 ```
 
   | 설정 | 값 |
@@ -141,17 +142,18 @@ Get-ScheduledTask -TaskName "AIRegressionAnalyzer_VXvueSpecSync" | Format-List T
 
 VXvue는 업로드 전에 활성 로컬 Skill의 최신 설치 캐시에서 지침·참조 MD를 읽어 같은 지식폴더의 `[Skill 지침] VXvue.md`에 내보낸다. 사용자 QA 규칙과 프롬프트 원본은 고치지 않는다. 검색 코드와 MCP 설정은 해시만 기록하며 변경은 별도 검증 후 배포한다(REQ-VXVUECHATBOT-008). 새 종류를 받을 수 있도록 서버와 운영 PC 코드를 반영한 뒤 예약 실행본을 갱신한다. 자세한 기준은 [Skill 동기화 계획](VXVUE_SKILL_SYNC_PLAN.md)에 있다.
 
-기존 09:00 수집과 03:30 사양 동기화는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
+기존 평일 10:20 수집·사양 동기화(`QA_SRS_Collect`)는 유지한다. 그 결과가 서버에 등록되면 다음 챗봇 질문에 반영된다. 동일한 원본이 두 경로로 등록돼도 챗봇 지식 판은 같은 바이트의 자료를 한 번만 검색한다.
 
 ### 7.2 하루 실행 순서 (평일)
 
 ```flow
 04:00 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
 08:00 PC 지식 폴더 업로드 -> 실패 시 15분마다 재시도 -> 서버 지식 사본
-09:00 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 다음 평일 03:30 PC 사양서 동기화 -> 서버 신규 사양서 등록
+10:20 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 같은 작업에서 바로 사양서 동기화 -> 서버 신규 사양서 등록 -> 다음 날 04:00 점검이 사용
+11:00 PC ALM 이슈 수집(ALM_QA_Automation_Daily)
 ```
 
-`QA_SRS_Collect`는 시작에 실패하면(PC 재시작 중 등) 10분 뒤 최대 3번 다시 시도한다. 설치 스크립트(`scripts/install_srs_schedule.ps1`)가 이 설정을 넣으며 관리자 PowerShell에서만 바뀐다. 03:30 동기화가 고른 수집본과 오늘 사이에 빠진 평일이 있으면 `PARTIAL`로 보고해 Knowledge 화면 사양서 구역이 `주의`가 된다(REQ-SYNC-001).
+`QA_SRS_Collect`는 평일 10:20 과 로그온 15분 뒤에 돈다. 부팅 직후 만회 실행은 도메인 로그온에 실패할 수 있어(2026-10-26 10:01, 0x8007051F) 로그온 트리거를 함께 둔다. 같은 날 완료본은 다시 수집하지 않는다. 시작에 실패하면(PC 재시작 중 등) 10분 뒤 최대 3번 다시 시도한다. 설치 스크립트(`scripts/install_srs_schedule.ps1`)가 이 설정을 넣으며 관리자 PowerShell에서만 바뀐다. 동기화가 고른 수집본 다음 날부터 오늘까지 빠진 평일이 있으면 `PARTIAL`로 보고해 Knowledge 화면 사양서 구역이 `주의`가 된다(REQ-SYNC-001).
 
 서버의 QA Agent 점검은 Polarion 을 스스로 읽으므로 PC 가 꺼져 있어도 돈다. 공휴일(`config/holidays/kr.yaml`)에는 돌지 않는다. 일일 모드는 Claude 한도(세션·주간)나 사용률 기준에 걸려 멈추면 초기화 5분 뒤 자동으로 이어 하고(REQ-QAINTEL-049) 주간 모드는 다음 주 첫 업무일 또는 수동 실행에서 이어 간다. 자동 점검 중지나 서버 예약 비활성화는 모든 자동 실행을 막는다. PC 쪽 작업이 멈추면 서버의
 TC·매뉴얼·규칙 사본이 낡을 뿐이고, 그 시각은 `/knowledge` 화면에 보인다.
@@ -173,8 +175,8 @@ PC 작업 전환 시 기존 작업 XML을 백업한다. 실제 수집·배포·�
   직접 실행한다. 수동 트리거용 백엔드 엔드포인트(`POST /knowledge/sync/specification`)
   자체는 남겨뒀다(스크립트나 다른 자동화가 재사용할 수 있도록).
 - CLI: `\.venv\Scripts\python.exe scripts\sync_vxvue_spec.py --target-url http://10.13.0.222:24357`
-  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 평일 03:30에는 위 작업
-  스케줄러가 인자 없이 이 스크립트를 자동 실행한다(기본 대상이 운영 서버이므로 `--target-url`
+  (`--dry-run`으로 실제 등록 없이 변경분만 미리 확인 가능). 평일 10:20 수집 뒤에는 `QA_SRS_Collect`
+  작업이 이 스크립트를 자동 실행한다(기본 대상이 운영 서버이므로 `--target-url`
   생략).
 - 같은 문서의 이전 리비전(파일명에서 `(YYMMDD)` 날짜 부분만 다른 동일 문서, 예:
   `VXvue 사양서2(260824).pdf` → `VXvue 사양서2(260831).pdf`)이 Knowledge에 남아 있으면, 신규

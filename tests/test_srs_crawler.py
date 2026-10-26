@@ -316,3 +316,15 @@ def test_collect_schedule_retries_a_failed_start():
     assert '-RestartCount 3' in settings
     assert '-RestartInterval (New-TimeSpan -Minutes 10)' in settings
     assert '-StartWhenAvailable' in settings and '-MultipleInstances IgnoreNew' in settings
+
+
+def test_collect_schedule_runs_after_10am_and_syncs_right_after():
+    """Validates: REQ-SYNC-003, REQ-SYNC-001. 담당자 PC 는 평일 10:00 에 켜진다(2026-10-26 사용자 결정).
+    03:30·09:00 예약은 PC 가 꺼져 있어 늘 만회 실행에 기대었고, 10-26 에는 그 만회가 부팅 직후 로그온 실패로 빠졌다."""
+    from pathlib import Path
+    script = (Path(__file__).resolve().parents[1] / 'scripts' / 'install_srs_schedule.ps1').read_text(encoding='utf-8-sig')
+    assert "-At '10:20'" in script and "-At '09:00'" not in script
+    assert '-AtLogOn' in script and "Delay = 'PT15M'" in script
+    assert '-Action @($collectAction, $syncAction)' in script
+    assert 'Disable-ScheduledTask -TaskName $oldSync.TaskName' in script
+    assert "-At '11:00'" in script and '-Trigger $almTrigger' in script

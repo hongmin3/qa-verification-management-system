@@ -92,7 +92,7 @@ def _stale_env(tmp_path, monkeypatch, folder_date: str):
 
 
 def test_stale_collection_is_partial_even_when_upload_succeeds(tmp_path, monkeypatch):
-    """Validates: REQ-SYNC-001. 2026-10-23(금)에 10-19(월) 수집본이면 10-20·21·22 가 빠졌다."""
+    """Validates: REQ-SYNC-001. 2026-10-23(금)에 10-19(월) 수집본이면 10-20·21·22·23 이 빠졌다."""
     _stale_env(tmp_path, monkeypatch, "2026-10-19")
 
     first = sync.run("http://server", today=date(2026, 10, 23))
@@ -100,14 +100,28 @@ def test_stale_collection_is_partial_even_when_upload_succeeds(tmp_path, monkeyp
 
     for result in (first, again):
         assert result["status"] == "PARTIAL"
-        assert result["detail"].startswith("최신 수집본이 오래됐습니다(마지막 완료 2026-10-19, 빠진 평일 3일). SRS 수집(QA_SRS_Collect)을 확인하세요. / ")
+        assert result["detail"].startswith("최신 수집본이 오래됐습니다(마지막 완료 2026-10-19, 빠진 평일 4일). SRS 수집(QA_SRS_Collect)을 확인하세요. / ")
     assert "업로드 1건" in first["detail"] and "변경 없음" in again["detail"]
 
 
 @pytest.mark.parametrize(("folder_date", "today"), [
-    ("2026-10-23", date(2026, 10, 26)),   # 금요일 수집본을 월요일 03:30 에 올림: 사이는 주말뿐
-    ("2026-10-22", date(2026, 10, 23)),   # 어제 수집본
-    ("2026-10-23", date(2026, 10, 23)),   # 오늘 수집본(수동 실행)
+    ("2026-10-22", date(2026, 10, 23)),   # 평일 수집 뒤 바로 도는 동기화인데 오늘 수집본이 없음
+    ("2026-10-23", date(2026, 10, 26)),   # 월요일 수집이 실패해 금요일 수집본을 올림
+])
+def test_missing_today_collection_is_partial(tmp_path, monkeypatch, folder_date, today):
+    """Validates: REQ-SYNC-001. 동기화는 같은 날 수집 바로 뒤에 돈다(2026-10-26 부터)."""
+    _stale_env(tmp_path, monkeypatch, folder_date)
+
+    result = sync.run("http://server", today=today)
+
+    assert result["status"] == "PARTIAL"
+    assert "빠진 평일 1일" in result["detail"]
+
+
+@pytest.mark.parametrize(("folder_date", "today"), [
+    ("2026-10-23", date(2026, 10, 23)),   # 오늘 수집본
+    ("2026-10-23", date(2026, 10, 24)),   # 토요일 수동 실행: 사이는 주말뿐
+    ("2026-10-23", date(2026, 10, 25)),   # 일요일 수동 실행
 ])
 def test_fresh_collection_stays_success(tmp_path, monkeypatch, folder_date, today):
     """Validates: REQ-SYNC-001."""
@@ -116,9 +130,10 @@ def test_fresh_collection_stays_success(tmp_path, monkeypatch, folder_date, toda
     assert sync.run("http://server", today=today)["status"] == "SUCCESS"
 
 
-def test_missing_weekdays_counts_only_weekdays_between():
+def test_missing_weekdays_counts_weekdays_through_today():
     """Validates: REQ-SYNC-001."""
-    assert sync.missing_weekdays(date(2026, 10, 19), date(2026, 10, 23)) == 3
-    assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 26)) == 0
-    assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 27)) == 1
+    assert sync.missing_weekdays(date(2026, 10, 19), date(2026, 10, 23)) == 4
+    assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 26)) == 1
+    assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 27)) == 2
+    assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 25)) == 0
     assert sync.missing_weekdays(date(2026, 10, 23), date(2026, 10, 23)) == 0

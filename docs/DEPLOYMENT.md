@@ -209,7 +209,7 @@ systemctl show qa-verification -p Restart -p RestartUSec
 1. `config/products/vxvue.yaml`의 `specification.crawler_output_dir`를 실제 크롤러 output 경로로
    맞춘다.
 2. 크롤러가 있는 Windows PC에서 `scripts/sync_vxvue_spec.py --target-url http://<서버>:24357`을
-   Windows 작업 스케줄러에 평일 03:30 으로 등록한다 (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
+   Windows 작업 스케줄러 `QA_SRS_Collect` 의 수집 뒤 동작으로 등록한다(`scripts/install_srs_schedule.ps1`, 평일 10:20) (서버 자체는 크롤러 폴더에 접근할 수 없어 이 스크립트를
    서버에서 실행할 수 없다).
 3. 앱 내부 스케줄러(`app/core/scheduler.py`)는 신규 systemd 없이 이미 함께 뜨며, `/knowledge`
    화면의 "지금 동기화" 버튼으로 수동 실행도 가능하다.
@@ -335,4 +335,4 @@ schtasks /Query /TN QA_LimitEvidence_Sync /XML
 
 등록 결과만으로 복사가 끝났다고 판단하지 않는다. `%LOCALAPPDATA%\qa-limit-evidence\sync.log`와 최종 공유폴더의 PNG·TXT를 확인한다. PC가 꺼져 있거나 로그아웃 상태면 복사하지 못하며 서버 원본은 유지된다.
 
-QA 예약은 평일 04:00, SRS 동기화 목표는 평일 03:30(KST)이다. 제품 설정을 바꾸어도 Windows 작업 `AIRegressionAnalyzer_VXvueSpecSync`의 시각은 바뀌지 않는다. 기존 실행 파일·인수·계정·요일을 보존해 작업 시각만 변경한 뒤 XML을 다시 확인한다. `Access is denied`면 관리자 권한으로 변경해야 하며, 실제 적용 여부는 `progress.md`에 남긴다.
+QA 예약은 평일 04:00, SRS 수집·동기화는 평일 10:20(KST, 담당자 PC 가 켜진 뒤)이다. 제품 설정을 바꾸어도 Windows 작업 `QA_SRS_Collect`의 시각은 바뀌지 않는다. 시각은 `scripts/install_srs_schedule.ps1` 로만 바꾸고 XML을 다시 확인한다. `Access is denied`면 관리자 권한으로 변경해야 하며, 실제 적용 여부는 `progress.md`에 남긴다.
