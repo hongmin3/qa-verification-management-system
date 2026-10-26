@@ -144,3 +144,39 @@ def test_web_chat_stdio_executes_same_redmine_guard(tmp_path,monkeypatch):
     value=json.loads(json.loads(result['content'][0]['text'])['text'])
     assert value['issue']['id']==5 and value['issue']['journals']==[]
     assert 'private-sentinel' not in target.getvalue()
+
+def test_fulltext_project_url_does_not_override_scope_to_all():
+    def transport(request):
+        assert request.url.path == '/projects/61/search.json'
+        assert 'scope' not in request.url.params
+        assert request.url.params['open_issues'] == '0'
+        return httpx.Response(200,json={'results':[],'total_count':0,'offset':0,'limit':50})
+    result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[61],full_text=True)
+    assert not result['errors']
+
+def test_cross_project_hit_is_filtered_before_deduplication():
+    def transport(request):
+        if request.url.path.endswith('/search.json'):
+            return httpx.Response(200,json={'results':[{'id':5,'type':'issue'}],'total_count':1,'offset':0,'limit':1})
+        return httpx.Response(200,json={'issue':{'id':5,'project':{'id':61,'name':'Integration'},'status':{'id':1,'name':'Open'},'subject':'Focal None'}})
+    result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[29,61,107],full_text=True,page_size=1)
+    assert [row['id'] for row in result['items']] == [5]
+    assert result['items'][0]['project']['id'] == 61 and not result['errors']
+
+def test_legitimate_cross_project_repeat_after_move_is_skipped():
+    hydrated=iter((61,29))
+    def transport(request):
+        if request.url.path.endswith('/search.json'):
+            return httpx.Response(200,json={'results':[{'id':5,'type':'issue'}],'total_count':1,'offset':0,'limit':1})
+        project=next(hydrated)
+        return httpx.Response(200,json={'issue':{'id':5,'project':{'id':project,'name':'QA'},'status':{'id':1,'name':'Open'},'subject':'Focal None'}})
+    result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[61,29],full_text=True,page_size=1)
+    assert [row['id'] for row in result['items']] == [5] and not result['errors']
+
+def test_duplicate_fulltext_id_in_same_project_page_is_error():
+    def transport(request):
+        if request.url.path.endswith('/search.json'):
+            return httpx.Response(200,json={'results':[{'id':5,'type':'issue'},{'id':5,'type':'issue'}],'total_count':2,'offset':0,'limit':2})
+        return httpx.Response(200,json={'issue':{'id':5,'project':{'id':61,'name':'QA'},'status':{'id':1,'name':'Open'},'subject':'Focal None'}})
+    result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[61],full_text=True,page_size=2)
+    assert [row['id'] for row in result['items']] == [5] and result['errors'] and not result['complete']

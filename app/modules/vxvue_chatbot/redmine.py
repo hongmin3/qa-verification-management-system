@@ -143,7 +143,7 @@ class RedmineLookup(PolarionLookup):
             try:
                 params = {'offset': (page-1)*page_size, 'limit': page_size}
                 if full_text:
-                    params.update(q=keywords, issues=1, all_words=1, scope='all', open_issues=0, titles_only=0)
+                    params.update(q=keywords, issues=1, all_words=1, open_issues=0, titles_only=0)
                     data = self._get(f'/projects/{project}/search.json', params)
                     rows = data.get('results')
                 else:
@@ -158,6 +158,7 @@ class RedmineLookup(PolarionLookup):
                     raise ValueError('Redmine 페이지 건수가 전체 수와 맞지 않습니다.')
                 totals[str(project)] = None
                 if offset+len(rows)<count: next_pages[str(project)] = page+1
+                page_seen = set()
                 for row in rows:
                     if full_text:
                         if not isinstance(row, dict) or row.get('type') not in ('issue', 'issue closed'): raise ValueError('전문 검색에 이슈 외 결과가 있습니다.')
@@ -170,19 +171,23 @@ class RedmineLookup(PolarionLookup):
                         self._authorize_issue(row)
                     except ValueError:
                         continue
+                    if row['project']['id'] != project:
+                        continue
+                    meta = self._metadata(row)
+                    if meta['id'] in page_seen:
+                        raise ValueError('Redmine 페이지에 중복 이슈 번호가 있습니다. 전체 수집 완료로 처리하지 않았습니다.')
+                    page_seen.add(meta['id'])
                     if full_text:
                         row = self._public_issue(row)
                         if not self._public_match(row, terms):
                             continue
-                    meta = self._metadata(row)
                     if meta['id'] in seen:
-                        raise ValueError('Redmine 페이지에 중복 이슈 번호가 있습니다. 전체 수집 완료로 처리하지 않았습니다.')
-                    seen.add(meta['id'])
-                    if meta['project']['id'] != project: raise ValueError('검색 결과의 프로젝트가 요청 범위와 다릅니다.')
+                        continue
                     if full_text and status != '*':
                         if status in ('open','closed'):
                             raise ValueError('전문 검색의 상태 제한은 상태 번호를 사용하세요.')
                         if str(meta['status']['id']) != status: continue
+                    seen.add(meta['id'])
                     items.append(meta)
             except ValueError as exc:
                 errors.append({'project_id': project, 'error': str(exc)})

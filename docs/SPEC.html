@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="b404695f083f5f00e5308afbfa82e7631e21466bf02b81debc55964260a3f624">
+<meta name="spec-source-sha256" content="33e077900f99b7715c7373713042f5a5f0285da53309ae1d417b7d027566df57">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -16381,8 +16381,9 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-req" id="REQ-VXVUECHATBOT-016">
 <h3><span class="idtag">REQ-VXVUECHATBOT-016</span> Redmine 이슈 읽기와 범위 확인</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_redmine.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-10-26 Redmine 전문 검색의 프로젝트 범위 수정</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: 프로젝트별 전문 검색에서 범위를 전체 프로젝트로 넓히던 scope=all을 제거했다. 현재 프로젝트를 먼저 확인한 뒤 중복을 처리하며, 같은 페이지의 중복 응답은 오류로 남기고 프로젝트 이동에 따른 반복 후보는 한 번만 제공한다.</li>
 <li><span class="hist">2026-10-26 VXvue Redmine 공용 조회와 연결 지침</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: Desktop·HTTP MCP와 웹 챗봇에 Redmine 상세·다중 프로젝트 제목/전문 검색을 연결했다. 61·29·107 프로젝트의 공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>만 읽고 페이지 잔여와 실패를 구분한다.</li>
 </ul>
 </details>
