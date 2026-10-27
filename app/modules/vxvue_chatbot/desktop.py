@@ -191,7 +191,7 @@ class DesktopTools(KnowledgeTools):
         pass  # No web conversation or browser source URL belongs to a desktop client.
 
 
-def definitions():
+def definitions(context=None):
     allowed = {"get_status", "search_documents", "get_document", "get_document_page", "get_document_pages",
                "find_testcases", "compare_packages", "trace_requirements", "get_generator_evidence"}
     result = []
@@ -223,6 +223,9 @@ def definitions():
     result.extend(review_definitions())
     for tool in result:
         tool["annotations"] = {"readOnlyHint": tool['name'] != 'make_manual_review_report', "destructiveHint": False, "openWorldHint": False}
+    if ((context or {}).get('usage') or {}).get('owner') and ((context or {}).get('usage') or {}).get('secure'):
+        from app.modules.vxvue_usage.service import decorate
+        return decorate(result)
     return result
 
 
@@ -255,20 +258,24 @@ def call(name, arguments):
         raise ValueError("get_status가 반환한 snapshot_id가 필요합니다.")
     current = snapshot(None if name == "get_status" else sid)
     if name == "get_workflow":
-        offset, limit = args.get("offset", 0), args.get("limit", 12000)
-        integer(offset, 0, 10_000_000)
-        integer(limit, 1, 12000)
-        from .qa_protection import mask_qa_text
-        body, protection = mask_qa_text(INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n" + current["rules"], current["rules"])
-        end = min(offset + limit, len(body))
-        return {"snapshot_id": current["id"], "skill_version": (current["skill_metadata"] or {}).get("version"),
-                "text": body[offset:end], "protection": protection.as_dict(), "total_chars": len(body), "truncated": end < len(body),
-                "next_offset": end if end < len(body) else None}
+        return workflow(current, args)
     session = DesktopTools(current, [], get_settings().root / "data/vxvue_desktop/unused-trace")
     return session.call(name, args)
 
 
-def dispatch(message, context=None):
+def workflow(current, args, extra=""):
+    offset, limit = args.get("offset", 0), args.get("limit", 12000)
+    integer(offset, 0, 10_000_000)
+    integer(limit, 1, 12000)
+    from .qa_protection import mask_qa_text
+    body, protection = mask_qa_text(INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n" + current["rules"] + ("\n\n" + extra if extra else ""), current["rules"])
+    end = min(offset + limit, len(body))
+    return {"snapshot_id": current["id"], "skill_version": (current["skill_metadata"] or {}).get("version"),
+            "text": body[offset:end], "protection": protection.as_dict(), "total_chars": len(body), "truncated": end < len(body),
+            "next_offset": end if end < len(body) else None}
+
+
+def _dispatch(message, context=None):
     method, params = message.get("method"), message.get("params") or {}
     if method == "initialize":
         version = params.get("protocolVersion", "2024-11-05")
@@ -278,10 +285,25 @@ def dispatch(message, context=None):
     if method == "ping":
         return {}
     if method == "tools/list":
-        return {"tools": definitions()}
+        return {"tools": definitions(context)}
     if method == "tools/call":
         try:
-            data = call(params["name"], params.get("arguments") or {})
+            usage = (context or {}).get('usage') or {}
+            name, arguments = params["name"], params.get("arguments") or {}
+            if usage.get('owner') and usage.get('secure') and name in ('begin_vxvue_activity', 'finish_vxvue_activity'):
+                from app.modules.vxvue_usage.service import owner_call, definitions as owner_definitions
+                schema = next(t['inputSchema'] for t in owner_definitions() if t['name'] == name)
+                if set(arguments)-set(schema['properties']):
+                    raise ValueError('허용된 기록 항목을 확인하세요.')
+                data = owner_call(name, arguments, usage)
+            elif usage.get('owner') and usage.get('secure') and name == 'get_workflow':
+                from app.modules.vxvue_usage.service import OWNER_INSTRUCTIONS
+                sid = arguments.get('snapshot_id')
+                if not isinstance(sid, str):
+                    raise ValueError('get_status가 반환한 snapshot_id가 필요합니다.')
+                data = workflow(snapshot(sid), arguments, OWNER_INSTRUCTIONS)
+            else:
+                data = call(name, arguments)
             if params["name"] == "get_status" and isinstance(data, dict):
                 # The guide points at the server this client is already connected to, so it is added after
                 # protection; every other value in the status is still protected.
@@ -317,10 +339,23 @@ def dispatch(message, context=None):
             from app.modules.daily_qa.polarion import PolarionError
             if not isinstance(exc, (ValueError, PolarionError)):
                 # Server log only: the client gets the generic message below.
-                logger.exception("vxvue-desktop tool %s failed", params.get("name"))
+                logger.error("vxvue-desktop source lookup failed (%s)", type(exc).__name__)
             safe = str(exc) if isinstance(exc, (ValueError, PolarionError)) else "서버 자료 조회에 실패했습니다. 서버 상태를 확인하세요."
             return {"content": text_content({"error": type(exc).__name__, "message": safe}), "isError": True}
     raise ValueError("지원하지 않는 MCP 메서드입니다.")
+
+
+def dispatch(message, context=None):
+    if message.get('method') != 'tools/call':
+        return _dispatch(message, context)
+    from app.modules.vxvue_usage import telemetry
+    params = dict(message.get('params') or {})
+    args = dict(params.get('arguments') or {})
+    metadata = args.pop('usage_context', {})
+    params['arguments'] = args
+    cleaned = {**message, 'params': params}
+    return telemetry.execute(lambda: _dispatch(cleaned, context), tool=params.get('name'),
+                             context=(context or {}).get('usage'), metadata=metadata if isinstance(metadata, dict) else {})
 
 
 async def _read_message(request):
@@ -364,7 +399,11 @@ async def _handle(request, notification_status):
     bridge = request.headers.get("x-vxvue-bridge", "")[:20] or None
     if bridge is None and identity["kind"] == "team":
         bridge = "1.0.0"  # the team-token bridge predates the version header
-    context = {"bridge_version": bridge, "base_url": _base_url(request)}
+    from app.modules.vxvue_usage import telemetry
+    from app.modules.vxvue_usage.auth import secure_transport
+    usage = telemetry.context(get_settings(), identity, 'http_mcp' if request.url.path.endswith('/mcp') else 'desktop', secure=secure_transport(request))
+    usage['diagnostic'] = bool(usage.get('owner_device') and request.headers.get('x-vxvue-usage-purpose') == 'diagnostic')
+    context = {"bridge_version": bridge, "base_url": _base_url(request), "usage": usage}
     try:
         result = await run_in_threadpool(dispatch, message, context)
         reply = {"jsonrpc": "2.0", "id": message["id"], "result": result}

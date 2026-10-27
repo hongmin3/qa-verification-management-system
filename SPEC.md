@@ -125,6 +125,7 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 �
 |---|---|---|---|---|---|---|
 | 10분마다 (매일) | 운영 서버 cron | 운영 상태 점검(`scripts/monitor_health.py`) | 앱 상태, DB, 멈춘 작업, 마지막 동기화, 디스크, Claude 메모리와 캡처 잔존을 본다 | `output/logs/monitor.log` | 없음. 문제가 있으면 종료 코드 1 과 알림 이름을 남긴다 | REQ-OPS-001, REQ-OPS-005 |
 | 14:15 (매일, 서버 시간 · 한국 03:15, 겨울 04:15) | 운영 서버 cron | 백업(`scripts/backup_data.py`) | DB 와 업로드 원본을 ZIP 하나로 백업하고 바로 확인한다. 보관 일수가 지난 백업과 일일 QA 실행 폴더를 지운다 | `backups/`, `output/logs/backup.log` | 없음 | REQ-OPS-002, NFR-DAILY-002 |
+| 03:10 (매일, 한국 시간)·앱 시작 | 운영 서버 앱 내장 예약(`vxvue_usage_retention`) | 신규 활용 이력 정리 | vxusage 이력·이벤트·연결 증명 365일, 익명 월 집계 36개월만 남긴다. 기존 웹 대화는 삭제하지 않는다 | 제작자 이력·익명 월 집계 | 없음 | REQ-VXVUEUSAGE-008 |
 | 14:30 (매일, 서버 시간 · 한국 03:30, 겨울 04:30) | 운영 서버 cron(`/etc/cron.d/qa-manual-hub-backup`) | QA Manual Hub 백업(`scripts/backup.sh`) | 매뉴얼 서버의 DB 와 파일을 백업한다. 설치 기본값 02:30 을 운영에서 바꿨다 | `<APP_ROOT>/logs/backup.log` | 없음 | REQ-HUBOPS-009 |
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
@@ -8633,6 +8634,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | QA Intelligence Agent | [specs/qa-intelligence.md](specs/qa-intelligence.md) | draft |
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
 | ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
+| VXvue 활용 이력과 제작자 지표 | [specs/vxvue-usage.md](specs/vxvue-usage.md) | implemented |
 
 <!-- spec-index: end -->
 

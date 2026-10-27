@@ -133,6 +133,15 @@ def run_retention(settings, backup_dir: Path, storage=None, now: datetime | None
     """설정된 보관 일수로 다섯 가지를 정리하고 무엇을 지웠는지 돌려준다."""
     from app.core.storage import Storage
 
+    # New usage retention is isolated from the existing chat and filesystem policies.
+    # Keep the public result shape unchanged; failures are server diagnostics only.
+    try:
+        target = object.__new__(Storage)
+        target.db_path = settings.root / "data" / "app.db"
+        target.usage_retention_if_present(now)
+    except Exception:
+        from app.modules.vxvue_usage.telemetry import failure
+        failure()
     days = retention_days(settings)
     result = {
         "backups": [path.name for path in prune_backups(backup_dir, days["backup_days"], now)],

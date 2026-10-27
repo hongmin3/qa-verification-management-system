@@ -175,7 +175,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     from .qa_protection import mask_qa_text
     system, system_mask = mask_qa_text(system, snapshot["rules"])
     prompt_file.write_text(system, encoding="utf-8")
-    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text", "conversation_meta")}, "attachments": attachments, "job_id": job_id,
+    context_file.write_text(json.dumps({"snapshot": {k: v for k, v in snapshot.items() if k not in ("rules", "skill_text", "conversation_meta", "usage_context")}, "attachments": attachments, "job_id": job_id, "usage_context": snapshot.get("usage_context"),
                                         "batch_token_budget": int(settings.get("vxvue_chatbot.batch_token_budget", 30000))}, ensure_ascii=False), encoding="utf-8")
     trace = workdir / "references.jsonl"
     config_file.write_text(json.dumps({"mcpServers": {"vxvue_knowledge": {"command": sys.executable, "args": ["-X", "utf8", str(module / "mcp_server.py"), "--context", str(context_file), "--trace", str(trace)]}}}), encoding="utf-8")

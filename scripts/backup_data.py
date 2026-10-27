@@ -19,11 +19,17 @@ from app.core.console import configure_stdout  # noqa: E402
 configure_stdout()
 
 from app.core.config import get_settings
+from app.core.private_files import private_directory, private_file, private_sqlite
 
 
 def create_backup(destination: Path) -> Path:
     settings = get_settings()
-    destination.mkdir(parents=True, exist_ok=True)
+    private_directory(destination)
+    private_sqlite(settings.root / "data" / "app.db")
+    from app.core.storage import Storage
+    usage_store = object.__new__(Storage)
+    usage_store.db_path = settings.root / "data" / "app.db"
+    usage_store.usage_retention_if_present()
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     archive_path = destination / f"qa-backup-{timestamp}.zip"
     with tempfile.TemporaryDirectory() as temp_name:
@@ -31,6 +37,8 @@ def create_backup(destination: Path) -> Path:
         db_copy = temp / "app.db"
         with closing(sqlite3.connect(settings.root / "data" / "app.db")) as source, closing(sqlite3.connect(db_copy)) as target:
             source.backup(target)
+        private_sqlite(db_copy)
+        private_sqlite(settings.root / "data" / "app.db")
         entries = [db_copy]
         for dotted in ("storage.upload_dir", "storage.specification_dir", "storage.testcase_dir", "storage.index_dir", "storage.manual_revision_dir"):
             root = settings.path(dotted)
@@ -46,11 +54,13 @@ def create_backup(destination: Path) -> Path:
             entries.extend(path for path in chat.rglob("*") if path.is_file() and path.suffix not in (".sqlite3", "-shm", "-wal"))
         manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            private_file(archive_path)
             for path in entries:
                 arcname = "data/app.db" if path == db_copy else path.relative_to(settings.root).as_posix()
                 archive.write(path, arcname)
                 manifest["files"][arcname] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+    private_file(archive_path)
     return archive_path
 
 
@@ -61,6 +71,7 @@ def verify_backup(archive_path: Path) -> dict:
             if hashlib.sha256(archive.read(name)).hexdigest() != expected:
                 raise ValueError(f"checksum mismatch: {name}")
         archive.extract("data/app.db", temp_name)
+        private_sqlite(Path(temp_name) / "data" / "app.db")
         with closing(sqlite3.connect(Path(temp_name) / "data" / "app.db")) as db:
             integrity = db.execute("PRAGMA integrity_check").fetchone()[0]
         if integrity != "ok":

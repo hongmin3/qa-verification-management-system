@@ -17,6 +17,7 @@ from app.modules.manual_review.router import router as manual_review_router
 from app.modules.qa_agent.router import router as qa_agent_router
 from app.modules.vxvue_chatbot.router import router as vxvue_chatbot_router
 from app.modules.vxvue_chatbot.desktop import router as vxvue_desktop_router
+from app.modules.vxvue_usage.router import router as vxvue_usage_router
 
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -129,4 +130,5 @@ def build_router() -> APIRouter:
     api.include_router(daily_qa_router, prefix="/daily-qa")
     api.include_router(vxvue_chatbot_router, prefix="/vxvue-chatbot")
     api.include_router(vxvue_desktop_router, prefix="/vxvue-desktop")
+    api.include_router(vxvue_usage_router, prefix="/vxvue-usage")
     return api

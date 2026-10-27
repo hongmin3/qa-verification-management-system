@@ -25,6 +25,7 @@
 | **기능 하나를 자세히 알기** | [QA Agent 점검 엔진](modules/daily-qa.md) · [QA Agent 화면·진행·결과](modules/qa-agent.md) · [QA Intelligence 사양](../specs/qa-intelligence.md)(TC Expected 충돌 분류 포함) · [매뉴얼 개정 검토](modules/manual-review.md) · [QA Manual Hub](../services/qa-manual-hub/README.md) |
 | **VXvue Redmine 상세·다중 프로젝트 검색·공용 연결 설정** | [Redmine 읽기 연결](VXVUE_REDMINE_TOOLS.md) · [사양 REQ-VXVUECHATBOT-016·017](../specs/vxvue-chatbot.md) |
 | **VXvue 챗봇의 동작·근거·첨부·이력 기준** | [챗봇 기능 사양](../specs/vxvue-chatbot.md) · 사용법은 `/vxvue-chatbot/guide` |
+| **제작자의 선택 이력·팀 익명 실행 지표·공개용 CSV** | [활용 이력 사양](../specs/vxvue-usage.md) · [구현 계획](superpowers/plans/2026-10-26-vxvue-usage-history.md) · 검증과 운영 미확인 범위는 [progress](../progress.md) |
 | **파트원 공용 매뉴얼 검토·한국어 근거 설명·짧은 메모** | [사양 REQ-MANUAL-021~023](../SPEC.md#req-manual-021-공용-매뉴얼-검토-자료와-원문-인용-보고서) · [구조와 적용 범위](modules/manual-review.md) · [개정 계획](superpowers/plans/2026-10-20-manual-review-policy.md) · 원문 상단 표시, 한국어 초안 구분, 최신 지침 조회에서 적용 |
 | **Claude Desktop·Claude Code에 VXvue AI 배포하기** | [사양 REQ-VXVUECHATBOT-011~015](../specs/vxvue-chatbot.md) · 입력 없는 설치·CLI 설치 명령·연결 실패 안내는 앱의 `/vxvue-desktop` · 연결된 PC 목록·취소는 `scripts/vxvue_desktop_devices.py` · 한 PC의 Claude·Codex Skill 사본 맞춤은 `scripts/sync_vxvue_local_skill.py` · [구현 계획](superpowers/plans/2026-10-15-vxvue-claude-desktop.md) |
 | **설정 탭·한도 알림·분석 상세와 결과 목록 개정(2026-10-15)** | [개정 실행 계획](superpowers/plans/2026-10-15-qa-settings-and-result-revision.md) · 절약 모드 master 병합(완료), 메일 재구성·사용률 기준 호출, 관리자 설정, 상세·목록 재구성(2026-10-15 운영 배포) |

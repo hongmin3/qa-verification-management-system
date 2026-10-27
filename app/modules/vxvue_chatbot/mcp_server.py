@@ -48,7 +48,8 @@ def compact_response(value, inventory=False):
 
 
 class KnowledgeTools:
-    def __init__(self, snapshot, attachments, trace_path, job_id="", batch_token_budget=30000):
+    def __init__(self, snapshot, attachments, trace_path, job_id="", batch_token_budget=30000, usage_context=None):
+        self.usage_context = usage_context
         self.batch_token_budget = int(batch_token_budget)
         self._trace_buffer = None
         self.snapshot = snapshot
@@ -320,11 +321,14 @@ def serve(session, source=sys.stdin, target=sys.stdout):
         elif method == "tools/list":
             result = {"tools": tools()}
         elif method == "tools/call":
-            try:
-                value = session.call(request["params"]["name"], request["params"].get("arguments", {}))
-                result = {"content": value if isinstance(value, list) else text_content(value), "isError": False}
-            except Exception as exc:
-                result = {"content": text_content({"error": type(exc).__name__, "detail": str(exc)[:400], "evidence_status": "incomplete"}), "isError": True}
+            from app.modules.vxvue_usage import telemetry
+            def invoke():
+                try:
+                    value = session.call(request["params"]["name"], request["params"].get("arguments", {}))
+                    return {"content": value if isinstance(value, list) else text_content(value), "isError": False}
+                except Exception as exc:
+                    return {"content": text_content({"error": type(exc).__name__, "detail": str(exc)[:400], "evidence_status": "incomplete"}), "isError": True}
+            result = telemetry.execute(invoke, tool=request.get('params', {}).get('name'), context=getattr(session, 'usage_context', None))
         else:
             target.write(json.dumps({"jsonrpc": "2.0", "id": request["id"], "error": {"code": -32601, "message": "Method not found"}}) + "\n")
             target.flush()
@@ -341,4 +345,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     context = json.loads(args.context.read_text(encoding="utf-8"))
     serve(KnowledgeTools(context["snapshot"], context["attachments"], args.trace, context["job_id"],
-                                context.get("batch_token_budget", 30000)))
+                                context.get("batch_token_budget", 30000), context.get("usage_context")))

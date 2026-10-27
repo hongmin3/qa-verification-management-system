@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
 import time
@@ -11,18 +12,24 @@ from app.core.config import get_settings
 from app.core.daily_qa_storage import DailyQaStorageMixin
 from app.core.qa_execution_storage import QaExecutionStorageMixin
 from app.core.vxchat_storage import VxChatStorageMixin
+from app.core.vxusage_storage import VxUsageStorageMixin
 from app.core.vxdesk_storage import VxDeskStorageMixin
 
 from app.core.setting_overrides import SCHEMA as SETTINGS_SCHEMA
+from app.core.private_files import private_sqlite
 
 #: 한 번만 보내는 알림을 선점한 뒤 이만큼 지나도 보낸 기록이 없으면 버려진 선점으로 본다 (REQ-QAINTEL-049).
 STALE_CLAIM_MINUTES = 30
 
 
-class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExecutionStorageMixin):
+class Storage(VxUsageStorageMixin, DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExecutionStorageMixin):
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or (get_settings().root / "data" / "app.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            private_sqlite(self.db_path)
+        except OSError:
+            logging.getLogger('uvicorn.error').warning('개인 기록 저장소 권한을 확인할 수 없습니다.')
         for attempt in range(5):
             try:
                 self.initialize()
@@ -30,6 +37,11 @@ class Storage(DailyQaStorageMixin, VxChatStorageMixin, VxDeskStorageMixin, QaExe
                 self._initialize_qa_execution()
                 self._initialize_vxchat()
                 self._initialize_vxdesk()
+                self._initialize_vxusage()
+                try:
+                    private_sqlite(self.db_path)
+                except OSError:
+                    logging.getLogger('uvicorn.error').warning('개인 기록 저장소 권한을 확인할 수 없습니다.')
                 return
             except sqlite3.OperationalError as exc:
                 # Windows can briefly deny opening the transaction journal.

@@ -1,0 +1,9 @@
+﻿{% extends "base.html" %}
+{% block page_title %}제작자 활용 이력{% endblock %}
+{% block header_title %}제작자 활용 이력{% endblock %}
+{% block header_subtitle %}선택한 본인 업무와 기록된 실행 지표를 확인합니다.{% endblock %}
+{% block content %}
+{% if not configured %}<section><h2>제작자 인증 설정이 필요합니다</h2><p>운영 담당자가 전용 인증 설정을 준비한 뒤 사용할 수 있습니다.</p></section>
+{% elif not logged_in %}<section><h2>제작자 로그인</h2><form method="post" action="/vxvue-usage/login"><input type="hidden" name="csrf" value="{{ login_csrf }}"><label>사용자명 <input name="username" autocomplete="username" required maxlength="64"></label><label>비밀번호 <input name="password" type="password" autocomplete="current-password" required maxlength="1024"></label><button>로그인</button></form></section>
+{% else %}<p id="usage-status" role="status">불러오는 중입니다.</p><div id="usage-app"></div><script src="/vxvue-usage/assets/usage.js" defer></script><link rel="stylesheet" href="/vxvue-usage/assets/usage.css">{% endif %}
+{% endblock %}

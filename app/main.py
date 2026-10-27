@@ -16,6 +16,7 @@ from app.modules.daily_qa.scheduled_jobs import register_scheduled_jobs as regis
 from app.modules.manual_review.router import resume_queued_jobs as resume_queued_manual_jobs
 from app.web.router import build_router
 from app.modules.vxvue_chatbot import service as vxvue_chatbot_service
+from app.modules.vxvue_usage.scheduled_jobs import register_scheduled_jobs as register_usage_jobs, prune as prune_usage
 
 from app.web.limit_evidence_router import router as limit_evidence_router
 from app.web.settings_router import router as settings_router
@@ -45,7 +46,8 @@ async def lifespan(_: FastAPI):
     resume_queued_manual_jobs()
     vxvue_chatbot_service.resume()
 
-    start_scheduler([register_spec_sync_jobs, register_knowledge_jobs, register_daily_qa_jobs])
+    prune_usage()
+    start_scheduler([register_spec_sync_jobs, register_knowledge_jobs, register_daily_qa_jobs, register_usage_jobs])
     yield
     vxvue_chatbot_service.stop()
     stop_scheduler()

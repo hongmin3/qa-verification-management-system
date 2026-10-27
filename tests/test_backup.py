@@ -1,3 +1,4 @@
+from pathlib import Path
 import sqlite3
 
 from app.core import config
@@ -221,3 +222,32 @@ def test_backup_cli_prunes_after_verifying(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "argv", ["backup_data.py", "--destination", str(folder), "--no-prune"])
     assert backup_cli.main() == 0
     assert ancient.exists()
+
+
+def test_backup_requests_private_destination_and_archive_modes(monkeypatch,tmp_path):
+    from app.core import private_files
+    root,settings=_project(tmp_path)
+    monkeypatch.setattr('scripts.backup_data.get_settings',lambda:settings)
+    calls=[]
+    monkeypatch.setattr(private_files,'POSIX',True)
+    monkeypatch.setattr(private_files.os,'chmod',lambda path,mode:calls.append((Path(path),mode)))
+    # This test records chmod requests; the double does not alter stat modes.
+    monkeypatch.setattr(private_files,'require_private_sqlite',lambda path:None)
+    destination=tmp_path/'private-backups'
+    archive=create_backup(destination)
+    assert (destination,0o700) in calls and (archive,0o600) in calls
+    assert (root/'data',0o700) in calls and (root/'data/app.db',0o600) in calls
+
+
+def test_new_backup_excludes_expired_usage_rows(monkeypatch,tmp_path):
+    from app.core.storage import Storage
+    import uuid,zipfile
+    root,settings=_project(tmp_path);store=Storage(root/'data/app.db')
+    aid=str(uuid.uuid4());store.usage_start(aid,'a'*64,'owner_ui','issue',question='EXPIRED_USAGE_SENTINEL',save_original=True)
+    with store.connect() as db:db.execute('UPDATE vxusage_activities SET created_at=?',((datetime.now(timezone.utc)-timedelta(days=400)).isoformat(),));db.commit()
+    monkeypatch.setattr('scripts.backup_data.get_settings',lambda:settings)
+    archive=create_backup(tmp_path/'private-backups')
+    with zipfile.ZipFile(archive) as zipped:raw=zipped.read('data/app.db')
+    copy=tmp_path/'copied.db';copy.write_bytes(raw)
+    with sqlite3.connect(copy) as db:assert db.execute('SELECT count(*) FROM vxusage_activities').fetchone()[0]==0
+    assert b'EXPIRED_USAGE_SENTINEL' not in raw
