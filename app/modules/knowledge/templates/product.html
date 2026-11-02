@@ -123,7 +123,15 @@ document.querySelectorAll('.kn-upload-form').forEach(form => {
     if (!input.files.length) return;
     const replacing = form.querySelector('input[name=replace_id]');
     if (replacing && !confirm(`${input.files[0].name} 으로 교체할까요? 새 파일이 등록된 뒤에 이전 문서가 빠집니다.`)) { input.value = ''; return; }
-    const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    let response;
+    try {
+      response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+    } catch (error) {
+      // 요청이 서버에 닿지 못하면 서버 기록도 없다. 알리지 않으면 교체된 줄 안다 (REQ-KNOW-020).
+      alert(`파일을 서버로 보내지 못했습니다. 기존 문서는 그대로입니다.\n파일이 Excel 등에 열려 있거나 고른 뒤 다시 저장했다면 닫고 페이지를 새로 고친 뒤 다시 고르세요.\n(${error.message})`);
+      input.value = '';
+      return;
+    }
     if (response.ok || response.redirected) { location.href = response.url; return; }
     const body = await response.json().catch(() => ({}));
     alert(body.detail || `등록 실패 (HTTP ${response.status})`);
@@ -147,6 +155,8 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
       if (body.duplicates && body.duplicates.length) notes.push('\n[중복 확인 요청]\n' + body.duplicates.join('\n'));
       alert(notes.join('\n'));
       location.reload();
+    } catch (error) {
+      alert(`수집 요청을 서버로 보내지 못했습니다. 잠시 뒤 다시 누르세요.\n(${error.message})`);
     } finally {
       button.disabled = false; button.textContent = '지금 수집';
     }

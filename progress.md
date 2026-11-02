@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-11-02 VXvue 영향성평가 Checklist 교체 실패 조사와 알림 추가 (REQ-KNOW-020, REQ-KNOW-021)
+
+- 계기: 사용자가 `/knowledge/products/vxvue` 에서 `R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx`(5.3MB) 교체를 두 번 했지만 반영되지 않았다.
+- 원인: 서버 로그(`output/logs/uvicorn.out`)에 오전 교체 성공 뒤로 교체 POST 가 한 건도 없었다. 요청이 브라우저에서 서버로 가지 못했는데, 화면 스크립트가 `fetch` 예외를 잡지 않아 알림 없이 끝났다. 서버 쪽(nginx 크기 제한, 파싱 686행, 이름 맞추기, 출처 검사)은 모두 정상이었다. 브라우저가 보내지 못한 정확한 이유는 서버에 기록이 없어 확인하지 못했다.
+- 바로 적용: 같은 파일을 서버에 교체 등록했다(문서 320 → 327, 내려받은 파일과 SHA-256 일치).
+- 수정: `product.html` 의 등록·교체와 `지금 수집` 스크립트에 전송 실패 알림을 더했다. 새 브라우저 시험 `tests/test_knowledge_upload_browser.py`(TEST-KNOW-010) 4개 중 3개가 수정 전 실패, 수정 후 Knowledge 관련 133 passed.
+- 운영 반영: 서버 판이 HEAD 와 같음(줄바꿈만 다름)을 확인하고 `backups/deploy-knowledge-upload-alert-20261102T082053Z/` 에 이전 판을 둔 뒤 템플릿 1개만 올렸다. 재시작 없이 반영됐다. 운영 화면을 Chromium 으로 열어 요청을 브라우저 안에서 끊었을 때 두 알림이 보이고 파일 선택이 비워지며 버튼이 돌아오는 것을 확인했다. 시험 요청은 서버에 가지 않았다.
+
 ## 2026-11-02 Redmine 공용 조회에 XIPL·QXLink QA Defect 추가 (REQ-VXVUECHATBOT-016)
 
 - 계기: VXvue 1.1.0 변경사항 체크리스트 크로스체크에서 `get_redmine_issue`가 #24982(QXLink(QA Defect), 41)·#25001·#25003·#25341(XIPL, 33)에 "이 이슈는 공용 VXvue 조회 범위에 없습니다."를 반환했다. 추가 범위는 사용자가 33·41 두 개만 승인했다.

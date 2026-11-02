@@ -5313,6 +5313,11 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 경우 | 사용자에게 보이는 것 |
 |---|---|
 | 설정 파일이 없는 제품 | "'<제품>' 제품 설정이 없습니다."(404) |
+| 등록·교체 파일을 서버로 보내지 못함 | 알림 창에 "파일을 서버로 보내지 못했습니다. 기존 문서는 그대로입니다." 와 다시 하는 방법, 브라우저 오류 문구를 보인다. 고른 파일은 비워서 같은 파일을 다시 고를 수 있게 한다 |
+
+> **예시** 파일을 고른 뒤 Excel 에서 다시 저장했거나, 파일이 다른 프로그램에 잠겨 있거나, 연결이 끊기면 브라우저가 요청을 서버로 보내지 못한다. 이때 서버에는 아무 기록도 남지 않는다.
+
+이유: 알림 없이 끝나면 사람은 교체가 된 줄 알거나 왜 안 되는지 알 수 없다(2026-11-02 VXvue 영향성평가 Checklist 교체가 두 번 이렇게 끝났다).
 
 **지킬 것**
 
@@ -5357,6 +5362,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 지식 폴더 설정이 없음 | "config/products/ 에 '<제품>' 의 knowledge_source.dir 설정이 없습니다."(400) |
 | 서버 수집이 이미 진행 중 | REQ-KNOW-011 과 같다(409) |
 | 담당자 PC 가 꺼져 있음 | 요청이 "대기 중"으로 남는다. PC 가 켜지면 처리한다 |
+| 요청을 서버로 보내지 못함 | 알림 창에 "수집 요청을 서버로 보내지 못했습니다." 와 브라우저 오류 문구를 보이고, 버튼을 `지금 수집` 으로 되돌린다 |
 
 > **주의** 요청을 처리하는 것은 그 제품을 올리도록 예약된 PC 다(지금은 VXvue). 예약이 없는 제품은 요청이 계속 대기 중으로 남는다.
 
@@ -9561,6 +9567,19 @@ REQ-KNOW-002, 003, 005, 018, 019, 020 을 `tests/test_knowledge_profiles.py` 로
 python -m pytest tests/test_knowledge_profiles.py -q
 ```
 
+### TEST-KNOW-010
+
+REQ-KNOW-020 과 REQ-KNOW-021 의 "서버로 보내지 못함" 을 `tests/test_knowledge_upload_browser.py` 로 실제 브라우저에서 확인한다. 화면은 실제 라우터가 그린 VXvue 상세 화면이고, 서버로 가는 요청은 브라우저 안에서 끊는다. 운영 호출은 없다.
+
+1. 교체: 문서 줄의 `교체` 로 파일을 고르고 확인 창에 동의하면, 요청이 끊긴 뒤 알림 창에 "파일을 서버로 보내지 못했습니다" 가 보이고 고른 파일이 비워진다. 페이지는 이동하지 않는다.
+2. 새 문서 등록: 같은 경우에 같은 알림이 보인다.
+3. 지금 수집: 요청이 끊기면 "수집 요청을 서버로 보내지 못했습니다" 가 보이고 버튼이 다시 `지금 수집` 으로 돌아온다.
+4. 서버가 오류를 돌려주면(400) 지금처럼 서버가 준 이유를 그대로 보인다.
+
+```text
+python -m pytest tests/test_knowledge_upload_browser.py -q
+```
+
 ### TEST-KNOW-009
 
 REQ-KNOW-018 의 화면 등록 허용(`allow_manual`), REQ-KNOW-020, REQ-KNOW-022, REQ-KNOW-023 을 `tests/test_knowledge_manual_spec.py` 로 확인한다. 설정·DB·파싱 저장본·수집 기록·업로드 폴더는 모두 임시 폴더다. 사양서가 `alm_crawler` 이고 `allow_manual: true` 인 가짜 제품을 쓴다.
@@ -10256,8 +10275,8 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-017 | `app/modules/knowledge/templates/guide.html` | TEST-KNOW-006, `tests/test_knowledge_screens.py` | implemented |
 | REQ-KNOW-018 | `app/core/product_config.py`, `app/core/knowledge_registry.py`, `app/modules/knowledge/vxvue_spec_sync.py`, `app/core/knowledge_status.py`, `config/products/vxvue.yaml` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-007, TEST-KNOW-008: `tests/test_knowledge_profiles.py`, `tests/test_product_config.py`, `tests/test_knowledge_collect_request.py` | verified |
 | REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/knowledge_registry.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
-| REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/product_config.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
-| REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py`, `tests/test_product_knowledge_retry.py` | verified |
+| REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/product_config.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py`, TEST-KNOW-010: `tests/test_knowledge_upload_browser.py` | verified |
+| REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py`, `tests/test_product_knowledge_retry.py`, TEST-KNOW-010: `tests/test_knowledge_upload_browser.py` | verified |
 | REQ-KNOW-022 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
 | REQ-KNOW-023 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
