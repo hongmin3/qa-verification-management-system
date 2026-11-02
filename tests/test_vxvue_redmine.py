@@ -180,3 +180,26 @@ def test_duplicate_fulltext_id_in_same_project_page_is_error():
         return httpx.Response(200,json={'issue':{'id':5,'project':{'id':61,'name':'QA'},'status':{'id':1,'name':'Open'},'subject':'Focal None'}})
     result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[61],full_text=True,page_size=2)
     assert [row['id'] for row in result['items']] == [5] and result['errors'] and not result['complete']
+
+@pytest.mark.parametrize('project',[33,41])
+def test_integration_module_projects_are_readable_by_number(project,tmp_path):
+    issue={'id':5,'project':{'id':project,'name':'XIPL'},'journals':[{'id':1,'notes':'public'},{'id':2,'private_notes':True,'notes':'secret-note'}]}
+    lookup=redmine.RedmineLookup(cfg(),root=tmp_path,transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'issue':issue})))
+    result=lookup.issue(5);value=json.loads(result['text'])
+    assert value['issue']['project']['id']==project and [j['id'] for j in value['issue']['journals']]==[1]
+
+def test_integration_module_projects_need_explicit_search_and_default_stays_narrow():
+    asked=[]
+    def transport(r):
+        project=int(r.url.params['project_id']);asked.append(project)
+        return httpx.Response(200,json={'issues':[],'total_count':0,'offset':0,'limit':50})
+    lookup=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport))
+    assert not lookup.search('x')['errors'] and asked==[61,29,107]
+    asked.clear()
+    assert not lookup.search('x',project_ids=[33,41])['errors'] and asked==[33,41]
+    schema=next(t for t in redmine.definitions() if t['name']=='search_redmine_issues')['inputSchema']
+    assert schema['properties']['project_ids']['items']['enum']==[61,29,107,33,41]
+
+def test_private_issue_in_integration_module_project_is_still_hidden():
+    lookup=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(lambda r:httpx.Response(200,json={'issue':{'id':5,'project':{'id':33},'is_private':True}})))
+    with pytest.raises(ValueError):lookup.issue(5)

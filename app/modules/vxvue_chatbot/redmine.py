@@ -14,6 +14,8 @@ from app.core.security_filter import mask_payload
 from .desktop_polarion import PolarionLookup, integer
 
 DEFAULT_PROJECTS = (61, 29, 107)
+# XIPL(33)·QXLink(QA Defect)(41): VXvue 검증이 참조하는 연동 모듈. 명시 지정·번호 조회만 허용한다.
+ALLOWED_PROJECTS = DEFAULT_PROJECTS + (33, 41)
 MAX_BYTES = 10 * 1024 * 1024
 
 
@@ -59,7 +61,7 @@ class RedmineLookup(PolarionLookup):
 
     @staticmethod
     def _authorize_issue(issue):
-        if not isinstance(issue, dict) or issue.get('is_private') is True or (issue.get('project') or {}).get('id') not in DEFAULT_PROJECTS:
+        if not isinstance(issue, dict) or issue.get('is_private') is True or (issue.get('project') or {}).get('id') not in ALLOWED_PROJECTS:
             raise ValueError('이 이슈는 공용 VXvue 조회 범위에 없습니다.')
 
     @staticmethod
@@ -126,7 +128,7 @@ class RedmineLookup(PolarionLookup):
             raise ValueError('프로젝트 번호는 1~10개입니다.')
         for project in project_ids:
             integer(project, 1, 2_147_483_647)
-            if project not in DEFAULT_PROJECTS: raise ValueError('허용 프로젝트는 61, 29, 107입니다.')
+            if project not in ALLOWED_PROJECTS: raise ValueError('허용 프로젝트는 61, 29, 107, 33, 41입니다.')
         if len(set(project_ids)) != len(project_ids): raise ValueError('프로젝트 번호가 중복됐습니다.')
         if not isinstance(status, str) or status not in ('*', 'open', 'closed') and not re.fullmatch(r'[1-9][0-9]*', status):
             raise ValueError('상태는 *, open, closed 또는 상태 번호입니다.')
@@ -216,6 +218,6 @@ def definitions():
     string={'type':'string'}; positive={'type':'integer','minimum':1}
     specs=[
         ('get_redmine_issue','Redmine 이슈 상세·journals·첨부 목록·relations 읽기. 첨부 본문은 미수집. 잘리면 read_redmine_result로 이어 읽기.',{'issue_id':positive},['issue_id']),
-        ('search_redmine_issues','Redmine 여러 프로젝트 제목 검색. 기본 61·29·107 및 모든 상태. full_text=true는 전문 검색. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(DEFAULT_PROJECTS)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'}},['keywords']),
+        ('search_redmine_issues','Redmine 여러 프로젝트 제목 검색. 기본 61·29·107 및 모든 상태. XIPL(33)·QXLink QA Defect(41)는 project_ids로 지정. full_text=true는 전문 검색. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(ALLOWED_PROJECTS)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'}},['keywords']),
         ('read_redmine_result','수집·보호한 Redmine 상세를 문자 위치로 이어 읽기. 24시간 보관.',{'result_id':string,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':12000}},['result_id'])]
     return [{'name':n,'description':d,'inputSchema':{'type':'object','properties':p,'required':r,'additionalProperties':False},'annotations':{'readOnlyHint':True,'destructiveHint':False,'openWorldHint':False}} for n,d,p,r in specs]

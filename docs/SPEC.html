@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="0573aa0cd1cb17858d5708e35459d41bb06b7f9be8adf01e19764f83de86d468">
+<meta name="spec-source-sha256" content="55978a831e487ca0000f77d82550c5a8f0669865b6d9fa521d85724dc5a65604">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -16413,14 +16413,15 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-req" id="REQ-VXVUECHATBOT-016">
 <h3><span class="idtag">REQ-VXVUECHATBOT-016</span> Redmine 이슈 읽기와 범위 확인</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_vxvue_redmine.py</code></span></div>
-<details class="history"><summary>변경 이력 2</summary>
+<details class="history"><summary>변경 이력 3</summary>
 <ul>
+<li><span class="hist">2026-11-02 Redmine 공용 조회에 연동 모듈 프로젝트 추가</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: VXvue 검증이 참조하는 XIPL(33)·QXLink(QA Defect)(41)를 읽기 전용 허용 범위에 추가했다. 번호 조회와 <code>project_ids</code> 지정 검색만 되고 검색 기본값 61·29·107, 비공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>·댓글 제외는 그대로다.</li>
 <li><span class="hist">2026-10-26 Redmine 전문 검색의 프로젝트 범위 수정</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: 프로젝트별 전문 검색에서 범위를 전체 프로젝트로 넓히던 scope=all을 제거했다. 현재 프로젝트를 먼저 확인한 뒤 중복을 처리하며, 같은 페이지의 중복 응답은 오류로 남기고 프로젝트 이동에 따른 반복 후보는 한 번만 제공한다.</li>
 <li><span class="hist">2026-10-26 VXvue Redmine 공용 조회와 연결 지침</span> <a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a>: Desktop·HTTP MCP와 웹 챗봇에 Redmine 상세·다중 프로젝트 제목/전문 검색을 연결했다. 61·29·107 프로젝트의 공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>만 읽고 페이지 잔여와 실패를 구분한다.</li>
 </ul>
 </details>
 <p><strong>하는 일</strong> Redmine 상세와 여러 프로젝트의 검색 목록을 읽는다. Desktop 전달기와 HTTP MCP, 웹 챗봇이 같은 읽기 도구를 제공한다.</p>
-<p><strong>입력</strong> 양의 정수 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 번호 또는 검색어, 프로젝트 번호 목록, 상태, 페이지다. 허용 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 기본 상태는 전체다.</p>
+<p><strong>입력</strong> 양의 정수 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 번호 또는 검색어, 프로젝트 번호 목록, 상태, 페이지다. 기본 검색 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 기본 상태는 전체다. VXvue 검증이 참조하는 연동 모듈 XIPL(33)·QXLink(QA Defect)(41)도 허용하며, 검색에서는 프로젝트 번호로 지정할 때만 읽는다.</p>
 <ol>
 <li>제목 검색은 프로젝트별 <code>/issues.json</code>을 읽는다. 전문 검색은 프로젝트별 <code>/search.json</code>의 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 결과를 읽고 프로젝트·상태·제목을 확인한다. 공개 제목·본문·댓글에서 검색어를 다시 확인하고, 확인되지 않은 후보의 번호·제목은 반환하지 않는다.</li>
 <li>목록에는 번호·프로젝트·상태·제목만 반환한다. 프로젝트별 다음 후보 페이지와 전송·응답 오류를 알린다. 비공개 자료의 존재를 건수로 드러내지 않도록 전체 건수는 항상 null이고 complete는 항상 false다. 비공개·공개 본문 일치 확인 불가 후보의 번호·제목·제외 건수는 알리지 않는다.</li>
