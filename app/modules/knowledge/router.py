@@ -18,6 +18,7 @@ from app.core.knowledge_registry import (
     RegistrationError,
     check_request,
     extensions_for,
+    person_documents,
     register_uploaded,
     registered_by_person,
     replacement_name,
@@ -213,6 +214,13 @@ def product_knowledge_state(product: str):
         return server_state(product.strip())
     except UploadRejected as exc:
         raise HTTPException(400, str(exc))
+
+
+@router.get("/knowledge/product-knowledge/registered")
+def product_knowledge_registered(product: str):
+    """사람이 화면에서 올린 등록 목록. 담당자 PC 가 업로드 전에 지식 폴더로 내려받는다 (REQ-SYNC-004)."""
+    product = product.strip()
+    return {"product": product, "documents": person_documents(storage, product)}
 
 
 @router.post("/knowledge/product-knowledge/asset")

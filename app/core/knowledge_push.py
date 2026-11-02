@@ -12,18 +12,27 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import shutil
 import socket
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.product_knowledge import (
     collected_path,
+    document_logical_key,
+    is_strictly_older_name,
     load_manifest,
+    product_dir,
     product_slug,
     resolve_config,
+    scan_source,
     source_available,
     sync_product,
 )
+
+KST = timezone(timedelta(hours=9))
 
 #: 큰 PDF 한 개를 사내망으로 올리는 데 걸리는 시간을 넉넉히 잡는다.
 UPLOAD_TIMEOUT_SECONDS = 300
@@ -58,6 +67,89 @@ def fetch_collect_request(product: str, target_url: str, timeout: int = 10) -> s
         return str(response.json().get("requested_at") or "")
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _parse_time(value: str) -> datetime | None:
+    try:
+        moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def pull_person_documents(config, client, target_url: str, *, backup_root: Path, stamp: str) -> dict:
+    """서버 화면 등록본 가운데 지식 폴더보다 최신인 것을 지식 폴더로 내려받는다 (REQ-SYNC-004).
+
+    목록 조회 실패는 예외로 올린다 — 업로드를 계속할지는 부르는 쪽(`push_product`)이 정한다.
+    파일 하나의 실패는 그 파일만 건너뛰고 `failed` 에 적는다.
+    """
+    from app.core.knowledge_upload import UploadRejected, safe_file_name
+
+    response = client.get(f"{target_url.rstrip('/')}/knowledge/product-knowledge/registered", params={"product": config.product})
+    response.raise_for_status()
+    documents = response.json().get("documents", [])
+    folder = Path(config.knowledge_source.dir)
+    result = {"downloaded": [], "moved": [], "local_newer": [], "failed": [], "status": "SUCCESS"}
+    for document in documents:
+        local = [asset for asset in scan_source(config).assets if asset.sha256]
+        name, kind, digest = str(document.get("name", "")), str(document.get("kind", "")), str(document.get("sha256", ""))
+        if any(asset.sha256 == digest for asset in local):
+            continue
+        try:
+            name = safe_file_name(name)
+        except UploadRejected as exc:
+            result["failed"].append(f"{name} ({exc})")
+            continue
+        key = document_logical_key(kind, name)
+        same = [asset for asset in local if asset.kind == kind and document_logical_key(kind, asset.file_name) == key]
+        registered = _parse_time(document.get("registered_at", ""))
+        # 폴더 쪽이 리비전으로 확실히 최신이거나, 비교할 수 없는데 화면 등록 뒤에 바뀌었으면 그대로 둔다.
+        newer = [
+            asset for asset in same
+            if is_strictly_older_name(name, asset.file_name)
+            or (not is_strictly_older_name(asset.file_name, name) and registered is not None
+                and (_parse_time(asset.modified) or registered) > registered)
+        ]
+        if newer:
+            result["local_newer"].append(name)
+            continue
+        temporary = folder / f".~{name}.download.tmp"
+        try:
+            download = client.get(f"{target_url.rstrip('/')}/knowledge/download/{document['id']}")
+            download.raise_for_status()
+            temporary.write_bytes(download.content)
+            if _file_sha256(temporary) != digest:
+                raise ValueError("sha256 불일치")
+        except Exception as exc:
+            temporary.unlink(missing_ok=True)
+            result["failed"].append(f"{name} ({type(exc).__name__}: {exc})"[:200])
+            continue
+        # 새 파일을 다 받고 확인한 뒤에 기존 파일을 옮긴다. 받다가 끊겨도 폴더에서 문서가 사라지지 않는다.
+        for asset in same:
+            target_dir = backup_root / stamp
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(asset.source_path, target_dir / Path(asset.source_path).name)
+            result["moved"].append(Path(asset.source_path).name)
+        temporary.replace(folder / name)
+        result["downloaded"].append(name)
+    if result["failed"]:
+        result["status"] = "PARTIAL"
+    return result
+
+
+def _pull_summary(pulled: dict | None, error: str = "") -> str:
+    if error:
+        return f"서버 화면 등록본 확인 실패({error})"
+    return (f"서버 화면 등록본 내려받음 {len(pulled['downloaded'])}건, 지식 폴더가 더 최신 {len(pulled['local_newer'])}건, "
+            f"내려받기 실패 {len(pulled['failed'])}건")
+
+
 def push_product(product: str, target_url: str, *, dry_run: bool = False, timeout: int = UPLOAD_TIMEOUT_SECONDS) -> dict:
     """제품 하나의 지식 폴더를 수집해 서버로 올린다.
 
@@ -86,6 +178,19 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
                 export_skill(config)
         except (OSError, ValueError) as exc:
             return {"status": "FAILED", "detail": f"Skill 지침 내보내기 실패: {type(exc).__name__}. 로컬 설치 상태와 자동 생성 문서를 확인해주세요."}
+
+    # 0단계: 서버 화면 등록본을 먼저 지식 폴더로 내려받는다 (REQ-SYNC-004). 미리보기는 서버를 부르지 않는다.
+    pulled: dict | None = None
+    pull_note = ""
+    if not dry_run:
+        try:
+            with _client(timeout) as client:
+                pulled = pull_person_documents(config, client, target_url, backup_root=product_dir(config.product) / "replaced",
+                                               stamp=datetime.now(KST).strftime("%Y%m%d-%H%M%S"))
+            pull_note = _pull_summary(pulled)
+        except Exception as exc:
+            # 목록을 못 읽으면(옛 서버, 연결 끊김) 내려받기만 건너뛰고 업로드는 한다.
+            pull_note = _pull_summary(None, type(exc).__name__)
 
     collected = sync_product(config, dry_run=dry_run)
     if collected.status in ("NEEDS_CONFIG", "FAILED"):
@@ -159,14 +264,15 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
         result = commit.json()
 
     detail = (
-        f"{collected.detail} / 업로드 {len(uploaded)}건({sent_bytes / 1_048_576:.1f}MB), "
+        (f"{pull_note} / " if pull_note else "")
+        + f"{collected.detail} / 업로드 {len(uploaded)}건({sent_bytes / 1_048_576:.1f}MB), "
         f"서버 보유분 건너뜀 {len(skipped)}건 / {result.get('detail', '')}"
     )
     if failed:
         detail += f" / 업로드 실패 {len(failed)}건: {', '.join(failed[:5])}"
     status = result.get("status", "SUCCESS")
     # PC 수집이 PARTIAL(읽지 못한 파일 있음)이거나 업로드가 하나라도 실패하면 PARTIAL 이다(종료 코드 1).
-    if (failed or collected.status == "PARTIAL") and status == "SUCCESS":
+    if (failed or collected.status == "PARTIAL" or (pulled and pulled["status"] == "PARTIAL")) and status == "SUCCESS":
         status = "PARTIAL"
     return {
         "status": status,
@@ -179,6 +285,7 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
         # CLI 가 "읽지 못해 이전 판 유지" 줄과 읽지 못한 파일을 한 줄씩 찍는다(SPEC_CODE_MISMATCH 5절 12번).
         "kept_previous": result.get("kept_previous", []),
         "unreadable": result.get("failures", []),
+        "pulled": pulled or {},
     }
 
 

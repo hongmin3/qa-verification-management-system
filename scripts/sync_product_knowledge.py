@@ -113,6 +113,12 @@ def main() -> int:
         else:
             result = sync_and_register(product)
         print(f"[{product}] {result['status']} — {result['detail']}")
+        # 서버 화면 등록본 내려받기 결과 (REQ-SYNC-004).
+        pulled = result.get("pulled") or {}
+        for label, key in (("지식 폴더로 내려받음", "downloaded"), ("보관 폴더로 옮김", "moved"),
+                           ("지식 폴더가 더 최신", "local_newer"), ("내려받기 실패", "failed")):
+            for note in pulled.get(key, []):
+                print(f"  {label}: {note}")
         for note in result.get("duplicates", []):
             print(f"  중복 확인 요청: {note}")
         for note in result.get("excluded", []):

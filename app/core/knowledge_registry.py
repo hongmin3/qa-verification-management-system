@@ -100,6 +100,23 @@ def registered_by_person(document: dict) -> bool:
     return str(_metadata(document).get("source") or "") not in AUTOMATIC_DOCUMENT_SOURCES
 
 
+def person_documents(storage, product: str) -> list[dict]:
+    """담당자 PC 가 지식 폴더로 내려받을 화면 등록본 목록 (REQ-SYNC-004).
+
+    원본 파일이 없는 등록은 내려받을 수 없으므로 뺀다. 옛 등록에 sha256 이 없으면 파일에서 구한다.
+    """
+    documents = []
+    for kind in REGISTERABLE_KINDS:
+        for document in storage.active_documents(kind, product):
+            path = Path(document["path"])
+            if not registered_by_person(document) or not path.is_file():
+                continue
+            digest = str(_metadata(document).get("sha256") or "") or _sha256(path)
+            documents.append({"id": document["id"], "kind": document["kind"], "name": document["name"],
+                              "sha256": digest, "registered_at": document["created_at"]})
+    return documents
+
+
 def check_request(storage, config: ProductConfig, kind: str, declared_source: str = "", replace_id: int | None = None,
                   *, file_name: str = "") -> dict | None:
     """파일을 저장하기 전에 받을 수 있는 요청인지 본다. 교체 대상 문서를 돌려준다."""

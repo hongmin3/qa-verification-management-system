@@ -6,6 +6,8 @@ import json
 import os
 
 KST = timezone(timedelta(hours=9))
+#: 매일 업로드 시각(KST). 늦게 출근하는 날도 놓치지 않게 10시로 둔다 (REQ-SYNC-002).
+DAILY_HOUR = 10
 
 
 def _requested(check_request):
@@ -46,7 +48,7 @@ def run_due(product, target_url, *, state_dir, now=None, push=None, check_reques
             except (OSError, ValueError):
                 state = {}
             today = now.astimezone(KST).date()
-            due_date = today if now.astimezone(KST).hour >= 8 else today - timedelta(days=1)
+            due_date = today if now.astimezone(KST).hour >= DAILY_HOUR else today - timedelta(days=1)
             # A screen request the PC has not handled yet runs now, whatever the daily schedule says.
             request = _requested(check_request)
             next_retry = state.get("next_retry_at")
@@ -57,9 +59,9 @@ def run_due(product, target_url, *, state_dir, now=None, push=None, check_reques
                     return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
             else:
                 request = ""
-                # First installation before 08:00 waits for today's schedule.
-                if not state and now.astimezone(KST).hour < 8:
-                    return {"status": "NOT_DUE", "detail": "오전 8시 실행 대기"}
+                # First installation before the daily hour waits for today's schedule.
+                if not state and now.astimezone(KST).hour < DAILY_HOUR:
+                    return {"status": "NOT_DUE", "detail": "오전 10시 실행 대기"}
                 if state.get("completed_date", "") >= due_date.isoformat():
                     return {"status": "NOT_DUE", "detail": "해당 일정 동기화 완료"}
                 if waiting:

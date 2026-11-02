@@ -23,7 +23,7 @@ foreach ($file in @($Python, $script)) {
 }
 & $Python -X utf8 $script --project-root $ProjectRoot --product VXvue --upload-to $TargetUrl --check
 if ($LASTEXITCODE -ne 0) { throw '지식 폴더 설정 확인에 실패했습니다.' }
-Write-Output 'QA_ProductKnowledge_Sync: 매일 08:00 KST · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인 · PC 시작 때 만회'
+Write-Output 'QA_ProductKnowledge_Sync: 매일 10:00 KST · 서버 화면 등록본 내려받기 후 업로드 · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인 · PC 시작 때 만회'
 if ($CheckOnly) { Write-Output '계획 확인 완료. 예약은 변경하지 않았습니다.'; exit 0 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principalCheck = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -49,7 +49,7 @@ $action = New-ScheduledTaskAction -Execute $Python -Argument ('-X utf8 "{0}" --p
 # No RepetitionDuration means indefinite repetition; the Python state gates daily due work.
 # Every minute so a screen "지금 수집" request (REQ-KNOW-021) is picked up quickly. No --wait-retry:
 # a waiting instance would make IgnoreNew skip the following minutes.
-$repeat = New-ScheduledTaskTrigger -Once -At ([datetime]::Today.AddHours(8)) -RepetitionInterval (New-TimeSpan -Minutes 1)
+$repeat = New-ScheduledTaskTrigger -Once -At ([datetime]::Today.AddHours(10)) -RepetitionInterval (New-TimeSpan -Minutes 1)
 $startup = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2)
 $settings.Enabled = $true

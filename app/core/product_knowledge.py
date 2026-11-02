@@ -584,6 +584,8 @@ class RegisterOutcome:
     skipped_older: list[str] = field(default_factory=list)
     #: 리비전 비교는 안 되지만 사람이 화면에서 같은 논리 문서를 등록해 두어 등록하지 않은 수집본 (REQ-KNOW-012).
     skipped_person: list[str] = field(default_factory=list)
+    #: 리비전 비교는 안 되지만 화면 등록 뒤 지식 폴더에서 바뀌어, 수집본을 등록하고 뺀 화면 등록본 (REQ-KNOW-012).
+    replaced_person: list[str] = field(default_factory=list)
     skipped_deleted: list[str] = field(default_factory=list)
     detail: str = ""
 
@@ -634,6 +636,20 @@ def _is_strictly_older(existing_name: str, asset: dict) -> bool:
         return False
 
 
+def _changed_after(asset: dict, document: dict) -> bool:
+    """수집본이 이 등록보다 나중에 바뀌었는가 (REQ-KNOW-012). 시각을 모르면 False 다."""
+    try:
+        modified = datetime.fromisoformat(str(asset.get("modified") or "").replace("Z", "+00:00"))
+        registered = datetime.fromisoformat(str(document.get("created_at") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if modified.tzinfo is None:
+        modified = modified.replace(tzinfo=timezone.utc)
+    if registered.tzinfo is None:
+        registered = registered.replace(tzinfo=timezone.utc)
+    return modified > registered
+
+
 def _is_same_file(document_path: str, asset: dict) -> bool:
     """등록된 파일이 이 수집본과 **바이트까지 같은가**. 같으면 같은 파일이 두 번 등록된 것이다."""
     digest = asset.get("sha256")
@@ -681,6 +697,7 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
             existing_all.append({**document, "kind": kind})
 
     removed_ids: set[int] = set()
+    overridden_person: set[int] = set()
     registered_paths = {str((base / "original" / kind / asset["file_name"]).resolve()).casefold() for kind in kinds for asset in collected_assets(product, kind=kind, root=root)}
 
     for kind in kinds:
@@ -725,7 +742,10 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                     ),
                     None,
                 )
-                if person is not None:
+                if person is not None and _changed_after(asset, person):
+                    # 화면 등록 뒤 지식 폴더에서 다시 고쳤다. 나중에 바뀐 쪽을 따른다.
+                    overridden_person.add(person["id"])
+                elif person is not None:
                     outcome.skipped_person.append(f"{asset['file_name']} (화면에서 등록한 {person['name']} 우선)")
                     continue
             if already is not None:
@@ -777,11 +797,15 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
                 # 파일이 사라진 등록은 검색에 아무것도 기여하지 못하면서 "사양 없음" 오판만
                 # 만든다. 같은 논리 문서를 수집본이 대체하므로 잃는 것이 없다.
                 dead = not Path(document["path"]).is_file()
-                if older or identical or dead:
+                overridden = document["id"] in overridden_person
+                if older or identical or dead or overridden:
                     storage.delete_document(document["id"])
                     document_cache.delete(document["id"])
                     removed_ids.add(document["id"])
-                    if older:
+                    if overridden and not (older or identical):
+                        reason = "화면 등록 뒤 지식 폴더에서 바뀜"
+                        outcome.replaced_person.append(document["name"])
+                    elif older:
                         reason = "이전 리비전"
                     elif identical:
                         reason = f"동일 파일이 {kind} 로도 등록됨" if document["kind"] != kind else "동일 파일 중복 등록"
@@ -805,6 +829,8 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
         outcome.detail += f", 등록된 판이 더 최신이라 건너뜀 {len(outcome.skipped_older)}건"
     if outcome.skipped_person:
         outcome.detail += f", 화면 등록본 우선으로 건너뜀 {len(outcome.skipped_person)}건"
+    if outcome.replaced_person:
+        outcome.detail += f", 화면 등록 뒤 지식 폴더에서 바뀜 {len(outcome.replaced_person)}건"
     if outcome.skipped_deleted:
         outcome.detail += f", 지운 문서라 건너뜀 {len(outcome.skipped_deleted)}건"
     return outcome

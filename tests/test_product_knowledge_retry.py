@@ -7,10 +7,10 @@ def retry_module():
     return importlib.import_module("app.core.knowledge_retry")
 
 
-def test_eight_am_kst_failure_retries_at_fifteen_minutes_and_stops_on_success(tmp_path):
+def test_ten_am_kst_failure_retries_at_fifteen_minutes_and_stops_on_success(tmp_path):
     retry = retry_module()
     kst = timezone(timedelta(hours=9))
-    before = datetime(2026, 10, 13, 7, 59, tzinfo=kst)
+    before = datetime(2026, 10, 13, 9, 59, tzinfo=kst)
     now = before + timedelta(minutes=1)
     calls = []
     def push(*args, **kwargs):
@@ -22,6 +22,21 @@ def test_eight_am_kst_failure_retries_at_fifteen_minutes_and_stops_on_success(tm
     assert run(now + timedelta(minutes=14))["status"] == "NOT_DUE"
     assert run(now + timedelta(minutes=15))["status"] == "SUCCESS"
     assert run(now + timedelta(hours=8))["status"] == "NOT_DUE"
+    assert len(calls) == 2
+
+
+def test_upload_done_yesterday_waits_until_ten_today(tmp_path):
+    """Validates: REQ-SYNC-002. 늦게 켠 날도 10:00 전에는 전날 완료로 보고 기다린다."""
+    retry = retry_module()
+    kst = timezone(timedelta(hours=9))
+    calls = []
+    def push(*args, **kwargs):
+        calls.append(args)
+        return {"status": "SUCCESS", "detail": "test"}
+    run = lambda moment: retry.run_due("VXvue", "http://a", state_dir=tmp_path, now=moment, push=push)
+    assert run(datetime(2026, 11, 2, 15, tzinfo=kst))["status"] == "SUCCESS"
+    assert run(datetime(2026, 11, 3, 9, 30, tzinfo=kst))["status"] == "NOT_DUE"
+    assert run(datetime(2026, 11, 3, 10, 0, tzinfo=kst))["status"] == "SUCCESS"
     assert len(calls) == 2
 
 
@@ -54,8 +69,8 @@ def test_partial_is_not_success_and_exception_is_recorded(tmp_path):
 def test_request_is_kept_after_a_failed_upload_and_retried_after_fifteen_minutes(tmp_path):
     """Validates: REQ-KNOW-021. 서버에 닿지 못한 실패 뒤에도 같은 화면 요청을 다시 처리한다."""
     retry = retry_module()
-    now = datetime(2026, 10, 23, 1, 16, tzinfo=timezone.utc)   # 10:16 KST, 그날 정기 업로드는 이미 끝남
-    request = lambda: "2026-10-23T01:15:30+00:00"
+    now = datetime(2026, 10, 23, 3, 16, tzinfo=timezone.utc)   # 12:16 KST, 그날 정기 업로드는 이미 끝남
+    request = lambda: "2026-10-23T03:15:30+00:00"
     calls = []
     results = iter(["SUCCESS", "FAILED", "SUCCESS"])
     def push(*args, **kwargs):
@@ -63,7 +78,7 @@ def test_request_is_kept_after_a_failed_upload_and_retried_after_fifteen_minutes
         return {"status": next(results), "detail": "test"}
     run = lambda moment, check=request: retry.run_due("VXvue", "http://a", state_dir=tmp_path, now=moment, push=push, check_request=check)
 
-    assert run(now - timedelta(hours=2), check=lambda: "")["status"] == "SUCCESS"      # 08:00 정기 업로드
+    assert run(now - timedelta(hours=2), check=lambda: "")["status"] == "SUCCESS"      # 10:16 정기 업로드
     assert run(now)["status"] == "FAILED"                                               # 요청 처리 실패
     assert run(now + timedelta(minutes=1))["status"] == "NOT_DUE"                       # 15분 재시도 대기
     assert run(now + timedelta(minutes=15))["status"] == "SUCCESS"                      # 같은 요청을 다시 처리

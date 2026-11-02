@@ -1,4 +1,4 @@
-"""Daily 08:00 KST knowledge sync, persistent 15-minute catch-up."""
+"""Daily 10:00 KST knowledge sync (server screen documents pulled first), persistent 15-minute catch-up."""
 import argparse
 import logging
 from datetime import datetime, timezone
@@ -28,7 +28,7 @@ def main():
         from app.core.product_knowledge import resolve_config, source_available
         config = resolve_config(args.product)
         ready = bool(config and source_available(config))
-        print(f"지식 폴더 접근: {'정상' if ready else '확인 필요'} / 매일 08:00 KST · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인")
+        print(f"지식 폴더 접근: {'정상' if ready else '확인 필요'} / 매일 10:00 KST · 서버 화면 등록본 내려받기 후 업로드 · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인")
         return 0 if ready else 1
     log = settings.root / "output" / "logs" / "product_knowledge_retry.log"
     log.parent.mkdir(parents=True, exist_ok=True)

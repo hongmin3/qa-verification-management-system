@@ -1,5 +1,14 @@
 # 진행 상태
 
+## 2026-11-02 지식 폴더 ↔ 서버 양방향 동기화와 매일 10:00 (REQ-SYNC-004, REQ-KNOW-012, REQ-SYNC-002)
+
+- 계기: 공유폴더(`v1.1.0. Documents`)의 11/2 수정 매뉴얼 5건과 릴리즈노트 Rev04·Shimadzu DICOM V4.4W2 를 지식 폴더와 서버에 반영해 달라는 요청과, 앞으로 하루 한 번 양쪽 차이를 최신본으로 맞춰 달라는 요청. 시각은 사용자 요청으로 10:00.
+- 수동 반영: 지식 폴더에 7개 파일을 넣고 바뀐 이전 판 5개는 `projects/vxvue/backups/knowledge-manuals-20261102/` 로 옮겼다. `--upload-to` 두 번 모두 SUCCESS. 지식 폴더 27개와 서버 자산 27개의 해시가 같고, VXvue AI 연결도 새 판으로 색인 실패 0이다.
+- 구현: 서버에 화면 등록본 목록 주소(`/knowledge/product-knowledge/registered`)를 더하고, PC 업로드 첫 단계에서 더 최신인 화면 등록본을 지식 폴더로 내려받는다(기존 파일은 `data/product_knowledge/<slug>/replaced/` 로 이동). 리비전 비교가 안 되면 나중에 바뀐 쪽을 따른다. 매일 기준 시각은 10:00.
+- 시험: 새 `tests/test_knowledge_pull.py` 13개 중 기존 동작 1개를 뺀 12개가 구현 전 실패했다. 10시 경계 시험 2개도 구현 전 실패했다. 구현 후 지식 동기화 관련 121 passed(63.5초). 전체 회귀는 끝내지 못했다. 첫 실행은 10분 제한으로 53% 지점에서, 두 번째 실행은 PC 메모리 부족으로 25% 지점에서 중단됐고 그때까지 실패는 0건이다.
+- 운영 반영: 서버 8개 파일이 HEAD 와 같음을 확인하고 `backups/deploy-knowledge-pull-20261102T103356Z/` 에 이전 판을 둔 뒤 반영했다. 정식 systemctl 재시작 뒤 active·health ok, 주요 화면 다섯 곳 200, 서버 파일 해시가 작업본과 같다. 실제 CLI 실행은 "서버 화면 등록본 내려받음 0건 … 업로드 0건" SUCCESS 다. 운영 DB 의 VXvue 문서 25건이 모두 지식 폴더 수집본이라 0건이 맞다.
+- 남은 일: PC 예약 `QA_ProductKnowledge_Sync` 의 실행본은 아직 예전 코드(08:00, 내려받기 없음)다. 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 를 실행해야 바뀐다(확인 모드는 통과).
+
 ## 2026-11-02 VXvue 영향성평가 Checklist 교체 실패 조사와 알림 추가 (REQ-KNOW-020, REQ-KNOW-021)
 
 - 계기: 사용자가 `/knowledge/products/vxvue` 에서 `R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx`(5.3MB) 교체를 두 번 했지만 반영되지 않았다.

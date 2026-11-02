@@ -130,13 +130,13 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 �
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 04:00 (수집은 매 업무일. AI 분석은 검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교한다. AI 분석일이면 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `/qa-agent/changes`, `output/daily_qa/<실행 ID>/` | 변경 리포트 메일 한 통, AI 분석을 했으면 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002, REQ-ALMCHG-001, REQ-ALMCHG-004 |
-| 08:00 (매일), 미완료 시 15분마다. 1분마다 화면 수집 요청 확인 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다. 화면에서 `지금 수집` 요청이 있으면 바로 올린다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002, REQ-KNOW-021 |
+| 10:00 (매일), 미완료 시 15분마다. 1분마다 화면 수집 요청 확인 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 서버 화면 등록본 내려받기 뒤 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 서버 화면에서 등록·교체한 최신본을 지식 폴더로 내려받은 뒤 지식 폴더를 올린다. 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다. 화면에서 `지금 수집` 요청이 있으면 바로 올린다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002, REQ-SYNC-004, REQ-KNOW-021 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 | 10:20 (평일), 로그온 15분 뒤 | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포(`scripts/collect_srs_spec.py`) 뒤 사양서 동기화(`scripts/sync_vxvue_spec.py`) | Polarion SRS를 수집하고 PDF를 만든다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다. 이어서 같은 작업의 두 번째 동작이 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. 그날 완료본이 있으면 다시 수집하지 않는다 | `output/srs_crawler/`, 지식 폴더, 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003, REQ-SYNC-001 |
 
 ```flow
 04:00 서버: QA Intelligence Agent 일일 점검 -> Polarion 직접 조회 -> 스냅샷 비교·변경 이벤트 -> 바뀐 것만 분석 -> 요약 메일
-08:00 PC: 지식 폴더 업로드(REQ-SYNC-002) -> 실패 시 15분마다 재시도 -> 서버 지식 사본 갱신 -> 다음 채팅·다음 날 점검이 사용
+10:00 PC: 서버 화면 등록본 내려받기(REQ-SYNC-004) -> 지식 폴더 업로드(REQ-SYNC-002) -> 실패 시 15분마다 재시도 -> 서버 지식 사본 갱신 -> 다음 채팅·다음 날 점검이 사용
 10:20 PC: SRS 수집·PDF 배포(REQ-SYNC-003) -> 완료 PDF 를 동기화 출력과 지식 폴더에 배포 -> 사양서 동기화(REQ-SYNC-001) -> 서버 사양서 등록
 ```
 
@@ -3452,7 +3452,7 @@ Claude 토큰만 없으면 점검은 띄운다. 앱 로그에 `daily_qa_without_
 | SRS 전체, 이슈 전체 | Polarion (점검 때 서버가 직접 읽는다) | 매 실행 |
 | 전날 스냅샷 | `data/daily_qa/snapshots/<slug>/srs/`, `.../issues/` | 매 정상 실행 |
 | 분석을 기다리는 변경 이벤트 | 이벤트 표(`qa_change_events`)의 `pending`·`failed` 줄 | 매 실행 |
-| TC Excel, 매뉴얼 텍스트, QA 규칙·지침 프롬프트 | 서버의 지식 사본(`data/product_knowledge/<제품>/`) | 담당자 PC 가 올릴 때 (PC 의 예약 작업, 매일 08:00·실패 후 15분 재시도) |
+| TC Excel, 매뉴얼 텍스트, QA 규칙·지침 프롬프트 | 서버의 지식 사본(`data/product_knowledge/<제품>/`) | 담당자 PC 가 올릴 때 (PC 의 예약 작업, 매일 10:00·실패 후 15분 재시도) |
 | 영향성평가 Checklist | 지식 사본의 TC 가운데 파일 이름에 제품 설정의 표시 글자(VXvue 는 `영향성평가`)가 들어간 첫 파일 | 위와 같다 |
 | 사람이 답한 질문 | 이 시스템의 질문 표(`daily_qa_questions`). 개편 전에 남긴 답만 있다 | 바뀌지 않는다 |
 
@@ -5052,14 +5052,17 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 3번에서 새로 등록하기 전에, 같은 종류에 같은 논리 문서를 사람이 화면에서 등록해 두었는지 본다.
 
-- 리비전을 비교할 수 없어도 화면 등록본이 있으면 수집본을 등록하지 않는다. 결과에 "화면 등록본 우선으로 건너뜀 N건"과 그 목록이 남는다.
+- 리비전을 비교할 수 없으면 더 나중에 바뀐 쪽을 따른다. 수집본의 파일 수정 시각(`modified`)과 화면 등록본의 등록 시각(`created_at`)을 비교한다.
+  - 화면 등록본이 나중이면 수집본을 등록하지 않는다. 결과에 "화면 등록본 우선으로 건너뜀 N건"과 그 목록이 남는다.
+  - 수집본이 나중이면 수집본을 등록하고 화면 등록본을 지운다. 4번 표의 지움 이유는 "화면 등록 뒤 지식 폴더에서 바뀜"이다.
+  - 수집본에 수정 시각이 없으면 화면 등록본을 따른다.
 - 화면 등록본의 리비전이 확실히 더 오래됐거나, 내용(sha256)이 수집본과 같거나, 원본 파일이 없으면 이 규칙을 쓰지 않는다. 그때는 4번 표대로 처리한다.
 
-> **예시** 사람이 화면에서 리비전 표시 없는 `(TC) VXvue 회귀 TC.xlsx` 를 새 내용으로 올렸다. 지식 폴더의 같은 이름 파일은 아직 예전 내용이다. 다음 업로드 확정 때 폴더의 파일은 등록되지 않고 화면 등록본만 검색된다.
+> **예시** 사람이 10월 30일 화면에서 리비전 표시 없는 `(TC) VXvue 회귀 TC.xlsx` 를 새 내용으로 올렸다. 지식 폴더의 같은 이름 파일은 10월 20일에 마지막으로 고친 예전 내용이다. 다음 업로드 확정 때 폴더의 파일은 등록되지 않고 화면 등록본만 검색된다. 담당자가 11월 2일 지식 폴더의 그 파일을 다시 고치면, 다음 업로드 때 폴더의 파일이 등록되고 화면 등록본은 빠진다.
 
-이유: 사람이 화면에서 올린 판은 그 사람이 최신이라고 판단한 것이다. 어느 쪽이 최신인지 이름으로 가릴 수 없으면 사람의 판단을 따른다. 화면 업로드는 같은 논리 문서의 다른 등록을 빼므로, 이 규칙이 없으면 다음 수집 때 폴더의 옛 판이 다시 등록된다.
+이유: 이름으로 가릴 수 없을 때 어느 한쪽을 늘 이기게 하면, 진 쪽에서 고친 내용은 서버에 영영 반영되지 않는다. 화면 업로드는 같은 논리 문서의 다른 등록을 빼므로, 이 규칙이 없으면 다음 수집 때 폴더의 옛 판이 다시 등록된다.
 
-> **참고** 지식 폴더의 판을 다시 쓰고 싶으면 화면에서 그 문서의 등록을 지운다. 다음 업로드 확정 때 폴더의 판이 등록된다. 사양서 동기화(`alm_crawler`)나 지식 폴더 수집처럼 자동으로 들어온 등록은 사람의 등록으로 보지 않는다.
+> **참고** 화면 등록본은 담당자 PC 가 매일 업로드 전에 지식 폴더로 내려받는다(REQ-SYNC-004). 내려받은 뒤에는 두 쪽 내용이 같아져 지식 폴더 사본 하나로 정리된다. 사양서 동기화(`alm_crawler`)나 지식 폴더 수집처럼 자동으로 들어온 등록은 사람의 등록으로 보지 않는다.
 4. 같은 제품의 기존 등록(세 종류 모두)을 논리 문서 이름으로 맞춰 본다. 아래 표에서 지움이 "예"인 조건이면 파싱 저장본까지 함께 지운다.
 
 | 조건 | 지움 | 기록 문구 |
@@ -5067,9 +5070,10 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 같은 종류이고 리비전이 확실히 더 오래됨 | 예 | 이전 리비전 |
 | 파일 내용(sha256)이 수집본과 같음. 종류가 달라도 | 예 | 동일 파일 중복 등록 / 동일 파일이 <종류> 로도 등록됨 |
 | 등록의 원본 파일이 없음 | 예 | 원본 파일 없음 |
+| 같은 종류의 화면 등록본이고, 리비전 비교 불가이며, 수집본이 그 등록보다 나중에 바뀜(3번 규칙) | 예 | 화면 등록 뒤 지식 폴더에서 바뀜 |
 | 그 밖(종류가 다름, 리비전 비교 불가 등) | 아니오 | 중복 확인 요청 목록에 더함 |
 
-**결과** "등록 N건, 미변경 N건, 이전 리비전 정리 N건, 중복 확인 요청 N건"과 그 목록. 건너뛴 것이 있으면 ", 등록된 판이 더 최신이라 건너뜀 N건"이나 ", 화면 등록본 우선으로 건너뜀 N건"이 붙는다.
+**결과** "등록 N건, 미변경 N건, 이전 리비전 정리 N건, 중복 확인 요청 N건"과 그 목록. 건너뛴 것이 있으면 ", 등록된 판이 더 최신이라 건너뜀 N건"이나 ", 화면 등록본 우선으로 건너뜀 N건"이 붙는다. 3번 규칙으로 화면 등록본을 뺐으면 ", 화면 등록 뒤 지식 폴더에서 바뀜 N건"이 붙는다.
 
 이유: 이 시스템은 "어느 것이 최신인가"에 답해야 한다. 옛 판이 남으면 옛 사양이 검색된다. 반대로 사람이 다른 기준으로 올린 문서를 자동으로 지우면 그 판단 근거가 사라진다.
 
@@ -5178,7 +5182,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 - 사용법은 문서 파일이 아니라 이 화면에 둔다. 화면이 바뀌면 사용법도 같이 고친다.
 - 리비전 정규식, 논리 문서를 가리는 방법, 네트워크 마운트 절차 같은 개발·운영 기술 설명은 이 화면에 두지 않는다. 그런 설명은 `docs/PRODUCT_ONBOARDING.md` 와 이 SPEC 에 한 번만 둔다.
-- CLI 예시는 운영 방식(`--upload-to http://<서버 주소>:24357`, 매일 08:00)을 보인다(REQ-SYNC-002).
+- CLI 예시는 운영 방식(`--upload-to http://<서버 주소>:24357`, 매일 10:00)을 보인다(REQ-SYNC-002).
 
 ### REQ-KNOW-018 제품별 자료 출처 프로필
 
@@ -5326,7 +5330,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-021 제품 상세에서 지식 폴더 지금 수집
 
-**하는 일** 담당자가 지식 폴더에 새 파일을 넣은 뒤 제품 상세 화면의 `지금 수집` 을 누르면, 그 시점의 지식 폴더 전체가 수집·등록된다. 다음 날 08:00 예약을 기다리지 않아도 된다.
+**하는 일** 담당자가 지식 폴더에 새 파일을 넣은 뒤 제품 상세 화면의 `지금 수집` 을 누르면, 그 시점의 지식 폴더 전체가 수집·등록된다. 다음 날 10:00 예약을 기다리지 않아도 된다.
 
 > **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 올리기가 끝나면 화면이 저절로 새로 고쳐지고 새 매뉴얼이 목록에 있다.
 
@@ -5375,7 +5379,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 사람이 화면에서 지운 문서를 지식 폴더 수집이 다시 등록하지 않게 한다. 지식 폴더에 같은 파일이 남아 있어도 지운 상태가 유지된다.
 
-> **예시** 사양서 구역에서 `(사양서) VSS Specification (261006).xlsx` 를 지웠는데 담당자 PC 의 지식 폴더에 그 파일이 남아 있다. 다음 날 08:00 업로드가 그 파일을 다시 보내도 서버는 등록하지 않는다. 폴더에 `(사양서) VSS Specification (261023).xlsx` 가 생기면 이름이 다르므로 그 판은 등록한다.
+> **예시** 사양서 구역에서 `(사양서) VSS Specification (261006).xlsx` 를 지웠는데 담당자 PC 의 지식 폴더에 그 파일이 남아 있다. 다음 날 10:00 업로드가 그 파일을 다시 보내도 서버는 등록하지 않는다. 폴더에 `(사양서) VSS Specification (261023).xlsx` 가 생기면 이름이 다르므로 그 판은 등록한다.
 
 **순서**
 
@@ -6838,7 +6842,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 이유: 서버가 PC 폴더를 마운트하는 방법은 쓰지 않는다. PC 가 Wi-Fi DHCP 라 주소가 바뀌고, 사내 DNS 에 이름이 없으며, 외근 때는 망에 없기 때문이다. 폴더를 볼 수 있는 쪽이 밀어 올리고, 서버는 마지막 업로드본을 계속 쓴다.
 
-**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 08:00 KST부터 1분 간격으로 실행한다. 매일 업로드와 15분 재시도 시각은 아래 상태 파일이 정하고, 1분 간격은 화면의 수집 요청(REQ-KNOW-021)을 빨리 보기 위한 것이다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
+**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 10:00 KST부터 1분 간격으로 실행한다. 매일 업로드와 15분 재시도 시각은 아래 상태 파일이 정하고, 1분 간격은 화면의 수집 요청(REQ-KNOW-021)을 빨리 보기 위한 것이다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
 
 ```text
 python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<서버 주소>:24357
@@ -6848,7 +6852,7 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 2. 그날 동기화가 성공했으면 이후 확인에서는 전송하지 않는다.
 3. `PARTIAL`, `FAILED`, `NEEDS_CONFIG`면 15분 후 다시 시도한다.
 4. 수일 동안 PC가 꺼졌으면 마지막 완료 날짜와 비교해 최신 자료를 한 번 수집한다.
-5. 실패 중에는 서버의 이전 자료를 계속 사용한다. 성공하면 다음 날 08:00까지 대기한다.
+5. 실패 중에는 서버의 이전 자료를 계속 사용한다. 성공하면 다음 날 10:00까지 대기한다.
 6. 실행할 때마다 서버에 남은 수집 요청(REQ-KNOW-021)을 묻는다. 처리하지 않은 요청이 있으면 2~3번의 대기와 관계없이 바로 올리고, 처리한 요청 시각을 상태 파일에 적는다.
 
 기존 평일 사양 수집·동기화(REQ-SYNC-003, REQ-SYNC-001)는 유지한다. 같은 PDF가 두 경로로 등록되면 챗봇 지식 판에서 같은 바이트의 원본을 한 번만 검색한다. 동기화의 새 등록도 다음 요청에 반영한다.
@@ -6880,8 +6884,11 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 | ② | `POST /knowledge/product-knowledge/asset` | `product`, `kind`, `sha256`, `file` | 자산 기록(텍스트 추출 결과 포함) |
 | ③ | `POST /knowledge/product-knowledge/commit` | `product`, `manifest`(JSON), `uploaded`(②의 응답 모음 JSON) | 확정 결과 |
 
+내려받기(REQ-SYNC-004)는 ① 앞에서 `GET /knowledge/product-knowledge/registered?product=` 와 `GET /knowledge/download/<id>` 를 쓴다.
+
 **순서** PC 쪽:
 
+0. 서버의 화면 등록본 가운데 지식 폴더보다 최신인 것을 지식 폴더로 내려받는다(REQ-SYNC-004). 미리보기(`--dry-run`)에서는 하지 않는다.
 1. 지식 폴더를 PC 의 `data/product_knowledge/<slug>/` 로 수집해, 무엇을 쓸지(종류·최신 리비전)를 정한다(REQ-KNOW-011).
    - 수집이 `FAILED`·`NEEDS_CONFIG` 면 올리지 않고 끝난다.
    - 읽은 파일이 하나라도 있으면(새로 수집했거나 그대로인 것) 새 파일이 실패해도 `PARTIAL` 이다.
@@ -6961,6 +6968,55 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 이유: 같은 문서의 여러 리비전 중 무엇이 최신인지는 이웃 파일을 봐야 안다.
 
 - PC 경로를 서버 등록에 넣지 않는다.
+
+### REQ-SYNC-004 서버 화면 등록본을 지식 폴더로 내려받기
+
+**하는 일** 누군가 서버 화면에서 문서를 등록하거나 교체하면, 담당자 PC 가 다음 업로드 전에 그 파일을 지식 폴더로 내려받는다. 지식 폴더와 서버가 같은 최신본을 갖게 된다.
+
+> **예시** 담당자가 11월 2일 서버 화면에서 `(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx` 를 새 파일로 교체했다. 다음 날 10:00 업로드(REQ-SYNC-002) 직전에 PC 가 그 파일을 지식 폴더로 내려받는다. 지식 폴더에 있던 예전 파일은 보관 폴더로 옮긴다.
+
+**언제** REQ-SYNC-002 업로드를 시작할 때마다 그 첫 단계로 한다. 매일 10:00 예약, 화면의 `지금 수집` 요청(REQ-KNOW-021), `--upload-to` CLI 가 모두 같다. `--dry-run` 에서는 하지 않는다.
+
+**입력**
+
+| 주소 | 응답 |
+|---|---|
+| `GET /knowledge/product-knowledge/registered?product=` | 그 제품에 지금 등록된 문서 가운데 사람이 화면에서 올린 것(REQ-KNOW-005의 사람 등록). 문서마다 번호(`id`)·종류(`kind`)·이름(`name`)·sha256·등록 시각(`registered_at`) |
+| `GET /knowledge/download/<id>` | 그 문서의 원본 파일 |
+
+> **주의** 지식 폴더 수집·사양서 동기화처럼 자동으로 들어온 등록은 목록에 넣지 않는다. 그 파일은 이미 지식 폴더나 사양서 수집에서 온 것이다.
+
+**순서** 화면 등록본마다 다음을 차례로 본다.
+
+1. 지식 폴더에 sha256 이 같은 파일이 있으면 건너뛴다(이미 같다).
+2. 지식 폴더에서 같은 종류·같은 논리 문서(REQ-KNOW-003의 종류 + 이름 + 언어)인 파일을 찾는다.
+3. 그 가운데 리비전이 확실히 더 최신인 파일이 있으면 내려받지 않는다. 결과에 "지식 폴더가 더 최신"으로 남는다.
+4. 리비전을 비교할 수 없는 파일이 화면 등록보다 나중에 바뀌었으면(파일 수정 시각 > `registered_at`) 내려받지 않는다. 결과에 "지식 폴더가 더 최신"으로 남는다. 업로드 때 그 파일이 등록된다(REQ-KNOW-012).
+5. 그 밖이면 내려받는다.
+   1. 지식 폴더 안 임시 이름으로 받는다.
+   2. 받은 파일의 sha256 이 목록의 값과 다르면 임시 파일을 지우고 실패로 남긴다.
+   3. 같은 논리 문서의 기존 파일(리비전이 더 오래됐거나 비교할 수 없는 것)을 보관 폴더로 옮긴다.
+   4. 임시 파일을 서버의 문서 이름으로 바꾼다.
+
+보관 폴더는 PC 프로젝트의 `data/product_knowledge/<slug>/replaced/<YYYYMMDD-HHMMSS>/` 다. 실행 한 번에 폴더 하나를 쓴다.
+
+**결과** 업로드 결과 상세 앞에 "서버 화면 등록본 내려받음 N건, 지식 폴더가 더 최신 N건, 내려받기 실패 N건"이 붙는다. 내려받은 파일과 옮긴 파일은 CLI 에 한 줄씩 나온다.
+
+**안 될 때**
+
+| 경우 | 동작 |
+|---|---|
+| 목록 조회 실패(서버가 꺼짐, 옛 서버라 주소가 없음 등) | 내려받기를 건너뛰고 업로드는 그대로 한다. 상세에 "서버 화면 등록본 확인 실패"를 남긴다 |
+| 파일 하나의 다운로드 실패·sha256 불일치 | 그 파일만 건너뛰고 나머지는 계속한다. 기존 지식 폴더 파일은 그대로 둔다. 결과 상태는 `PARTIAL` 이다 |
+| 서버 문서 이름이 파일 이름으로 쓸 수 없음(경로 조각 등, NFR-SEC-003) | 내려받지 않고 실패로 남긴다 |
+
+**지킬 것**
+
+- 지식 폴더의 파일은 지우지 않는다. 바꿀 때는 보관 폴더로 옮긴다.
+- 서버에서 지운 문서(REQ-KNOW-022)는 지식 폴더에서 지우지 않는다. 업로드해도 서버가 다시 등록하지 않는다.
+- 새 파일을 다 받고 sha256 을 확인한 뒤에 기존 파일을 옮긴다.
+
+이유: 받다가 끊기면 지식 폴더에 그 문서가 하나도 남지 않을 수 있다.
 
 ### NFR-SEC-002 비밀값을 밖으로 내지 않기
 
@@ -9804,7 +9860,7 @@ REQ-SYNC-003을 `tests/test_srs_crawler.py`와 `tests/srs_crawler/`의 합성 �
 
 ### TEST-SYNC-002
 
-REQ-SYNC-002를 `tests/test_knowledge_upload.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`로 검증한다. 08:00 KST, 실패 후 15분 대기, 성공 후 정지, PC 종료 뒤 만회와 대상별 상태를 함께 확인한다.
+REQ-SYNC-002를 `tests/test_knowledge_upload.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`로 검증한다. 10:00 KST, 실패 후 15분 대기, 성공 후 정지, PC 종료 뒤 만회와 대상별 상태를 함께 확인한다.
 
 - 서버가 같은 sha256 으로 가진 파일은 다시 보내지 않는다.
 - 사양서 동기화가 먼저 올린 같은 바이트의 PDF 는 지식 사본 쪽 1건으로 정리된다.
@@ -9814,6 +9870,23 @@ REQ-SYNC-002를 `tests/test_knowledge_upload.py`, `tests/test_product_knowledge_
 - 파일 이름 검증(NFR-SEC-003), 손상 전송 거절, 모르는 종류·제품 거절, 빈 파일·큰 파일 거절, 서버 보유 목록이 실제 파일 기준, 목록에서 빠진 파일 정리(원본·텍스트), 업로드 누락 보고, PC 경로 제거, 다시 올리지 않은 파일의 텍스트 경로 유지, HTTP 거절 경로.
 
 이 검사들은 해당 코드를 빼면 실패하는 것까지 확인했다(2026-09-29).
+
+### TEST-SYNC-004
+
+REQ-SYNC-004 와 REQ-KNOW-012 의 시각 비교 규칙을 `tests/test_knowledge_pull.py` 로 확인한다. 지식 폴더·보관 폴더·서버 DB 는 모두 임시 폴더이고, 서버는 실제 라우터를 `TestClient` 로 띄운다. 운영 호출은 없다. 시각은 테스트가 정한 값만 쓴다.
+
+1. 목록 주소는 사람이 화면에서 올린 등록만 돌려주고, 지식 폴더 수집으로 들어온 등록은 뺀다. 각 항목에 sha256 과 등록 시각이 있다.
+2. 화면 등록본이 새 이름(새 리비전)이면 내려받고, 지식 폴더의 옛 리비전 파일은 보관 폴더로 옮긴다. 받은 파일의 내용이 서버 원본과 같다.
+3. 리비전 표시 없는 같은 이름 파일이 화면 등록보다 먼저 바뀌었으면 내려받아 바꾸고, 나중에 바뀌었으면 그대로 둔다("지식 폴더가 더 최신").
+4. 지식 폴더에 sha256 이 같은 파일이 있거나, 리비전이 확실히 더 최신인 파일이 있으면 아무것도 바꾸지 않는다.
+5. 받은 내용의 sha256 이 다르면 임시 파일이 남지 않고 기존 파일도 그대로이며, 결과가 `PARTIAL` 이다.
+6. 목록 조회가 실패해도 업로드는 계속되고 상세에 "서버 화면 등록본 확인 실패"가 남는다. `--dry-run` 은 서버를 부르지 않는다.
+7. 경로 조각이 든 서버 문서 이름은 내려받지 않는다.
+8. 업로드 확정 때 리비전 비교가 안 되는 수집본이 화면 등록보다 나중에 바뀌었으면 수집본이 등록되고 화면 등록본은 "화면 등록 뒤 지식 폴더에서 바뀜"으로 빠진다. 먼저 바뀌었으면 지금처럼 "화면 등록본 우선으로 건너뜀"이다.
+
+```text
+python -m pytest tests/test_knowledge_pull.py -q
+```
 
 ```text
 python -m pytest tests/test_knowledge_upload.py -q
@@ -10267,7 +10340,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-009 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-010 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
 | REQ-KNOW-011 | `app/core/product_knowledge.py`, `app/modules/knowledge/router.py`, `scripts/sync_product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
-| REQ-KNOW-012 | `app/core/product_knowledge.py`, `app/core/knowledge_upload.py` | TEST-KNOW-005: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py` | implemented |
+| REQ-KNOW-012 | `app/core/product_knowledge.py`, `app/core/knowledge_upload.py` | TEST-KNOW-005: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, TEST-SYNC-004: `tests/test_knowledge_pull.py` | implemented |
 | REQ-KNOW-013 | `app/modules/knowledge/router.py` | TEST-KNOW-006, `tests/test_page_scripts.py` | implemented |
 | REQ-KNOW-014 | `app/modules/knowledge/router.py` | TEST-KNOW-006 | implemented |
 | REQ-KNOW-015 | `app/core/product_knowledge.py` | TEST-KNOW-001: `tests/test_product_knowledge.py` | implemented |
@@ -10321,6 +10394,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py`, `config/products/vxvue.yaml` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
 | REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml`, `app/modules/knowledge/srs_crawler/problem_state.py`, `scripts/install_srs_schedule.ps1` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
 | REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
+| REQ-SYNC-004 | `app/core/knowledge_push.py`, `app/modules/knowledge/router.py`, `app/core/knowledge_registry.py` | TEST-SYNC-004: `tests/test_knowledge_pull.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |
 | NFR-SEC-004 | `deploy/nginx/qa-platform.conf`, `app/core/admin_auth.py`, `app/web/settings_router.py` | TEST-SEC-004, TEST-WEB-003: `tests/test_admin_auth.py` | implemented |

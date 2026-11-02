@@ -125,11 +125,11 @@ Get-ScheduledTask -TaskName "QA_SRS_Collect" | Select-Object TaskName, State, @{
 (`app/core/knowledge_push.py` → `app/core/knowledge_upload.py`). TC Excel, 매뉴얼, QA 규칙,
 지침 프롬프트가 이 경로로 서버에 간다. QA Agent 점검(`docs/modules/daily-qa.md`)도 이 사본을 쓴다.
 
-매일 08:00 KST에 갱신하고 실패하면 15분마다 재시도한다. 설치·실행 확인 결과는 `progress.md`에 기록한다.
+매일 10:00 KST에 서버 화면 등록본을 지식 폴더로 내려받은 뒤 갱신하고 실패하면 15분마다 재시도한다. 설치·실행 확인 결과는 `progress.md`에 기록한다.
 
 | 설정 | 값 |
 |---|---|
-| 시간 | 매일 08:00 KST, 15분 간격 확인, PC 시작 때 놓친 일정 만회 |
+| 시간 | 매일 10:00 KST, 15분 간격 확인, PC 시작 때 놓친 일정 만회 |
 | 실행 | 운영 프로젝트 `data/knowledge_retry/worker-<해시>/retry_product_knowledge.py --project-root <운영 프로젝트> --product VXvue --upload-to <서버 주소>` |
 | 성공 후 | 제품·대상 서버별 완료 날짜를 저장하고 그날 추가 업로드를 멈춘다 |
 | 실패·부분 실패 | 다음 재시도 시각을 저장한다. 서버는 이전 자료를 계속 사용한다 |
@@ -148,7 +148,7 @@ VXvue는 업로드 전에 활성 로컬 Skill의 최신 설치 캐시에서 지�
 
 ```flow
 04:00 서버 QA Agent 점검(제품마다, Polarion 직접 조회 + 전날까지 올라온 지식 사본, 공휴일 건너뜀) -> 요약 메일·/qa-agent 대시보드
-08:00 PC 지식 폴더 업로드 -> 실패 시 15분마다 재시도 -> 서버 지식 사본
+10:00 PC 서버 화면 등록본 내려받기 -> 지식 폴더 업로드 -> 실패 시 15분마다 재시도 -> 서버 지식 사본
 10:20 PC 통합 SRS 수집·PDF 배포(QA_SRS_Collect) -> 같은 작업에서 바로 사양서 동기화 -> 서버 신규 사양서 등록 -> 다음 날 04:00 점검이 사용
 11:00 PC ALM 이슈 수집(ALM_QA_Automation_Daily)
 ```

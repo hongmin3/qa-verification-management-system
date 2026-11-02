@@ -287,7 +287,7 @@ def knowledge_status():
             "specification_sync": {"last_success_at": spec_success["synced_at"] if spec_success else None,
                                    "last_attempt_at": spec_attempt["synced_at"] if spec_attempt else None,
                                    "status": spec_attempt["status"] if spec_attempt else None, "schedule": spec_schedule},
-            "schedule": "매일 08:00 KST · 실패 시 15분마다 재시도",
+            "schedule": "매일 10:00 KST · 실패 시 15분마다 재시도",
             "documents": sum(len(store.active_documents(kind, "VXvue")) for kind in ("specification", "manual", "testcase")) + len([a for a in manifest.get("assets", []) if a.get("kind") in ("qa_rules", "instruction_prompt", "skill_instruction")])}
 
 
