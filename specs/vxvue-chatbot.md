@@ -330,6 +330,12 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 **지킬 것** 승인된 QA 통합 원문의 29.8절에 있는 정확한 로그 공유 템플릿만 해당 지침과 원문 전달에서 보존한다. 일반 문서·대화·다른 UNC·고객 경로에는 예외를 적용하지 않는다. 전문을 보호한 뒤 자르고 보호 결과의 문자 위치와 전체 길이를 유지한다.
 
+### REQ-VXVUECHATBOT-018 제출용 Word 기본 양식
+
+**하는 일** Word 파일을 요청하면 서버의 Guide 양식으로 DOCX를 만든다. 표지와 Creator·Reviewer·Approver 서명란, 본문 서식과 자동 페이지 번호를 유지한다. 제목과 절별 본문·표를 받는다. 문서번호·개정·날짜·담당자는 제공받은 값만 쓰고 미지정 값은 빈칸으로 둔다. 서명·승인·검증 결과를 임의로 채우지 않는다. 별도 양식 요청을 우선한다.
+
+**지킬 것** 사내 양식과 생성 문서는 Git에 넣지 않는다. 양식이 없으면 오류를 알린다. 원본 문서는 수정하지 않는다. 결과는 무작위 주소로 내려받으며 주소를 아는 사내 사용자는 접근할 수 있다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -382,3 +388,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-010 | `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/prompts/vxvue_chatbot.yaml` | `tests/test_vxvue_chat_retrieval.py` | verified |
 | REQ-VXVUECHATBOT-016 | `app/modules/vxvue_chatbot/redmine.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_vxvue_redmine.py` | implemented |
 | REQ-VXVUECHATBOT-017 | `app/modules/vxvue_chatbot/qa_protection.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_qa_protection.py`, `tests/test_vxvue_redmine.py` | implemented |
+
+| REQ-VXVUECHATBOT-018 | `app/modules/vxvue_chatbot/word_reports.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_word_reports.py` | implemented |

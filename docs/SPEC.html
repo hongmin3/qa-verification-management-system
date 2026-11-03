@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="5e65dcbacd548149dc9043e68b0ef41b70581d0c863e949b9a8237965c64b86a">
+<meta name="spec-source-sha256" content="91a7e589be666e493119df01a6c5ebc028cd39e8750a13cdeadb50b45f1efd9d">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>326</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>200</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>224</b><span>implemented</span></div><div class="stat st-verified"><b>83</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>327</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>200</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>224</b><span>implemented</span></div><div class="stat st-verified"><b>83</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -644,6 +644,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015 <span>한 PC의 Claude·Codex 연결 Skill 맞춤</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016 <span>Redmine 이슈 읽기와 범위 확인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017 <span>상태 재시도와 승인된 로그 경로</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018 <span>제출용 Word 기본 양식</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1074,6 +1075,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></td><td data-label="이름">한 PC의 Claude·Codex 연결 Skill 맞춤</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>scripts/sync_vxvue_local_skill.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a></td><td data-label="이름">Redmine 이슈 읽기와 범위 확인</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="테스트"><code>tests/test_vxvue_redmine.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="이름">상태 재시도와 승인된 로그 경로</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="테스트"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a></td><td data-label="이름">제출용 Word 기본 양식</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -16574,6 +16576,16 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>하는 일</strong> 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 get_status의 timeout만 1초 간격으로 총 3회까지 재시도한다. 계속 실패하거나 다른 오류이면 원인과 확인사항을 알린다. 로컬 색인·rawfile·다른 연결로 옮기기 전에 사용자 승인을 받는다.</p>
 <p><strong>지킬 것</strong> 승인된 QA 통합 원문의 29.8절에 있는 정확한 로그 공유 템플릿만 해당 지침과 원문 전달에서 보존한다. 일반 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>·대화·다른 UNC·고객 경로에는 예외를 적용하지 않는다. 전문을 보호한 뒤 자르고 보호 결과의 문자 위치와 전체 길이를 유지한다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-018">
+<h3><span class="idtag">REQ-VXVUECHATBOT-018</span> 제출용 Word 기본 양식</h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-03</span> <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a>: Word 요청 시 표지와 서명란이 있는 Guide 양식으로 DOCX를 만들고 다운로드 주소를 제공한다. 미지정 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 정보는 빈칸으로 둔다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> Word 파일을 요청하면 서버의 Guide 양식으로 DOCX를 만든다. 표지와 Creator·Reviewer·Approver 서명란, 본문 서식과 자동 페이지 번호를 유지한다. 제목과 절별 본문·표를 받는다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>번호·개정·날짜·담당자는 제공받은 값만 쓰고 미지정 값은 빈칸으로 둔다. 서명·승인·검증 결과를 임의로 채우지 않는다. 별도 양식 요청을 우선한다.</p>
+<p><strong>지킬 것</strong> 사내 양식과 생성 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 Git에 넣지 않는다. 양식이 없으면 오류를 알린다. 원본 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 수정하지 않는다. 결과는 무작위 주소로 내려받으며 주소를 아는 사내 사용자는 접근할 수 있다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -16629,6 +16641,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="Test"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
+<p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">
 <h2>QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</h2>

@@ -221,8 +221,10 @@ def definitions(context=None):
     result.extend({"name": n, "description": d, "inputSchema": {"type": "object", "properties": p, "required": r, "additionalProperties": False}} for n, d, p, r in extra)
     from app.modules.manual_review.shared_tools import definitions as review_definitions
     result.extend(review_definitions())
+    from .word_reports import definitions as word_definitions
+    result.extend(word_definitions())
     for tool in result:
-        tool["annotations"] = {"readOnlyHint": tool['name'] != 'make_manual_review_report', "destructiveHint": False, "openWorldHint": False}
+        tool["annotations"] = {"readOnlyHint": tool['name'] not in ('make_manual_review_report', 'make_word_report'), "destructiveHint": False, "openWorldHint": False}
     if ((context or {}).get('usage') or {}).get('owner') and ((context or {}).get('usage') or {}).get('secure'):
         from app.modules.vxvue_usage.service import decorate
         return decorate(result)
@@ -243,6 +245,9 @@ def call(name, arguments):
     if name in ("get_redmine_issue", "search_redmine_issues", "read_redmine_result"):
         from .redmine import call as redmine_call
         return redmine_call(name, arguments)
+    if name == "make_word_report":
+        from .word_reports import create
+        return create(get_settings().root, **arguments)
     if name == "polarion_query":
         return polarion_lookup().query(**arguments)
     if name == "get_polarion_item":
@@ -264,6 +269,7 @@ def call(name, arguments):
 
 
 def workflow(current, args, extra=""):
+    extra += "\n사용자가 워드 파일/Word/DOCX를 요청하면 make_word_report로 기본 Guide 양식의 파일을 만들고 반환된 URL을 다운로드 링크로 안내한다. 서명·승인·결과를 임의로 채우지 않는다. 별도 양식 요청은 우선한다."
     offset, limit = args.get("offset", 0), args.get("limit", 12000)
     integer(offset, 0, 10_000_000)
     integer(limit, 1, 12000)
@@ -484,3 +490,6 @@ def download_skill():
 
 from app.modules.manual_review.shared_routes import review_router
 router.include_router(review_router(lambda: get_settings().root), prefix='/manual-review')
+
+from .word_reports import routes as word_routes
+router.include_router(word_routes(lambda: get_settings().root))
