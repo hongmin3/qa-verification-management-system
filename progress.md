@@ -7,7 +7,8 @@
 - 구현: 서버에 화면 등록본 목록 주소(`/knowledge/product-knowledge/registered`)를 더하고, PC 업로드 첫 단계에서 더 최신인 화면 등록본을 지식 폴더로 내려받는다(기존 파일은 `data/product_knowledge/<slug>/replaced/` 로 이동). 리비전 비교가 안 되면 나중에 바뀐 쪽을 따른다. 매일 기준 시각은 10:00.
 - 시험: 새 `tests/test_knowledge_pull.py` 13개 중 기존 동작 1개를 뺀 12개가 구현 전 실패했다. 10시 경계 시험 2개도 구현 전 실패했다. 구현 후 지식 동기화 관련 121 passed(63.5초). 전체 회귀는 끝내지 못했다. 첫 실행은 10분 제한으로 53% 지점에서, 두 번째 실행은 PC 메모리 부족으로 25% 지점에서 중단됐고 그때까지 실패는 0건이다.
 - 운영 반영: 서버 8개 파일이 HEAD 와 같음을 확인하고 `backups/deploy-knowledge-pull-20261102T103356Z/` 에 이전 판을 둔 뒤 반영했다. 정식 systemctl 재시작 뒤 active·health ok, 주요 화면 다섯 곳 200, 서버 파일 해시가 작업본과 같다. 실제 CLI 실행은 "서버 화면 등록본 내려받음 0건 … 업로드 0건" SUCCESS 다. 운영 DB 의 VXvue 문서 25건이 모두 지식 폴더 수집본이라 0건이 맞다.
-- 남은 일: PC 예약 `QA_ProductKnowledge_Sync` 의 실행본은 아직 예전 코드(08:00, 내려받기 없음)다. 관리자 PowerShell 에서 `scripts/install_product_knowledge_schedule.ps1` 를 실행해야 바뀐다(확인 모드는 통과).
+- PC 예약 재설치(2026-11-03 09:15, 사용자 관리자 PowerShell): 설치 스크립트가 완료됐다. 원래 예약 백업은 `backups/knowledge-schedule-20261103-091535`, 새 실행본은 `data/knowledge_retry/worker-2d11550e9136bb12/` 이다. 실행본 4개 파일이 저장소 판과 SHA-256 이 같다. 시각 트리거는 `2026-11-03T10:00+09:00` 시작·1분 반복이고 PC 시작 트리거가 남아 있다. 09:15 실행 결과는 0 이다.
+- 첫 새 코드 하루 실행: 11-03 은 설치 전 08:00 실행(예전 코드)이 이미 완료로 기록돼(`completed_date` 2026-11-03) 오늘 10:00 에는 건너뛴다. 내려받기를 포함한 첫 예약 실행은 11-04 10:00 이다. 그 전에도 화면 `지금 수집` 요청은 새 실행본이 1분마다 받는다.
 
 ## 2026-11-02 VXvue 영향성평가 Checklist 교체 실패 조사와 알림 추가 (REQ-KNOW-020, REQ-KNOW-021)
 
