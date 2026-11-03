@@ -37,7 +37,7 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> ALM 변경 리포트(specs/alm-change-report.md, AI 없음) -> 변경 리포트 메일·/qa-agent/changes 화면
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
-QA 담당자 -> ALM 스킬 안내(specs/alm-skill.md) -> 공용 가이드·영상·Skill ZIP -> 제품 스킬과 함께 근거 조회
+QA 담당자 -> 스킬 관리(specs/alm-skill.md) -> VXvue·Bellalun·XIPL·ALM 상세와 업데이트·개선 문서 -> 근거 조회
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
 결과 형식 검증 -(형식 오류 또는 한도)-> 작업 실패·건너뜀 기록 -> 요약 메일
 ```
@@ -8714,7 +8714,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
 | ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
 | VXvue 활용 이력과 제작자 지표 | [specs/vxvue-usage.md](specs/vxvue-usage.md) | implemented |
-| ALM 스킬 안내 | [specs/alm-skill.md](specs/alm-skill.md) | implemented |
+| 스킬 관리와 ALM 안내 | [specs/alm-skill.md](specs/alm-skill.md) | implemented |
 | XIPL 공용 문서 조회 | [specs/xipl-shared.md](specs/xipl-shared.md) | verified |
 | Bellalun 공용 서버 지식과 Skill | [specs/bellalun-shared.md](specs/bellalun-shared.md) | draft |
 
