@@ -8,6 +8,10 @@
 
 챗봇은 서버 Claude CLI와 VXvue Skill을 사용하며, 동기화한 최신 지침 프롬프트 TXT와 QA 규칙 MD 전문을 적용합니다. 사용법은 앱의 `/vxvue-chatbot/guide`에 있습니다.
 
+QA 홈의 **ALM 스킬**에서는 공통 ALM 사용 절차·교육 영상·원본 슬라이드·가이드 파일과 Codex·Claude Code 설치 방법을 확인할 수 있습니다. 안내 주소는 `/static/alm-ai/index.html`입니다. 제품별 사양은 기존 VXvue·Bellalun 스킬과 함께 확인합니다.
+
+ALM 스킬에는 로그인된 기존 Edge·Chrome에서 구체적으로 요청한 작업을 수행하고 저장 결과를 재조회하는 절차도 포함됩니다. 실제 작업에는 해당 세션을 제어할 수 있는 Computer Use 연결이 필요하며, ALM 저장 동작은 아직 시험하지 않았습니다.
+
 로컬 Skill의 지침·참조 MD도 기존 지식폴더의 자동 생성 문서로 동기화합니다. 업무 규칙은 그 폴더에서 계속 관리하고, 검색 도구 변경은 검증 후 배포합니다. [Skill 동기화 기준](docs/VXVUE_SKILL_SYNC_PLAN.md)을 참고하세요.
 
 Opus medium을 유지하면서 공통 지침 캐시와 묶음 조회로 반복 입력을 줄입니다. [챗봇 사용량 절감 계획](docs/VXVUE_CHATBOT_COST_PLAN.md)에 적용 방법과 측정 기준을 정리했습니다.

@@ -37,6 +37,7 @@ QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -(변경 �
 QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) -> ALM 변경 리포트(specs/alm-change-report.md, AI 없음) -> 변경 리포트 메일·/qa-agent/changes 화면
 담당자 PC 예약 실행 -> 사양서·지식 폴더 동기화 -> 서버 사양서·지식 사본
 QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) -> 답변·근거·대화 이력
+QA 담당자 -> ALM 스킬 안내(specs/alm-skill.md) -> 공용 가이드·영상·Skill ZIP -> 제품 스킬과 함께 근거 조회
 판정 검증 -(근거 부족·AI 오류)-> 확인 요청 -> 사람이 원본 확인
 결과 형식 검증 -(형식 오류 또는 한도)-> 작업 실패·건너뜀 기록 -> 요약 메일
 ```
@@ -53,6 +54,7 @@ QA 팀 채팅 요청·첨부 -> VXvue AI 챗봇(Skill·지침·원문 조회) ->
 | ALM 변경 리포트 | 서버가 매 업무일 수집 뒤 스스로. QA 담당자가 `/qa-agent/changes` 에서 기간을 골라 아무 때나 | 없음(저장된 날짜별 기록을 읽는다) | 이슈·SRS 의 날짜순 변경 목록 화면, 매 업무일 변경 리포트 메일 | [기능 사양](specs/alm-change-report.md) |
 | Knowledge·동기화·공통 기반 | 담당자 PC 예약 작업과 모든 기능이 | 지식 폴더의 사양서·TC·매뉴얼·QA 규칙 | 서버의 최신 지식 사본, 설정·저장·AI 호출·메일·백업 | 5.5 |
 | QA Manual Hub | 사내 사용자가 매뉴얼을 찾거나 올릴 때 | 매뉴얼 파일 | 제품·문서·버전별로 정리된 매뉴얼과 최신본(Current) | 5.6 |
+| ALM 스킬 안내 | ALM 사용 절차를 찾거나 스킬을 설치할 때 | 서버의 공용 교육 자료 목록 | 활용·설치 안내, 가이드·영상·Skill ZIP 연결 | [기능 사양](specs/alm-skill.md) |
 
 ## 2. 프로젝트 범위
 
@@ -8712,6 +8714,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
 | ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
 | VXvue 활용 이력과 제작자 지표 | [specs/vxvue-usage.md](specs/vxvue-usage.md) | implemented |
+| ALM 스킬 안내 | [specs/alm-skill.md](specs/alm-skill.md) | implemented |
 
 <!-- spec-index: end -->
 

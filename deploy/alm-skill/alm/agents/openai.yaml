@@ -1,0 +1,4 @@
+interface:
+  display_name: "ALM 사용 가이드"
+  short_description: "QA 서버 교육 근거로 ALM 절차를 확인하고 제품 스킬과 함께 사용"
+  default_prompt: "ALM 스킬로 서버의 최신 가이드와 원본 근거를 확인하고 업무 절차를 안내해줘."
