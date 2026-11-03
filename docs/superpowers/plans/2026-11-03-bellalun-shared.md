@@ -59,4 +59,4 @@ XIPL service는 줄바꿈 바이트만 다르며 의미 차이는 없다. 서버
 - [x] cleanup·전체 pytest·readiness·diff·검토, 문서 갱신.
 - [x] 운영 작업 유휴·대상 파일 해시 재확인 후 백업·선별 배포·systemd 재시작.
 - [x] 외부 클라이언트 인증 RPC·지침 전문·원문·이미지·ZIP 재조회.
-- [ ] 최종 커밋·push.
+- [x] 최종 커밋·push.
