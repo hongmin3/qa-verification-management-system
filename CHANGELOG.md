@@ -798,3 +798,9 @@ QA Manual Hub:
 ## 2026-11-03
 
 - REQ-VXVUECHATBOT-018: Word 요청 시 표지와 서명란이 있는 Guide 양식으로 DOCX를 만들고 다운로드 주소를 제공한다. 미지정 문서 정보는 빈칸으로 둔다.
+# 2026-11-03 Bellalun 공용 서버 지식
+
+- 기존 인증된 AI 연결에 Bellalun 전용 상태·최신 지침·검색·원문·PDF 페이지·TC·추적 도구를 추가했다.
+- 공통 Skill Markdown과 통합 QA를 기존 제품 수집기로 동기화하며 원본·검색 인덱스 무결성을 확인한다.
+- 설치·업무 예시·제약 안내와 별도 bellalun-server-ai Skill ZIP, 담당자 PC의 별도 동기화 예약 설치를 제공한다.
+- Windows에서 새 자료 판 폴더 확정이 일시 거부되는 경우에만 제한적으로 재시도하며, Bellalun·XIPL의 기존 자료 판과 실제 권한 오류는 보존한다.

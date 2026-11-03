@@ -61,7 +61,8 @@ def test_stdio_mcp_and_image_attachment(tmp_path):
     serve(session, io.StringIO("\n".join(json.dumps(r) for r in requests)), output)
     replies = [json.loads(line)["result"] for line in output.getvalue().splitlines()]
     assert replies[0]["capabilities"] == {"tools": {}}
-    assert all(t["annotations"]["readOnlyHint"] for t in replies[1]["tools"])
+    assert {t["name"] for t in replies[1]["tools"] if not t["annotations"]["readOnlyHint"]} == {"make_word_report"}
+    assert all(not t["annotations"]["destructiveHint"] for t in replies[1]["tools"])
     assert replies[2]["content"][1]["type"] == "image"
     assert replies[3]["isError"] is True
 

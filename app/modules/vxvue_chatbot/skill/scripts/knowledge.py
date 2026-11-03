@@ -65,9 +65,100 @@ def relationships(z, xml_path):
     return result
 
 
-def read_workbook(path):
+def _vertical_merge_cutoff(archive, part):
+    # Merge declarations follow sheetData. Read their bounded attributes first,
+    # so inherited steps are known before any ID-only row is compacted.
+    cutoff, tail = 0, b''
+    pattern = re.compile(rb'<(?:[A-Za-z0-9_]+:)?mergeCell\b[^>]*\bref=["\x27]([^"\x27]+)')
+    with archive.open(part) as stream:
+        while data := stream.read(1024 * 1024):
+            block = tail + data
+            for match in pattern.finditer(block):
+                ref = match[1].decode('ascii')
+                if ':' in ref:
+                    start, end = ref.split(':')
+                    _, first = coordinates(start); _, last = coordinates(end)
+                    if last > first:
+                        cutoff = max(cutoff, last)
+            tail = block[-4096:]
+    return cutoff
+
+
+def _sparse_worksheet(archive, part, comment_refs, shared, strikes):
+    """Stream styled blank rows without expanding them into evidence cells."""
+    tag = '{' + N['s'] + '}'
+    result = ET.Element(tag + 'worksheet')
+    selected = ET.SubElement(result, tag + 'sheetData')
+    row_parent = None
+    merged_until = _vertical_merge_cutoff(archive, part)
+    sequence, buffered, sequences = None, [], []
+
+    def flush():
+        nonlocal sequence, buffered
+        if sequence and sequence['last_row'] - sequence['first_row'] >= 9:
+            sequences.append(sequence)
+        selected.extend(buffered)
+        sequence, buffered = None, []
+
+    with archive.open(part) as stream:
+        for event, elem in ET.iterparse(stream, events=('start', 'end')):
+            if event == 'start' and elem.tag == tag + 'sheetData':
+                row_parent = elem
+            elif event == 'end' and elem.tag == tag + 'row':
+                meaningful = [c for c in elem if c.tag == tag + 'c' and (
+                    c.get('r') in comment_refs or c.find(tag + 'f') is not None or
+                    bool(c.findtext(tag + 'v')) or bool(''.join(c.find(tag + 'is').itertext()) if c.find(tag + 'is') is not None else ''))]
+                if meaningful:
+                    row = ET.Element(tag + 'row', elem.attrib)
+                    row.extend(copy.deepcopy(c) for c in meaningful)
+                    candidate = None
+                    if len(meaningful) == 1 and int(elem.get('r', '0')) > merged_until:
+                        cell = meaningful[0]; typ = cell.get('t'); style = int(cell.get('s', 0))
+                        text, runs = shared[int(cell.findtext(tag + 'v'))] if typ == 's' else rich_text(cell.find(tag + 'is')) if typ == 'inlineStr' else ('', [])
+                        match = re.fullmatch(r'(TC_[^\n]*?)(\d+)', text)
+                        if (match and cell.get('r') not in comment_refs and cell.find(tag + 'f') is None and
+                                not (style < len(strikes) and strikes[style]) and not any(r.get('strike') for r in runs) and
+                                str(int(match[2])) == match[2]):
+                            column, rn = coordinates(cell.get('r'))
+                            candidate = {'column': column_name(column), 'type': typ, 'style': style, 'prefix': match[1],
+                                         'hidden': elem.get('hidden', '0'), 'first_row': rn, 'last_row': rn,
+                                         'first_value': int(match[2]), 'last_value': int(match[2])}
+                    if candidate:
+                        same = sequence and all(sequence[k] == candidate[k] for k in ('column', 'type', 'style', 'prefix', 'hidden')) and candidate['first_row'] == sequence['last_row'] + 1 and candidate['first_value'] == sequence['last_value'] + 1
+                        if same:
+                            sequence['last_row'], sequence['last_value'] = candidate['last_row'], candidate['last_value']
+                            buffered.append(row)
+                            if sequence['last_row'] - sequence['first_row'] >= 9:
+                                buffered = [buffered[0], buffered[-1]]
+                        else:
+                            flush(); sequence, buffered = candidate, [row]
+                    else:
+                        flush(); selected.append(row)
+                else:
+                    flush()
+                elem.clear()
+                if row_parent is not None:
+                    row_parent.remove(elem)
+            elif event == 'end' and elem.tag in (tag + 'cols', tag + 'mergeCells'):
+                result.append(copy.deepcopy(elem)); elem.clear()
+    flush()
+    return result, sequences
+
+
+def _stream_shared_strings(archive):
+    values = []
+    with archive.open('xl/sharedStrings.xml') as stream:
+        parser = ET.iterparse(stream, events=('start', 'end'))
+        _, root = next(parser)
+        for event, elem in parser:
+            if event == 'end' and elem.tag == '{' + N['s'] + '}si':
+                values.append(rich_text(elem)); elem.clear(); root.clear()
+    return values
+
+
+def read_workbook(path, *, sparse=False):
     with ZipFile(path) as z:
-        shared = [rich_text(si) for si in ET.fromstring(z.read('xl/sharedStrings.xml'))] if 'xl/sharedStrings.xml' in z.namelist() else []
+        shared = (_stream_shared_strings(z) if sparse else [rich_text(si) for si in ET.fromstring(z.read('xl/sharedStrings.xml'))]) if 'xl/sharedStrings.xml' in z.namelist() else []
         styles = ET.fromstring(z.read('xl/styles.xml')) if 'xl/styles.xml' in z.namelist() else None
         font_nodes = styles.findall('s:fonts/s:font', N) if styles is not None else []
         fonts = [enabled(f.find('s:strike', N)) for f in font_nodes]
@@ -79,15 +170,17 @@ def read_workbook(path):
         result = []
         for sheet in ET.fromstring(z.read('xl/workbook.xml')).findall('s:sheets/s:sheet', N):
             xml_path = rels[sheet.get('{'+N['r']+'}id')]['path']
-            doc = ET.fromstring(z.read(xml_path))
             comments = {}
             for rel in relationships(z, xml_path).values():
                 if rel['type'].endswith('/comments'):
                     for comment in ET.fromstring(z.read(rel['path'])).findall('s:commentList/s:comment', N):
                         comments[comment.get('ref')] = rich_text(comment.find('s:text', N))[0]
+            doc, sequences = _sparse_worksheet(z, xml_path, comments, shared, strikes) if sparse else (ET.fromstring(z.read(xml_path)), [])
             record = {'name': sheet.get('name'), 'state': sheet.get('state', 'visible'), 'cells': {},
                       'merges': [m.get('ref') for m in doc.findall('s:mergeCells/s:mergeCell', N)],
                       'hidden_rows': [], 'hidden_columns': [], 'max_row': 0, 'max_column': 0}
+            if sparse:
+                record['id_only_sequences'] = sequences
             for col in doc.findall('s:cols/s:col', N):
                 if col.get('hidden') in ('1','true'):
                     record['hidden_columns'].extend(range(int(col.get('min')), int(col.get('max'))+1))

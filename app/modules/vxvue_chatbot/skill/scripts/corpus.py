@@ -231,9 +231,21 @@ def docx_chunks(path):
     return result, []
 
 
-def xlsx_chunks(path):
+def xlsx_chunks(path, *, workbook_reader=None):
     result = []
-    for sheet in k.read_workbook(path):
+    warnings = []
+    for sheet in (workbook_reader or k.read_workbook)(path):
+        for sequence in sheet.get('id_only_sequences', []):
+            start, end = sequence['first_row'], sequence['last_row']
+            text = (f"Consecutive ID-only cells {sequence['column']}{start}:{sequence['column']}{end}. "
+                    f"Each source row r contains {sequence['prefix']} followed by integer r + ({sequence['first_value'] - start}); "
+                    f"first={sequence['prefix']}{sequence['first_value']}; last={sequence['prefix']}{sequence['last_value']}. "
+                    "This range contains IDs only, no TC steps or expected results.")
+            result.append(chunk(f"sheet:{sheet['name']}:rows:{start}-{end}", text,
+                                {'sheet': sheet['name'], 'first_row': start, 'last_row': end},
+                                {'id_only_range': sequence}, evidence_status='id-only-range-not-test-definition'))
+        if sheet.get('id_only_sequences'):
+            warnings.append('ID-only sequences use lossless row-range encoding; these rows contain no TC steps or expected results: ' + sheet['name'])
         hr = k.tc_header_row(sheet)
         header_rows = list(range(1, hr + 1))
         if 'VSS Specification' in path.name:
@@ -292,7 +304,7 @@ def xlsx_chunks(path):
                                 noncurrent_cells={ref: v['validity'] for ref,v in cells.items() if v['validity'] not in ('current','missing')},
                                 sheet_review_required=bool(re.search(r'폐기|삭제|backup|\(구\)|legacy', sheet['name'], re.I)),
                                 evidence_status='source-cells-review-required'))
-    return result, []
+    return result, warnings
 
 
 def parse(path):
@@ -306,7 +318,8 @@ def parse(path):
 
 
 class Corpus:
-    def __init__(self, root=None, index_path=None, *, document_kinds=None):
+    def __init__(self, root=None, index_path=None, *, document_kinds=None, parser=None):
+        self.parser = parser
         self.document_kinds = dict(document_kinds or {})
         self.root = Path(root or os.environ.get('VXVUE_KNOWLEDGE_ROOT') or k.DEFAULT_ROOT).resolve()
         root_key = hashlib.sha256(str(self.root).encode('utf-8')).hexdigest()[:16]
@@ -398,7 +411,7 @@ class Corpus:
                     old = db.execute('SELECT sha,status FROM documents WHERE id=?', (doc_id,)).fetchone()
                     if old and old['sha'] == sha and old['status'] == 'indexed':
                         continue
-                    chunks, warnings = parse(path)
+                    chunks, warnings = (self.parser or parse)(path)
                     if sha != k.fingerprint(path):
                         raise ValueError('Source changed during parsing; retry')
                     metadata['warnings'] = warnings

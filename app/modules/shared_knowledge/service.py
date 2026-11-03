@@ -10,6 +10,8 @@ from pathlib import Path
 import tempfile
 from threading import Lock
 
+from app.core.snapshot_files import publish_directory
+
 from app.modules.vxvue_chatbot.mcp_server import tools
 from app.modules.vxvue_chatbot.skill.scripts.corpus import Corpus
 
@@ -106,7 +108,7 @@ def snapshot(project_root, snapshot_id=None):
                     if _digest((final / "original" / record["document_id"]).read_bytes()) != record["sha256"]:
                         raise ValueError("저장된 XIPL 지식 판의 해시를 확인하세요.")
             else:
-                building.rename(final)
+                publish_directory(building, final)
         value = {"id": identity, "root": str(final / "original"), "index": str(final / "index.sqlite3"),
                  "documents": records, "failures": [], "rules": "", "skill_text": "", "skill_metadata": None}
         _snapshots[key] = value

@@ -15,10 +15,15 @@ manual_types:
 # 환경변수 이름은 `scripts/make_knowledge_mount.py` 가 제품 slug 로 생성하는 것과 같다.
 knowledge_source:
   dir: "${QA_KNOWLEDGE_DIR_BELLALUN_VIEWER:-C:/Users/2024980/Documents/자동화/bellalun-viewer/지식}"
+  # 최신 공통 Skill이 발행한 통합본만 QA 지침으로 선택한다.
+  classify:
+    qa_rules:
+      - "Bellalun Viewer QA 지침.md"
   # 이 폴더에는 QA 지식이 아닌 자동화 프로젝트 운영 문서도 함께 있다
   # (`[자동화 구현 현황]`, `[자동화 운영 지침]`). 수집 대상에서 제외한다.
   ignore:
     - "[자동화*"
+    - "*지침 프롬프트*"
 
 specification:
   # VXvue와 달리 ALM 크롤러 연동이 없다. 사양서는 knowledge_source 폴더에서 수집한다.
