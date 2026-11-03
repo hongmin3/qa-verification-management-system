@@ -8712,6 +8712,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | VXvue AI 챗봇 | [specs/vxvue-chatbot.md](specs/vxvue-chatbot.md) | draft |
 | ALM 변경 리포트 | [specs/alm-change-report.md](specs/alm-change-report.md) | draft |
 | VXvue 활용 이력과 제작자 지표 | [specs/vxvue-usage.md](specs/vxvue-usage.md) | implemented |
+| XIPL 공용 문서 조회 | [specs/xipl-shared.md](specs/xipl-shared.md) | verified |
 
 <!-- spec-index: end -->
 
