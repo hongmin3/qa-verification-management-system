@@ -18,7 +18,7 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 ## 2. 범위
 
-기존 핵심 앱의 정적 파일 제공 기능으로 `/static/alm-ai/index.html`을 제공한다. QA 홈에 ALM 스킬 카드를 추가한다. 별도 서버 프로세스·DB·로그인·AI 호출·Polarion 변경 기능은 추가하지 않는다.
+기존 핵심 앱의 정적 파일 제공 기능으로 `/static/alm-ai/index.html`을 제공한다. QA 홈의 스킬 관리 카드에서 공통 목록과 개별 안내로 들어간다. 별도 서버 프로세스·DB·로그인·AI 호출·Polarion 변경 기능은 추가하지 않는다.
 
 ## 5. 기능 요구사항
 
@@ -28,7 +28,7 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 ### REQ-ALMSKILL-001 활용과 설치 안내
 
-**하는 일** QA 홈의 ALM 스킬 카드로 안내 페이지에 들어간다. 페이지는 활용 범위, Codex와 Claude Code의 준비 사항·ZIP 설치·첫 질문·설치 확인·문제 해결을 설명한다.
+**하는 일** QA 홈의 스킬 관리 카드에서 ALM 상세 안내로 들어간다. 페이지는 활용 범위, Codex와 Claude Code의 준비 사항·ZIP 설치·첫 질문·설치 확인·문제 해결을 설명한다.
 
 **순서** 설치 없이 가이드를 읽는 길과 스킬을 설치해 질문하는 길을 함께 제공한다. VXvue AI 안내 및 QA 홈으로 돌아가는 링크를 둔다. 제품 스킬과 함께 쓰는 질문 예시를 제공한다.
 
@@ -54,6 +54,14 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 **지킬 것** 기존 브라우저 프로필을 복사하거나 쿠키·비밀번호를 추출하지 않는다. 사용자가 지정한 로그인 세션을 새 자동화 전용 브라우저로 대체하지 않는다. 컴퓨터 제어 도구의 별도 확인 정책을 따른다.
 
+### REQ-ALMSKILL-004 스킬 관리와 하위 업데이트 문서
+
+**하는 일** QA 홈의 스킬 관리 카드로 `/static/skills/index.html`을 연다. VXvue·Bellalun·XIPL·ALM 네 상세 페이지와 각 업데이트·개선 문서를 제공한다.
+
+**순서** 상세 페이지는 목적·사용 방법·현재 제공 상태와 기존 안내로 연결한다. Bellalun 작업 세션의 결과가 확인되기 전에는 연결 준비 중으로 표시한다. 기존 VXvue·ALM 안내 주소와 설치·인증 경로는 유지한다.
+
+**지킬 것** 새 안내·개선 문서는 `app/web/static/skills/<스킬>/` 하위에 작성한다. 향후 배포 파일은 같은 하위의 `releases/<버전>/`에 보존하고, 업데이트 문서와 상세 페이지를 같은 변경으로 갱신한다. 완료한 변경과 개선 예정·미검증을 구분한다. 다른 세션이 만드는 스킬 본체를 덮어쓰지 않는다. 파일 감시나 자동 배포 기능으로 설명하지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-ALMSKILL-001 안내 진입과 본문
@@ -75,3 +83,4 @@ ZIP에 브라우저 작업 절차와 지정 서버 설정이 들어가고 비밀
 | REQ-ALMSKILL-001 | `app/web/templates/hub.html`, `app/web/static/alm-ai/index.html`, `app/web/static/alm-ai/style.css` | `tests/test_alm_skill_guide.py` | verified |
 | REQ-ALMSKILL-002 | `app/web/static/alm-ai/guide.js` | `tests/test_alm_skill_guide.py` | verified |
 | REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
+| REQ-ALMSKILL-004 | `app/web/static/skills/index.html`, `app/web/static/skills/AGENTS.md`, `app/web/templates/hub.html` | `tests/test_skill_management.py` | verified |

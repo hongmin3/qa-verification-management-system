@@ -13,7 +13,7 @@ ASSET='/static/alm-guide'
 
 def test_alm_guide_is_available_from_hub_and_serves_assets():
  client=TestClient(app)
- assert f'href="{PAGE}"' in client.get('/').text
+ assert 'href="/static/alm-ai/index.html"' in client.get('/static/skills/alm/index.html').text
  response=client.get(PAGE)
  assert response.status_code==200
  for word in ['ALM 스킬 사용 안내','Codex','Claude Code','VXvue','Bellalun','화면 표본','음성','로그인된 Edge','저장 결과','전자서명']:

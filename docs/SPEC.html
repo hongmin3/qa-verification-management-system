@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="bb5e95caeca7c8f842d2f3e6d8ba2fc345c9195e1e852b203deae6e3e03dd431">
+<meta name="spec-source-sha256" content="dff6baf558adb8487ec0894f075b5fd6a37ff8dc7bd378d611313364985bacf1">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>333</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>205</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>225</b><span>implemented</span></div><div class="stat st-verified"><b>88</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>334</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>205</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>225</b><span>implemented</span></div><div class="stat st-verified"><b>89</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -698,6 +698,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001 <span>활용과 설치 안내</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-ALMSKILL-002">REQ-ALMSKILL-002 <span>현재 자료 판과 다운로드</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003 <span>기존 로그인 브라우저 작업 절차와 스킬 배포</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-ALMSKILL-004">REQ-ALMSKILL-004 <span>스킬 관리와 하위 업데이트 문서</span></a></li>
 <li class="toc-2"><a href="#doc-alm-skill-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMSKILL-001">TEST-ALMSKILL-001 <span>안내 진입과 본문</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMSKILL-002">TEST-ALMSKILL-002 <span>자료 연결과 실패</span></a></li>
@@ -1120,6 +1121,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a></td><td data-label="이름">활용과 설치 안내</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/templates/hub.html</code>, <code>app/web/static/alm-ai/index.html</code>, <code>app/web/static/alm-ai/style.css</code></td><td data-label="테스트"><code>tests/test_alm_skill_guide.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-002">REQ-ALMSKILL-002</a></td><td data-label="이름">현재 자료 판과 다운로드</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/static/alm-ai/guide.js</code></td><td data-label="테스트"><code>tests/test_alm_skill_guide.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a></td><td data-label="이름">기존 로그인 브라우저 작업 절차와 스킬 배포</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>deploy/alm-skill/alm/SKILL.md</code>, <code>deploy/alm-skill/alm/references/browser-operations.md</code>, <code>scripts/build_alm_skill.py</code></td><td data-label="테스트"><code>tests/test_alm_skill_package.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-004">REQ-ALMSKILL-004</a></td><td data-label="이름">스킬 관리와 하위 업데이트 문서</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/static/skills/index.html</code>, <code>app/web/static/skills/AGENTS.md</code>, <code>app/web/templates/hub.html</code></td><td data-label="테스트"><code>tests/test_skill_management.py</code></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">XIPLSHARED</span> XIPL 공용 자료</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a></td><td data-label="이름">XIPL 원문 수집</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>config/products/xipl.yaml</code></td><td data-label="테스트"><code>tests/test_xipl_shared.py</code>, <code>tests/test_knowledge_sync_integrity.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-XIPLSHARED-002">REQ-XIPLSHARED-002</a></td><td data-label="이름">같은 판에서 검색과 원문 조회</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/shared_knowledge/service.py</code></td><td data-label="테스트"><code>tests/test_xipl_shared.py</code></td></tr>
@@ -1147,62 +1149,62 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <p>사람이 따로 AI 채팅에 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>하지 않고, 정해진 화면과 예약 실행 안에서 이 일이 끝나는 것이 핵심이다.</p>
 <h3>한눈에 보기</h3>
 <figure class="flow">
-<svg viewBox="0 0 1647 532" width="1647" height="532" role="img" aria-label="QA 담당자 화면 요청 → 개정 매뉴얼, 개정 매뉴얼 → 사양서·지식 사본과 대조, 사양서·지식 사본과 대조 → AI 판정(Claude CLI), AI 판정(Claude CLI) → 판정 검증, 판정 검증 → 보고서·Excel·Word Comment, 평일 04:00 예약 실행(공휴일 제외) → QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md), QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → Claude Skill(바뀐 것만), Claude Skill(바뀐 것만) → 결과 형식·근거 검증, 결과 형식·근거 검증 → 요약 메일, 요약 메일 → /qa-agent 대시보드, QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → 변경사항 없음(AI 호출 0회), 변경사항 없음(AI 호출 0회) → 요약 메일, QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → ALM 변경 리포트(specs/alm-change-report.md, AI 없음), ALM 변경 리포트(specs/alm-change-report.md, AI 없음) → 변경 리포트 메일·/qa-agent/changes 화면, 담당자 PC 예약 실행 → 사양서·지식 폴더 동기화, 사양서·지식 폴더 동기화 → 서버 사양서·지식 사본, QA 팀 채팅 요청·첨부 → VXvue AI 챗봇(Skill·지침·원문 조회), VXvue AI 챗봇(Skill·지침·원문 조회) → 답변·근거·대화 이력, QA 담당자 → ALM 스킬 안내(specs/alm-skill.md), ALM 스킬 안내(specs/alm-skill.md) → 공용 가이드·영상·Skill ZIP, 공용 가이드·영상·Skill ZIP → 제품 스킬과 함께 근거 조회, 판정 검증 → 확인 요청, 확인 요청 → 사람이 원본 확인, 결과 형식 검증 → 작업 실패·건너뜀 기록, 작업 실패·건너뜀 기록 → 요약 메일">
+<svg viewBox="0 0 1812 532" width="1812" height="532" role="img" aria-label="QA 담당자 화면 요청 → 개정 매뉴얼, 개정 매뉴얼 → 사양서·지식 사본과 대조, 사양서·지식 사본과 대조 → AI 판정(Claude CLI), AI 판정(Claude CLI) → 판정 검증, 판정 검증 → 보고서·Excel·Word Comment, 평일 04:00 예약 실행(공휴일 제외) → QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md), QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → Claude Skill(바뀐 것만), Claude Skill(바뀐 것만) → 결과 형식·근거 검증, 결과 형식·근거 검증 → 요약 메일, 요약 메일 → /qa-agent 대시보드, QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → 변경사항 없음(AI 호출 0회), 변경사항 없음(AI 호출 0회) → 요약 메일, QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md) → ALM 변경 리포트(specs/alm-change-report.md, AI 없음), ALM 변경 리포트(specs/alm-change-report.md, AI 없음) → 변경 리포트 메일·/qa-agent/changes 화면, 담당자 PC 예약 실행 → 사양서·지식 폴더 동기화, 사양서·지식 폴더 동기화 → 서버 사양서·지식 사본, QA 팀 채팅 요청·첨부 → VXvue AI 챗봇(Skill·지침·원문 조회), VXvue AI 챗봇(Skill·지침·원문 조회) → 답변·근거·대화 이력, QA 담당자 → 스킬 관리(specs/alm-skill.md), 스킬 관리(specs/alm-skill.md) → VXvue·Bellalun·XIPL·ALM 상세와 업데이트·개선 문서, VXvue·Bellalun·XIPL·ALM 상세와 업데이트·개선 문서 → 근거 조회, 판정 검증 → 확인 요청, 확인 요청 → 사람이 원본 확인, 결과 형식 검증 → 작업 실패·건너뜀 기록, 작업 실패·건너뜀 기록 → 요약 메일">
 <defs><marker id="flow-arrow-1" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>
-<path class="edge" d="M380.5 44 L78.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M78.5 124 L96.5 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M96.5 204 L464 248" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M464 284 L769.5 328" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M769.5 364 L682 408" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M606 44 L398 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M398 124 L303.5 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M303.5 204 L645 248" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M645 284 L877.5 328" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M877.5 364 L884.5 408" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M398 124 L522.5 168" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="460.3" y="146">변경 없음</text>
-<path class="edge" d="M522.5 204 L877.5 328" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M398 124 L847 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M847 204 L894 248" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M831.5 44 L757.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M757.5 124 L1153 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1012 44 L1005.5 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1005.5 124 L1334.5 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1159 44 L1297 88" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1297 124 L1536.5 168" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1536.5 204 L1166 248" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M769.5 364 L1026 408" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="897.8" y="386">근거 부족·AI 오류</text>
-<path class="edge" d="M1026 444 L823.5 488" marker-end="url(#flow-arrow-1)"/>
-<path class="edge" d="M1284.5 44 L1535 88" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="1409.8" y="66">형식 오류 또는 한도</text>
-<path class="edge" d="M1535 124 L877.5 328" marker-end="url(#flow-arrow-1)"/>
-<g class="node"><rect x="304" y="8" width="153" height="36" rx="8"/><text x="380.5" y="26">QA 담당자 화면 요청</text></g>
-<g class="node"><rect x="30" y="88" width="97" height="36" rx="8"/><text x="78.5" y="106">개정 매뉴얼</text></g>
+<path class="edge" d="M463 44 L176 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M176 124 L96.5 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M96.5 204 L603 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M603 284 L852 328" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M852 364 L764.5 408" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M688.5 44 L495.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M495.5 124 L303.5 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M303.5 204 L784 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M784 284 L960 328" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M960 364 L967 408" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M495.5 124 L522.5 168" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="509" y="146">변경 없음</text>
+<path class="edge" d="M522.5 204 L960 328" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M495.5 124 L847 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M847 204 L1033 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M914 44 L855 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M855 124 L1153 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1094.5 44 L1103 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1103 124 L1334.5 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1241.5 44 L1379.5 88" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1379.5 124 L1619 168" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1619 204 L1248.5 248" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M852 364 L1108.5 408" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="980.3" y="386">근거 부족·AI 오류</text>
+<path class="edge" d="M1108.5 444 L906 488" marker-end="url(#flow-arrow-1)"/>
+<path class="edge" d="M1367 44 L1602.5 88" marker-end="url(#flow-arrow-1)"/><text class="elabel" x="1484.8" y="66">형식 오류 또는 한도</text>
+<path class="edge" d="M1602.5 124 L960 328" marker-end="url(#flow-arrow-1)"/>
+<g class="node"><rect x="386.5" y="8" width="153" height="36" rx="8"/><text x="463" y="26">QA 담당자 화면 요청</text></g>
+<g class="node"><rect x="127.5" y="88" width="97" height="36" rx="8"/><text x="176" y="106">개정 매뉴얼</text></g>
 <g class="node"><rect x="8" y="168" width="177" height="36" rx="8"/><text x="96.5" y="186">사양서·지식 사본과 대조</text></g>
-<g class="node"><rect x="382.5" y="248" width="163" height="36" rx="8"/><text x="464" y="266">AI 판정(Claude CLI)</text></g>
-<g class="node"><rect x="727.5" y="328" width="84" height="36" rx="8"/><text x="769.5" y="346">판정 검증</text></g>
-<g class="node"><rect x="579" y="408" width="206" height="36" rx="8"/><text x="682" y="426">보고서·Excel·Word Comment</text></g>
-<g class="node"><rect x="481" y="8" width="250" height="36" rx="8"/><text x="606" y="26">평일 04:00 예약 실행(공휴일 제외)</text></g>
-<g class="node"><rect x="151" y="88" width="494" height="36" rx="8"/><text x="398" y="106">QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md)</text></g>
+<g class="node"><rect x="521.5" y="248" width="163" height="36" rx="8"/><text x="603" y="266">AI 판정(Claude CLI)</text></g>
+<g class="node"><rect x="810" y="328" width="84" height="36" rx="8"/><text x="852" y="346">판정 검증</text></g>
+<g class="node"><rect x="661.5" y="408" width="206" height="36" rx="8"/><text x="764.5" y="426">보고서·Excel·Word Comment</text></g>
+<g class="node"><rect x="563.5" y="8" width="250" height="36" rx="8"/><text x="688.5" y="26">평일 04:00 예약 실행(공휴일 제외)</text></g>
+<g class="node"><rect x="248.5" y="88" width="494" height="36" rx="8"/><text x="495.5" y="106">QA Intelligence Agent 변경 감지(5.4절, specs/qa-intelligence.md)</text></g>
 <g class="node"><rect x="209" y="168" width="189" height="36" rx="8"/><text x="303.5" y="186">Claude Skill(바뀐 것만)</text></g>
-<g class="node"><rect x="569.5" y="248" width="151" height="36" rx="8"/><text x="645" y="266">결과 형식·근거 검증</text></g>
-<g class="node"><rect x="835.5" y="328" width="84" height="36" rx="8"/><text x="877.5" y="346">요약 메일</text></g>
-<g class="node"><rect x="809" y="408" width="151" height="36" rx="8"/><text x="884.5" y="426">/qa-agent 대시보드</text></g>
+<g class="node"><rect x="708.5" y="248" width="151" height="36" rx="8"/><text x="784" y="266">결과 형식·근거 검증</text></g>
+<g class="node"><rect x="918" y="328" width="84" height="36" rx="8"/><text x="960" y="346">요약 메일</text></g>
+<g class="node"><rect x="891.5" y="408" width="151" height="36" rx="8"/><text x="967" y="426">/qa-agent 대시보드</text></g>
 <g class="node"><rect x="422" y="168" width="201" height="36" rx="8"/><text x="522.5" y="186">변경사항 없음(AI 호출 0회)</text></g>
 <g class="node"><rect x="647" y="168" width="400" height="36" rx="8"/><text x="847" y="186">ALM 변경 리포트(specs/alm-change-report.md, AI 없음)</text></g>
-<g class="node"><rect x="744.5" y="248" width="299" height="36" rx="8"/><text x="894" y="266">변경 리포트 메일·/qa-agent/changes 화면</text></g>
-<g class="node"><rect x="755" y="8" width="153" height="36" rx="8"/><text x="831.5" y="26">담당자 PC 예약 실행</text></g>
-<g class="node"><rect x="669" y="88" width="177" height="36" rx="8"/><text x="757.5" y="106">사양서·지식 폴더 동기화</text></g>
+<g class="node"><rect x="883.5" y="248" width="299" height="36" rx="8"/><text x="1033" y="266">변경 리포트 메일·/qa-agent/changes 화면</text></g>
+<g class="node"><rect x="837.5" y="8" width="153" height="36" rx="8"/><text x="914" y="26">담당자 PC 예약 실행</text></g>
+<g class="node"><rect x="766.5" y="88" width="177" height="36" rx="8"/><text x="855" y="106">사양서·지식 폴더 동기화</text></g>
 <g class="node"><rect x="1071" y="168" width="164" height="36" rx="8"/><text x="1153" y="186">서버 사양서·지식 사본</text></g>
-<g class="node"><rect x="932" y="8" width="160" height="36" rx="8"/><text x="1012" y="26">QA 팀 채팅 요청·첨부</text></g>
-<g class="node"><rect x="870" y="88" width="271" height="36" rx="8"/><text x="1005.5" y="106">VXvue AI 챗봇(Skill·지침·원문 조회)</text></g>
+<g class="node"><rect x="1014.5" y="8" width="160" height="36" rx="8"/><text x="1094.5" y="26">QA 팀 채팅 요청·첨부</text></g>
+<g class="node"><rect x="967.5" y="88" width="271" height="36" rx="8"/><text x="1103" y="106">VXvue AI 챗봇(Skill·지침·원문 조회)</text></g>
 <g class="node"><rect x="1259" y="168" width="151" height="36" rx="8"/><text x="1334.5" y="186">답변·근거·대화 이력</text></g>
-<g class="node"><rect x="1116" y="8" width="86" height="36" rx="8"/><text x="1159" y="26">QA 담당자</text></g>
-<g class="node"><rect x="1165" y="88" width="264" height="36" rx="8"/><text x="1297" y="106">ALM 스킬 안내(specs/alm-skill.md)</text></g>
-<g class="node"><rect x="1434" y="168" width="205" height="36" rx="8"/><text x="1536.5" y="186">공용 가이드·영상·Skill ZIP</text></g>
-<g class="node"><rect x="1067.5" y="248" width="197" height="36" rx="8"/><text x="1166" y="266">제품 스킬과 함께 근거 조회</text></g>
-<g class="node"><rect x="984" y="408" width="84" height="36" rx="8"/><text x="1026" y="426">확인 요청</text></g>
-<g class="node"><rect x="758.5" y="488" width="130" height="36" rx="8"/><text x="823.5" y="506">사람이 원본 확인</text></g>
-<g class="node"><rect x="1226" y="8" width="117" height="36" rx="8"/><text x="1284.5" y="26">결과 형식 검증</text></g>
-<g class="node"><rect x="1453" y="88" width="164" height="36" rx="8"/><text x="1535" y="106">작업 실패·건너뜀 기록</text></g>
+<g class="node"><rect x="1198.5" y="8" width="86" height="36" rx="8"/><text x="1241.5" y="26">QA 담당자</text></g>
+<g class="node"><rect x="1262.5" y="88" width="234" height="36" rx="8"/><text x="1379.5" y="106">스킬 관리(specs/alm-skill.md)</text></g>
+<g class="node"><rect x="1434" y="168" width="370" height="36" rx="8"/><text x="1619" y="186">VXvue·Bellalun·XIPL·ALM 상세와 업데이트·개선 문서</text></g>
+<g class="node"><rect x="1206.5" y="248" width="84" height="36" rx="8"/><text x="1248.5" y="266">근거 조회</text></g>
+<g class="node"><rect x="1066.5" y="408" width="84" height="36" rx="8"/><text x="1108.5" y="426">확인 요청</text></g>
+<g class="node"><rect x="841" y="488" width="130" height="36" rx="8"/><text x="906" y="506">사람이 원본 확인</text></g>
+<g class="node"><rect x="1308.5" y="8" width="117" height="36" rx="8"/><text x="1367" y="26">결과 형식 검증</text></g>
+<g class="node"><rect x="1520.5" y="88" width="164" height="36" rx="8"/><text x="1602.5" y="106">작업 실패·건너뜀 기록</text></g>
 </svg>
 </figure>
 <aside class="callout callout-info"><span class="callout-label">참고</span>
@@ -11454,7 +11456,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <tr><td>VXvue AI 챗봇</td><td><a href="#doc-vxvue-chatbot">specs/vxvue-chatbot.md</a></td><td><span class="badge st-draft">draft</span></td></tr>
 <tr><td>ALM 변경 리포트</td><td><a href="#doc-alm-change-report">specs/alm-change-report.md</a></td><td><span class="badge st-draft">draft</span></td></tr>
 <tr><td>VXvue 활용 이력과 제작자 지표</td><td><a href="#doc-vxvue-usage">specs/vxvue-usage.md</a></td><td><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td>ALM 스킬 안내</td><td><a href="#doc-alm-skill">specs/alm-skill.md</a></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td>스킬 관리와 ALM 안내</td><td><a href="#doc-alm-skill">specs/alm-skill.md</a></td><td><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td>XIPL 공용 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 조회</td><td><a href="#doc-xipl-shared">specs/xipl-shared.md</a></td><td><span class="badge st-verified">verified</span></td></tr>
 </tbody>
 </table></div>
@@ -17558,7 +17560,7 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 </section>
 <section class="chapter" id="doc-alm-skill-sec-2">
 <h2>2. 범위</h2>
-<p>기존 핵심 앱의 정적 파일 제공 기능으로 <code>/static/alm-ai/index.html</code>을 제공한다. QA 홈에 ALM 스킬 카드를 추가한다. 별도 서버 프로세스·DB·로그인·AI <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>·<span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 변경 기능은 추가하지 않는다.</p>
+<p>기존 핵심 앱의 정적 파일 제공 기능으로 <code>/static/alm-ai/index.html</code>을 제공한다. QA 홈의 스킬 관리 카드에서 공통 목록과 개별 안내로 들어간다. 별도 서버 프로세스·DB·로그인·AI <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>·<span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 변경 기능은 추가하지 않는다.</p>
 </section>
 <section class="chapter" id="doc-alm-skill-sec-5">
 <h2>5. 기능 요구사항</h2>
@@ -17571,12 +17573,13 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 <section class="card kind-req" id="REQ-ALMSKILL-001">
 <h3><span class="idtag">REQ-ALMSKILL-001</span> 활용과 설치 안내</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/web/templates/hub.html</code>, <code>app/web/static/alm-ai/index.html</code>, <code>app/web/static/alm-ai/style.css</code></span><span class="meta"><b>테스트</b> <code>tests/test_alm_skill_guide.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-11-03 스킬 관리와 하위 개선 문서</span> <a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a>: 기존 ALM 설치·교육 안내를 스킬 관리의 ALM 상세에서 열도록 했다. 기존 안내 주소는 유지한다.</li>
 <li><span class="hist">2026-11-03 ALM 스킬 안내 화면</span> <a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a>: QA 홈에 ALM 스킬 카드를 추가했다. 기존 웹서버의 안내 화면에서 활용 범위·Codex와 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code 설치·<span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 스킬 병행·<span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span> 예시·자료 한계를 확인할 수 있다.</li>
 </ul>
 </details>
-<p><strong>하는 일</strong> QA 홈의 ALM 스킬 카드로 안내 페이지에 들어간다. 페이지는 활용 범위, Codex와 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code의 준비 사항·ZIP 설치·첫 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>·설치 확인·문제 해결을 설명한다.</p>
+<p><strong>하는 일</strong> QA 홈의 스킬 관리 카드에서 ALM 상세 안내로 들어간다. 페이지는 활용 범위, Codex와 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code의 준비 사항·ZIP 설치·첫 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>·설치 확인·문제 해결을 설명한다.</p>
 <p><strong>순서</strong> 설치 없이 가이드를 읽는 길과 스킬을 설치해 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>하는 길을 함께 제공한다. VXvue AI 안내 및 QA 홈으로 돌아가는 링크를 둔다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 스킬과 함께 쓰는 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span> 예시를 제공한다.</p>
 <p><strong>지킬 것</strong> <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 사양과 공통 ALM 교육을 구분한다. 영상의 화면 표본 검토와 음성 전체 전사, 현재 운영 ALM 시험 여부를 구분한다. CLI 스킬을 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Desktop 전용 확장처럼 안내하지 않는다.</p>
 </section>
@@ -17606,6 +17609,19 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 <p><strong>결과</strong> 스킬 원본은 <code>deploy/alm-skill/alm</code>에서 관리한다. 빌드 도구는 지정한 QA 서버 주소로 설정을 넣은 ZIP을 만들며 기존 출력 파일을 덮어쓰지 않는다. 안내 화면은 필요한 연결과 실제 저장 시험 여부를 구분한다.</p>
 <p><strong>지킬 것</strong> 기존 브라우저 프로필을 복사하거나 쿠키·비밀번호를 추출하지 않는다. 사용자가 지정한 로그인 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>을 새 자동화 전용 브라우저로 대체하지 않는다. 컴퓨터 제어 도구의 별도 확인 정책을 따른다.</p>
 </section>
+<section class="card kind-req" id="REQ-ALMSKILL-004">
+<h3><span class="idtag">REQ-ALMSKILL-004</span> 스킬 관리와 하위 업데이트 문서</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/web/static/skills/index.html</code>, <code>app/web/static/skills/AGENTS.md</code>, <code>app/web/templates/hub.html</code></span><span class="meta"><b>테스트</b> <code>tests/test_skill_management.py</code></span></div>
+<details class="history"><summary>변경 이력 2</summary>
+<ul>
+<li><span class="hist">2026-11-03 스킬 관리와 하위 개선 문서</span> <a class="idref" href="#REQ-ALMSKILL-004">REQ-ALMSKILL-004</a>: QA 홈의 ALM 스킬 카드를 스킬 관리로 통합했다. VXvue·Bellalun·XIPL·ALM 상세 페이지와 개별 업데이트·개선 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 제공한다. Bellalun은 별도 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>의 확정된 연결을 기다리는 상태로 표시한다.</li>
+<li><span class="hist">2026-11-03 스킬 관리와 하위 개선 문서</span> <a class="idref" href="#REQ-ALMSKILL-004">REQ-ALMSKILL-004</a>: 향후 안내·개선 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>와 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>별 배포 파일을 skills의 각 스킬 하위에 관리하고 스킬 변경과 함께 갱신하는 규칙을 추가했다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> QA 홈의 스킬 관리 카드로 <code>/static/skills/index.html</code>을 연다. VXvue·Bellalun·XIPL·ALM 네 상세 페이지와 각 업데이트·개선 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 제공한다.</p>
+<p><strong>순서</strong> 상세 페이지는 목적·사용 방법·현재 제공 상태와 기존 안내로 연결한다. Bellalun <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>의 결과가 확인되기 전에는 연결 준비 중으로 표시한다. 기존 VXvue·ALM 안내 주소와 설치·인증 경로는 유지한다.</p>
+<p><strong>지킬 것</strong> 새 안내·개선 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 <code>app/web/static/skills/&lt;스킬&gt;/</code> 하위에 작성한다. 향후 배포 파일은 같은 하위의 <code>releases/&lt;버전&gt;/</code>에 보존하고, 업데이트 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>와 상세 페이지를 같은 변경으로 갱신한다. 완료한 변경과 개선 예정·미검증을 구분한다. 다른 <span class="term" title="로그인 상태다. 서버 DB 의 sessions 한 줄과 브라우저 쿠키(qamh_session) 한 개로 이루어진다" tabindex="0">세션</span>이 만드는 스킬 본체를 덮어쓰지 않는다. 파일 감시나 자동 배포 기능으로 설명하지 않는다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-alm-skill-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -17630,6 +17646,7 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a></td><td data-label="Implementation"><code>app/web/templates/hub.html</code>, <code>app/web/static/alm-ai/index.html</code>, <code>app/web/static/alm-ai/style.css</code></td><td data-label="Test"><code>tests/test_alm_skill_guide.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-002">REQ-ALMSKILL-002</a></td><td data-label="Implementation"><code>app/web/static/alm-ai/guide.js</code></td><td data-label="Test"><code>tests/test_alm_skill_guide.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a></td><td data-label="Implementation"><code>deploy/alm-skill/alm/SKILL.md</code>, <code>deploy/alm-skill/alm/references/browser-operations.md</code>, <code>scripts/build_alm_skill.py</code></td><td data-label="Test"><code>tests/test_alm_skill_package.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-004">REQ-ALMSKILL-004</a></td><td data-label="Implementation"><code>app/web/static/skills/index.html</code>, <code>app/web/static/skills/AGENTS.md</code>, <code>app/web/templates/hub.html</code></td><td data-label="Test"><code>tests/test_skill_management.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 </tbody>
 </table></div>
 </section>
