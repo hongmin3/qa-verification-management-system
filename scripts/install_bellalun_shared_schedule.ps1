@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)][string]$Python,
     [Parameter(Mandatory=$true)][string]$SkillRoot,
     [Parameter(Mandatory=$true)][string]$KnowledgeRoot,

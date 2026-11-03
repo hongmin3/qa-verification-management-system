@@ -77,6 +77,6 @@ Skill ZIP은 개인 경로·키·제품 원문 없이 서버 도구 순서만 �
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
-| REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | draft |
-| REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py` | draft |
-| REQ-BELLALUNSHARED-003 | `app/web/static/bellalun-ai/index.html`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_bellalun_shared.py` | draft |
+| REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |
+| REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/snapshot_files.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py`, `tests/test_snapshot_files.py` | verified |
+| REQ-BELLALUNSHARED-003 | `app/web/static/skills/bellalun/index.html`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_bellalun_shared.py`, `tests/test_skill_management.py` | verified |

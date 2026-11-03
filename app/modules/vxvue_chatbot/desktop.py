@@ -510,7 +510,7 @@ def download_skill():
 def download_bellalun_skill():
     from scripts.build_vxvue_desktop import _zip
     source = Path(__file__).resolve().parents[3] / "deploy/bellalun-skill/bellalun-server-ai/SKILL.md"
-    return Response(_zip((("bellalun-server-ai/SKILL.md", source.read_bytes()),)), media_type="application/zip",
+    return Response(_zip((("bellalun-server-ai/SKILL.md", source.read_bytes().replace(b"\r\n", b"\n")),)), media_type="application/zip",
                     headers={"Content-Disposition": 'attachment; filename="bellalun-server-ai-skill.zip"', "Cache-Control": "no-store"})
 
 

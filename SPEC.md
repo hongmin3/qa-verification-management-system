@@ -8716,7 +8716,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | VXvue 활용 이력과 제작자 지표 | [specs/vxvue-usage.md](specs/vxvue-usage.md) | implemented |
 | 스킬 관리와 ALM 안내 | [specs/alm-skill.md](specs/alm-skill.md) | implemented |
 | XIPL 공용 문서 조회 | [specs/xipl-shared.md](specs/xipl-shared.md) | verified |
-| Bellalun 공용 서버 지식과 Skill | [specs/bellalun-shared.md](specs/bellalun-shared.md) | draft |
+| Bellalun 공용 서버 지식과 Skill | [specs/bellalun-shared.md](specs/bellalun-shared.md) | verified |
 
 <!-- spec-index: end -->
 

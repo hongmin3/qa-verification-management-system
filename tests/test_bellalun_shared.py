@@ -241,4 +241,6 @@ def test_bellalun_download_contains_portable_skill(shared):
     for word in ('Claude Desktop', 'Claude Code', 'Codex', 'bellalun_get_status', 'Redmine', '동기화'):
         assert word in text
     release = guide.parent / 'releases/2026-11-03.1/bellalun-server-ai-skill.zip'
-    assert release.read_bytes() == response.content
+    with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
+        assert archive.namelist() == dynamic.namelist()
+        assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())
