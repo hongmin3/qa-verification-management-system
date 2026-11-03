@@ -313,6 +313,28 @@ def test_replace_registers_the_upload_under_the_target_name_and_drops_the_target
     assert _names(env) == sorted([ALM_PDF, expected])
 
 
+def test_json_replace_returns_the_finished_registration_instead_of_a_redirect(env):
+    """화면은 교체가 끝난 결과를 받아 크기를 맞춰 본 뒤 완료 팝업을 띄운다 (REQ-KNOW-020, TEST-KNOW-010 8)."""
+    import hashlib
+
+    _upload(env, "auto-spec", VSS_OLD, _xlsx("옛 VSS"))
+    target = _doc(env, VSS_OLD)
+    sent = _xlsx("새 VSS")
+    response = env.client.post("/knowledge/products/auto-spec/documents", headers={"Accept": "application/json"},
+                               data={"kind": "specification", "replace_id": str(target["id"])},
+                               files={"file": ("VSS_spec_최종.xlsx", sent)}, follow_redirects=False)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    new = _doc(env, body["name"])
+    assert body["status"] == "DONE"
+    assert body["document_id"] == new["id"]
+    assert body["replaced"] == [VSS_OLD]
+    assert body["size"] == len(sent)
+    assert body["sha256"] == hashlib.sha256(sent).hexdigest()
+    assert _names(env) == [body["name"]]
+
+
 def test_new_document_registration_keeps_the_uploaded_name(env):
     response = _upload(env, "auto-spec", "VSS_spec_최종.xlsx", _xlsx("새 VSS"))
 

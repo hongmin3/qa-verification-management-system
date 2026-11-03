@@ -131,8 +131,13 @@ def _optional_id(value: str) -> int | None:
     return int(value)
 
 
-def _register(config, kind: str, file: UploadFile, replace_id: int | None, source: str = "", version: str = ""):
-    """등록·교체 공통 처리 (REQ-KNOW-003·004). 출처 확인은 파일을 저장하기 전에 한다. 성공하면 제품 상세로 303."""
+def _register(config, kind: str, file: UploadFile, replace_id: int | None, source: str = "", version: str = "",
+              *, as_json: bool = False):
+    """등록·교체 공통 처리 (REQ-KNOW-003·004). 출처 확인은 파일을 저장하기 전에 한다. 성공하면 제품 상세로 303.
+
+    `as_json` 이면 등록과 이전 문서 정리를 마친 결과를 JSON 으로 돌려준다. 화면은 받은 크기를 보낸 크기와
+    맞춰 본 뒤 완료 팝업을 띄운다 (REQ-KNOW-020).
+    """
     if kind not in REGISTERABLE_KINDS:
         raise HTTPException(400, f"등록할 수 없는 종류입니다: {kind}")
     uploaded_name = file.filename or ""
@@ -155,16 +160,37 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
         params = {"filename": path.name, "product": config.product, "version": version, "original_name": original_name}
         if replace_id is not None:
             params["replace_id"] = replace_id
-        return RedirectResponse(f"/knowledge/testcase/map?{urlencode(params)}", status_code=303)
+        url = f"/knowledge/testcase/map?{urlencode(params)}"
+        return {"status": "NEEDS_MAPPING", "next": url} if as_json else RedirectResponse(url, status_code=303)
     except RegistrationError as exc:
         raise HTTPException(exc.status, exc.message)
+    if as_json:
+        saved = storage.get_document(outcome.document_id) or {}
+        saved_path = Path(saved.get("path") or path)
+        return {"status": "DONE", "name": outcome.name, "document_id": outcome.document_id, "replaced": outcome.replaced,
+                "size": saved_path.stat().st_size, "sha256": _file_sha256(saved_path), "summary": outcome.summary()}
     return RedirectResponse(_detail_url(config, outcome.summary()), status_code=303)
 
 
+def _file_sha256(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _wants_json(request: Request) -> bool:
+    return "application/json" in request.headers.get("accept", "")
+
+
 @router.post("/knowledge/products/{slug}/documents")
-def upload_product_document(slug: str, kind: str = Form(...), file: UploadFile = File(...), replace_id: str = Form("")):
+def upload_product_document(request: Request, slug: str, kind: str = Form(...), file: UploadFile = File(...),
+                            replace_id: str = Form("")):
     config = _config_or_404(slug)
-    return _register(config, kind.strip(), file, _optional_id(replace_id))
+    return _register(config, kind.strip(), file, _optional_id(replace_id), as_json=_wants_json(request))
 
 
 @router.post("/knowledge/sync/product-knowledge")

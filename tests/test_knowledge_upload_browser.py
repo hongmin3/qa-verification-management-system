@@ -107,6 +107,89 @@ def test_server_refusal_still_shows_the_server_reason(env, browser_page, tmp_pat
     assert seen["alerts"] == ["등록할 수 없는 종류입니다: x"]
 
 
+REPLACE_INPUT = "form.kn-upload-form:has(input[name=replace_id]) input[type=file]"
+
+
+def _forward(env, route):
+    """브라우저가 보낸 요청을 실제 라우터에 그대로 넘기고 그 응답으로 채운다."""
+    request = route.request
+    headers = {key: value for key, value in request.headers.items() if key in ("content-type", "accept")}
+    response = env.client.post(request.url.replace(ORIGIN, ""), content=request.post_data_buffer, headers=headers,
+                               follow_redirects=False)
+    route.fulfill(status=response.status_code, body=response.content,
+                  headers={key: value for key, value in response.headers.items() if key in ("content-type", "location")})
+    return response
+
+
+def _wait_posts(page, held):
+    for _ in range(100):
+        if held:
+            return
+        page.wait_for_timeout(50)
+
+
+def test_replace_shows_a_spinner_then_a_completion_popup_after_the_real_router_finishes(env, browser_page, tmp_path):
+    _upload(env, "auto-spec", "(사양서) VSS Specification (261006).xlsx", _xlsx("옛 사양"))
+    page = browser_page
+    held = []
+    seen = _serve(page, env, "/knowledge/products/auto-spec", held.append)
+    picked = _file(tmp_path)
+    page.locator(REPLACE_INPUT).first.set_input_files(picked)
+    _wait_posts(page, held)
+
+    assert held, "교체 요청을 보내지 않았다"
+    assert held[0].request.headers.get("accept") == "application/json"
+    busy = page.locator("#kn-busy")
+    assert busy.is_visible(), "교체하는 동안 로딩 원이 보이지 않는다"
+    assert "등록 확인 중" in busy.text_content() or "보내는 중" in busy.text_content()
+
+    response = _forward(env, held[0])
+    assert response.status_code == 200, response.text
+    _wait_alert(page, seen)
+    message = seen["alerts"][0]
+    assert "교체가 완료되었습니다." in message
+    assert response.json()["name"] in message
+    assert f"{Path(picked).stat().st_size:,}" in message
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(300)
+    assert not page.locator("#kn-busy").is_visible()
+    assert response.json()["name"] in page.content()
+
+
+def test_size_mismatch_is_reported_instead_of_a_completion_popup(env, browser_page, tmp_path):
+    _upload(env, "auto-spec", "(사양서) VSS Specification (261006).xlsx", _xlsx("옛 사양"))
+    page = browser_page
+    body = json.dumps({"status": "DONE", "name": "x.xlsx", "document_id": 9, "replaced": [], "size": 1, "sha256": "0"})
+    seen = _serve(page, env, "/knowledge/products/auto-spec",
+                  lambda route: route.fulfill(status=200, body=body, headers={"content-type": "application/json"}))
+    page.locator(REPLACE_INPUT).first.set_input_files(_file(tmp_path))
+    _wait_alert(page, seen)
+
+    assert any("서버가 받은 파일 크기가 다릅니다" in message for message in seen["alerts"]), seen["alerts"]
+    assert not any("완료되었습니다" in message for message in seen["alerts"])
+    assert not page.locator("#kn-busy").is_visible()
+
+
+def test_file_that_cannot_be_read_is_not_sent(env, browser_page, tmp_path):
+    """고른 뒤 파일이 바뀌거나 사라지면 보내기 전에 알린다 (2026-11-03 교체 중 연결 끊김)."""
+    _upload(env, "auto-spec", "(사양서) VSS Specification (261006).xlsx", _xlsx("옛 사양"))
+    page = browser_page
+    picked = Path(_file(tmp_path))
+
+    def remove_before_confirm(dialog):   # 확인 창을 수락하기 전에 지운다(_serve 의 수락보다 먼저 등록)
+        if dialog.type == "confirm" and picked.exists():
+            picked.unlink()
+
+    page.on("dialog", remove_before_confirm)
+    seen = _serve(page, env, "/knowledge/products/auto-spec", lambda route: route.abort("failed"))
+    page.locator(REPLACE_INPUT).first.set_input_files(str(picked))
+    _wait_alert(page, seen)
+
+    assert any("파일을 읽지 못했습니다" in message and "기존 문서는 그대로" in message for message in seen["alerts"]), seen["alerts"]
+    assert seen["posts"] == []
+    assert not page.locator("#kn-busy").is_visible()
+
+
 def test_collect_request_that_never_reaches_the_server_shows_an_alert(env, browser_page):
     page = browser_page
     seen = _serve(page, env, "/knowledge/products/vxvue", lambda route: route.abort("failed"))
