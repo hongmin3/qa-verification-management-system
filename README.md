@@ -8,7 +8,7 @@
 
 챗봇은 서버 Claude CLI와 VXvue Skill을 사용하며, 동기화한 최신 지침 프롬프트 TXT와 QA 규칙 MD 전문을 적용합니다. 사용법은 앱의 `/vxvue-chatbot/guide`에 있습니다.
 
-QA 홈의 **스킬 관리**(`/static/skills/index.html`)에서 VXvue·Bellalun·XIPL·ALM의 상세 안내와 각 하위 업데이트·개선 문서를 확인합니다. Bellalun의 새 서버 연결은 준비 중입니다. ALM 상세에서는 기존 교육 자료와 Codex·Claude Code 설치 안내로 연결합니다.
+QA 홈의 **스킬 관리**(`/static/skills/index.html`)에서 카드를 누르면 각 스킬의 실제 상세 사용 안내가 바로 열립니다. VXvue·ALM은 기존 안내로, XIPL·Bellalun은 각 하위 가이드로 연결하며 업데이트·개선 문서는 목록에서 별도로 엽니다. Bellalun의 새 서버 연결은 준비 중입니다.
 
 ALM 스킬에는 로그인된 기존 Edge·Chrome에서 구체적으로 요청한 작업을 수행하고 저장 결과를 재조회하는 절차도 포함됩니다. 실제 작업에는 해당 세션을 제어할 수 있는 Computer Use 연결이 필요하며, ALM 저장 동작은 아직 시험하지 않았습니다.
 
