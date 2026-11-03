@@ -127,6 +127,10 @@ class KnowledgeTools:
         return text_content({"name": a["name"], "results": chunks[offset:offset + limit], "warnings": warnings, "truncated": offset + limit < len(chunks), "next_offset": offset + limit, "untrusted_attachment": True})
 
     def call(self, name, arguments):
+        if name == "make_word_report":
+            from app.core.config import get_settings
+            from app.modules.vxvue_chatbot.word_reports import create
+            return create(get_settings().root, **arguments)
         if name in ("get_redmine_issue", "search_redmine_issues", "read_redmine_result"):
             from app.modules.vxvue_chatbot.redmine import call as redmine_call
             return redmine_call(name, arguments)
@@ -302,7 +306,8 @@ def tools():
         ("read_attachment", "현재 대화의 첨부 원문·표·이미지를 읽는다. PDF 이미지는 page를 지정.", {"attachment_id": string, "offset": integer, "limit": integer, "page": {"type": "integer", "minimum": 1}}, ["attachment_id"]),
     ]
     from app.modules.vxvue_chatbot.redmine import definitions as redmine_definitions
-    return redmine_definitions() + [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
+    from app.modules.vxvue_chatbot.word_reports import definitions as word_definitions
+    return word_definitions() + redmine_definitions() + [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
 
 
 def serve(session, source=sys.stdin, target=sys.stdout):

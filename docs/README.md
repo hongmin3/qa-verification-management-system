@@ -149,3 +149,5 @@
 | `qa-agent-*.md` | QA Agent (`qa-agent-dev`) · 제품 지식 자산 (`product-knowledge`) |
 | `core-documentation.md` | 문서 작업 (`documentation`) |
 | `manual-hub-*.md` | 하위 서비스 QA Manual Hub (`manual-hub-dev` / `-auth` / `-ui` / `-deploy` / `-backup`) |
+
+제출용 Word 기본 양식과 생성 기준은 [챗봇 기능 사양](../specs/vxvue-chatbot.md#req-vxvuechatbot-018-제출용-word-기본-양식)을 따른다. 사용법은 앱의 /vxvue-chatbot/guide에 있다.

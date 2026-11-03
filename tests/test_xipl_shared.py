@@ -78,6 +78,11 @@ def value(result):
 
 def test_shared_rpc_status_search_source_and_pdf_without_vxvue_rules(shared):
     client, _, _, word = shared
+    listed=client.post('/vxvue-desktop/rpc',json={'jsonrpc':'2.0','id':2,'method':'tools/list'}).json()
+    definitions={t['name']:t for t in listed['result']['tools']}
+    assert 'make_word_report' in definitions and 'xipl_get_status' in definitions
+    assert definitions['make_word_report']['annotations']['readOnlyHint'] is False
+    assert definitions['xipl_get_document']['annotations']['readOnlyHint'] is True
     status = value(rpc(client, "xipl_get_status"))
     assert status["scope"]["files"] == 3
     sid = status["snapshot_id"]
