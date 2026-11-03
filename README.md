@@ -14,6 +14,8 @@ ALM 스킬에는 로그인된 기존 Edge·Chrome에서 구체적으로 요청�
 
 로컬 Skill의 지침·참조 MD도 기존 지식폴더의 자동 생성 문서로 동기화합니다. 업무 규칙은 그 폴더에서 계속 관리하고, 검색 도구 변경은 검증 후 배포합니다. [Skill 동기화 기준](docs/VXVUE_SKILL_SYNC_PLAN.md)을 참고하세요.
 
+VXvue와 Bellalun이 함께 쓰는 XIPL 매뉴얼·개정 이력은 서버의 XIPL 자료함에서 한 번 수집합니다. 기존 AI 연결의 `xipl_` 조회 도구로 같은 문서 판을 읽고, 제품별 적용 사양과 라이선스는 각 제품의 기존 도구로 확인합니다. [XIPL 공용 조회](specs/xipl-shared.md)에 범위와 검증 기준이 있습니다.
+
 Opus medium을 유지하면서 공통 지침 캐시와 묶음 조회로 반복 입력을 줄입니다. [챗봇 사용량 절감 계획](docs/VXVUE_CHATBOT_COST_PLAN.md)에 적용 방법과 측정 기준을 정리했습니다.
 
 제작자는 별도 인증 후 선택한 본인 질문·답변·활용 요약과 팀의 본문 없는 익명 실행 지표를 확인할 수 있습니다. 원문 기능은 HTTPS 또는 본인 PC의 SSH loopback 연결에서 제공하며, 기존 팀 HTTP 연결은 호출 통계만 남깁니다. 수집·권한·보관·CSV 공개 범위는 [VXvue 활용 이력 사양](specs/vxvue-usage.md)을 따릅니다.

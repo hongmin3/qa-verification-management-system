@@ -88,6 +88,8 @@ def _option(command: list[str], name: str) -> str:
 
 # Validates: REQ-AICALL-005, REQ-AICALL-001
 def test_claude_provider_runs_cli_with_isolated_arguments(tmp_path, monkeypatch, workdir):
+    # Model a CLI available on PATH; a real user's ~/.local/bin must not alter this fake-runner test.
+    monkeypatch.setattr(claude_cli.shutil, "which", lambda name: "/test-bin/claude" if name == "claude" else None)
     runner = FakeRunner(_result())
     client = _client(tmp_path, monkeypatch, runner, workdir, effort="low")
 

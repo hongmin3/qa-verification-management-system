@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v7">
 <meta name="spec-html-renderer" content="v7">
-<meta name="spec-source-sha256" content="80bc257a18ea925b6e131acf32b806462b8d6ba8c3eae26f54c0298b7f779efa">
+<meta name="spec-source-sha256" content="bb5e95caeca7c8f842d2f3e6d8ba2fc345c9195e1e852b203deae6e3e03dd431">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>329</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>203</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>225</b><span>implemented</span></div><div class="stat st-verified"><b>85</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>333</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>205</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>225</b><span>implemented</span></div><div class="stat st-verified"><b>88</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -644,6 +644,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015 <span>한 PC의 Claude·Codex 연결 Skill 맞춤</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016 <span>Redmine 이슈 읽기와 범위 확인</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017 <span>상태 재시도와 승인된 로그 경로</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018 <span>제출용 Word 기본 양식</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -701,7 +702,18 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-ALMSKILL-001">TEST-ALMSKILL-001 <span>안내 진입과 본문</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMSKILL-002">TEST-ALMSKILL-002 <span>자료 연결과 실패</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-ALMSKILL-003">TEST-ALMSKILL-003 <span>스킬 패키지와 작업 경계</span></a></li>
-<li class="toc-2"><a href="#doc-alm-skill-sec-12">12. 요구사항 추적성</a></li></ul>
+<li class="toc-2"><a href="#doc-alm-skill-sec-12">12. 요구사항 추적성</a></li>
+<li class="toc-2"><a href="#doc-xipl-shared">XIPL 공용 문서 조회</a></li>
+<li class="toc-2"><a href="#doc-xipl-shared-sec-1">1. 목적과 범위</a></li>
+<li class="toc-2"><a href="#doc-xipl-shared-sec-2">2. 사용 순서</a></li>
+<li class="toc-2"><a href="#doc-xipl-shared-sec-5">5. 요구사항</a></li>
+<li class="toc-id kind-req"><a href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001 <span>XIPL 원문 수집</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-XIPLSHARED-002">REQ-XIPLSHARED-002 <span>같은 판에서 검색과 원문 조회</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-XIPLSHARED-003">REQ-XIPLSHARED-003 <span>두 제품의 조회 경로 유지</span></a></li>
+<li class="toc-2"><a href="#doc-xipl-shared-sec-11">11. 테스트 사양</a></li>
+<li class="toc-id kind-test"><a href="#TEST-XIPLSHARED-001">TEST-XIPLSHARED-001 <span>원문 수집 분류</span></a></li>
+<li class="toc-id kind-test"><a href="#TEST-XIPLSHARED-002">TEST-XIPLSHARED-002 <span>인증된 연결의 판 고정 조회</span></a></li>
+<li class="toc-2"><a href="#doc-xipl-shared-sec-12">12. 추적성</a></li></ul>
 </nav>
 <main>
 <section class="chapter" id="feature-index">
@@ -1086,6 +1098,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></td><td data-label="이름">한 PC의 Claude·Codex 연결 Skill 맞춤</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>scripts/sync_vxvue_local_skill.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007</a>: <code>tests/test_sync_vxvue_local_skill.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-016">REQ-VXVUECHATBOT-016</a></td><td data-label="이름">Redmine 이슈 읽기와 범위 확인</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code></td><td data-label="테스트"><code>tests/test_vxvue_redmine.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="이름">상태 재시도와 승인된 로그 경로</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="테스트"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a></td><td data-label="이름">제출용 Word 기본 양식</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -1107,6 +1120,10 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a></td><td data-label="이름">활용과 설치 안내</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/templates/hub.html</code>, <code>app/web/static/alm-ai/index.html</code>, <code>app/web/static/alm-ai/style.css</code></td><td data-label="테스트"><code>tests/test_alm_skill_guide.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-002">REQ-ALMSKILL-002</a></td><td data-label="이름">현재 자료 판과 다운로드</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/web/static/alm-ai/guide.js</code></td><td data-label="테스트"><code>tests/test_alm_skill_guide.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a></td><td data-label="이름">기존 로그인 브라우저 작업 절차와 스킬 배포</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>deploy/alm-skill/alm/SKILL.md</code>, <code>deploy/alm-skill/alm/references/browser-operations.md</code>, <code>scripts/build_alm_skill.py</code></td><td data-label="테스트"><code>tests/test_alm_skill_package.py</code></td></tr>
+<tr class="group"><th colspan="5"><span class="gcode">XIPLSHARED</span> XIPL 공용 자료</th></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a></td><td data-label="이름">XIPL 원문 수집</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>config/products/xipl.yaml</code></td><td data-label="테스트"><code>tests/test_xipl_shared.py</code>, <code>tests/test_knowledge_sync_integrity.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-XIPLSHARED-002">REQ-XIPLSHARED-002</a></td><td data-label="이름">같은 판에서 검색과 원문 조회</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/shared_knowledge/service.py</code></td><td data-label="테스트"><code>tests/test_xipl_shared.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-XIPLSHARED-003">REQ-XIPLSHARED-003</a></td><td data-label="이름">두 제품의 조회 경로 유지</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/desktop.py</code></td><td data-label="테스트"><code>tests/test_xipl_shared.py</code>, <code>tests/test_vxvue_desktop.py</code></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -7183,7 +7200,7 @@ python scripts/rule_capability_report.py --markdown
 </section>
 <section class="card kind-req" id="REQ-KNOW-012">
 <h3><span class="idtag">REQ-KNOW-012</span> 수집본을 분석 대상으로 등록하고 옛 판 정리</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/product_knowledge.py</code>, <code>app/core/knowledge_upload.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-KNOW-005">TEST-KNOW-005</a>: <code>tests/test_knowledge_upload.py</code>, <code>tests/test_knowledge_sync_integrity.py</code>, <a class="idref" href="#TEST-SYNC-004">TEST-SYNC-004</a>: <code>tests/test_knowledge_pull.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-007">REQ-KNOW-007</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-021">REQ-KNOW-021</a>, <a class="idref" href="#REQ-KNOW-022">REQ-KNOW-022</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>, <a class="idref" href="#REQ-SYNC-004">REQ-SYNC-004</a>, <a class="idref" href="#TEST-KNOW-005">TEST-KNOW-005</a>, <a class="idref" href="#TEST-SYNC-004">TEST-SYNC-004</a></span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/product_knowledge.py</code>, <code>app/core/knowledge_upload.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-KNOW-005">TEST-KNOW-005</a>: <code>tests/test_knowledge_upload.py</code>, <code>tests/test_knowledge_sync_integrity.py</code>, <a class="idref" href="#TEST-SYNC-004">TEST-SYNC-004</a>: <code>tests/test_knowledge_pull.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-007">REQ-KNOW-007</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-021">REQ-KNOW-021</a>, <a class="idref" href="#REQ-KNOW-022">REQ-KNOW-022</a>, <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>, <a class="idref" href="#REQ-SYNC-004">REQ-SYNC-004</a>, <a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a>, <a class="idref" href="#TEST-KNOW-005">TEST-KNOW-005</a>, <a class="idref" href="#TEST-SYNC-004">TEST-SYNC-004</a></span></div>
 <details class="history"><summary>변경 이력 4</summary>
 <ul>
 <li><span class="hist">2026-11-02 지식 폴더와 서버의 양방향 동기화, 매일 10:00</span> <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>: <span class="term" title="검증에 한 번 올린 개정본 한 건이다. 검증 이력의 한 줄이 된다" tabindex="0">리비전</span>으로 가릴 수 없는 같은 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 더 나중에 바뀐 쪽을 따른다. 화면 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 뒤 <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span>에서 고친 파일이 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>되고 화면 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>본은 &quot;화면 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 뒤 <span class="term" title="QA 가 사양서·매뉴얼·TC·QA 규칙 최신본을 모아 두는 담당자 PC 의 폴더" tabindex="0">지식 폴더</span>에서 바뀜&quot;으로 빠진다. 전에는 화면 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>본이 늘 이겨 폴더에서 고친 내용이 반영되지 않았다.</li>
@@ -8135,8 +8152,9 @@ python scripts/rule_capability_report.py --markdown
 <section class="card kind-req" id="REQ-AICALL-005">
 <h3><span class="idtag">REQ-AICALL-005</span> Claude CLI 로 AI 판정 받기</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/claude_cli.py</code>, <code>app/core/gemini_client.py</code>, <code>app/core/model_router.py</code>, <code>config.yaml</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a>: <code>tests/test_claude_cli_provider.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-AICALL-001">REQ-AICALL-001</a>, <a class="idref" href="#REQ-AICALL-003">REQ-AICALL-003</a>, <a class="idref" href="#REQ-DAILY-016">REQ-DAILY-016</a>, <a class="idref" href="#REQ-QAINTEL-026">REQ-QAINTEL-026</a>, <a class="idref" href="#TEST-AICALL-004">TEST-AICALL-004</a></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-11-03 XIPL 공용 매뉴얼과 개정 이력 조회</span> <a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a>: 가짜 CLI 실행기 시험에서 PATH 탐색도 고정한다. 실제 사용자 홈에 설치된 CLI 경로 때문에 격리 인자 시험의 기대값이 달라지던 환경 의존성을 제거했다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 CLI 탐색 동작은 바꾸지 않았다.</li>
 <li><span class="hist">2026-09-30 · 화면 기능의 AI 판정을 Claude CLI 로 전환</span> <a class="idref" href="#REQ-AICALL-005">REQ-AICALL-005</a>: <span class="term" title="한 곳을 고친 뒤 원래 되던 기능이 망가지지 않았는지 다시 시험하는 것" tabindex="0">Regression</span> 영향 분석, QA Agent, 매뉴얼 개정 검증이 기본으로 <span class="term" title="Claude 를 명령줄에서 부르는 프로그램(claude). 이 시스템은 claude -p 로 사람 없이 한 번씩 부른다" tabindex="0">Claude CLI</span>(<code>claude -p</code>)에서 <span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>을 받는다. 응답 형식은 <code>--json-schema</code> 로 고정한다. 도구는 하나도 주지 않고, 저장소 밖 빈 폴더(<code>~/.qa-ai-workspace</code>)에서 사용자 설정과 MCP 없이 실행한다. <code>config.yaml</code> 의 <code>ai.provider: gemini</code> 로 바꾸면 예전처럼 <span class="term" title="Google 의 생성형 AI. 설정(ai.provider: gemini)으로 고르면 QA Agent·매뉴얼 개정 검토이 Claude 대신 부른다" tabindex="0">Gemini</span> API 를 쓴다.</li>
 </ul>
 </details>
@@ -9370,7 +9388,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-req" id="REQ-SYNC-002">
 <h3><span class="idtag">REQ-SYNC-002</span> 지식 폴더 업로드</h3>
-<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-005">REQ-KNOW-005</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>, <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-KNOW-017">REQ-KNOW-017</a>, <a class="idref" href="#REQ-KNOW-018">REQ-KNOW-018</a>, <a class="idref" href="#REQ-KNOW-021">REQ-KNOW-021</a>, <a class="idref" href="#REQ-KNOW-022">REQ-KNOW-022</a>, <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a>, <a class="idref" href="#REQ-QAINTEL-022">REQ-QAINTEL-022</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-003">REQ-SYNC-003</a>, <a class="idref" href="#REQ-SYNC-004">REQ-SYNC-004</a>, <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a></span></div>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-KNOW-005">REQ-KNOW-005</a>, <a class="idref" href="#REQ-KNOW-011">REQ-KNOW-011</a>, <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>, <a class="idref" href="#REQ-KNOW-016">REQ-KNOW-016</a>, <a class="idref" href="#REQ-KNOW-017">REQ-KNOW-017</a>, <a class="idref" href="#REQ-KNOW-018">REQ-KNOW-018</a>, <a class="idref" href="#REQ-KNOW-021">REQ-KNOW-021</a>, <a class="idref" href="#REQ-KNOW-022">REQ-KNOW-022</a>, <a class="idref" href="#REQ-OPS-004">REQ-OPS-004</a>, <a class="idref" href="#REQ-QAINTEL-022">REQ-QAINTEL-022</a>, <a class="idref" href="#REQ-SCHED-002">REQ-SCHED-002</a>, <a class="idref" href="#REQ-SYNC-001">REQ-SYNC-001</a>, <a class="idref" href="#REQ-SYNC-003">REQ-SYNC-003</a>, <a class="idref" href="#REQ-SYNC-004">REQ-SYNC-004</a>, <a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a>, <a class="idref" href="#TEST-SYNC-002">TEST-SYNC-002</a></span></div>
 <details class="history"><summary>변경 이력 10</summary>
 <ul>
 <li><span class="hist">2026-11-02 지식 폴더와 서버의 양방향 동기화, 매일 10:00</span> <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>: 매일 업로드 시각을 08:00 에서 10:00 KST 로 옮겼다. 늦게 출근하는 날도 그날 업로드를 놓치지 않게 하려는 사용자 요청이다.</li>
@@ -11437,6 +11455,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <tr><td>ALM 변경 리포트</td><td><a href="#doc-alm-change-report">specs/alm-change-report.md</a></td><td><span class="badge st-draft">draft</span></td></tr>
 <tr><td>VXvue 활용 이력과 제작자 지표</td><td><a href="#doc-vxvue-usage">specs/vxvue-usage.md</a></td><td><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td>ALM 스킬 안내</td><td><a href="#doc-alm-skill">specs/alm-skill.md</a></td><td><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td>XIPL 공용 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 조회</td><td><a href="#doc-xipl-shared">specs/xipl-shared.md</a></td><td><span class="badge st-verified">verified</span></td></tr>
 </tbody>
 </table></div>
 </section>
@@ -16599,6 +16618,16 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>하는 일</strong> 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 get_status의 timeout만 1초 간격으로 총 3회까지 재시도한다. 계속 실패하거나 다른 오류이면 원인과 확인사항을 알린다. 로컬 색인·rawfile·다른 연결로 옮기기 전에 사용자 승인을 받는다.</p>
 <p><strong>지킬 것</strong> 승인된 QA 통합 원문의 29.8절에 있는 정확한 로그 공유 템플릿만 해당 지침과 원문 전달에서 보존한다. 일반 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>·대화·다른 UNC·고객 경로에는 예외를 적용하지 않는다. 전문을 보호한 뒤 자르고 보호 결과의 문자 위치와 전체 길이를 유지한다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-018">
+<h3><span class="idtag">REQ-VXVUECHATBOT-018</span> 제출용 Word 기본 양식</h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-03</span> <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a>: Word 요청 시 표지와 서명란이 있는 Guide 양식으로 DOCX를 만들고 다운로드 주소를 제공한다. 미지정 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 정보는 빈칸으로 둔다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> Word 파일을 요청하면 서버의 Guide 양식으로 DOCX를 만든다. 표지와 Creator·Reviewer·Approver 서명란, 본문 서식과 자동 페이지 번호를 유지한다. 제목과 절별 본문·표를 받는다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>번호·개정·날짜·담당자는 제공받은 값만 쓰고 미지정 값은 빈칸으로 둔다. 서명·승인·검증 결과를 임의로 채우지 않는다. 별도 양식 요청을 우선한다.</p>
+<p><strong>지킬 것</strong> 사내 양식과 생성 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 Git에 넣지 않는다. 양식이 없으면 오류를 알린다. 원본 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 수정하지 않는다. 결과는 무작위 주소로 내려받으며 주소를 아는 사내 사용자는 접근할 수 있다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -16654,6 +16683,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="Test"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
+<p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">
 <h2>QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</h2>
@@ -17600,6 +17630,109 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-001">REQ-ALMSKILL-001</a></td><td data-label="Implementation"><code>app/web/templates/hub.html</code>, <code>app/web/static/alm-ai/index.html</code>, <code>app/web/static/alm-ai/style.css</code></td><td data-label="Test"><code>tests/test_alm_skill_guide.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-002">REQ-ALMSKILL-002</a></td><td data-label="Implementation"><code>app/web/static/alm-ai/guide.js</code></td><td data-label="Test"><code>tests/test_alm_skill_guide.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a></td><td data-label="Implementation"><code>deploy/alm-skill/alm/SKILL.md</code>, <code>deploy/alm-skill/alm/references/browser-operations.md</code>, <code>scripts/build_alm_skill.py</code></td><td data-label="Test"><code>tests/test_alm_skill_package.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+</tbody>
+</table></div>
+</section>
+<section class="chapter" id="doc-xipl-shared">
+<h2>XIPL 공용 문서 조회</h2>
+<p><code>specs/xipl-shared.md</code></p>
+</section>
+<section class="chapter" id="doc-xipl-shared-sec-1">
+<h2>1. 목적과 범위</h2>
+<p>VXvue와 Bellalun 담당자가 같은 XIPL 매뉴얼과 개정 이력을 조회한다.
+서버에 원문을 한 번 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>하고 기존 인증된 AI 연결에서 XIPL 전용 도구로 읽는다.
+뷰어별 적용 사양과 QA <span class="term" title="서버가 발급한 업무 UUID 또는 실제 웹 작업에 연결된 단위" tabindex="0">업무</span> 지침은 각 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 기존 연결에서 확인한다.</p>
+</section>
+<section class="chapter" id="doc-xipl-shared-sec-2">
+<h2>2. 사용 순서</h2>
+<p>담당자가 XIPL 자료함을 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>한다. AI는 <code>xipl_get_status</code>로 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록과 판을 받은 뒤
+그 판에서 검색하고 원문을 읽는다. 프로그램 실행이나 지원 여부 <span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>은 하지 않는다.</p>
+<p>Knowledge의 XIPL <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 화면에서 원문을 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>·<span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>할 수 있다.
+공용 AI는 확정된 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 목록을 읽으므로 화면에서 <span class="term" title="같은 논리 문서의 새 파일을 등록하고, 새 파일이 문제없이 등록된 뒤에 이전 등록을 분석 대상에서 빼는 일이다" tabindex="0">교체</span>한 뒤 XIPL 동기화를 실행해야 새 판을 조회한다.
+초기 범위에는 XIPL 예약 동기화 설치를 포함하지 않는다.</p>
+</section>
+<section class="chapter" id="doc-xipl-shared-sec-5">
+<h2>5. 요구사항</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>카테고리</th><th>이름</th></tr></thead>
+<tbody>
+<tr><td>XIPLSHARED</td><td>XIPL 공용 자료</td></tr>
+</tbody>
+</table></div>
+<section class="card kind-req" id="REQ-XIPLSHARED-001">
+<h3><span class="idtag">REQ-XIPLSHARED-001</span> XIPL 원문 수집</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>config/products/xipl.yaml</code></span><span class="meta"><b>테스트</b> <code>tests/test_xipl_shared.py</code>, <code>tests/test_knowledge_sync_integrity.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-03 XIPL 공용 매뉴얼과 개정 이력 조회</span> <a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a>: XIPL 전용 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 설정으로 <span class="term" title="두 가지 역할이다. 역할 값은 admin, user 다" tabindex="0">User</span> Manual·STUDIO Manual·<span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span> History를 한 자료함에 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>한다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 자료함에 사본을 넣지 않는다.</li>
+</ul>
+</details>
+<p>XIPL <span class="term" title="config/products/&lt;slug&gt;.yaml. 제품마다 다른 Polarion 프로젝트·조회식·필드 이름·연구소 결과 값·Checklist 형식을 적는다" tabindex="0">제품 설정</span>으로 기존 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>·변경분 업로드 경로를 사용한다.
+<span class="term" title="두 가지 역할이다. 역할 값은 admin, user 다" tabindex="0">User</span> Manual DOCX, STUDIO <span class="term" title="두 가지 역할이다. 역할 값은 admin, user 다" tabindex="0">User</span> Manual PDF는 매뉴얼로, <span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span> History DOCX는 릴리즈노트로 분류한다.
+원본 이름과 해시를 보존한다. 필수 자료는 매뉴얼과 릴리즈노트이며 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>·QA 지침을 요구하지 않는다.</p>
+<p>원본 폴더는 환경변수로 지정하며 미설정·접근 실패를 빈 폴더로 처리하지 않는다.
+<span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 자료함에 XIPL 사본을 만들지 않고 XIPL <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>본만 관리한다.
+<span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 실패 시 이전 정상본 보존은 <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a>와 <a class="idref" href="#REQ-KNOW-012">REQ-KNOW-012</a>를 따른다.
+XIPL은 자동 QA 분석을 실행하지 않는다.</p>
+</section>
+<section class="card kind-req" id="REQ-XIPLSHARED-002">
+<h3><span class="idtag">REQ-XIPLSHARED-002</span> 같은 판에서 검색과 원문 조회</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/shared_knowledge/service.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_xipl_shared.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-03 XIPL 공용 매뉴얼과 개정 이력 조회</span> <a class="idref" href="#REQ-XIPLSHARED-002">REQ-XIPLSHARED-002</a>: 기존 인증 연결에서 <code>xipl_</code> 도구 4개로 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록·검색·원문·PDF 페이지를 조회한다. 판과 원문 해시를 확인하고 잘못된 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> ID와 변경된 원문을 거절한다.</li>
+</ul>
+</details>
+<p>기존 인증된 서버 연결에 <code>xipl_get_status</code>, <code>xipl_search_documents</code>, <code>xipl_get_document</code>,
+<code>xipl_get_document_page</code>를 제공한다. 모든 도구는 읽기 전용이며 XIPL 자료함만 읽는다.
+상태 도구는 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록·원본 해시·추출 실패·한계와 <code>snapshot_id</code>를 반환한다.
+다른 도구는 같은 판을 필수로 받으며 조회에 필요한 기존 도구의 매개변수를 사용한다.</p>
+<p>새 판이 만들어져도 이미 읽고 있는 판의 내용은 바꾸지 않는다. 프로세스 안에서 최근 8개 판을 유지한다.
+모르는 판은 오류로 알린다. 원본 이름·해시·매뉴얼 위치와 응답 잘림 여부를 유지한다.
+파일 누락·해시 불일치·추출 실패가 있으면 새 판을 공개하지 않고 오류를 알린다.
+기존 판은 계속 조회할 수 있다. 서버 재시작 후에는 상태 도구부터 다시 조회한다.</p>
+<p>원문 조회의 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> ID는 해당 판 목록 안에서만 허용한다. 경로 탈출과 다른 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 자료 접근을 거절한다.
+응답은 기존 비밀정보 <span class="term" title="AI로 보내기 직전에 환자 번호·IP·사내 경로 같은 값을 [IP_ADDRESS] 같은 자리표로 바꾸는 것이다" tabindex="0">마스킹</span>을 적용하며 서버의 로컬 경로를 공개하지 않는다.
+PDF 페이지는 이미지로 제공한다. DOCX는 문단·표 위치를 제공하고 렌더링하지 않은 쪽수를 만들지 않는다.
+Word 변경 추적·메모와 이미지의 추출 한계를 상태·원문 응답에 표시한다.</p>
+</section>
+<section class="card kind-req" id="REQ-XIPLSHARED-003">
+<h3><span class="idtag">REQ-XIPLSHARED-003</span> 두 제품의 조회 경로 유지</h3>
+<div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/modules/vxvue_chatbot/desktop.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_xipl_shared.py</code>, <code>tests/test_vxvue_desktop.py</code></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-03 XIPL 공용 매뉴얼과 개정 이력 조회</span> <a class="idref" href="#REQ-XIPLSHARED-003">REQ-XIPLSHARED-003</a>: VXvue와 Bellalun이 같은 공용 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 읽도록 안내한다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 적용 사양과 QA 지침은 기존 조회 경로를 유지한다.</li>
+</ul>
+</details>
+<p>기존 VXvue AI 연결의 동적 도구 목록에 XIPL 전용 도구를 더한다.
+VXvue와 Bellalun은 이 도구로 같은 XIPL 원문을 조회하며 각 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>의 사양·QA 지침은 기존 도구로 읽는다.
+XIPL 공용 자료가 특정 뷰어의 지원 사양이나 실행 결과를 증명한다고 안내하지 않는다.
+기존 인증·회수·접근 네트워크 제한을 그대로 적용한다. 별도 키 복사나 인증 완화를 하지 않는다.
+기존 VXvue <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>과 Bellalun 로컬 지식 경로를 변경하지 않는다.</p>
+</section>
+</section>
+<section class="chapter" id="doc-xipl-shared-sec-11">
+<h2>11. 테스트 사양</h2>
+<section class="card kind-test" id="TEST-XIPLSHARED-001">
+<h3><span class="idtag">TEST-XIPLSHARED-001</span> 원문 수집 분류</h3>
+<p>세 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>의 실제 파일명으로 분류와 필수 자료 설정을 확인한다.
+기존 업로드 실패·이전 판 보존 시험도 실행한다.</p>
+</section>
+<section class="card kind-test" id="TEST-XIPLSHARED-002">
+<h3><span class="idtag">TEST-XIPLSHARED-002</span> 인증된 연결의 판 고정 조회</h3>
+<p>합성 PDF·DOCX·개정 이력으로 상태→검색→원문→페이지 조회를 수행한다.
+원문 갱신 전후 판, 잘림, 누락·해시 실패, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> ID·경로 탈출, 잘못된 인증을 확인한다.
+기존 VXvue 연결 시험을 함께 실행한다. 운영에서는 양쪽 프로젝트가 같은 판·해시를 읽는지 확인한다.</p>
+</section>
+</section>
+<section class="chapter" id="doc-xipl-shared-sec-12">
+<h2>12. 추적성</h2>
+<div class="table-wrap"><table class="responsive">
+<thead><tr><th>Requirement</th><th>Implementation</th><th>Test</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-XIPLSHARED-001">REQ-XIPLSHARED-001</a></td><td data-label="Implementation"><code>config/products/xipl.yaml</code></td><td data-label="Test"><code>tests/test_xipl_shared.py</code>, <code>tests/test_knowledge_sync_integrity.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-XIPLSHARED-002">REQ-XIPLSHARED-002</a></td><td data-label="Implementation"><code>app/modules/shared_knowledge/service.py</code></td><td data-label="Test"><code>tests/test_xipl_shared.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-XIPLSHARED-003">REQ-XIPLSHARED-003</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/desktop.py</code></td><td data-label="Test"><code>tests/test_xipl_shared.py</code>, <code>tests/test_vxvue_desktop.py</code></td><td data-label="Status"><span class="badge st-verified">verified</span></td></tr>
 </tbody>
 </table></div>
 </section>

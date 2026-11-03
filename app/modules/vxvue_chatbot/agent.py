@@ -164,6 +164,7 @@ def run(messages, snapshot, attachments, job_id, settings, cancel, progress):
     workdir.mkdir(parents=True, exist_ok=True)
     module = Path(__file__).parent
     system = load_prompt("vxvue_chatbot").system_instruction
+    system += "\n사용자가 워드 파일/Word/DOCX를 요청하면 make_word_report로 기본 Guide 양식의 파일을 만들고 반환된 URL을 다운로드 링크로 안내한다. 서명·승인·결과를 임의로 채우지 않는다. 별도 양식 요청은 우선한다."
     system += "\n\n" + (module / "skill" / "SKILL.md").read_text(encoding="utf-8")
     if snapshot.get("skill_text"):
         system += "\n\n" + snapshot["skill_text"]

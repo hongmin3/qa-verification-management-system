@@ -306,7 +306,8 @@ def parse(path):
 
 
 class Corpus:
-    def __init__(self, root=None, index_path=None):
+    def __init__(self, root=None, index_path=None, *, document_kinds=None):
+        self.document_kinds = dict(document_kinds or {})
         self.root = Path(root or os.environ.get('VXVUE_KNOWLEDGE_ROOT') or k.DEFAULT_ROOT).resolve()
         root_key = hashlib.sha256(str(self.root).encode('utf-8')).hexdigest()[:16]
         self.index_path = Path(index_path or os.environ.get('VXVUE_INDEX_PATH') or
@@ -385,7 +386,7 @@ class Corpus:
                 revision = re.search(r'Rev\.?([\d.]+)', path.name, re.I)
                 date = re.search(r'\((\d{6}|\d{8})\)', path.name)
                 metadata = {'document_id': doc_id, 'document_name': path.name, 'file_path': str(path),
-                            'document_kind': kind(path), 'document_revision': revision[1].rstrip('.') if revision else None,
+                            'document_kind': self.document_kinds.get(doc_id, kind(path)), 'document_revision': revision[1].rstrip('.') if revision else None,
                             'document_snapshot': date[1] if date else None, 'product_version': None,
                             'version_source': 'filename-candidate', 'warnings': []}
                 try:
@@ -486,7 +487,7 @@ class Corpus:
         terms = query_terms(query)
         vp_ids = query_vp_ids(query)
         vp_terms = {t: normalize_vp(t) for t in terms if normalize_vp(t) in vp_ids}
-        if document_kind and document_kind not in KINDS:
+        if document_kind and document_kind not in KINDS | set(self.document_kinds.values()):
             raise ValueError('Unknown document kind')
         with closing(self.connect()) as db:
             self.refresh(db)

@@ -11,6 +11,7 @@
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
 | **매일 어떤 자동화가 돌고 어디로 보고되는지** | [SPEC 4절](../SPEC.md#4-전체-자동화-흐름) · 설치·실행 확인 결과는 [progress](../progress.md) |
 | 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |
+| VXvue·Bellalun에서 XIPL 공용 문서 읽기 | [XIPL 공용 조회 사양](../specs/xipl-shared.md) · [구현 계획](superpowers/plans/2026-11-03-xipl-shared.md) |
 | master 통합·운영 배포 상태 | [진행 상태](../progress.md) · 2026-10-20 브랜치 이력·운영 차이 대조·통합 시험·배포 확인 |
 | 전체 시험 경고·DB 초기화와 남은 확인사항 | [잔여 작업](../NEXT_STEPS.md) · [진행 상태](../progress.md) (2026-10-20 규칙 80절·의존성 경고·Windows 초기화 점검) |
 | 화면에서 사양서 읽기·목차와 요구사항 검색 | [HTML 사양서](SPEC.html) · 긴 표와 명령은 줄바꿈하며 작은 화면의 넓은 표는 세로 목록으로 표시 |
@@ -149,3 +150,5 @@
 | `qa-agent-*.md` | QA Agent (`qa-agent-dev`) · 제품 지식 자산 (`product-knowledge`) |
 | `core-documentation.md` | 문서 작업 (`documentation`) |
 | `manual-hub-*.md` | 하위 서비스 QA Manual Hub (`manual-hub-dev` / `-auth` / `-ui` / `-deploy` / `-backup`) |
+
+제출용 Word 기본 양식과 생성 기준은 [챗봇 기능 사양](../specs/vxvue-chatbot.md#req-vxvuechatbot-018-제출용-word-기본-양식)을 따른다. 사용법은 앱의 /vxvue-chatbot/guide에 있다.

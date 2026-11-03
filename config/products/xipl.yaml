@@ -1,0 +1,37 @@
+# 공용 영상처리 모듈 문서. 원문 위치는 수집 PC에서만 지정한다.
+product: XIPL
+version: ""
+manual_types:
+  - XIPL User Manual
+  - XIPL.STUDIO User Manual
+knowledge_source:
+  dir: "${QA_KNOWLEDGE_DIR_XIPL}"
+  classify:
+    manual:
+      - "XIPL User Manual*"
+      - "XIPL.STUDIO User Manual*"
+    release_note:
+      - "Revision History_XIPL*"
+manual:
+  source: knowledge_folder
+  required: true
+release_note:
+  source: knowledge_folder
+  required: true
+specification:
+  source: manual
+  required: false
+testcase:
+  source: manual
+  required: false
+qa_rules:
+  source: knowledge_folder
+  required: false
+instruction_prompt:
+  source: knowledge_folder
+  required: false
+skill_instruction:
+  source: knowledge_folder
+  required: false
+qa_intelligence:
+  enabled: false
