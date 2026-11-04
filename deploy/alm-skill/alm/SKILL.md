@@ -11,6 +11,8 @@ description: Polarion ALM 사용법과 TC·Test Run·이슈·승인 절차 확�
 
 사용법·설명·근거 조사 요청은 아래 서버 자료 조회를 사용한다. 실제 ALM 화면의 등록·수정·연결·Import 요청이면 먼저 [로그인된 브라우저 작업 절차](references/browser-operations.md)를 읽고 현재 환경의 Computer Use 스킬과 도구로 기존 로그인 세션을 사용한다. 미래의 사용 의향만으로 현재 ALM 데이터를 바꾸지 않는다. 브라우저 도구·대상 확인·실행·저장값 재조회가 끝난 범위만 완료로 보고한다.
 
+Checklist 전체를 새 TC로 등록하고 SRS 관계·문서까지 구성하는 요청은 [Checklist 일괄 등록과 문서 정리](references/checklist-registration.md)를 함께 읽는다. 기존 서비스 API 연결이 사용 가능하면 승인된 대량 관계 작업에 병행하고, 등록 요청의 완료 지점은 저장 후 전체 대조를 마친 미서명 문서까지로 잡는다. 조사·준비만 요청한 경우의 변경 금지는 그대로 적용한다.
+
 ## 서버 자료 읽기
 
 이 스킬 폴더 기준 `scripts/knowledge.py`를 실행한다. Windows에서는 `py`, 다른 환경에서는 사용 가능한 Python 3을 사용한다. 기본 설정은 `server.json`의 `catalog_url`이며 서버의 현재 자료 목록에서 release를 찾는다. `base_url` 또는 `ALM_KNOWLEDGE_URL`은 특정 자료 판을 직접 지정할 때 사용한다. 인증정보를 요구하거나 저장하지 않는다.

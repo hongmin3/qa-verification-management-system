@@ -7,7 +7,7 @@
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `alm-skill` |
 | Document Version | 0.1.0 |
-| Last Updated | 2026-11-03 |
+| Last Updated | 2026-11-04 |
 | Status | implemented |
 
 먼저 목적과 범위를 읽고, 5절에서 안내 화면과 자료 연결 기준을 확인한다. 설치와 질문 예시는 앱 안 안내 페이지에서 제공한다.
@@ -52,6 +52,8 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 **결과** 스킬 원본은 `deploy/alm-skill/alm`에서 관리한다. 빌드 도구는 지정한 QA 서버 주소로 설정을 넣은 ZIP을 만들며 기존 출력 파일을 덮어쓰지 않는다. 안내 화면은 필요한 연결과 실제 저장 시험 여부를 구분한다.
 
+**Checklist 전체 등록** 사용자가 전체 등록을 요청하면 최신 원본 대조·허용된 파일 준비·Preview·Import·문서 편입·실제 SRS 관계 연결·미서명 문서 표시·전체 저장 대조를 안내한다. 기존 정상 서비스 API는 승인된 대량 작업에 병행할 수 있으며 브라우저 인증을 추출하지 않는다. 참고 문서의 결재표·공통 매크로와 실제 결재경로 속성을 구분한다. 원본 변경과 불명확한 저장은 기존 결과를 보존한 채 대조하고, 권한 제한과 미완료를 보고한다. 조사·준비 요청에는 쓰기를 추가하지 않는다.
+
 **지킬 것** 기존 브라우저 프로필을 복사하거나 쿠키·비밀번호를 추출하지 않는다. 사용자가 지정한 로그인 세션을 새 자동화 전용 브라우저로 대체하지 않는다. 컴퓨터 제어 도구의 별도 확인 정책을 따른다.
 
 ### REQ-ALMSKILL-004 스킬 관리와 하위 업데이트 문서
@@ -84,5 +86,5 @@ ZIP에 브라우저 작업 절차와 지정 서버 설정이 들어가고 비밀
 |---|---|---|---|
 | REQ-ALMSKILL-001 | `app/web/templates/hub.html`, `app/web/static/alm-ai/index.html`, `app/web/static/alm-ai/style.css` | `tests/test_alm_skill_guide.py` | verified |
 | REQ-ALMSKILL-002 | `app/web/static/alm-ai/guide.js` | `tests/test_alm_skill_guide.py` | verified |
-| REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
+| REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `deploy/alm-skill/alm/references/checklist-registration.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
 | REQ-ALMSKILL-004 | `app/web/static/skills/index.html`, `app/web/static/skills/AGENTS.md`, `app/web/templates/hub.html` | `tests/test_skill_management.py` | verified |
