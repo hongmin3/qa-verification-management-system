@@ -69,3 +69,7 @@ data/knowledge_retry/
 data/manual_review_tools/
 data/shared_rollout/
 data/shared_knowledge/
+# 담당자 PC 실행 상태 (예약 백업 XML, 브라우저 확인 기록)
+data/bellalun_sync/
+data/headless-probe.txt
+data/task-config-backup/

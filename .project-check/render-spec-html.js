@@ -20,7 +20,7 @@ const crypto = require('crypto');
 //     `이유:` 줄을 따로 보이고, `| 용어 | 뜻 |` 표의 용어에 마우스를 올리면 뜻을 보인다.
 // v6: fence·표 파서를 준비 검사와 한 벌로(탭 들여쓰기, 4칸 들여쓴 닫는 표시는 닫지 않음, code span 속 `|`).
 // v7: responsive reading layout.
-const RENDERER_VERSION = 'v7';
+const RENDERER_VERSION = 'v8';
 const OUTPUT = 'docs/SPEC.html';
 const REGENERATE = 'node .project-check/render-spec-html.js .';
 const ID = /\b(?:REQ|NFR|TEST)-[A-Z0-9]+-\d{3}\b/g;
@@ -663,7 +663,7 @@ function featureIndex(ctx) {
 
 // 기능 사양 문서의 페이지 안 위치 이름. `specs/export/csv.md` → `doc-export-csv`.
 function docAnchor(relative) {
-  return 'doc-' + relative.replace(/^specs\//, '').replace(/\.md$/i, '').replace(/[^A-Za-z0-9_-]+/g, '-');
+  return 'doc-' + encodeURIComponent(relative.replace(/^specs\//, '').replace(/\.md$/i, '')).replace(/_/g, '%5F').replace(/%/g, '_');
 }
 const toLines = markdown => normalize(markdown).replace(/<!--[\s\S]*?(?:-->|$)/g, '').replace(/\t/g, '    ').split('\n');
 
@@ -811,7 +811,6 @@ function inside(root, target) {
 function featureFiles(root) {
   const found = [];
   const walk = (dir, depth) => {
-    if (depth > 4) return;
     let entries;
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT' || e.code === 'ENOTDIR') return; throw e; }
     for (const entry of entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
