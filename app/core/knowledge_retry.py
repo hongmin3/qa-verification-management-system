@@ -20,7 +20,11 @@ def _requested(check_request):
         return ""
 
 
-def run_due(product, target_url, *, state_dir, now=None, push=None, check_request=None):
+def run_due(product, target_url, *, state_dir, now=None, push=None, check_request=None, daily=True):
+    """`daily=False` 이면 매일 업로드를 하지 않고 화면 수집 요청만 처리한다 (REQ-SYNC-002, REQ-KNOW-024).
+
+    매일 업로드를 다른 예약이 맡는 제품(Bellalun 은 지침 내보내기와 함께 10:10 에 올린다)에 쓴다.
+    """
     from app.core.knowledge_push import push_product
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     state_dir = Path(state_dir)
@@ -59,6 +63,8 @@ def run_due(product, target_url, *, state_dir, now=None, push=None, check_reques
                     return {"status": "NOT_DUE", "detail": "15분 재시도 대기", "next_retry_at": next_retry}
             else:
                 request = ""
+                if not daily:
+                    return {"status": "NOT_DUE", "detail": "화면 수집 요청 없음"}
                 # First installation before the daily hour waits for today's schedule.
                 if not state and now.astimezone(KST).hour < DAILY_HOUR:
                     return {"status": "NOT_DUE", "detail": "오전 10시 실행 대기"}

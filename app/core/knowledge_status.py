@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -68,6 +69,7 @@ class DocumentRow:
     usable: bool = True
     can_delete: bool = False
     misfiled_as: str = ""  # 파일 이름으로 보면 다른 종류일 때 그 종류 (REQ-KNOW-019 8번)
+    ai_status: str = ""    # AI 사본 반영: 반영됨 | 반영 대기. 제품에 AI 사본이 없으면 빈 값 (REQ-KNOW-024)
 
 
 @dataclass
@@ -100,6 +102,8 @@ class ProductHealth:
     assets: list[AssetStatus]
     excluded: list[dict] = field(default_factory=list)
     advanced: dict = field(default_factory=dict)
+    ai_copy: bool = False      # 담당자 PC 가 올린 AI 사본(manifest)이 있는가 (REQ-KNOW-024)
+    ai_pending: int = 0        # AI 사본에 아직 없는 등록 문서 수
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -162,6 +166,36 @@ class _Context:
         return finished, success
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _ai_status(ctx: _Context, kind: str, document: dict, metadata: dict, exists: bool) -> str:
+    """등록 문서가 AI 사본에 같은 내용으로 들어 있는가 (REQ-KNOW-024).
+
+    공용 AI 연결은 담당자 PC 가 올린 지식 사본(manifest)만 읽는다. 같은 종류·같은 이름의 사본이 있고
+    sha256 이 같을 때만 반영됨이다. 화면 등록·교체 직후에는 PC 가 다시 올리기 전까지 반영 대기다.
+    """
+    if not ctx.manifest_assets:
+        return ""
+    if str(metadata.get("source") or "") == "product_knowledge":
+        return "반영됨"
+    asset = ctx.manifest_by_name.get((kind, document["name"]))
+    if not asset or not exists:
+        return "반영 대기"
+    digest = str(metadata.get("sha256") or "")
+    if not digest:
+        try:
+            digest = _file_sha256(Path(document["path"]))
+        except OSError:
+            return "반영 대기"
+    return "반영됨" if digest == asset.get("sha256") else "반영 대기"
+
+
 def _registered_rows(ctx: _Context, kind: str) -> tuple[list[DocumentRow], list[dict]]:
     rows, documents = [], ctx.storage.active_documents(kind, ctx.product)
     for document in documents:
@@ -187,6 +221,7 @@ def _registered_rows(ctx: _Context, kind: str) -> tuple[list[DocumentRow], list[
             source_label=DOCUMENT_SOURCE_LABELS.get(source, SOURCE_LABELS[SOURCE_MANUAL]),
             status=status, updated_at=updated, id=document["id"], usable=usable,
             can_delete=can_manual_upload(ctx.config, kind) or registered_by_person(document), misfiled_as=misfiled_as,
+            ai_status=_ai_status(ctx, kind, document, metadata, exists),
         ))
     return rows, documents
 
@@ -201,7 +236,7 @@ def _rule_rows(ctx: _Context, kind: str) -> list[DocumentRow]:
         rows.append(DocumentRow(
             name=asset.get("file_name", ""), kind=kind, kind_label=KIND_LABELS[kind], source_label="지식 폴더",
             status="정상" if usable else ("파일 없음" if not exists else "읽지 못함"),
-            updated_at=asset.get("collected_at", ""), usable=usable,
+            updated_at=asset.get("collected_at", ""), usable=usable, ai_status="반영됨",
         ))
     return rows
 
@@ -304,6 +339,8 @@ def product_health(config: ProductConfig, storage, root: Path | None = None) -> 
             "last_sync_detail": (ctx.folder_sync or {}).get("detail", ""),
             "rule_revision": (rule_set.revision or "개정 번호 없음(원문 적용)") if rule_set.available else "",
         },
+        ai_copy=bool(ctx.manifest_assets),
+        ai_pending=sum(1 for asset in assets for row in asset.documents if row.ai_status == "반영 대기"),
     )
 
 

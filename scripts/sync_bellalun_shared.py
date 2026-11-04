@@ -74,13 +74,29 @@ def main():
     parser.add_argument('--skill-root', required=True, type=Path)
     parser.add_argument('--knowledge-root', required=True, type=Path)
     parser.add_argument('--upload-to', required=True)
+    parser.add_argument('--only-when-requested', action='store_true',
+                        help='서버 화면의 수집 요청이 있을 때만 올린다 (1분 간격 예약용, REQ-KNOW-024)')
     args = parser.parse_args()
     try:
-        exported = export_common_skill(args.skill_root, args.knowledge_root)
         os.environ['QA_KNOWLEDGE_DIR_BELLALUN_VIEWER'] = str(args.knowledge_root.resolve())
         from app.core.knowledge_push import push_product
-        result = push_product('Bellalun Viewer', args.upload_to)
-        print(json.dumps({'export': exported, 'upload': result}, ensure_ascii=False, default=str))
+
+        def sync(product, target_url):
+            exported = export_common_skill(args.skill_root, args.knowledge_root)
+            result = push_product(product, target_url)
+            return {**result, 'export': exported}
+
+        if args.only_when_requested:
+            from app.core.config import get_settings
+            from app.core.knowledge_push import fetch_collect_request
+            from app.core.knowledge_retry import run_due
+            result = run_due('Bellalun Viewer', args.upload_to, state_dir=get_settings().root / 'data' / 'knowledge_retry',
+                             push=sync, check_request=lambda: fetch_collect_request('Bellalun Viewer', args.upload_to),
+                             daily=False)
+            print(json.dumps(result, ensure_ascii=False, default=str))
+            return 1 if result['status'] == 'FAILED' else 0
+        result = sync('Bellalun Viewer', args.upload_to)
+        print(json.dumps({'export': result.pop('export'), 'upload': result}, ensure_ascii=False, default=str))
         return 0 if result['status'] == 'SUCCESS' else 1
     except (OSError, ValueError) as exc:
         print('Bellalun 동기화 실패: ' + type(exc).__name__ + ': ' + str(exc))

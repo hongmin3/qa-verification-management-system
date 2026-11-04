@@ -12,6 +12,8 @@
 .kn-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .kn-actions form{margin:0}
 .kn-upload{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.kn-ai-wait{color:#92400e;font-weight:600}.kn-ai-done{color:#166534}
+.kn-ai-banner{padding:10px 12px;border-radius:8px;background:#fef3c7;color:#92400e;margin:8px 0}
 </style>
 {% if notice %}<div class="kn-notice" id="kn-notice">{{ notice }}</div>{% endif %}
 <section>
@@ -20,6 +22,9 @@
     <span class="kn-level kn-{{ health.level }}">{{ health.label }}</span>
   </div>
   <p class="kn-meta">마지막 갱신: {% if health.last_updated %}<span data-utc-time="{{ health.last_updated }}">{{ health.last_updated[:16].replace('T', ' ') }} UTC</span>{% else %}기록 없음{% endif %} · <a href="/knowledge">현황판으로</a></p>
+  {% if health.ai_pending %}
+  <p class="kn-ai-banner" id="kn-ai-pending">AI 연결에 아직 반영되지 않은 문서 {{ health.ai_pending }}개. 공용 AI 연결은 담당자 PC 가 올린 지식 사본을 읽습니다. {% if health.advanced.source_dir %}PC 가 사본을 올리면 'AI 반영' 칸이 '반영됨'으로 바뀝니다. 오래 걸리면 '지금 수집'을 누르세요.{% else %}이 제품은 사본을 올리는 담당자 PC 설정이 없어 지식 폴더 업로드를 따로 실행해야 합니다.{% endif %}</p>
+  {% endif %}
   {% if health.advanced.source_dir %}
   <form method="post" action="/knowledge/products/{{ health.slug }}/collect" class="kn-upload knowledge-sync-form">
     <button type="submit">지금 수집</button>
@@ -43,7 +48,7 @@
   {% if asset.documents %}
   <div class="table-wrap">
     <table class="history kn-docs">
-      <thead><tr><th>문서명</th><th>종류</th><th>출처</th><th>상태</th><th>마지막 갱신</th>{% set show_actions = asset.can_upload or asset.documents | selectattr('can_delete') | list %}{% if show_actions %}<th>동작</th>{% endif %}</tr></thead>
+      <thead><tr><th>문서명</th><th>종류</th><th>출처</th><th>상태</th><th>마지막 갱신</th>{% if health.ai_copy %}<th>AI 반영</th>{% endif %}{% set show_actions = asset.can_upload or asset.documents | selectattr('can_delete') | list %}{% if show_actions %}<th>동작</th>{% endif %}</tr></thead>
       <tbody>
         {% for doc in asset.documents %}
         <tr>
@@ -52,6 +57,7 @@
           <td>{{ doc.source_label }}</td>
           <td>{{ doc.status }}</td>
           <td>{% if doc.updated_at %}<span data-utc-time="{{ doc.updated_at }}">{{ doc.updated_at[:16].replace('T', ' ') }} UTC</span>{% endif %}</td>
+          {% if health.ai_copy %}<td class="{{ 'kn-ai-wait' if doc.ai_status == '반영 대기' else 'kn-ai-done' }}">{{ doc.ai_status }}</td>{% endif %}
           {% if show_actions %}
           <td class="kn-actions">
             {% if asset.can_upload %}
@@ -196,6 +202,8 @@ document.querySelectorAll('.kn-upload-form').forEach(form => {
     const lines = [replacing ? '교체가 완료되었습니다.' : '등록이 완료되었습니다.', '', `새 문서: ${body.name}`];
     if (body.replaced && body.replaced.length) lines.push(`빠진 이전 문서: ${body.replaced.join(', ')}`);
     lines.push(`확인한 크기: ${bytes.byteLength.toLocaleString()}바이트`);
+    // 화면 등록은 공용 AI 연결에 바로 쓰이지 않는다. 담당자 PC 가 사본을 다시 올려야 한다 (REQ-KNOW-024).
+    if (body.ai_refresh && body.ai_refresh.detail) lines.push('', body.ai_refresh.detail);
     knHideBusy();
     alert(lines.join('\n'));
     location.reload();

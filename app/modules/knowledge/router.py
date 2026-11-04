@@ -122,6 +122,31 @@ def _owned_dirs() -> list[Path]:
     return [settings.path("storage.specification_dir"), settings.path("storage.testcase_dir")]
 
 
+AI_REFRESH_REQUESTED = ("AI 연결 반영을 요청했습니다. 담당자 PC 가 1분 안에 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 "
+                        "'반영됨'으로 바뀝니다.")
+AI_REFRESH_NO_UPLOADER = ("이 제품은 지식 사본을 올리는 담당자 PC 설정이 없습니다. 지식 폴더 업로드를 따로 실행해야 "
+                          "AI 연결에 반영됩니다.")
+
+
+def _request_ai_refresh(config) -> dict:
+    """등록·교체가 끝난 뒤 AI 사본을 다시 올리도록 수집 요청을 남긴다 (REQ-KNOW-024).
+
+    공용 AI 연결은 담당자 PC 가 올린 지식 사본만 읽는다. 요청이 없으면 다음 날 10:00 업로드까지 이전 판을 쓴다.
+    요청을 남기지 못해도 등록은 이미 끝났으므로 실패로 바꾸지 않고 사유만 알린다.
+    """
+    if not config.knowledge_source.dir:
+        return {"status": "NO_UPLOADER", "detail": AI_REFRESH_NO_UPLOADER}
+    try:
+        requested_at = request_collect(config.product)
+    except OSError as exc:
+        return {"status": "FAILED", "detail": f"AI 연결 반영 요청을 남기지 못했습니다. 화면의 '지금 수집'을 누르세요: {exc}"}
+    return {"status": "REQUESTED", "requested_at": requested_at, "detail": AI_REFRESH_REQUESTED}
+
+
+def _with_ai_note(summary: str, refresh: dict) -> str:
+    return f"{summary} {refresh['detail']}".strip()
+
+
 def _optional_id(value: str) -> int | None:
     value = (value or "").strip()
     if not value:
@@ -164,12 +189,14 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
         return {"status": "NEEDS_MAPPING", "next": url} if as_json else RedirectResponse(url, status_code=303)
     except RegistrationError as exc:
         raise HTTPException(exc.status, exc.message)
+    refresh = _request_ai_refresh(config)
     if as_json:
         saved = storage.get_document(outcome.document_id) or {}
         saved_path = Path(saved.get("path") or path)
         return {"status": "DONE", "name": outcome.name, "document_id": outcome.document_id, "replaced": outcome.replaced,
-                "size": saved_path.stat().st_size, "sha256": _file_sha256(saved_path), "summary": outcome.summary()}
-    return RedirectResponse(_detail_url(config, outcome.summary()), status_code=303)
+                "size": saved_path.stat().st_size, "sha256": _file_sha256(saved_path), "summary": outcome.summary(),
+                "ai_refresh": refresh}
+    return RedirectResponse(_detail_url(config, _with_ai_note(outcome.summary(), refresh)), status_code=303)
 
 
 def _file_sha256(path: Path) -> str:
@@ -414,7 +441,7 @@ def register_testcase_with_mapping(
             "replace_id": replace_id, "sheet": sheet, "header_row": header_row, "error": str(exc),
         })
         return RedirectResponse(f"/knowledge/testcase/map?{params}", status_code=303)
-    return RedirectResponse(_detail_url(config, outcome.summary()), status_code=303)
+    return RedirectResponse(_detail_url(config, _with_ai_note(outcome.summary(), _request_ai_refresh(config))), status_code=303)
 
 
 @router.post("/knowledge/delete/{document_id}")

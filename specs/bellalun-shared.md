@@ -31,6 +31,9 @@ Bellalun 안내 화면에서 연결과 `bellalun-server-ai` Skill을 설치한�
 별도 Bellalun 예약은 매일 10:10과 사용자 로그인 때 실행하고 실패하면 15분 간격 3회 재시도한다.
 로그인된 담당자 PC에서 실행하며 기존 VXvue 예약을 대체하지 않는다.
 
+화면 등록·교체가 남긴 수집 요청은 1분마다 도는 `Bellalun_SharedKnowledge_Request` 예약이 처리한다(REQ-KNOW-024).
+요청이 없으면 서버에 묻기만 하고 올리지 않는다.
+
 ### REQ-BELLALUNSHARED-002 인증된 판 고정 조회
 
 기존 연결에 bellalun_get_status, bellalun_get_workflow, bellalun_search_documents,
