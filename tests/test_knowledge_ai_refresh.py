@@ -255,3 +255,46 @@ def test_screen_delete_leaves_an_ai_refresh_request(env):
                                follow_redirects=False)
     assert response.status_code == 303
     assert knowledge_collect_request.pending_request("VXvue", env.storage, env.root)
+
+
+# -- 열어 둔 화면에서 교체: 동기화로 문서 번호가 바뀌어도 교체된다 (REQ-KNOW-024) --------------------
+
+def _replace(env, replace_id, replace_name, name, data):
+    form = {"kind": "manual", "replace_id": str(replace_id)}
+    if replace_name is not None:
+        form["replace_name"] = replace_name
+    return env.client.post("/knowledge/products/vxvue/documents", data=form, files={"file": (name, data)},
+                           headers={"Accept": "application/json"}, follow_redirects=False)
+
+
+def _resync(env, document_id):
+    """담당자 PC 가 화면 등록본을 다시 올린 것처럼, 같은 이름의 새 번호 문서로 바꾼다."""
+    return _replace(env, document_id, None, "synced.docx", _docx("동기화된 판")).json()["document_id"]
+
+
+def test_stale_replace_id_falls_back_to_the_current_document_of_the_same_name(env):
+    first = _upload(env, "vxvue", GUIDE, _docx("처음 판")).json()
+    current = _resync(env, first["document_id"])
+    assert env.storage.get_document(first["document_id"]) is None
+    response = _replace(env, first["document_id"], GUIDE, "새 안내.docx", _docx("새 판"))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["replaced"] == [GUIDE]
+    assert env.storage.get_document(current) is None
+    [active] = env.storage.active_documents("manual", "VXvue")
+    assert active["id"] == body["document_id"]
+
+
+def test_stale_replace_id_without_a_match_asks_for_a_reload(env):
+    first = _upload(env, "vxvue", GUIDE, _docx("처음 판")).json()
+    _resync(env, first["document_id"])
+    for name in (None, "(매뉴얼) Other Guide V1.0_KO.docx"):
+        response = _replace(env, first["document_id"], name, "새 안내.docx", _docx("새 판"))
+        assert response.status_code == 400
+        assert "화면을 새로 고친 뒤 다시 교체하세요" in response.json()["detail"]
+
+
+def test_replace_form_sends_the_document_name(env):
+    _upload(env, "vxvue", GUIDE, _docx("안내"))
+    page = env.client.get("/knowledge/products/vxvue").text
+    assert f'name="replace_name" value="{GUIDE}"' in page

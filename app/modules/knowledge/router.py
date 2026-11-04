@@ -27,7 +27,7 @@ from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
 from app.core.product_config import SOURCE_LABELS, SOURCE_MANUAL, can_manual_upload, normalize_source
-from app.core.product_knowledge import REGISTERABLE_KINDS, load_manifest, resolve_config, scan_source, source_available, sync_and_register
+from app.core.product_knowledge import REGISTERABLE_KINDS, document_logical_key, load_manifest, resolve_config, scan_source, source_available, sync_and_register
 from app.core.storage import Storage
 from app.core.uploads import save_upload
 from app.parsers.excel_parser import preview_workbook, suggest_columns
@@ -147,6 +147,28 @@ def _with_ai_note(summary: str, refresh: dict) -> str:
     return f"{summary} {refresh['detail']}".strip()
 
 
+STALE_REPLACE_MESSAGE = ("교체할 문서를 찾을 수 없습니다. 화면을 연 뒤 문서가 바뀌었을 수 있습니다. "
+                         "화면을 새로 고친 뒤 다시 교체하세요.")
+
+
+def _current_replace_id(config, kind: str, replace_id: int | None, replace_name: str) -> int | None:
+    """열어 둔 화면의 옛 번호를 지금 번호로 바꾼다 (REQ-KNOW-024 열어 둔 화면에서 교체).
+
+    담당자 PC 가 화면 등록본을 다시 올리면 같은 문서가 새 번호로 등록된다. 번호의 문서가 없을 때만
+    같은 제품·종류의 같은 논리 문서를 찾는다. 번호의 문서가 있으면 그대로 두어 다른 제품·종류 거절을 지킨다.
+    """
+    if replace_id is None or storage.get_document(replace_id) is not None:
+        return replace_id
+    name = (replace_name or "").strip()
+    if name:
+        key = document_logical_key(kind, name)
+        matches = [document for document in storage.active_documents(kind, config.product)
+                   if document["name"].casefold() == name.casefold() or document_logical_key(kind, document["name"]) == key]
+        if matches:
+            return max(document["id"] for document in matches)
+    raise HTTPException(400, STALE_REPLACE_MESSAGE)
+
+
 def _optional_id(value: str) -> int | None:
     value = (value or "").strip()
     if not value:
@@ -157,7 +179,7 @@ def _optional_id(value: str) -> int | None:
 
 
 def _register(config, kind: str, file: UploadFile, replace_id: int | None, source: str = "", version: str = "",
-              *, as_json: bool = False):
+              *, as_json: bool = False, replace_name: str = ""):
     """등록·교체 공통 처리 (REQ-KNOW-003·004). 출처 확인은 파일을 저장하기 전에 한다. 성공하면 제품 상세로 303.
 
     `as_json` 이면 등록과 이전 문서 정리를 마친 결과를 JSON 으로 돌려준다. 화면은 받은 크기를 보낸 크기와
@@ -165,6 +187,7 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
     """
     if kind not in REGISTERABLE_KINDS:
         raise HTTPException(400, f"등록할 수 없는 종류입니다: {kind}")
+    replace_id = _current_replace_id(config, kind, replace_id, replace_name)
     uploaded_name = file.filename or ""
     try:
         target = check_request(storage, config, kind, source, replace_id, file_name=uploaded_name)
@@ -215,9 +238,10 @@ def _wants_json(request: Request) -> bool:
 
 @router.post("/knowledge/products/{slug}/documents")
 def upload_product_document(request: Request, slug: str, kind: str = Form(...), file: UploadFile = File(...),
-                            replace_id: str = Form("")):
+                            replace_id: str = Form(""), replace_name: str = Form("")):
     config = _config_or_404(slug)
-    return _register(config, kind.strip(), file, _optional_id(replace_id), as_json=_wants_json(request))
+    return _register(config, kind.strip(), file, _optional_id(replace_id), as_json=_wants_json(request),
+                     replace_name=replace_name)
 
 
 @router.post("/knowledge/sync/product-knowledge")

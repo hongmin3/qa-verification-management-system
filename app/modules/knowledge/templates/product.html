@@ -64,6 +64,7 @@
             <form class="kn-upload-form" method="post" action="/knowledge/products/{{ health.slug }}/documents" enctype="multipart/form-data">
               <input type="hidden" name="kind" value="{{ asset.kind }}">
               <input type="hidden" name="replace_id" value="{{ doc.id }}">
+              <input type="hidden" name="replace_name" value="{{ doc.name }}">
               <label class="btn-link">교체<input type="file" name="file" accept="{{ asset.accept }}" hidden></label>
             </form>
             {% endif %}
