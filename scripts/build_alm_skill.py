@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import zipfile
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 SOURCE = Path(__file__).resolve().parents[1] / "deploy/alm-skill/alm"
 FILES = ("SKILL.md", "agents/openai.yaml", "scripts/knowledge.py", "references/browser-operations.md")
 
