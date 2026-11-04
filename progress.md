@@ -6,7 +6,9 @@
 - 개선: 화면 등록·교체 뒤 수집 요청을 자동으로 남기고, 문서 표에 `AI 반영` 칸을 더했다. Bellalun 은 요청 전용 실행(`--only-when-requested`)과 1분 예약 설치를 추가했다.
 - 검증: 관련 테스트 99 passed(사용자 결정으로 전체 회귀는 생략). 전체 테스트는 PC 메모리 부족으로 Claude Code 가 중단시켜 결과가 없다.
 - 운영 반영: 변경 파일 6개만 백업(`backups/deploy-ai-refresh-20261104T053658Z/before.tgz`) 뒤 반영·재시작, health ok, 6개 해시 일치. 세 제품 화면에 `AI 반영` 칸이 보인다. 같은 내용의 체크리스트로 실제 교체를 한 번 해서 `ai_refresh: REQUESTED` → 50초 안에 PC 업로드 `SUCCESS` → 반영 대기 0건을 확인했다.
-- 남은 일: 이 PC 에 `Bellalun_SharedKnowledge_Request` 예약을 설치하지 않았다(`scripts/install_bellalun_shared_schedule.ps1` 재실행 필요). XIPL 은 업로드 PC 가 없어 화면 안내만 한다. 화면에서 지운 문서는 AI 사본에 남는다(REQ-KNOW-024 범위 밖).
+- 후속(같은 날): `Bellalun_SharedKnowledge_Request` 1분 예약을 설치했다. 수집 요청을 보내 60초 안에 `SUCCESS`(14:50)로 처리되는 것을 확인했다.
+- 후속(REQ-KNOW-022): 화면에서 지운 문서는 업로드 확정 때 AI 사본 목록에서 빠지고 `수집 제외` 표에 사유가 남는다. 지우면 수집 요청을 남긴다. 관련 테스트 219 passed. 운영에 7개 파일 반영(`backups/deploy-ai-refresh-20261104T055858Z/before.tgz`), health ok, 해시 7/7. VXvue 수집 요청이 80초 안에 처리되고 확정이 정상(자산 27건)임을 봤다. 실제 문서를 지워 보는 운영 확인은 지식 폴더에 시험 파일이 남기 때문에 하지 않았다.
+- 남은 제한: XIPL 은 업로드 PC 가 없어 화면 안내만 한다. 전체 회귀 테스트는 실행하지 않았다.
 
 ## 2026-11-03 상세 사용 안내로 직접 이동 (REQ-ALMSKILL-004)
 

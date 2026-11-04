@@ -205,3 +205,53 @@ def test_bellalun_installer_registers_a_minute_request_task():
     assert "$requestArguments = $arguments + ' --only-when-requested'" in text
     assert "-RepetitionInterval (New-TimeSpan -Minutes 1)" in text
     assert "-MultipleInstances IgnoreNew" in text
+
+
+# -- 화면에서 지운 문서는 AI 사본에서도 빠진다 (REQ-KNOW-022, REQ-KNOW-024) ------------------------
+
+def _commit_two(env, keep_name, deleted_name):
+    from app.core.knowledge_upload import commit, store_asset
+
+    records = {name: store_asset("VXvue", "manual", name, f"{name} 본문".encode("utf-8"), root=env.root)
+               for name in (keep_name, deleted_name)}
+    manifest = {"assets": [{"kind": "manual", "file_name": name, "sha256": record["sha256"]} for name, record in records.items()]}
+    return commit("VXvue", manifest, uploaded=records, storage=env.storage, root=env.root), records
+
+
+def test_commit_leaves_screen_deleted_documents_out_of_the_ai_copy(env):
+    from app.core.knowledge_upload import server_state
+
+    keep, gone = "(매뉴얼) Keep Guide.txt", "(매뉴얼) Gone Guide.txt"
+    env.storage.remember_deleted("VXvue", "manual", gone.upper())   # 대소문자만 다른 이름도 같은 기록
+    result, records = _commit_two(env, keep, gone)
+    manifest = product_knowledge.load_manifest("VXvue", env.root)
+    assert [asset["file_name"] for asset in manifest["assets"]] == [keep]
+    excluded = [item for item in manifest["excluded"] if item.get("screen_deleted")]
+    assert [item["file_name"] for item in excluded] == [gone]
+    assert "화면에서 지운 문서" in excluded[0]["exclude_reason"]
+    assert "화면에서 지운 문서 AI 제외 1건" in result["detail"]
+    # 파일은 남겨 PC 가 매번 다시 올리지 않게 한다. 서버 상태에도 그 해시가 있다.
+    assert (product_knowledge.product_dir("VXvue", env.root) / "original" / "manual" / gone).is_file()
+    state = {asset["file_name"]: asset["sha256"] for asset in server_state("VXvue", env.root)["assets"]}
+    assert state[gone] == records[gone]["sha256"]
+
+
+def test_re_registered_name_returns_to_the_ai_copy(env):
+    keep, gone = "(매뉴얼) Keep Guide.txt", "(매뉴얼) Gone Guide.txt"
+    env.storage.remember_deleted("VXvue", "manual", gone)
+    _commit_two(env, keep, gone)
+    env.storage.forget_deleted("VXvue", "manual", gone)
+    _commit_two(env, keep, gone)
+    names = [asset["file_name"] for asset in product_knowledge.load_manifest("VXvue", env.root)["assets"]]
+    assert sorted(names) == sorted([keep, gone])
+
+
+def test_screen_delete_leaves_an_ai_refresh_request(env):
+    body = _upload(env, "vxvue", GUIDE, _docx("안내")).json()
+    sync = env.storage.sync_start("VXvue", "product_knowledge", "upload")
+    env.storage.sync_finish(sync, "SUCCESS", "업로드 완료")
+    assert knowledge_collect_request.pending_request("VXvue", env.storage, env.root) == ""
+    response = env.client.post(f"/knowledge/delete/{body['document_id']}", data={"next": "/knowledge/products/vxvue"},
+                               follow_redirects=False)
+    assert response.status_code == 303
+    assert knowledge_collect_request.pending_request("VXvue", env.storage, env.root)

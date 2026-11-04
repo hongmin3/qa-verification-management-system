@@ -462,6 +462,9 @@ def delete_document(document_id: int, source: str = Form(""), next: str = Form("
     if not source.strip() or normalize_source(source) == SOURCE_MANUAL:
         # 사람이 지운 이름은 지식 폴더 수집이 되살리지 않는다. 자동 출처의 옛 판 정리는 적지 않는다 (REQ-KNOW-022).
         storage.remember_deleted(document["product"], document["kind"], document["name"])
+        if config is not None:
+            # AI 사본에서도 빠지도록 담당자 PC 가 다시 올리게 한다 (REQ-KNOW-024).
+            _request_ai_refresh(config)
     path = Path(document["path"])
     if path.exists():
         path.unlink()

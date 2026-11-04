@@ -131,6 +131,14 @@ def server_state(product: str, root: Path | None = None) -> dict:
         if not path.is_file():
             continue
         assets.append({"file_name": file_name, "kind": kind, "sha256": _sha256(path)})
+    # 화면에서 지워 AI 사본에서 뺀 파일도 서버가 가진 파일이다. 알려 주지 않으면 PC 가 매번 다시 보낸다.
+    for entry in load_manifest(config.product, root).get("excluded", []) or []:
+        kind, file_name = entry.get("kind", ""), entry.get("file_name", "")
+        if not entry.get("screen_deleted") or not kind or not file_name:
+            continue
+        path = base / "original" / kind / file_name
+        if path.is_file():
+            assets.append({"file_name": file_name, "kind": kind, "sha256": _sha256(path)})
     return {"product": config.product, "slug": product_slug(config.product), "assets": assets}
 
 
@@ -289,6 +297,20 @@ def _keep_previous_readable(base: Path, kept: list[dict], previous_assets: list[
     return notes
 
 
+SCREEN_DELETED_REASON = "화면에서 지운 문서(REQ-KNOW-022). 같은 이름으로 다시 등록하면 AI 사본에 돌아온다."
+
+
+def _screen_deleted_names(storage, product: str, kinds: set[str]) -> dict[str, set[str]]:
+    """종류별 화면에서 지운 이름(소문자). 저장소가 없으면 비어 있다."""
+    if storage is None:
+        return {}
+    return {kind: storage.deleted_names(product, kind) for kind in kinds if kind}
+
+
+def _is_screen_deleted(record: dict, deleted: dict[str, set[str]]) -> bool:
+    return str(record.get("file_name", "")).casefold() in deleted.get(record.get("kind", ""), set())
+
+
 def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None, storage=None, root: Path | None = None) -> dict:
     """PC 가 보낸 manifest 를 서버 상태로 확정하고 문서로 등록한다.
 
@@ -333,7 +355,12 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         kept.append(record)
 
     kept_previous = _keep_previous_readable(base, kept, previous_assets, missing_records)
-    keep_keys = {(record["kind"], record["file_name"]) for record in kept}
+    deleted_names = _screen_deleted_names(storage, config.product, {record["kind"] for record in kept} | {
+        old.get("kind", "") for old in previous_assets})
+    screen_deleted = [record for record in kept if _is_screen_deleted(record, deleted_names)]
+    kept = [record for record in kept if not _is_screen_deleted(record, deleted_names)]
+    # 지운 문서의 파일은 남긴다. 지우면 PC 가 업로드마다 같은 파일을 다시 보낸다 (REQ-KNOW-022).
+    keep_keys = {(record["kind"], record["file_name"]) for record in kept + screen_deleted}
     allow_prune = manifest.get("allow_prune", True) is True and not missing
     if not allow_prune:
         for old in previous_assets:
@@ -343,7 +370,7 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
                     name = safe_file_name(key[1])
                 except UploadRejected:
                     continue
-                if (base / "original" / key[0] / name).is_file():
+                if (base / "original" / key[0] / name).is_file() and not _is_screen_deleted(old, deleted_names):
                     kept.append(old)
                     keep_keys.add(key)
     removed = _prune_orphans(base, keep_keys) if allow_prune else []
@@ -357,7 +384,10 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         "uploaded_from": manifest.get("uploaded_from", ""),
         "counts": manifest.get("counts", {}),
         "assets": kept,
-        "excluded": manifest.get("excluded", []),
+        "excluded": list(manifest.get("excluded", []) or []) + [
+            {"kind": record["kind"], "file_name": record["file_name"], "sha256": record.get("sha256", ""),
+             "exclude_reason": SCREEN_DELETED_REASON, "screen_deleted": True}
+            for record in screen_deleted],
     }
     path = manifest_path(config.product, root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -372,6 +402,8 @@ def commit(product: str, manifest: dict, uploaded: dict[str, dict] | None = None
         detail += f" / 정규화 실패 {len(failures)}건"
     if unregistered:
         detail += f" / 지운 파일의 등록 정리 {len(unregistered)}건"
+    if screen_deleted:
+        detail += f" / 화면에서 지운 문서 AI 제외 {len(screen_deleted)}건"
     if kept_previous:
         detail += f" / 읽지 못한 새 판 대신 이전 판 유지 {len(kept_previous)}건: {', '.join(kept_previous[:3])}"
     return {

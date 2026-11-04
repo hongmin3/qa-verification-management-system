@@ -4830,7 +4830,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
   이유: 자동 수집은 사람이 올린 등록을 교체하거나 지우지 않는다. 이 길이 없으면 잘못 올린 문서를 화면에서 뺄 방법이 없다.
 - 제품 설정이 없는 옛 등록은 출처를 판단할 수 없으므로 지우기를 막지 않는다.
-- 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보내지만, 서버는 지운 이름을 기억해 두었으므로 다시 등록하지 않는다(REQ-KNOW-022).
+- 지식 폴더에서 수집한 문서를 지우면 서버의 수집 사본 파일도 지워진다. 다음 업로드 때 PC 가 그 파일을 다시 보내지만, 서버는 지운 이름을 기억해 두었으므로 다시 등록하지 않고 AI 사본 목록에서도 뺀다(REQ-KNOW-022). 그 뒤로는 파일을 남겨 다시 받지 않는다.
 
 이유: REQ-SYNC-002 에서 서버가 가진 파일 목록은 디스크에 있는 파일을 기준으로 만든다.
 
@@ -5404,15 +5404,21 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 1. 사람이 지우기(REQ-KNOW-005)를 하면 지운 기록 표(`deleted_documents`)에 제품·종류·파일 이름·지운 시각을 적는다. 자동 출처를 밝힌 지우기 요청(`source=alm_crawler` 등)은 적지 않는다.
 2. 지식 폴더 수집본을 등록할 때(REQ-KNOW-012, REQ-SYNC-002 8번) 같은 제품·종류에 같은 이름(대소문자 무시)의 지운 기록이 있으면 그 파일은 등록하지 않는다.
 3. 같은 이름의 파일을 화면이나 동기화 주소로 다시 등록하면 그 지운 기록을 지운다.
+4. 지식 폴더 업로드를 확정할 때(REQ-SYNC-002) 지운 기록이 있는 파일은 AI 사본 목록(manifest 의 `assets`)에 넣지 않는다. 대신 수집 제외 목록(`excluded`)에 사유 "화면에서 지운 문서" 와 `screen_deleted: true` 로 적는다. 공용 AI 연결은 그 파일을 읽지 않는다.
+5. 그 파일의 서버 사본은 지우지 않고 남긴다. 서버가 가진 파일 목록(`/knowledge/product-knowledge/state`)에도 넣는다.
 
-**결과** 등록 결과 문구에 "지운 문서라 건너뜀 N건" 이 붙는다.
+이유: 사본을 지우거나 목록에서 빼면 담당자 PC 가 업로드할 때마다 같은 파일을 다시 보낸다.
+
+**결과** 등록 결과 문구에 "지운 문서라 건너뜀 N건" 이 붙는다. 업로드 확정 문구에는 "화면에서 지운 문서 AI 제외 N건" 이 붙고, 제품 상세의 `수집 제외` 표에 그 파일이 보인다.
 
 **지킬 것**
 
 - 파일 이름이 같을 때만 건너뛴다. 날짜·버전이 다른 새 판은 막지 않는다.
-- 지운 기록은 등록만 막는다. 지식 폴더의 파일과 서버의 수집 사본은 건드리지 않는다.
+- 지식 폴더의 파일은 건드리지 않는다.
 
 이유: 지식 폴더는 담당자 PC 에 있어 서버가 지울 수 없다. 기억하지 않으면 지운 문서가 다음 날 되살아난다.
+
+- 사람이 지우면 REQ-KNOW-024 처럼 수집 요청을 남긴다. 담당자 PC 가 1분 안에 다시 올리면 AI 사본에서도 빠진다.
 
 ### REQ-KNOW-023 교체 파일 이름 맞추기
 
@@ -5497,7 +5503,7 @@ JSON 응답(REQ-KNOW-020)에는 `ai_refresh`(`status`: `REQUESTED`·`NO_UPLOADER
 
 이유: AI 사본은 지식 폴더와 같아야 한다. 서버가 따로 고치면 다음 PC 업로드가 그 변경을 되돌리거나 두 판이 섞인다.
 
-- 화면에서 지운 문서는 이 요구사항의 범위가 아니다. 지식 폴더 파일은 지우지 않으므로(REQ-SYNC-004) AI 사본에 남는다.
+- 화면에서 지울 때도 같은 요청을 남긴다. 지운 문서가 AI 사본에서 빠지는 규칙은 REQ-KNOW-022 4·5번이다.
 
 ### REQ-CONF-001 설정 파일 읽기
 
@@ -9760,6 +9766,8 @@ REQ-KNOW-024 를 `tests/test_knowledge_ai_refresh.py` 로 확인한다. 설정·
 5. AI 사본에 이전 판이 있으면 문서 표의 `AI 반영` 칸이 반영 대기이고 머리에 "AI 연결에 아직 반영되지 않은 문서 1개" 가 보인다. AI 사본을 새 판으로 바꾸면 반영됨이 된다. AI 사본이 없는 제품에는 칸이 없다.
 6. PC 쪽 요청 전용 실행(`run_due(daily=False)`)은 요청이 없으면 올리지 않고, 새 요청은 한 번만 올린다.
 7. `scripts/sync_bellalun_shared.py --only-when-requested` 는 요청이 있을 때만 공통 지침을 내보내고 올린다. 설치 스크립트는 1분 간격 `Bellalun_SharedKnowledge_Request` 예약을 등록한다.
+8. 화면에서 지운 이름(대소문자 무시)은 업로드 확정 때 AI 사본 목록에서 빠지고 수집 제외 목록에 사유와 함께 남는다. 파일은 남고 서버 상태에도 보인다. 같은 이름을 다시 등록하면 AI 사본에 돌아온다(REQ-KNOW-022).
+9. 화면에서 지우면 수집 요청이 남는다.
 
 ```text
 python -m pytest tests/test_knowledge_ai_refresh.py -q
@@ -10451,9 +10459,9 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-019 | `app/core/knowledge_status.py`, `app/core/knowledge_registry.py`, `app/core/storage.py` | TEST-KNOW-007: `tests/test_knowledge_profiles.py` | verified |
 | REQ-KNOW-020 | `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/product_config.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-006, TEST-KNOW-007: `tests/test_knowledge_profiles.py`, TEST-KNOW-010: `tests/test_knowledge_upload_browser.py` | verified |
 | REQ-KNOW-021 | `app/core/knowledge_collect_request.py`, `app/modules/knowledge/router.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `app/core/knowledge_push.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1` | TEST-KNOW-008: `tests/test_knowledge_collect_request.py`, `tests/test_product_knowledge_retry.py`, TEST-KNOW-010: `tests/test_knowledge_upload_browser.py` | verified |
-| REQ-KNOW-022 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
+| REQ-KNOW-022 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_upload.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-011: `tests/test_knowledge_ai_refresh.py` | verified |
 | REQ-KNOW-023 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
-| REQ-KNOW-024 | `app/modules/knowledge/router.py`, `app/core/knowledge_status.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `scripts/sync_bellalun_shared.py`, `scripts/install_bellalun_shared_schedule.ps1` | TEST-KNOW-011: `tests/test_knowledge_ai_refresh.py` | verified |
+| REQ-KNOW-024 | `app/modules/knowledge/router.py`, `app/core/knowledge_status.py`, `app/core/knowledge_upload.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `scripts/sync_bellalun_shared.py`, `scripts/install_bellalun_shared_schedule.ps1` | TEST-KNOW-011: `tests/test_knowledge_ai_refresh.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |
