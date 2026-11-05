@@ -15,10 +15,11 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d5dbe3;padding
 .cite{color:#4a5a70;font-size:14px}
 .toc{background:#f7f9fb;border-radius:8px;padding:10px 18px}
 </style>
+<link rel="stylesheet" href="/static/skills/examples.css">
 <body><h1>VXvue AI 사용 안내</h1>
 <p class="note">Bellalun 업무도 이 공용 연결에서 사용할 수 있습니다. <a href="/static/skills/bellalun/index.html">Bellalun AI 설치·사용 가이드</a>에서 전용 Skill과 질문 예시를 확인하세요.</p>
 <p>VXvue AI는 파트원 PC의 Claude가 QA 서버의 <strong>VXvue 사양서·매뉴얼·TC·최신 QA 작성 규칙</strong>과 <strong>Polarion 항목</strong>을 직접 읽고 근거와 함께 답하게 해 주는 연결 도구입니다. 설치 파일을 받아 설치하면 QA 서버에 자동으로 연결됩니다. 서버 주소·토큰·Polarion 계정은 입력하지 않습니다.</p>
-<div class="toc"><strong>목차</strong> · <a href="#what">무엇을 할 수 있나</a> · <a href="#desktop">Claude Desktop 설치</a> · <a href="#cli">Claude Code CLI 설치</a> · <a href="#examples">실제 질문과 답</a> · <a href="#share">파트원이 알아 둘 점</a> · <a href="#trouble">연결이 안 될 때</a></div>
+<div class="toc"><strong>목차</strong> · <a href="#what">무엇을 할 수 있나</a> · <a href="#desktop">Claude Desktop 설치</a> · <a href="#cli">Claude Code CLI 설치</a> · <a href="#work-examples">업무 요청과 결과 예시</a> · <a href="#examples">과거 실제 조회 답변</a> · <a href="#share">파트원이 알아 둘 점</a> · <a href="#trouble">연결이 안 될 때</a></div>
 
 <h2 id="what">무엇을 할 수 있나</h2>
 <p>Claude가 질문을 받으면 먼저 서버의 최신 VXvue Skill·QA 규칙을 끝까지 읽고, 그 규칙에 따라 자료를 찾아 답합니다. 답에는 문서명·쪽·시트·행·VP 번호 같은 근거가 함께 붙습니다.</p>
@@ -36,8 +37,168 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #d5dbe3;padding
 <h2 id="alm-checklist">ALM에 다음 버전 Checklist 등록하기</h2>
 <p>제품 스킬은 최신 Checklist·사양·TC 근거를 확인하고, <a href="/static/alm-ai/index.html#checklist-registration">ALM 스킬</a>은 실제 등록·SRS 연결·문서 구성을 담당합니다. 이 공용 자료 연결의 조회 권한은 그대로 유지합니다. 실제 등록에는 실행 환경의 기존 로그인 브라우저 또는 허용된 별도 ALM 연결이 필요합니다.</p>
 <p class="note">“최신 서버 Checklist의 [대상 버전]을 A~K만 신규 등록하고, SRS verifies와 Basic Function 기준 문서 정리, 저장 후 전체 대조까지 진행해줘”처럼 요청하세요. 조사·준비만 요청하면 등록은 보류합니다. 문서 결재표·실제 결재경로·전자서명은 각각 확인하며 전자서명과 최종 승인은 사용자가 직접 합니다.</p>
-<p>통합 QA 업무 지침 2026-11-04.3부터 적용됩니다. 기존 연결 프로그램 재설치 없이 새 작업에서 최신 workflow를 읽으면 됩니다. ALM Skill은 1.2.0 ZIP으로 갱신하세요. 새 버전의 대상·개수·제외와 권한은 다시 확인합니다.</p>
+<p>통합 QA 업무 지침 2026-11-04.3부터 적용됩니다. 기존 연결 프로그램 재설치 없이 새 작업에서 최신 workflow를 읽으면 됩니다. ALM Skill은 현재 안내의 최신 ZIP으로 갱신하세요. 새 버전의 대상·개수·제외와 권한은 다시 확인합니다.</p>
 
+<!-- work-examples:start -->
+<section id="work-examples" aria-labelledby="work-examples-title">
+<h2 id="work-examples-title">이전에 맡겼던 VXvue 업무를 다시 요청하는 방법</h2>
+<p class="note">아래는 사용자가 이전에 요청한 업무를 재구성한 예시입니다. 당시 버전·문서·행 번호는 사례 설명용이며, 새 작업에서는 최신 자료 판과 원본을 다시 확인합니다. VXvue 서버 도구는 사양·TC·이슈를 읽고 지원되는 파생 보고서를 만듭니다. ALM·PLM 기록 변경은 해당 스킬과 별도의 Computer Use 연결을 사용하며, 실제 제품·장비 시험은 따로 확인합니다.</p>
+<p>아래 결과는 보고 형식 예시이며 현재 작업의 완료 사실이 아닙니다. 대괄호 안에는 이번 작업에서 확인한 값을 넣습니다. 항목을 펼치면 필요한 입력부터 완료 기준까지 볼 수 있습니다.</p>
+<details class="work-case" id="vxvue-checklist" open>
+<summary>1. V1.1.0 Checklist R378~R858처럼 기존 행을 보존하며 첨삭</summary>
+<p class="case-basis">과거 R-20-643의 V1.1.0 R378~R858 첨삭 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>이번에 사용할 최신 Checklist·시트·행 범위·수정할 열</li>
+<li>관련 사양·매뉴얼·기존 결과 이력·원본 수정 또는 별도 복사용 파일 여부</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 최신 Checklist의 [시트/행 범위]를 관련 사양과 매뉴얼로 대조해 첨삭해줘.
+과거 R378~R858 작업처럼 원래 순서·빈 행·Step/Expected 대응·Pass/Fail 이력을 유지해줘.
+뜻을 유지하는 최소 수정과 시험 의미가 바뀌는 후보를 나누고, 의미가 바뀌는 것만 근거·전후 문구로 질문해줘.
+복사용 자료가 필요하면 [원래 붙일 범위]와 행 대응을 유지해 만들어줘. ALM 등록은 아직 하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>새 상태·workflow를 끝까지 읽고 이번 파일의 해시·시트·열·실제 범위를 확인한다.</li>
+<li>TC별 목적·조작·판정을 사양·매뉴얼과 대조한다. 유지·문구 수정·의미 변경·확인 필요를 구분한다.</li>
+<li>수정 권한이 있는 로컬 파일 도구가 연결된 경우에만 허용 범위를 편집하고 다시 읽어 원행 대응·결과·수식·다른 시트를 대조한다. 서버 읽기 연결만 있으면 교정안과 복사용 내용을 제공한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">원본: [해시 / 시트 / 행 / 수정 열]
+대조표: [원래 행·TC / 근거 / 기존 문구 / 수정안 / 의미 변경 여부]
+산출물: [파일 또는 복사용 범위 / 시작 셀 / 행 대응 검증]
+보존: [빈 행·실행 이력·수식·다른 시트 대조]
+보류: [의미 변경 질문 / 실제 제품 시험 / ALM 등록]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>과거 481행·행 번호를 이번 원본의 고정 범위로 쓰지 않는다.</li>
+<li>사양 대조·파일 교정 완료와 실제 시험·Import 완료를 구분한다. Test Data는 근거 없이 채우지 않는다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-api-manual">
+<summary>2. API Protocol Manual의 꼭 필요한 수정 코멘트 작성</summary>
+<p class="case-basis">과거 Web System Design &amp; API Protocol Manual v1.4.6 검토 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>이번 PDF/Word 판·검토 범위·관련 사양·현재 ALM 코멘트</li>
+<li>직접 수정할지 코멘트 초안만 필요한지</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 첨부한 API Protocol Manual을 관련 사양과 실제 예제까지 대조해줘.
+과거 errorCode -1·device/type·/image/ 경로 검토처럼 공통 표와 명령별 설명·예제를 함께 확인해줘.
+정말 수정할 항목과 선택 보강·사양 확인을 나누고 원문·위치·한국어 설명·최소 수정안·복사용 코멘트를 줘.
+API를 실행하지 않았다면 런타임 결함으로 단정하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>원본 해시·판·PDF 물리 페이지 또는 Word 표시 기준과 검토 범위를 고정한다.</li>
+<li>공통 규칙·각 명령의 입력/결과·예제·관련 SRS와 기존 코멘트를 함께 읽는다.</li>
+<li>각 발견에 정확한 현재 원문과 위치, 한국어 의미, 근거, 오해 가능성, 최소 수정안과 코멘트를 연결한다. 필요하면 지원되는 보고서 도구로 파생 보고서를 만든다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">분류: [필수 수정 / 선택 보강 / 사양 확인]
+위치·현재 원문: [판 / 쪽·절·표 셀·예제 키 / 원문 인용]
+판단: [한국어 설명 / 사양 근거 / 구체적 오해]
+제안: [최소 수정안 / 복사용 한국어 코멘트]
+검증 범위: [문서 대조 / API 실행 여부]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>현재 문구와 분석 설명을 섞지 않는다. 내부 문단 번호를 출력 페이지로 쓰지 않는다.</li>
+<li>경로 문구가 다르다는 이유만으로 404나 제품 오류를 주장하지 않는다. 원본 수정·ALM 댓글 저장은 별도 실행 요청이 필요하다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-shimadzu">
+<summary>3. Shimadzu 전용 매뉴얼 추가 내용만 검토</summary>
+<p class="case-basis">과거 Operation/Service Manual의 시마주 전용 추가 내용 검토 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>대상 매뉴얼 판·시마주 전용 추가 범위·관련 라이선스/테마 사양</li>
+<li>기존 공통 설명·앞선 검토 지적·반영 여부</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 이번 Operation/Service Manual에서 Shimadzu 전용으로 추가한 부분만 검토해줘.
+기존 공통 설명에 이미 반영된 내용과 삭제된 조건을 따로 확인하고, 남아 있는 낡은 중복 설명만 정확히 짚어줘.
+원문 위치와 인용, 한국어 해설, 필요한 수정 코멘트를 문서 순서로 정리해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 판과 추가된 범위를 먼저 확인하고 이전 중단 위치를 현재 문서에 다시 대응시킨다.</li>
+<li>시마주 라이선스·패키지·테마·장비 연계 조건을 사양과 비교한다.</li>
+<li>이미 올바른 곳·오래된 중복·삭제된 조건을 분리해 실제 수정 대상만 제시한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">검토 범위: [문서 판 / 추가 구역]
+유지할 곳: [이미 반영된 원문]
+수정 후보: [낡은 중복 위치 / 정확한 인용 / 근거]
+코멘트: [문서 순서의 한국어 초안]
+미확인: [운영 라이선스·장비 실행]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>공통 기능 전체를 시마주 전용 결함으로 묶지 않는다.</li>
+<li>과거 W7·W5 같은 내부 위치를 새 판의 페이지로 재사용하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-generator">
+<summary>4. Ecoray Generator 체크리스트와 실제 로그 대조</summary>
+<p class="case-basis">과거 Ecoray·Ready 전환·Generator 오류 조사 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>Generator 모델·펌웨어·Protocol 판·시험 조건·캡처·로그</li>
+<li>현재 Checklist의 대상 모델 열·과거 Issue·실제 수행 결과</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 [Generator 모델/버전]의 Ready 전환과 첨부 오류 로그를 관련 Protocol·사양·과거 이슈로 대조해줘.
+Checklist에서는 해당 모델 열의 적용 여부를 먼저 확인하고, 미지원 항목을 공통 지원으로 바꾸지 마.
+확인한 Actual·기대 상태 전환·누락 TC·추가로 장비에서 확인할 조건을 나눠 정리해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>같은 자료 판에서 모델·Protocol·Generator 명령/상태와 실제 로그의 시간 순서를 확인한다.</li>
+<li>해당 모델의 Checklist 열과 과거 이슈를 연결하고 UI 상태·명령 응답·장비 상태를 구분한다.</li>
+<li>현재 증거로 판단 가능한 항목과 추가 장비 검증이 필요한 항목을 나누고 재현/재시험 절차를 제안한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">대상: [모델 / Protocol / 펌웨어 / 시험 빌드]
+상태 비교: [시점 / 명령·응답 / UI·장비 Actual / 기대 동작]
+TC: [파일·시트·행 / 적용 여부 / 누락 후보]
+추가 확인: [로그·장비 조건 / 재시험 절차]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>정적 문서와 로그만으로 장비를 직접 제어했거나 오류가 수정됐다고 보고하지 않는다.</li>
+<li>다른 Generator의 기능·오류 코드·모델 열을 그대로 가져오지 않는다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-vp6906">
+<summary>5. VP-6906 같은 인증 이슈의 수정확인 TC 설계</summary>
+<p class="case-basis">과거 Password Expired·IC Card 인증 이슈 TC 설계 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>이슈 번호·현재 본문/댓글·첨부의 실제 내용·발생/수정 버전</li>
+<li>관련 인증 사양과 최신 Checklist의 기존 TC</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 VP-6906과 연결된 인증 사양·댓글·기존 TC를 최신 자료에서 확인해줘.
+IC Card 로그인과 일반 비밀번호 만료 정책의 적용 차이를 먼저 확인하고, 누락·중복 없이 수정확인 TC를 정리해줘.
+읽지 않은 영상·ZIP 첨부는 미확인으로 표시하고, TC 설계 완료와 실제 제품 Pass를 구분해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 VP 속성·관계·댓글과 필요한 연결 사양을 끝까지 읽는다.</li>
+<li>인증 방식·계정 상태·정책 적용 조건을 기존 TC와 비교한다.</li>
+<li>환경·Step·Expected를 근거에 맞게 작성하고 실제 실행해야 할 조건과 첨부 미확인을 남긴다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">이슈: [VP / 현재 상태·버전 / 조회 범위]
+사양: [인증 방식별 적용 조건 / 근거 VP]
+TC: [기존 유지·수정·추가 / Step / Expected]
+상태: [설계 완료 / 제품 실행 미수행 / 미열람 첨부]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>첨부 목록 조회만으로 MP4·ZIP의 본문을 확인했다고 하지 않는다.</li>
+<li>과거 설계한 TC 개수나 행을 새 버전의 확정 범위로 재사용하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-verified">
+<summary>6. “검증했어” 뒤 Checklist와 종료 코멘트 준비</summary>
+<p class="case-basis">사용자가 자주 요청한 수정확인 후속 업무 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>실제 확인한 버전·환경·조작·Actual·증거</li>
+<li>대상 Issue·최신 Checklist 시트/행·원래 결과·재발 이력</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 [이슈]를 [버전/조건]에서 검증한 첨부 결과를 정리해줘.
+관련 Checklist 파일·시트·행과 현재 기록을 확인하고, 이번 증거로 결과를 적을 수 있는 항목과 보류할 항목을 나눠줘.
+기존 Fail·재발생 이력은 보존하고 복사용 한국어 종료 코멘트를 만들어줘. ALM에 저장하려면 별도 실행 요청으로 구분해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>실제 증거와 현 버전의 대상 TC·판정 기준을 대조한다.</li>
+<li>TC 유지·문구 수정·추가 검증·사양 문의와 결과 기록 가능 여부를 구분한다.</li>
+<li>근거·관찰·검증 범위가 있는 종료 코멘트를 준비한다. 서버 조회만 사용한 경우 원본 셀이나 Issue 상태를 바꾸지 않는다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">연결: [Issue / Checklist 파일·시트·행 / TC 제목]
+이번 결과: [버전·조건 / Actual / 증거 / 기록 가능 여부]
+이력: [과거 Fail·재발 기록 보존]
+종료 코멘트: [복사용 한국어 문장]
+미수행: [추가 제품 시험 / 실제 ALM 저장]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>“검증했어”만으로 모든 조건이 Pass라고 추정하지 않는다.</li>
+<li>원본 수정·ALM 기록 변경 요청이 있으면 해당 도구와 권한을 확인해 별도 수행·재조회한다.</li>
+</ul></details>
+<details class="work-case" id="vxvue-filter">
+<summary>7. Polarion 필터 전체 수집과 항목별 분석</summary>
+<p class="case-basis">과거 사용자 필터 전체 수집·VP 이력 분석 요청 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>사용자가 지정한 원래 필터·프로젝트·기간·필요한 분석 기준</li>
+<li>본문·댓글·관계·첨부 중 확인할 범위</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 이 Polarion 필터 [필터]를 바꾸지 말고 모든 페이지에서 수집해줘.
+각 항목의 본문·댓글·관련 사양을 읽고 변경 내용·TC 영향·미확인을 정리해줘.
+목록을 모은 수와 실제 분석한 수를 나누고 남은 페이지·조회 실패도 알려줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>원래 필터를 그대로 전달하고 next_page가 없을 때까지 조회한다.</li>
+<li>실제 모은 ID를 기준으로 본문·댓글·관계와 필요한 문서를 이어 읽는다.</li>
+<li>수집·본문 확인·분석·실패의 범위를 각각 집계하고 근거별 결론을 낸다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">조회: [원래 필터 / 시각 / 자료 판]
+수집: [ID 목록 / 페이지 / 남은 페이지·실패]
+분석: [항목별 변화 / 관련 사양·TC / 판단 근거]
+범위: [수집 수 / 본문 확인 수 / 분석 수 / 미확인 첨부]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>첫 페이지나 목록 수집만으로 전체 분석 완료라고 하지 않는다.</li>
+<li>일반 Redmine 검색의 제한을 Polarion 필터 전체 수집 결과와 혼동하지 않는다.</li>
+</ul></details>
+</section>
+<!-- work-examples:end -->
 <h2 id="desktop">Claude Desktop 설치 (일반 채팅·Cowork)</h2>
 <ol>
 <li><a href="/vxvue-desktop/download" download="vxvue-ai.mcpb">VXvue AI 확장 다운로드</a>를 누릅니다. 받을 때마다 이 PC를 한 번 등록할 수 있는 번호(7일 유효)가 새로 들어갑니다. 받은 파일은 다른 사람에게 전달하지 말고 각자 이 화면에서 받습니다.</li>

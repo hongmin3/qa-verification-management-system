@@ -1,4 +1,4 @@
 interface:
-  display_name: "ALM 사용 가이드"
-  short_description: "QA 서버 교육 근거로 ALM 절차를 확인하고 제품 스킬과 함께 사용"
-  default_prompt: "ALM 스킬로 서버의 최신 가이드와 원본 근거를 확인하고 업무 절차를 안내해줘."
+  display_name: "ALM 브라우저 업무"
+  short_description: "기존 로그인 화면에서 요청한 업무 수행과 저장 결과 재조회"
+  default_prompt: "ALM 스킬로 현재 로그인된 브라우저의 요청 대상을 확인하고, 허용된 작업을 수행한 뒤 저장값을 재조회해 결과와 미완료를 보고해줘."

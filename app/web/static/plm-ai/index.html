@@ -8,19 +8,20 @@
 <meta content="Teamcenter 산출물 등록·승인 준비·DHF·WBS 절차를 원본과 영상으로 확인하는 PLM 스킬 안내" name="description"/>
 <link href="style.css" rel="stylesheet"/>
 <script defer="" src="guide.js"></script>
+<link rel="stylesheet" href="/static/skills/examples.css">
 </head>
 <body>
 <header class="site-header">
 <a class="brand" href="/">QA 업무 지원</a>
-<nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#install">설치 방법</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
+<nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#work-examples">실제 작업과 결과</a><a href="#install">설치 방법</a><a href="#claude">Claude에서 사용</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
 </header>
 <main>
 <section aria-labelledby="title" class="intro">
 <p class="eyebrow">QA 공통 업무 스킬</p>
 <h1 id="title">PLM 스킬 사용 안내</h1>
-<p class="lead">Teamcenter에 검증 산출물을 등록하고 승인 문서와 DHF를 연결하는 절차를 교육 자료와 영상 근거로 확인합니다. ALM의 문서 서명·PDF Export는 ALM 스킬과 함께 사용합니다.</p>
-<div class="actions">
-<a aria-disabled="true" class="button primary" data-asset="index.html" id="guide-link">상세 사용 가이드 열기</a>
+<p class="lead">로그인된 브라우저를 Computer Use로 제어해 Teamcenter 문서번호 등록·속성 저장·파일 첨부·DHF 연결·WBS 업무를 수행합니다. 같은 ID와 리비전에서 결과를 다시 확인하며, 사용법 질문에도 교육 근거로 답합니다. ALM 승인 PDF는 ALM 스킬과 함께 확인합니다.</p>
+<div class="actions"><a class="button primary" href="#work-examples">실제로 맡길 작업 보기</a>
+<a aria-disabled="true" class="button" data-asset="index.html" id="guide-link">상세 사용 가이드 열기</a>
 <a aria-disabled="true" class="button" data-asset="plm-skill.zip" download="plm-skill.zip" id="skill-download">PLM 스킬 ZIP 다운로드</a>
 </div>
 <p class="small">설치 없이 가이드와 영상을 바로 볼 수 있습니다. AI와 함께 사용하려면 아래 설치 방법을 따르세요.</p>
@@ -48,6 +49,164 @@
 <h2 id="what-title">이런 일을 도와줍니다</h2>
 <div class="feature-grid"><article><h3>문서번호와 파일 등록</h3><p>프로젝트 산출물의 문서번호·Priority Grade·문서 주제를 확인하고 파일 첨부와 체크인 절차를 살펴봅니다.</p></article><article><h3>승인과 ALM 연계</h3><p>PLM 승인과 ALM 승인 PDF를 구분하고 10.Document Approve(V2)·100.Document Approve(ALM)의 적용 조건을 확인합니다.</p></article><article><h3>DHF와 WBS</h3><p>승인 문서의 Record 연결·레코드 개정·WBS 타스크 준비와 완료 조건을 확인합니다.</p></article><article><h3>원본 근거와 샘플</h3><p>P1~P20 원본 슬라이드·V01 영상·D1 Plan·D2 Report 샘플을 함께 살펴봅니다.</p></article></div>
 </section>
+<!-- work-examples:start -->
+<section id="work-examples" aria-labelledby="work-examples-title">
+<h2 id="work-examples-title">PLM에서 실제로 맡길 작업과 결과 예시</h2>
+<p class="note">PLM은 Teamcenter의 문서번호·첨부·DHF·WBS 작업을 기존 로그인 브라우저와 Computer Use로 수행하는 스킬입니다. 현재 제어 도구와 권한을 확인한 뒤 요청한 일반 저장·연결·완료 처리를 진행합니다. 전자서명·자가결재·최종 승인은 사람이 처리합니다. 사용법 질문에도 교육 근거로 답합니다.</p>
+<p>아래 결과는 보고 형식 예시이며 현재 작업의 완료 사실이 아닙니다. 대괄호 안에는 이번 작업에서 확인한 값을 넣습니다. 항목을 펼치면 필요한 입력부터 완료 기준까지 볼 수 있습니다.</p>
+<details class="work-case" id="plm-document" open>
+<summary>1. 프로젝트 산출물 문서번호 등록</summary>
+<p class="case-basis">PLM 교육 가이드 7장·P7·V01을 작업 요청으로 구성</p>
+<h4>준비할 입력</h4><ul>
+<li>프로젝트·폴더·유형·이름·문서 주제·Priority Grade</li>
+<li>신규 문서인지 기존 리비전인지·현재 로그인 Teamcenter</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 로그인된 Edge의 [프로젝트/폴더]에 [문서명]을 프로젝트 산출물로 등록해줘.
+문서 주제 [값]과 Priority Grade [값]을 확인하고 문서번호를 발급받아줘.
+같은 이름의 기존 문서를 먼저 확인하고, 새 ID·리비전·속성을 다시 열어 보고해줘. Workflow 제출과 승인은 아직 하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>서버·프로젝트·폴더·현재 권한·동일 문서 존재 여부를 확인한다.</li>
+<li>유형과 입력값으로 문서를 생성하고 자동 발급된 ID를 확인한다.</li>
+<li>같은 ID를 다시 열어 이름·리비전·주제·Priority Grade와 중복 여부를 읽는다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">문서: [실제 생성 ID / 리비전 / URL]
+등록 위치: [프로젝트 / 폴더]
+속성: [유형 / 이름 / 주제 / Priority Grade]
+재조회: [대조 결과]
+미수행: [Workflow 제출·승인]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>예제 DD 번호를 새 업무에 복사하지 않는다.</li>
+<li>필수 속성이 불명확하면 현재 화면과 자료로 확인하고, 결과를 바꾸는 값이 남으면 생성 전에 질문한다.</li>
+</ul></details>
+<details class="work-case" id="plm-upload">
+<summary>2. PLM 승인 대상 Word 첨부와 체크인</summary>
+<p class="case-basis">PLM 교육 가이드 8장·P8 기반 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>문서 ID·리비전·최종 Word 파일·현재 체크아웃 상태</li>
+<li>기존 첨부 교체 여부·문서번호·변경 추적 처리 상태</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 [문서 ID/리비전]에 첨부 Word를 올리고 필요한 체크인까지 해줘.
+기존 첨부가 있으면 먼저 파일명과 교체 범위를 확인해줘. 생성된 PDF에서 문서번호·쪽수·본문을 확인해줘.
+전자서명이나 최종 승인은 하지 말고 업로드·체크인·PDF 확인 결과를 구분해 보고해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>같은 ID·리비전·승인 위치와 기존 첨부를 확인한다. Word의 변경 추적이 남았으면 처리 범위를 확인한다.</li>
+<li>요청 범위에서 파일을 첨부·교체하고 PLM 승인 문서에 필요한 체크아웃·체크인을 수행한다.</li>
+<li>PDF가 생성되면 문서번호·쪽수·본문과 첨부·체크인 상태를 같은 객체에서 다시 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">대상: [ID / 리비전]
+파일: [업로드한 파일명 / 보존 또는 교체한 첨부]
+체크인: [현재 상태]
+PDF: [생성 여부 / 문서번호 / 쪽수 / 확인 범위]
+남은 단계: [사용자 검토·서명·승인]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>ALM 승인 PDF 첨부와 이 절차를 혼용하지 않는다.</li>
+<li>업로드 알림만으로 PDF 생성·승인 완료까지 보고하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="plm-alm-pdf">
+<summary>3. ALM 승인 PDF 첨부와 Workflow 제출 준비</summary>
+<p class="case-basis">PLM 교육 가이드 9~10장·P9/P10·V01 기반 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>ALM 승인 완료 증거·Export PDF·PLM 문서번호·리비전</li>
+<li>대상 모델의 승인 위치·선택할 Workflow·사용자 결재 단계</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM과 PLM 스킬로 [ALM 문서]의 승인 상태와 Export PDF를 확인하고 [PLM 문서 ID/리비전]에 첨부해줘.
+문서번호·쪽수·내용을 확인하고 100.Document Approve(ALM)의 타깃과 제출 정보를 확인해 Workflow 제출까지 해줘.
+단, 내 전자서명·자가결재가 필요한 시점에는 대상과 다음 버튼을 보여주고 넘겨줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>ALM 스킬로 현재 문서의 승인 상태와 Export PDF를 확인한다. 현재 도구에 Export 기능이 없으면 사용자가 제공한 파일과 한계를 확인한다.</li>
+<li>PLM의 동일 ID·리비전에 승인 PDF를 첨부하고 문서번호·쪽수·내용을 대조한다. 교육 지침상 ALM 승인 문서에는 PLM 체크아웃·체크인이 필요 없음을 현재 대상과 함께 확인한다.</li>
+<li>정확한 템플릿·타깃·제출 정보를 확인하고 요청·도구 정책이 허용한 제출 단계까지 수행한다. 서명·자가결재는 사용자에게 넘긴다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">ALM: [문서 / 승인 확인 근거 / Export PDF]
+PLM: [문서 ID / 리비전 / 첨부 파일 / PDF 대조]
+Workflow: [템플릿 / 타깃 / 준비 또는 제출 상태]
+사용자 단계: [타스크 / 서명·자가결재가 필요한 다음 동작]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>ALM의 미승인 문서를 PLM 자가결재로 대신하지 않는다.</li>
+<li>V01의 02:10~02:20 사이 승인 클릭은 화면 표본으로 직접 확인한 동작이 아니다.</li>
+</ul></details>
+<details class="work-case" id="plm-dhf">
+<summary>4. 승인 문서를 DHF Record에 연결</summary>
+<p class="case-basis">PLM 교육 가이드 12장·P12·V01 04:00~04:27 기반 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>상품화 프로젝트·DHF Record·연결할 승인 문서 ID/리비전</li>
+<li>현재 Record와 기존 산출물·DHF 개정 필요 여부</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 [프로젝트]의 DHF에서 [Record 이름/ID]를 찾아 [승인 문서 ID/리비전]을 산출물로 연결해줘.
+기존 문서와 승인 상태를 먼저 확인하고, 저장 후 Record Deliverable Relation과 실제 문서 리비전을 재조회해줘.
+DHF가 잠겨 있거나 개정이 필요하면 임의로 우회하지 말고 그 지점까지 보고해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>프로젝트와 맞는 Record·현재 산출물·승인 문서를 확인한다. 이름만 비슷한 다른 Record로 대체하지 않는다.</li>
+<li>권한·상태가 허용되면 산출물 첨부로 지정 문서를 연결한다.</li>
+<li>Record를 다시 열고 LATEST RECORDS의 관계 열과 실제 문서 ID·리비전을 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">프로젝트·Record: [이름 / 실제 ID]
+연결: [Record → 승인 문서 ID/리비전]
+재조회: [Record Deliverable Relation / 문서 승인 상태]
+미완료: [잠금·연구소 개정·권한 제한]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>모델별 DHF 적용 표와 미확정 대상을 먼저 확인한다.</li>
+<li>관계 표시만 보고 다른 리비전·미승인 문서를 올바른 연결이라고 처리하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="plm-revision">
+<summary>5. 문서 개정과 DHF의 새 리비전 연결</summary>
+<p class="case-basis">PLM 교육 가이드 11·13장과 P11·P13/P14 기반 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>기존 문서 ID·리비전·개정 사유·새 파일</li>
+<li>문서 종류·버전·DHF Recordset/Record·기존 연결의 처리 범위</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 [문서 ID/현재 리비전]의 [개정 사유]를 확인해 새 리비전을 준비해줘.
+새 파일 첨부와 재조회까지 진행하고, 승인 뒤 연결할 DHF Record와 기존 리비전 처리 대상을 정리해줘.
+이번 요청에 없는 기존 승인 문서 삭제나 최종 승인은 하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>TC 리비전과 Plan/Report의 버전별 새 문서번호 규칙을 구분하고 현재 대상의 개정 방식을 확인한다.</li>
+<li>허용된 개정·파일 교체·체크인 또는 ALM PDF 첨부를 수행하고 이전/새 리비전을 대조한다.</li>
+<li>DHF 승인 완료로 수정할 수 없으면 연구소 리비전 필요를 보고한다. 승인 전의 새 문서를 승인 완료 산출물처럼 연결하지 않는다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">문서 개정: [ID / 이전 리비전 / 새 리비전]
+파일·상태: [새 첨부 / 체크인 또는 PDF / 승인 전 상태]
+DHF: [현재 연결 / 승인 뒤 갱신할 Record / 개정 필요 여부]
+미수행: [서명·승인·요청하지 않은 삭제]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>승인 완료 DHF의 변경 제한을 우회하지 않는다.</li>
+<li>이전 문서를 잘라내는 작업은 대상과 영향이 확인된 구체적인 요청 범위에서만 진행한다.</li>
+<li>준비 요청에 파일 첨부·저장·재조회가 함께 지정돼 있으면 그 단계까지 수행한다. 최종 승인이나 요청하지 않은 DHF 교체는 추가하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="plm-tc-path">
+<summary>6. TC 저장 위치를 등록하고 파일은 첨부하지 않기</summary>
+<p class="case-basis">PLM 교육 가이드 15장·P19 기반 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>TC 문서번호 또는 신규 대상·리비전·실제 서버 저장 경로</li>
+<li>대상 프로젝트·문서 속성 필드·현재 TC 승인/연결 상태</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 [TC 문서 ID/리비전]의 저장 위치 속성에 [실제 서버 경로]를 입력해줘.
+이 TC는 교육 지침의 변경 절차에 따라 파일을 첨부하지 않는 대상인지 확인해줘.
+저장 후 같은 ID에서 경로와 기존 첨부 상태를 재조회하고, 자가승인과 DHF는 다음 단계로 구분해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 대상이 TC인지·신규 문서번호/리비전 방식과 실제 경로를 확인한다.</li>
+<li>현재 화면의 올바른 속성에 요청 경로를 저장한다.</li>
+<li>같은 ID·리비전의 속성과 첨부·승인·DHF 현재 상태를 다시 읽는다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">TC 문서: [ID / 리비전]
+저장 위치: [기존 값 / 저장된 경로]
+첨부: [현재 첨부 상태 / 이번 파일 미첨부]
+다음 단계: [사용자 자가승인 / DHF 연결 요청 여부]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>경로 문자열 저장과 실제 서버 파일 존재·접근 검증을 구분한다.</li>
+<li>모든 PLM 문서에 파일 미첨부 규칙을 적용하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="plm-wbs">
+<summary>7. WBS 작업 내용·레퍼런스 등록과 일반 완료</summary>
+<p class="case-basis">PLM 교육 가이드 14장·P15~P18을 작업 요청으로 구성</p>
+<h4>준비할 입력</h4><ul>
+<li>프로젝트·타스크 ID·담당자·실제 완료한 작업 내용</li>
+<li>승인된 레퍼런스/VCN·완료 조건·현재 타스크 상태</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>PLM 스킬로 [프로젝트/타스크 ID]의 현재 담당자와 완료 조건을 확인해줘.
+내가 제공한 작업 내용 [내용]과 승인 레퍼런스 [ID]를 저장하고, 일반 완료 동작이면 완료 처리까지 해줘.
+전자서명·결재가 요구되거나 산출물이 부족하면 그 지점에서 멈춰줘. 저장 뒤 같은 타스크의 내용·관계·상태를 다시 읽어줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>타스크·담당자·대상 모델·선행 산출물·현재 상태를 확인한다. 매핑/할당 시점이 불명확하면 가이드 17장 확인 필요 항목을 적용한다.</li>
+<li>요청한 작업 내용과 승인 레퍼런스를 저장한다.</li>
+<li>서명·결재를 요구하지 않고 선행 조건이 확인된 일반 완료만 요청 범위에서 실행한다.</li>
+<li>같은 타스크의 내용·레퍼런스·완료 상태를 다시 조회하거나, 사용자에게 넘긴 단계와 미완료 이유를 보고한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">타스크: [ID / 담당자 / 프로젝트]
+저장 내용: [작업 내용 / 레퍼런스 ID]
+상태: [변경 전 / 재조회한 상태]
+완료 또는 보류 근거: [충족한 조건 / 부족한 산출물 / 사용자 서명 단계]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>작업 내용 저장과 WBS 완료는 별도 결과다. 수행하지 않은 업무를 완료로 만들지 않는다.</li>
+<li>타스크가 오지 않았다는 이유로 다른 타스크나 프로젝트에서 대신 완료하지 않는다.</li>
+</ul></details>
+</section>
+<!-- work-examples:end -->
 <section aria-labelledby="install-title" id="install">
 <h2 id="install-title">Codex와 Claude Code에 설치하기</h2>
 <p>Python 3을 실행할 수 있는 PC와 QA 서버에 접속할 수 있는 사내망이 필요합니다. PLM 계정·비밀번호·토큰을 이 스킬에 입력하지 않습니다.</p>
@@ -55,16 +214,32 @@
 <li><strong>준비 사항을 확인합니다.</strong><p>Windows PowerShell에서 <code>py --version</code>을 실행해 Python 3이 있는지 확인합니다. 다른 운영체제에서는 <code>python3 --version</code>을 사용합니다.</p></li>
 <li><strong>위의 PLM 스킬 ZIP을 받고 압축을 풉니다.</strong><p>압축 안의 <code>plm</code> 폴더 전체를 사용합니다. <code>SKILL.md</code>, <code>scripts</code>, <code>server.json</code>을 함께 둡니다.</p></li>
 <li><strong>사용하는 도구의 사용자 스킬 폴더에 넣습니다.</strong><div class="table-wrap"><table><thead><tr><th>사용 도구</th><th>Windows에서 둘 위치</th></tr></thead><tbody><tr><td>Codex</td><td><code>%USERPROFILE%\.codex\skills\plm</code></td></tr><tr><td>Claude Code</td><td><code>%USERPROFILE%\.claude\skills\plm</code></td></tr></tbody></table></div><p>macOS·Linux에서는 홈 폴더 아래 <code>~/.codex/skills/plm</code> 또는 <code>~/.claude/skills/plm</code>을 사용합니다. 같은 이름의 사용자 수정본이 있으면 먼저 보관하고 내용을 비교합니다.</p></li>
-<li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>PLM 스킬로 ALM에서 승인한 PDF를 Teamcenter에 등록하고 DHF에 연결하는 순서를 알려줘.</code></p><p>가이드의 절차와 함께 <code>P7</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$plm</code>으로도 부를 수 있습니다.</p></li>
+<li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>PLM 스킬로 로그인된 Edge의 [문서 ID/리비전]에 [승인 PDF]를 첨부하고 문서번호·쪽수·저장 상태를 재조회해줘. 전자서명·승인은 하지 마.</code></p><p>가이드의 절차와 함께 <code>P7</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$plm</code>으로도 부를 수 있습니다.</p></li>
 </ol>
 <details><summary>서버 자료를 읽는지 직접 확인하기</summary><p>Codex 사용자 폴더에 설치했다면 PowerShell에서 실행합니다. Claude Code만 사용한다면 경로의 <code>.codex</code>를 <code>.claude</code>로 바꿉니다.</p><pre><code>py -X utf8 "$env:USERPROFILE\.codex\skills\plm\scripts\knowledge.py" status</code></pre><p><code>metadata_verified: true</code>와 자료 판·가이드 장수 등이 나오면 자료 목록과 본문 파일의 해시 대조가 끝난 것입니다. 실제 PLM에서 시험이나 승인을 실행한 결과는 아닙니다.</p></details>
-<p class="small">이 설치 안내는 로컬 Python을 실행하는 Codex·Claude Code용입니다. Claude Desktop의 일반 채팅에 설치하는 MCP 확장 파일은 제공하지 않습니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
+<p class="small">위 폴더 설치는 로컬 Python을 사용하는 Codex·Claude Code용입니다. Claude Desktop·Cowork의 Skill ZIP 업로드와 실행 조건은 아래에서 따로 설명합니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
+</section>
+<section id="claude" aria-labelledby="claude-title">
+<h2 id="claude-title">Claude Code와 Claude Desktop·Cowork에서 사용하기</h2>
+<h3>Claude Code</h3>
+<ol><li>현재 PLM ZIP의 <code>plm</code> 폴더 전체를 <code>~/.claude/skills/plm</code>에 둡니다. Windows에서는 <code>%USERPROFILE%\.claude\skills\plm</code>입니다. 기존 사용자 수정본이나 다른 스킬로 연결된 폴더는 먼저 비교·보관합니다.</li>
+<li>Claude Code에서 <code>/plm</code>으로 호출하거나 “PLM 스킬로 로그인된 브라우저의 [대상]을 처리하고 저장 결과를 다시 확인해줘”라고 요청합니다. 스킬 목록이 갱신되지 않았다면 새 세션에서 확인합니다.</li>
+<li>Python 3과 QA 서버에 닿는 사내망에서 아래 명령을 실행해 자료 판과 <code>metadata_verified</code>를 확인합니다. 실제 브라우저 작업은 현재 Computer Use 도구와 대상 권한을 별도로 확인합니다.</li></ol>
+<pre><code>py -X utf8 "$env:USERPROFILE\.claude\skills\plm\scripts\knowledge.py" status</code></pre>
+<p><a href="https://code.claude.com/docs/en/skills">Claude Code 공식 스킬 안내</a></p>
+<h3>Claude Desktop·Cowork</h3>
+<ol><li>사용 중인 Claude에서 Skills 및 코드 실행·파일 생성이 허용돼 있는지 확인합니다. 조직 계정은 관리 정책에 따라 표시가 다를 수 있습니다.</li>
+<li><code>Customize → Skills → + → Create skill → Upload a skill</code>에서 위의 PLM ZIP을 업로드하고 스킬을 켭니다. 이것은 Skill 업로드이며 MCP 확장 설치가 아닙니다.</li>
+<li>현재 세션에 로컬 브라우저·컴퓨터 제어 도구가 연결돼 있는지, 실제 실행 위치에서 사내 QA 서버와 대상 ALM·PLM에 접근할 수 있는지 확인합니다. 같은 이름의 스킬을 올렸다는 이유만으로 로컬 PC 연결이 생기지는 않습니다.</li></ol>
+<p>일반 채팅의 클라우드 실행 환경은 PC의 로그인 탭이나 사내망에 직접 닿지 않을 수 있습니다. 그런 환경에서는 실제 등록·수정이 가능한 것으로 표시하지 않고, 접근 가능한 설명·검토·준비 범위로 보고합니다. Cowork에서도 현재 Computer Use 연결·권한·서버 접근을 확인한 뒤 실제 작업을 진행합니다.</p>
+<p><a href="https://support.claude.com/en/articles/12512180-use-skills-in-claude">Claude 공식 Skill 업로드 안내</a></p>
+<p class="small">공식 설치 절차를 확인해 작성했습니다. 이번 검증은 Claude Code의 로컬 설치 경로·자료 조회까지이며, Claude Desktop·Cowork의 사용자 계정 업로드와 실제 브라우저 쓰기는 별도로 확인해야 합니다.</p>
 </section>
 <section aria-labelledby="together-title" id="together"><h2 id="together-title">ALM과 제품 스킬을 함께 사용하기</h2><p>ALM 스킬은 문서 서명·승인 상태·PDF Export와 TC·Test Run을 담당합니다. PLM 스킬은 Teamcenter 문서번호·첨부·DHF 연결·WBS를 안내합니다. VXvue·Bellalun 스킬은 제품 사양·기존 TC·실제 시험 근거를 확인합니다.</p><p>예: “ALM과 PLM 스킬로 승인 PDF를 등록하는 순서를 확인하고, VXvue 제품 스킬로 Plan·Report에 필요한 근거를 찾아줘.” 기존 ALM 설치본과 연결 설정을 바꾸지 않습니다.</p><p><a href="/static/alm-ai/index.html">ALM 스킬 사용 안내</a></p></section>
-<section aria-labelledby="browser-title" id="browser-work"><h2 id="browser-title">로그인된 Edge·Chrome에서 실제 작업하기</h2><p>구체적인 등록·수정·첨부·DHF 연결 요청에는 현재 Computer Use 도구와 기존 로그인된 Edge·Chrome을 사용합니다. 먼저 Teamcenter 서버·프로젝트·문서 ID·리비전·상태를 확인합니다.</p><ol><li>대상 모델의 승인 위치와 DHF 여부, 문서 주제·Priority Grade·첨부 파일을 확인합니다.</li><li>요청한 문서번호 등록·일반 속성 저장·파일 첨부·DHF 연결을 수행합니다.</li><li>같은 ID와 리비전을 다시 열어 저장 결과와 Record Deliverable Relation을 확인합니다.</li><li>변경 전후·재조회 결과·미수행 범위를 보고합니다.</li></ol><p>전자서명·자가승인·최종 승인·WBS 완료 처리는 사용자가 직접 합니다. 자료 조사와 준비만 요청하면 Teamcenter 기록을 바꾸지 않습니다. 이미 요청한 일반 저장마다 허락을 반복해서 묻지 않으며 현재 도구의 확인 정책을 따릅니다.</p><p class="small">현재 운영 Teamcenter에서 등록·승인·DHF 변경을 직접 시험하지 않았습니다. 브라우저 연결이나 대상 식별이 불확실하면 입력을 중단하고, 새 프로필로 바꾸거나 로그인 정보를 추출하지 않습니다.</p></section>
+<section aria-labelledby="browser-title" id="browser-work"><h2 id="browser-title">로그인된 Edge·Chrome에서 실제 작업하기</h2><p>구체적인 등록·수정·첨부·DHF 연결 요청에는 현재 Computer Use 도구와 기존 로그인된 Edge·Chrome을 사용합니다. 먼저 Teamcenter 서버·프로젝트·문서 ID·리비전·상태를 확인합니다.</p><ol><li>대상 모델의 승인 위치와 DHF 여부, 문서 주제·Priority Grade·첨부 파일을 확인합니다.</li><li>요청한 문서번호 등록·일반 속성 저장·파일 첨부·DHF 연결을 수행합니다.</li><li>같은 ID와 리비전을 다시 열어 저장 결과와 Record Deliverable Relation을 확인합니다.</li><li>변경 전후·재조회 결과·미수행 범위를 보고합니다.</li></ol><p>전자서명·자가승인·최종 승인은 사용자가 직접 합니다. WBS의 일반 완료는 구체적인 요청과 선행 산출물을 확인한 범위에서 수행하고 같은 타스크를 재조회합니다. 서명·결재가 필요하면 사용자에게 넘깁니다. 자료 조사와 준비만 요청하면 Teamcenter 기록을 바꾸지 않습니다. 이미 요청한 일반 저장마다 허락을 반복해서 묻지 않으며 현재 도구의 확인 정책을 따릅니다.</p><p class="small">현재 운영 Teamcenter에서 등록·승인·DHF 변경을 직접 시험하지 않았습니다. 브라우저 연결이나 대상 식별이 불확실하면 입력을 중단하고, 새 프로필로 바꾸거나 로그인 정보를 추출하지 않습니다.</p></section>
 
 <section aria-labelledby="examples-title" id="examples">
-<h2 id="examples-title">이렇게 질문해 보세요</h2>
+<h2 id="examples-title">설명과 근거를 물어볼 때</h2>
 <p class="small">아래 답변 요점은 서버 가이드에서 확인한 사례입니다. 현재 운영 설정과 제품 시험 결과는 별도로 확인합니다.</p>
 <article class="example"><div class="question"><p id="prompt-1">PLM 스킬로 ALM 승인 PDF를 올릴 때 체크아웃·체크인이 필요한지 알려줘.</p><button data-copy="prompt-1" type="button">질문 복사</button></div><p>ALM 승인 문서는 PLM 체크아웃·체크인을 하지 않는 교육 절차입니다. 먼저 ALM 승인과 PDF Export를 확인합니다.</p><p class="cite">근거: 가이드 9장 · P9 · V01 01:00</p></article>
 <article class="example"><div class="question"><p id="prompt-2">PLM 스킬로 두 승인 Workflow의 차이를 알려줘.</p><button data-copy="prompt-2" type="button">질문 복사</button></div><p>10.Document Approve(V2)는 PLM 승인, 100.Document Approve(ALM)는 이미 승인받은 문서의 자가결재 절차입니다. 실제 승인은 사용자가 직접 처리합니다.</p><p class="cite">근거: 가이드 10장 · P10 · V01 01:50</p></article>

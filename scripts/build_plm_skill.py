@@ -6,9 +6,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import zipfile
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 SOURCE = Path(__file__).resolve().parents[1] / "deploy/plm-skill/plm"
-FILES = ("SKILL.md", "agents/openai.yaml", "scripts/knowledge.py", "references/browser-operations.md")
+FILES = ("SKILL.md", "agents/openai.yaml", "scripts/knowledge.py", "references/browser-operations.md", "references/work-examples.md")
 
 
 def build_skill(server_url, output):

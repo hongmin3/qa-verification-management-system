@@ -6,8 +6,8 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `alm-skill` |
-| Document Version | 0.1.0 |
-| Last Updated | 2026-11-04 |
+| Document Version | 0.2.0 |
+| Last Updated | 2026-11-05 |
 | Status | implemented |
 
 먼저 목적과 범위를 읽고, 5절에서 안내 화면과 자료 연결 기준을 확인한다. 설치와 질문 예시는 앱 안 안내 페이지에서 제공한다.
@@ -66,6 +66,20 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 **지킬 것** 새 안내·개선 문서는 `app/web/static/skills/<스킬>/` 하위에 작성한다. 향후 배포 파일은 같은 하위의 `releases/<버전>/`에 보존하고, 업데이트 문서와 상세 페이지를 같은 변경으로 갱신한다. 완료한 변경과 개선 예정·미검증을 구분한다. 다른 세션이 만드는 스킬 본체를 덮어쓰지 않는다. 파일 감시나 자동 배포 기능으로 설명하지 않는다.
 
+### REQ-ALMSKILL-005 실행 중심 안내와 업무 사례
+
+**하는 일** ALM·PLM은 기존 로그인 브라우저와 Computer Use를 이용한 업무 수행을 먼저 안내한다. 사용법 질문에는 설명·근거 조회로 답한다. 스킬 설치만으로 컴퓨터 제어 연결이나 쓰기 권한이 생긴다고 설명하지 않는다.
+
+**순서** 구체적인 실행 요청은 현재 대상·상태·입력 확인, 허용된 조작, 저장 후 같은 객체 재조회, 결과와 미완료 보고까지 진행한다. 조사 요청에는 쓰기를 추가하지 않는다. 이미 받은 일반 저장 권한을 반복해서 묻지 않는다. 서명과 최종 승인은 사람이 처리하며 현재 도구의 확인 정책을 따른다.
+
+**업무 예시** ALM·PLM의 스킬 참조 MD와 웹 안내에 준비할 입력·복사용 요청·수행 단계·결과 보고 형식·확인 불가 때의 처리를 제공한다. VXvue·Bellalun 웹 안내는 과거 요청을 재구성한 상세 사례를 제공하고 기존 실조회 사례와 구분한다.
+
+**지킬 것** 과거 요청 재구성·일반 요청 예시·교육 절차 기반 예시를 구분한다. 결과의 ID·수량·Pass·메일 전송을 가상 완료 사실로 만들지 않는다. 제품 스킬의 읽기 도구, 파일 산출물, 별도 브라우저 변경, 실제 제품·장비 실행의 범위를 구분한다. 예시의 제품·버전·행 번호는 다음 작업의 고정값이 아니다.
+
+**관리** 업무 사례 원본에서 스킬 MD와 웹 구역을 함께 생성하고 검사한다. 설치·다운로드·기존 링크·과거 실조회 사례를 보존한다. 스킬 지침 변경은 새 ZIP으로 배포하고 웹 문서만 수정된 제품 스킬의 본체가 갱신됐다고 설명하지 않는다.
+
+**Claude 사용** Claude Code는 사용자 스킬 폴더와 `/alm`·`/plm` 호출을 안내한다. Claude Desktop·Cowork의 Skill ZIP 업로드는 로컬 폴더 설치와 구분한다. 업로드만으로 사내망 자료 조회·PC 제어가 연결됐다고 설명하지 않는다. 현재 도구·실행 위치·서버 접근 여부를 확인하고 연결이 없는 범위는 미수행으로 보고한다.
+
 ## 11. 테스트 사양
 
 ### TEST-ALMSKILL-001 안내 진입과 본문
@@ -88,3 +102,4 @@ ZIP에 브라우저 작업 절차와 지정 서버 설정이 들어가고 비밀
 | REQ-ALMSKILL-002 | `app/web/static/alm-ai/guide.js` | `tests/test_alm_skill_guide.py` | verified |
 | REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `deploy/alm-skill/alm/references/checklist-registration.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
 | REQ-ALMSKILL-004 | `app/web/static/skills/index.html`, `app/web/static/skills/AGENTS.md`, `app/web/templates/hub.html` | `tests/test_skill_management.py` | verified |
+| REQ-ALMSKILL-005 | `deploy/skill-examples.json`, `scripts/render_skill_examples.py`, `deploy/alm-skill/alm/references/work-examples.md`, `app/web/static/alm-ai/index.html`, `app/web/static/plm-ai/index.html`, `app/modules/vxvue_chatbot/templates/desktop-guide.html`, `app/web/static/skills/bellalun/index.html` | `tests/test_skill_work_examples.py` | verified |

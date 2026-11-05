@@ -7,19 +7,20 @@
   <meta name="description" content="ALM 공통 사용법을 교육 자료와 영상 근거로 확인하고 VXvue와 Bellalun 검증 스킬과 함께 사용하는 방법">
   <link rel="stylesheet" href="style.css">
   <script src="guide.js" defer></script>
+<link rel="stylesheet" href="/static/skills/examples.css">
 </head>
 <body>
 <header class="site-header">
   <a class="brand" href="/">QA 업무 지원</a>
-  <nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#install">설치 방법</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
+  <nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#work-examples">실제 작업과 결과</a><a href="#install">설치 방법</a><a href="#claude">Claude에서 사용</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
 </header>
 <main>
   <section class="intro" aria-labelledby="title">
     <p class="eyebrow">QA 공통 업무 스킬</p>
     <h1 id="title">ALM 스킬 사용 안내</h1>
-    <p class="lead">TC를 올리고, Test Run을 수행하고, 문서를 승인할 때 필요한 절차를 교육 자료와 영상 근거로 확인합니다. VXvue·Bellalun의 제품 사양은 해당 제품 스킬과 함께 살펴봅니다.</p>
-    <div class="actions">
-      <a id="guide-link" class="button primary" data-asset="index.html" aria-disabled="true">상세 사용 가이드 열기</a>
+    <p class="lead">로그인된 Edge·Chrome을 Computer Use로 제어해 TC 등록·SRS 연결·Test Run 초안·Issue·문서·실행 기록 업무를 수행합니다. 요청한 범위를 저장하고 같은 ID에서 결과를 다시 확인합니다. 사용법 질문에는 교육 근거로 답합니다.</p>
+    <div class="actions"><a class="button primary" href="#work-examples">실제로 맡길 작업 보기</a>
+      <a id="guide-link" class="button" data-asset="index.html" aria-disabled="true">상세 사용 가이드 열기</a>
       <a id="skill-download" class="button" data-asset="alm-skill.zip" aria-disabled="true" download="alm-skill.zip">ALM 스킬 ZIP 다운로드</a>
     </div>
     <p class="small">설치 없이 가이드와 영상을 바로 볼 수 있습니다. AI와 함께 사용하려면 아래 설치 방법을 따르세요.</p>
@@ -55,20 +56,212 @@
     </div>
   </section>
 
-  <section id="install" aria-labelledby="install-title">
+  <!-- work-examples:start -->
+<section id="work-examples" aria-labelledby="work-examples-title">
+<h2 id="work-examples-title">ALM에서 실제로 맡길 작업과 결과 예시</h2>
+<p class="note">ALM은 기존 로그인된 Edge·Chrome과 Computer Use로 기록 업무를 수행하는 스킬입니다. 구체적인 실행 요청이면 대상 확인부터 저장 후 재조회까지 진행합니다. 사용법을 물으면 근거와 설명으로 답합니다. 아래 작업은 현재 제어 도구·대상 권한이 있을 때 수행하며, ZIP 설치만으로 브라우저 제어 기능이 생기지는 않습니다.</p>
+<p>아래 결과는 보고 형식 예시이며 현재 작업의 완료 사실이 아닙니다. 대괄호 안에는 이번 작업에서 확인한 값을 넣습니다. 항목을 펼치면 필요한 입력부터 완료 기준까지 볼 수 있습니다.</p>
+<details class="work-case" id="alm-new-checklist" open>
+<summary>1. Checklist를 새 버전 TC와 미서명 문서로 등록</summary>
+<p class="case-basis">이전에 요청한 V1.1.0 Checklist 신규 TC 이관 업무를 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>최신 Checklist 파일·대상 시트·버전·등록할 A~K 범위와 보존할 실행 이력</li>
+<li>로그인 브라우저·ALM 프로젝트·대상 Space·표준 문서·현재 Import 템플릿</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM과 VXvue 스킬로 최신 서버 Checklist의 [버전/시트]를 확인하고, 로그인된 Edge의 [프로젝트]에 A~K 정의를 신규 TC로 등록해줘.
+기존 결과·버전·Issue 이력과 원래 빈 행은 보존해줘. 새 TC와 원본 행의 대응을 남기고 Preview에서 여러 Step이 하나의 TC로 묶이는지 확인해줘.
+Import·SRS verifies 연결·[표준 문서] 기준 문서 편입·전체 재조회까지 진행해줘. 전자서명 없이 검토 가능한 문서까지 정리해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 서버 자료 판과 원본 해시·시트·행·등록 대상을 다시 확인한다. 예전 제외 목록을 그대로 쓰지 않는다.</li>
+<li>현재 Import 열과 필수값을 확인하고 새 TC/Step 대응 자료를 만든다. Preview에서 묶음·Step/Expected·수량을 대조한 뒤 허용된 Import를 수행한다.</li>
+<li>생성한 ID와 원본 행을 연결하고 문서 편입·실제 SRS 관계를 확인한다. 기존 정상 서비스 API가 허용된 경우에만 대량 관계 처리에 병행한다.</li>
+<li>전체 대상의 속성·단계·Expected·문서 소속·관계를 다시 읽는다. 권한 제한과 불명확한 저장은 별도로 보고한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">원본: [파일 해시 / 시트 / 행 범위]
+등록: [생성 ID ↔ 원본 행 / 요청·생성·재조회 수량]
+문서: [URL / 유형 / 표지·개정 이력 / 미서명 상태]
+관계: [TC ID → verifies → SRS ID / 저장 대조 결과]
+미완료: [권한 제한·누락·미서명 단계]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>신규 Import와 Roundtrip을 구분한다. Old SRS ID 문자열만 적은 것은 관계 저장 완료가 아니다.</li>
+<li>Import 성공·Coverage·기존 Pass는 제품 시험 통과 증거가 아니다. Test Data 공란은 근거 없이 채우지 않는다.</li>
+<li>원본이 바뀌면 기준본과 차이를 보고하고, 응답이 끊기면 생성 여부부터 조회해 중복 Import를 막는다.</li>
+</ul></details>
+<details class="work-case" id="alm-edit-tc">
+<summary>2. 기존 TC의 속성과 Step·Expected 수정</summary>
+<p class="case-basis">일반 브라우저 실행 요청 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>수정할 실제 TC ID·변경 전후 문구·수정할 필드</li>
+<li>문서 상태·편집 권한·신규 생성인지 기존 갱신인지</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>로그인된 Chrome의 [프로젝트]에서 [TC ID 목록]의 [변경할 필드]만 첨부한 전후표대로 수정해줘.
+기존 ALM ID·문서 소속·Step/Expected 대응·실행 이력은 유지하고, 저장 후 같은 ID 전체를 다시 열어 대조해줘.
+Excel을 사용하면 신규 Import가 아니라 기존 ID를 유지하는 Roundtrip인지 먼저 확인해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>ID로 현재 항목과 상태·원래 값을 확인한다. 이미 값이 바뀌었으면 전후표와 충돌을 확인한다.</li>
+<li>허용된 필드만 수정한다. Roundtrip이면 내보낸 ID·행 구조와 현재 매핑을 보존한다.</li>
+<li>저장 뒤 같은 ID의 변경값·변경하지 않은 단계·관계·이력을 대조하고 추가 생성 여부를 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">대상: [TC ID / URL]
+변경: [필드 / 이전 값 / 저장된 값]
+보존: [단계 수·Step/Expected 대응·문서·실행 이력]
+재조회: [전체 대상 대조 결과 / 불명확한 항목]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>수정안을 제안해 달라는 요청만 받았다면 저장하지 않는다.</li>
+<li>뜻이 바뀐 TC에 과거 Pass를 새 결과로 가져오지 않는다.</li>
+</ul></details>
+<details class="work-case" id="alm-srs-links">
+<summary>3. TC와 SRS의 실제 관계 연결</summary>
+<p class="case-basis">Checklist 이관에서 요청한 verifies 관계 작업을 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>TC↔SRS 매핑표·프로젝트·제품·버전·기존 관계</li>
+<li>관계 방향과 추가/교체 범위</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM 스킬로 로그인된 Edge의 [프로젝트]에서 첨부 매핑의 TC와 SRS를 연결해줘.
+TC의 verifies와 SRS의 is verified by 방향을 확인하고 기존 정상 관계는 유지해줘.
+저장 뒤 양쪽 ID의 관계를 다시 읽어 요청한 매핑 전체와 대조해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>양쪽 실제 ID와 제품·버전·기존 관계를 읽고 연결할 의미가 맞는지 확인한다.</li>
+<li>요청한 방향으로 관계를 저장한다. 잘못된 기존 관계 삭제는 별도 요청 범위를 확인한다.</li>
+<li>양쪽 저장 관계와 요청 매핑을 대조하고 Coverage 표시와 실제 관계 저장을 구분해 보고한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">매핑: [TC ID → verifies → SRS ID]
+역방향: [SRS ID → is verified by → TC ID]
+대조: [요청 / 기존 유지 / 추가 / 미저장 항목]
+제품 커버리지 판단: [별도 검토 결과 또는 미검토]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>SRS ID의 존재만으로 해당 TC가 충분한 시험인지 확정하지 않는다.</li>
+<li>403 등으로 읽지 못한 값은 공란이라고 단정하지 않고 현재 값 확인 불가로 남긴다.</li>
+</ul></details>
+<details class="work-case" id="alm-test-run">
+<summary>4. Test Run 초안 생성과 포함 TC 확인</summary>
+<p class="case-basis">일반 브라우저 실행 요청 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>프로젝트·Run 이름·템플릿·Plan Scope·대상 TC 목록</li>
+<li>대상 빌드·파라미터·실행 환경·초기 상태</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM 스킬로 현재 로그인된 [브라우저]의 [프로젝트]에 [Run 이름] 초안을 만들어줘.
+[템플릿]·[Plan Scope]·첨부 TC 목록·[빌드/환경]을 사용하고 생성 후 실제 포함 ID를 양방향 대조해줘.
+시험은 수행하지 않았으므로 Passed나 실행 결과는 입력하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>템플릿과 Plan Scope·현재 TC 목록을 확인하고 중복 Run 여부를 조회한다.</li>
+<li>요청한 설정으로 Run을 생성한다.</li>
+<li>같은 Run ID를 다시 열어 포함/누락/초과 TC와 파라미터·초기 상태를 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">Run: [생성 ID / URL / 이름]
+범위: [Plan Scope / 요청·포함·누락·초과 TC]
+환경: [빌드 / 파라미터 / 실행 환경]
+상태: [재조회한 초기 상태 / 시험 결과 미입력]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>템플릿 예시를 현재 프로젝트의 필수값으로 단정하지 않는다.</li>
+<li>Run 초안 생성은 실제 시험 수행이나 제품 Pass가 아니다.</li>
+</ul></details>
+<details class="work-case" id="alm-issue">
+<summary>5. 근거가 있는 Issue 등록 또는 지정 항목 수정</summary>
+<p class="case-basis">기존 이슈 초안 작성 흐름을 실제 등록 요청으로 확장한 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>Actual 캡처·로그·재현 절차·발생 버전·Expected 근거</li>
+<li>등록 프로젝트·유형·담당자·연결할 TC/Run·기존 유사 이슈</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>VXvue 스킬로 첨부 현상의 Expected와 기존 유사 이슈를 먼저 확인하고, ALM 스킬로 [프로젝트]에 Issue를 등록해줘.
+제공한 Actual과 재현 절차만 쓰고, 확인하지 않은 원인·횟수·등급은 확정하지 마.
+제목·본문·버전·담당자·첨부·[TC/Run] 연결을 저장하고 생성 ID에서 다시 확인해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>실제 관찰과 문서상 Expected·미확인을 나누고 기존 유사 이슈를 확인한다.</li>
+<li>등록 범위와 필요한 값이 확인된 뒤 요청한 Issue를 생성하거나 지정 ID만 수정한다.</li>
+<li>저장된 제목·본문·버전·첨부·관계와 ID를 재조회한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">Issue: [ID / URL / 신규 또는 수정]
+근거: [Actual 증거 / Expected 출처 / 미확인 원인]
+저장 확인: [제목·본문·버전·담당자·첨부·관계]
+미완료: [권한 또는 자료 부족]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>초안만 요청한 경우에는 등록하지 않는다. 근거가 불충분하면 결함 확정 대신 확인 필요로 보고한다.</li>
+<li>메일 발송·다른 이슈 상태 변경은 이 요청에 포함하지 않는다.</li>
+</ul></details>
+<details class="work-case" id="alm-livedoc">
+<summary>6. 표준 문서 구성과 미서명 상태 정리</summary>
+<p class="case-basis">Basic Function 기준 문서 정리 요청을 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>대상 Space·문서명·유형·포함 Work Item 목록</li>
+<li>참조할 표준 문서·표지·결재표·개정 이력·현재 결재경로 권한</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM 스킬로 [표준 문서]를 참고해 [대상 Space]에 [문서명]을 구성하고 첨부 TC ID를 순서대로 넣어줘.
+표지·결재표·개정 이력과 실제 결재경로 속성은 각각 확인해줘.
+전자서명을 하지 않은 검토용 문서까지 정리하고 목차·Heading·포함 ID를 저장 후 재조회해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 문서 유형과 표준 문서의 구조를 확인한다. 결재표 본문과 실제 approvalType 같은 속성을 구분한다.</li>
+<li>요청한 표지·Heading·항목 편입을 수행하고 문서를 저장한다.</li>
+<li>포함 ID 전체·순서·목차·표지·현재 미서명 상태를 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">문서: [URL / 유형 / Space]
+구성: [Heading / 포함 ID / 순서 대조]
+결재: [표지 결재표 / 실제 경로 조회 결과 / 미서명 상태]
+남은 작업: [권한 부족 설정 / 사용자 검토·서명]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>권한이 없어 읽지 못한 결재경로는 빈 값으로 보고하지 않는다.</li>
+<li>표지 정리와 최종 결재 완료는 다르다.</li>
+</ul></details>
+<details class="work-case" id="alm-results">
+<summary>7. 제공한 시험 증거를 지정 Run에 기록</summary>
+<p class="case-basis">사용자의 “검증했어·수정확인했다” 후속 요청을 재구성</p>
+<h4>준비할 입력</h4><ul>
+<li>실제로 수행한 버전·TC·조건·Actual·증거·판정</li>
+<li>대상 Run·Iteration·Step별 결과·Issue와 과거 이력</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>첨부한 수행 증거를 VXvue 스킬로 기존 TC와 대조하고, ALM 스킬로 [Run ID]의 [TC/Iteration]에 이번 결과를 기록해줘.
+내가 준 조건과 결과만 사용하고 과거 Fail·재발생 기록은 유지해줘.
+Step별 결과와 전체 상태를 구분해 재조회하고, 증거가 부족한 항목은 입력을 보류해줘.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 Run·버전·TC·Iteration을 확인하고 실제 증거와 판정 기준을 대조한다.</li>
+<li>허용된 이번 실행 기록만 입력하고 증거와 Issue를 연결한다.</li>
+<li>같은 실행 기록의 Step·전체 상태·증거·이력 보존을 확인한다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">실행 대상: [Run / TC / Iteration / 빌드]
+기록 근거: [실제 수행 조건 / Actual / 증거]
+저장 결과: [Step별 결과 / 전체 상태 / Issue]
+보류: [증거 또는 판정 기준이 부족한 항목]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>개발팀 수정 완료·Coverage·문서 작성만으로 Passed를 입력하지 않는다.</li>
+<li>사용자가 “검증했어”라고만 하면 무엇을 어떤 조건에서 확인했는지 자료와 현재 기록으로 먼저 확인한다.</li>
+</ul></details>
+<details class="work-case" id="alm-explain">
+<summary>8. 실행 전에 절차와 필요한 자료만 물어보기</summary>
+<p class="case-basis">설명·조사 전용 요청 예시</p>
+<h4>준비할 입력</h4><ul>
+<li>알고 싶은 업무·대상 제품·버전·현재 상태</li>
+</ul><h4>복사해서 사용할 요청</h4><pre>ALM 스킬로 신규 Import와 Roundtrip의 차이, 준비할 파일과 Preview에서 확인할 내용을 알려줘.
+이번에는 설명과 근거 조회만 하고 브라우저의 기록을 변경하지 마.</pre>
+<h4>수행할 범위</h4><ol>
+<li>현재 자료 판의 관련 장·슬라이드·영상 근거를 읽는다.</li>
+<li>업무 차이와 필요한 입력·실행 시 확인할 항목을 정리한다.</li>
+<li>현재 운영 설정을 확인하지 못한 부분과 아직 수행하지 않은 작업을 알린다.</li>
+</ol><h4>결과 보고 형식</h4><pre class="case-result">설명: [절차 차이 / 선택 기준]
+근거: [가이드 장 / 슬라이드 / 영상 시점]
+준비할 자료: [필요 입력]
+미수행: [실제 Import·저장·서명 없음]</pre>
+<h4>완료 기준과 제한</h4><ul>
+<li>설명 질문을 등록 요청으로 확대하지 않는다.</li>
+<li>자료 해시 검증은 현재 ALM 설정이나 작업 성공을 증명하지 않는다.</li>
+</ul></details>
+</section>
+<!-- work-examples:end -->
+<section id="install" aria-labelledby="install-title">
     <h2 id="install-title">Codex와 Claude Code에 설치하기</h2>
     <p>Python 3을 실행할 수 있는 PC와 QA 서버에 접속할 수 있는 사내망이 필요합니다. ALM 계정·비밀번호·토큰을 이 스킬에 입력하지 않습니다.</p>
     <ol class="steps">
       <li><strong>준비 사항을 확인합니다.</strong><p>Windows PowerShell에서 <code>py --version</code>을 실행해 Python 3이 있는지 확인합니다. 다른 운영체제에서는 <code>python3 --version</code>을 사용합니다.</p></li>
       <li><strong>위의 ALM 스킬 ZIP을 받고 압축을 풉니다.</strong><p>압축 안의 <code>alm</code> 폴더 전체를 사용합니다. <code>SKILL.md</code>, <code>scripts</code>, <code>server.json</code>을 함께 둡니다.</p></li>
       <li><strong>사용하는 도구의 사용자 스킬 폴더에 넣습니다.</strong><div class="table-wrap"><table><thead><tr><th>사용 도구</th><th>Windows에서 둘 위치</th></tr></thead><tbody><tr><td>Codex</td><td><code>%USERPROFILE%\.codex\skills\alm</code></td></tr><tr><td>Claude Code</td><td><code>%USERPROFILE%\.claude\skills\alm</code></td></tr></tbody></table></div><p>macOS·Linux에서는 홈 폴더 아래 <code>~/.codex/skills/alm</code> 또는 <code>~/.claude/skills/alm</code>을 사용합니다. 같은 이름의 사용자 수정본이 있으면 먼저 보관하고 내용을 비교합니다.</p></li>
-      <li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>ALM 스킬로 Test Run을 만들고 결과를 확인하는 순서를 근거와 함께 알려줘.</code></p><p>가이드의 절차와 함께 <code>M220</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$alm</code>으로도 부를 수 있습니다.</p></li>
+      <li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>ALM 스킬로 로그인된 Edge의 [프로젝트]에 [TC 목록]으로 [Test Run 이름] 초안을 만들고 Plan Scope와 실제 포함 ID를 재조회해줘. 시험 결과는 입력하지 마.</code></p><p>가이드의 절차와 함께 <code>M220</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$alm</code>으로도 부를 수 있습니다.</p></li>
     </ol>
     <details><summary>서버 자료를 읽는지 직접 확인하기</summary><p>Codex 사용자 폴더에 설치했다면 PowerShell에서 실행합니다. Claude Code만 사용한다면 경로의 <code>.codex</code>를 <code>.claude</code>로 바꿉니다.</p><pre><code>py "$env:USERPROFILE\.codex\skills\alm\scripts\knowledge.py" status</code></pre><p><code>metadata_verified: true</code>와 자료 판·가이드 장수 등이 나오면 자료 목록과 본문 파일의 해시 대조가 끝난 것입니다. 실제 ALM에서 시험이나 승인을 실행한 결과는 아닙니다.</p></details>
-    <p class="small">이 설치 안내는 로컬 Python을 실행하는 Codex·Claude Code용입니다. Claude Desktop의 일반 채팅에 설치하는 MCP 확장 파일은 제공하지 않습니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
+    <p class="small">위 폴더 설치는 로컬 Python을 사용하는 Codex·Claude Code용입니다. Claude Desktop·Cowork의 Skill ZIP 업로드와 실행 조건은 아래에서 따로 설명합니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
   </section>
 
-  <section id="together" aria-labelledby="together-title">
+  <section id="claude" aria-labelledby="claude-title">
+<h2 id="claude-title">Claude Code와 Claude Desktop·Cowork에서 사용하기</h2>
+<h3>Claude Code</h3>
+<ol><li>현재 ALM ZIP의 <code>alm</code> 폴더 전체를 <code>~/.claude/skills/alm</code>에 둡니다. Windows에서는 <code>%USERPROFILE%\.claude\skills\alm</code>입니다. 기존 사용자 수정본이나 다른 스킬로 연결된 폴더는 먼저 비교·보관합니다.</li>
+<li>Claude Code에서 <code>/alm</code>으로 호출하거나 “ALM 스킬로 로그인된 브라우저의 [대상]을 처리하고 저장 결과를 다시 확인해줘”라고 요청합니다. 스킬 목록이 갱신되지 않았다면 새 세션에서 확인합니다.</li>
+<li>Python 3과 QA 서버에 닿는 사내망에서 아래 명령을 실행해 자료 판과 <code>metadata_verified</code>를 확인합니다. 실제 브라우저 작업은 현재 Computer Use 도구와 대상 권한을 별도로 확인합니다.</li></ol>
+<pre><code>py -X utf8 "$env:USERPROFILE\.claude\skills\alm\scripts\knowledge.py" status</code></pre>
+<p><a href="https://code.claude.com/docs/en/skills">Claude Code 공식 스킬 안내</a></p>
+<h3>Claude Desktop·Cowork</h3>
+<ol><li>사용 중인 Claude에서 Skills 및 코드 실행·파일 생성이 허용돼 있는지 확인합니다. 조직 계정은 관리 정책에 따라 표시가 다를 수 있습니다.</li>
+<li><code>Customize → Skills → + → Create skill → Upload a skill</code>에서 위의 ALM ZIP을 업로드하고 스킬을 켭니다. 이것은 Skill 업로드이며 MCP 확장 설치가 아닙니다.</li>
+<li>현재 세션에 로컬 브라우저·컴퓨터 제어 도구가 연결돼 있는지, 실제 실행 위치에서 사내 QA 서버와 대상 ALM·PLM에 접근할 수 있는지 확인합니다. 같은 이름의 스킬을 올렸다는 이유만으로 로컬 PC 연결이 생기지는 않습니다.</li></ol>
+<p>일반 채팅의 클라우드 실행 환경은 PC의 로그인 탭이나 사내망에 직접 닿지 않을 수 있습니다. 그런 환경에서는 실제 등록·수정이 가능한 것으로 표시하지 않고, 접근 가능한 설명·검토·준비 범위로 보고합니다. Cowork에서도 현재 Computer Use 연결·권한·서버 접근을 확인한 뒤 실제 작업을 진행합니다.</p>
+<p><a href="https://support.claude.com/en/articles/12512180-use-skills-in-claude">Claude 공식 Skill 업로드 안내</a></p>
+<p class="small">공식 설치 절차를 확인해 작성했습니다. 이번 검증은 Claude Code의 로컬 설치 경로·자료 조회까지이며, Claude Desktop·Cowork의 사용자 계정 업로드와 실제 브라우저 쓰기는 별도로 확인해야 합니다.</p>
+</section>
+<section id="together" aria-labelledby="together-title">
     <h2 id="together-title">VXvue와 Bellalun 스킬을 함께 사용하기</h2>
     <div class="table-wrap"><table><thead><tr><th>확인할 것</th><th>담당하는 근거</th></tr></thead><tbody><tr><td>ALM의 Import·Test Run·승인·이슈 처리 순서</td><td>ALM 스킬의 공통 교육 자료와 사용 가이드</td></tr><tr><td>제품 기능의 Expected·기존 TC·버전별 조건</td><td>VXvue 또는 Bellalun 스킬이 지정한 사양·매뉴얼·TC</td></tr><tr><td>실제 시험의 성공과 실패</td><td>해당 버전에서 수행한 결과와 캡처·로그 등 증거</td></tr></tbody></table></div>
     <p>예를 들어 “Bellalun의 변경 사양을 제품 스킬로 확인하고, ALM 스킬로 SRS와 TC 연결 및 재시험 준비 절차를 정리해줘”라고 요청할 수 있습니다. 기존 제품 스킬과 연결 설정을 교체할 필요는 없습니다.</p>
@@ -93,7 +286,7 @@
   </section>
 
   <section id="examples" aria-labelledby="examples-title">
-    <h2 id="examples-title">이렇게 질문해 보세요</h2>
+    <h2 id="examples-title">설명과 근거를 물어볼 때</h2>
     <p class="small">아래 답변 요점은 서버 가이드에서 확인한 사례입니다. 현재 운영 설정과 제품 시험 결과는 별도로 확인합니다.</p>
     <article class="example"><div class="question"><p id="prompt-1">ALM 스킬로 TC를 Roundtrip 수정할 때 기존 ALM ID를 지워도 되는지 근거와 함께 알려줘.</p><button type="button" data-copy="prompt-1">질문 복사</button></div><p>기존 항목을 갱신하려면 내보낸 ALM ID와 행 구조를 보존합니다. Import 후 같은 ID에 수정이 반영됐는지, 불필요한 새 TC가 생기지 않았는지 확인합니다.</p><p class="cite">근거: 가이드 10장 · Q8 · M237 · V02</p></article>
     <article class="example"><div class="question"><p id="prompt-2">ALM 스킬로 Q19 승인 영상이 최종 Approved 완료까지 보여주는지 확인해줘.</p><button type="button" data-copy="prompt-2">질문 복사</button></div><p>Q19는 승인 절차를 설명하지만 V10의 확인된 화면은 검토 서명과 Reviewed 상태까지입니다. 최종 승인자 처리 전체를 확인한 증거로 사용하지 않습니다.</p><p class="cite">근거: 가이드 23장과 28장 · Q19 · V10 00:10과 00:30</p></article>

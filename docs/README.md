@@ -47,7 +47,7 @@
 | **AI 비용이 왜 이렇게 설계됐는지** | [비용 절감 설계](COST_OPTIMIZATION.md) |
 | **에이전트와 개발할 때 폴더·지식을 어떻게 관리하는지** | [Context Engineering](CONTEXT_ENGINEERING.md) |
 | **운영 중 문제 대응** | [운영·백업·모니터링](OPERATIONS.md) |
-| **스킬 관리·상세 사용법·업데이트와 개선 문서** | 앱 안 `/static/skills/index.html` · [하위 페이지 유지보수](../app/web/static/skills/AGENTS.md) · [ALM 안내 사양](../specs/alm-skill.md) · [PLM 안내 사양](../specs/plm-skill.md) |
+| **스킬 관리·상세 사용법·업데이트와 개선 문서** | 앱 안 `/static/skills/index.html` · [하위 페이지 유지보수](../app/web/static/skills/AGENTS.md) · [ALM 안내 사양](../specs/alm-skill.md) · [PLM 안내 사양](../specs/plm-skill.md) · 상세 업무 예시 원본 `deploy/skill-examples.json`, 생성·대조 `py -X utf8 scripts/render_skill_examples.py --check` |
 | **Claude 메모리 사용과 캡처 잔존 확인** | [운영 점검](OPERATIONS.md#claude-메모리와-캡처-정리) · [사양 REQ-OPS-005](../SPEC.md#req-ops-005-claude-메모리-점검과-캡처-잔존-정리) |
 | **2026-10-13 후속 작업·다른 세션용 프롬프트(서버 실행 오류·진행 표시·남은 일)** | [후속 작업 프롬프트](local/CONTINUE_2026-10-13.md) |
 | **2026-10-01 후속 작업·다른 세션용 프롬프트·테스트 페이지 자동 실행** | [후속 작업과 테스트 웹페이지](local/CONTINUE_2026-10-01.md) |
