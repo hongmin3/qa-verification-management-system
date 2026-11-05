@@ -1,0 +1,4 @@
+interface:
+  display_name: "PLM Teamcenter 사용 가이드"
+  short_description: "QA 서버 교육 근거로 산출물 등록과 DHF 및 WBS 절차 확인"
+  default_prompt: "PLM 스킬로 서버의 최신 가이드와 원본 근거를 확인하고 Teamcenter 업무 절차를 안내해줘."

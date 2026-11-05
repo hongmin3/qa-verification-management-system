@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>PLM 스킬 사용 안내</title>
+<meta content="Teamcenter 산출물 등록·승인 준비·DHF·WBS 절차를 원본과 영상으로 확인하는 PLM 스킬 안내" name="description"/>
+<link href="style.css" rel="stylesheet"/>
+<script defer="" src="guide.js"></script>
+</head>
+<body>
+<header class="site-header">
+<a class="brand" href="/">QA 업무 지원</a>
+<nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#install">설치 방법</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
+</header>
+<main>
+<section aria-labelledby="title" class="intro">
+<p class="eyebrow">QA 공통 업무 스킬</p>
+<h1 id="title">PLM 스킬 사용 안내</h1>
+<p class="lead">Teamcenter에 검증 산출물을 등록하고 승인 문서와 DHF를 연결하는 절차를 교육 자료와 영상 근거로 확인합니다. ALM의 문서 서명·PDF Export는 ALM 스킬과 함께 사용합니다.</p>
+<div class="actions">
+<a aria-disabled="true" class="button primary" data-asset="index.html" id="guide-link">상세 사용 가이드 열기</a>
+<a aria-disabled="true" class="button" data-asset="plm-skill.zip" download="plm-skill.zip" id="skill-download">PLM 스킬 ZIP 다운로드</a>
+</div>
+<p class="small">설치 없이 가이드와 영상을 바로 볼 수 있습니다. AI와 함께 사용하려면 아래 설치 방법을 따르세요.</p>
+</section>
+<section aria-labelledby="materials-title" class="materials">
+<div class="section-heading"><h2 id="materials-title">서버에 정리된 참고 자료</h2><button id="reload" type="button">다시 불러오기</button></div>
+<p aria-live="polite" id="release-status" role="status">서버의 자료 목록을 확인하는 중입니다.</p>
+<dl class="stats">
+<div><dt>업무별 가이드</dt><dd><span data-count="chapters">—</span><small>장</small></dd></div>
+<div><dt>Word와 PDF</dt><dd><span data-count="guide_pages">—</span><small>쪽</small></dd></div>
+<div><dt>원본 슬라이드</dt><dd><span data-count="slides">—</span><small>장</small></dd></div>
+<div><dt>중복 제외 영상</dt><dd><span data-count="videos">—</span><small>개</small></dd></div>
+<div><dt>시간별 화면 표본</dt><dd><span data-count="sample_frames">—</span><small>개</small></dd></div>
+</dl>
+<div class="resource-links">
+<a aria-disabled="true" data-asset="PLM_Guide.docx" download="" id="word-download">Word 받기</a>
+<a aria-disabled="true" data-asset="PLM_Guide.pdf" download="" id="pdf-download">PDF 받기</a>
+<a aria-disabled="true" data-asset="index.html" data-fragment="videos">영상과 시간별 화면</a>
+<a aria-disabled="true" data-asset="index.html" data-fragment="sources">전체 슬라이드 찾아보기</a>
+</div>
+<p class="small">PLM 문서등록 가이드 20장과 시연 영상, Plan·Report 샘플을 정리했습니다. 자료 목록 표시는 현재 Teamcenter 운영 설정이나 저장 결과를 검증했다는 뜻이 아닙니다.</p>
+<noscript><p>자료 버튼을 사용하려면 JavaScript를 켜세요. <a href="/static/plm-guide/index.html">상세 가이드 바로가기</a>도 이용할 수 있습니다.</p></noscript>
+</section>
+<section aria-labelledby="what-title">
+<h2 id="what-title">이런 일을 도와줍니다</h2>
+<div class="feature-grid"><article><h3>문서번호와 파일 등록</h3><p>프로젝트 산출물의 문서번호·Priority Grade·문서 주제를 확인하고 파일 첨부와 체크인 절차를 살펴봅니다.</p></article><article><h3>승인과 ALM 연계</h3><p>PLM 승인과 ALM 승인 PDF를 구분하고 10.Document Approve(V2)·100.Document Approve(ALM)의 적용 조건을 확인합니다.</p></article><article><h3>DHF와 WBS</h3><p>승인 문서의 Record 연결·레코드 개정·WBS 타스크 준비와 완료 조건을 확인합니다.</p></article><article><h3>원본 근거와 샘플</h3><p>P1~P20 원본 슬라이드·V01 영상·D1 Plan·D2 Report 샘플을 함께 살펴봅니다.</p></article></div>
+</section>
+<section aria-labelledby="install-title" id="install">
+<h2 id="install-title">Codex와 Claude Code에 설치하기</h2>
+<p>Python 3을 실행할 수 있는 PC와 QA 서버에 접속할 수 있는 사내망이 필요합니다. PLM 계정·비밀번호·토큰을 이 스킬에 입력하지 않습니다.</p>
+<ol class="steps">
+<li><strong>준비 사항을 확인합니다.</strong><p>Windows PowerShell에서 <code>py --version</code>을 실행해 Python 3이 있는지 확인합니다. 다른 운영체제에서는 <code>python3 --version</code>을 사용합니다.</p></li>
+<li><strong>위의 PLM 스킬 ZIP을 받고 압축을 풉니다.</strong><p>압축 안의 <code>plm</code> 폴더 전체를 사용합니다. <code>SKILL.md</code>, <code>scripts</code>, <code>server.json</code>을 함께 둡니다.</p></li>
+<li><strong>사용하는 도구의 사용자 스킬 폴더에 넣습니다.</strong><div class="table-wrap"><table><thead><tr><th>사용 도구</th><th>Windows에서 둘 위치</th></tr></thead><tbody><tr><td>Codex</td><td><code>%USERPROFILE%\.codex\skills\plm</code></td></tr><tr><td>Claude Code</td><td><code>%USERPROFILE%\.claude\skills\plm</code></td></tr></tbody></table></div><p>macOS·Linux에서는 홈 폴더 아래 <code>~/.codex/skills/plm</code> 또는 <code>~/.claude/skills/plm</code>을 사용합니다. 같은 이름의 사용자 수정본이 있으면 먼저 보관하고 내용을 비교합니다.</p></li>
+<li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>PLM 스킬로 ALM에서 승인한 PDF를 Teamcenter에 등록하고 DHF에 연결하는 순서를 알려줘.</code></p><p>가이드의 절차와 함께 <code>P7</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$plm</code>으로도 부를 수 있습니다.</p></li>
+</ol>
+<details><summary>서버 자료를 읽는지 직접 확인하기</summary><p>Codex 사용자 폴더에 설치했다면 PowerShell에서 실행합니다. Claude Code만 사용한다면 경로의 <code>.codex</code>를 <code>.claude</code>로 바꿉니다.</p><pre><code>py -X utf8 "$env:USERPROFILE\.codex\skills\plm\scripts\knowledge.py" status</code></pre><p><code>metadata_verified: true</code>와 자료 판·가이드 장수 등이 나오면 자료 목록과 본문 파일의 해시 대조가 끝난 것입니다. 실제 PLM에서 시험이나 승인을 실행한 결과는 아닙니다.</p></details>
+<p class="small">이 설치 안내는 로컬 Python을 실행하는 Codex·Claude Code용입니다. Claude Desktop의 일반 채팅에 설치하는 MCP 확장 파일은 제공하지 않습니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
+</section>
+<section aria-labelledby="together-title" id="together"><h2 id="together-title">ALM과 제품 스킬을 함께 사용하기</h2><p>ALM 스킬은 문서 서명·승인 상태·PDF Export와 TC·Test Run을 담당합니다. PLM 스킬은 Teamcenter 문서번호·첨부·DHF 연결·WBS를 안내합니다. VXvue·Bellalun 스킬은 제품 사양·기존 TC·실제 시험 근거를 확인합니다.</p><p>예: “ALM과 PLM 스킬로 승인 PDF를 등록하는 순서를 확인하고, VXvue 제품 스킬로 Plan·Report에 필요한 근거를 찾아줘.” 기존 ALM 설치본과 연결 설정을 바꾸지 않습니다.</p><p><a href="/static/alm-ai/index.html">ALM 스킬 사용 안내</a></p></section>
+<section aria-labelledby="browser-title" id="browser-work"><h2 id="browser-title">로그인된 Edge·Chrome에서 실제 작업하기</h2><p>구체적인 등록·수정·첨부·DHF 연결 요청에는 현재 Computer Use 도구와 기존 로그인된 Edge·Chrome을 사용합니다. 먼저 Teamcenter 서버·프로젝트·문서 ID·리비전·상태를 확인합니다.</p><ol><li>대상 모델의 승인 위치와 DHF 여부, 문서 주제·Priority Grade·첨부 파일을 확인합니다.</li><li>요청한 문서번호 등록·일반 속성 저장·파일 첨부·DHF 연결을 수행합니다.</li><li>같은 ID와 리비전을 다시 열어 저장 결과와 Record Deliverable Relation을 확인합니다.</li><li>변경 전후·재조회 결과·미수행 범위를 보고합니다.</li></ol><p>전자서명·자가승인·최종 승인·WBS 완료 처리는 사용자가 직접 합니다. 자료 조사와 준비만 요청하면 Teamcenter 기록을 바꾸지 않습니다. 이미 요청한 일반 저장마다 허락을 반복해서 묻지 않으며 현재 도구의 확인 정책을 따릅니다.</p><p class="small">현재 운영 Teamcenter에서 등록·승인·DHF 변경을 직접 시험하지 않았습니다. 브라우저 연결이나 대상 식별이 불확실하면 입력을 중단하고, 새 프로필로 바꾸거나 로그인 정보를 추출하지 않습니다.</p></section>
+
+<section aria-labelledby="examples-title" id="examples">
+<h2 id="examples-title">이렇게 질문해 보세요</h2>
+<p class="small">아래 답변 요점은 서버 가이드에서 확인한 사례입니다. 현재 운영 설정과 제품 시험 결과는 별도로 확인합니다.</p>
+<article class="example"><div class="question"><p id="prompt-1">PLM 스킬로 ALM 승인 PDF를 올릴 때 체크아웃·체크인이 필요한지 알려줘.</p><button data-copy="prompt-1" type="button">질문 복사</button></div><p>ALM 승인 문서는 PLM 체크아웃·체크인을 하지 않는 교육 절차입니다. 먼저 ALM 승인과 PDF Export를 확인합니다.</p><p class="cite">근거: 가이드 9장 · P9 · V01 01:00</p></article>
+<article class="example"><div class="question"><p id="prompt-2">PLM 스킬로 두 승인 Workflow의 차이를 알려줘.</p><button data-copy="prompt-2" type="button">질문 복사</button></div><p>10.Document Approve(V2)는 PLM 승인, 100.Document Approve(ALM)는 이미 승인받은 문서의 자가결재 절차입니다. 실제 승인은 사용자가 직접 처리합니다.</p><p class="cite">근거: 가이드 10장 · P10 · V01 01:50</p></article>
+<article class="example"><div class="question"><p id="prompt-3">PLM 스킬로 승인 문서를 DHF에 연결하고 확인하는 순서를 알려줘.</p><button data-copy="prompt-3" type="button">질문 복사</button></div><p>프로젝트 DHF의 맞는 Record에서 산출물 첨부 후 Record Deliverable Relation의 문서 ID와 리비전을 확인합니다.</p><p class="cite">근거: 가이드 12장 · P12 · V01 04:20</p></article>
+<p aria-live="polite" id="copy-status" role="status"></p>
+</section>
+<section aria-labelledby="limits-title" id="limits">
+<h2 id="limits-title">자료를 사용할 때 알아둘 점</h2>
+<ul><li>교육 자료와 현재 Teamcenter 설정은 다를 수 있습니다. 문서 유형·상태·템플릿·권한을 현재 대상에서 확인합니다.</li><li>영상은 10초 간격과 끝부분 화면 표본 28개를 대조했습니다. 음성 전체 전사와 표본 사이 모든 클릭 확인은 포함하지 않았습니다.</li><li>사용자 가이드 v0.1 및 기본기능·문서관리 교육자료 PPT 2개는 미포함입니다. 확보되면 다음 자료 판에 추가합니다.</li><li>Setup·상품화 과제 범위와 WBS 배정·완료 의미의 미확정 항목은 가이드 17장에서 확인합니다.</li><li>서버 조회 도구는 읽기 전용입니다. 해시 불일치에는 조회를 중단하고 오래된 로컬 자료로 대신하지 않습니다.</li></ul>
+</section>
+<section aria-labelledby="trouble-title" id="trouble">
+<h2 id="trouble-title">사용이 안 될 때</h2>
+<dl class="troubles"><dt>자료 버튼이 활성화되지 않습니다</dt><dd>사내망 또는 VPN과 QA 서버 연결을 확인하고 “다시 불러오기”를 누릅니다. 실패 중에는 확인되지 않은 자료 링크를 열지 않습니다.</dd><dt>스킬 이름이 보이지 않습니다</dt><dd>압축을 푼 폴더가 <code>plm/plm/SKILL.md</code>처럼 중첩되지 않았는지 확인합니다. 설치 후 새 대화를 시작합니다.</dd><dt>Python 실행을 찾지 못합니다</dt><dd>Python 3 설치와 실행 경로를 확인합니다. 스킬이 실행되지 않아도 브라우저의 상세 가이드는 이용할 수 있습니다.</dd><dt>해시 불일치가 나옵니다</dt><dd>자료 갱신이 끝난 뒤 status를 다시 확인합니다. 계속 실패하면 자료 판과 오류를 운영 담당자에게 전달합니다.</dd><dt>현재 화면과 교육 자료가 다릅니다</dt><dd>대상 유형·상태를 현재 Teamcenter에서 확인하고 가이드 17장의 미확정 항목을 함께 읽습니다.</dd></dl>
+</section>
+</main>
+<footer><p>QA 공통 PLM 참고 자료 · <a href="/static/skills/index.html">스킬 목록</a> · <a href="/static/skills/plm/updates.html">업데이트·개선 문서</a> · <a href="/static/alm-ai/index.html">ALM 안내</a></p></footer>
+</body>
+</html>

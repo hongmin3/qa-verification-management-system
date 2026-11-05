@@ -30,7 +30,7 @@ def test_skill_management_home_and_all_document_links():
    if href.startswith(ROOT):pending.append(href)
    elif href.startswith('/'):
     assert client.get(href).status_code==200,href
- for key in ['vxvue','bellalun','xipl','alm']:
+ for key in ['vxvue','bellalun','xipl','alm','plm']:
   assert ROOT+key+'/updates.html' in seen
  assert '자동 배포' in client.get(ROOT+'alm/updates.html').text
 
@@ -38,9 +38,9 @@ def test_cards_open_actual_guides_directly():
  client=TestClient(app)
  soup=BeautifulSoup(client.get(ROOT+'index.html').text,'html.parser')
  assert {a.h2.text:a['href'] for a in soup.select('a.card')}=={
-  'VXvue':'/vxvue-desktop','ALM':'/static/alm-ai/index.html',
+  'VXvue':'/vxvue-desktop','ALM':'/static/alm-ai/index.html', 'PLM':'/static/plm-ai/index.html',
   'XIPL':ROOT+'xipl/index.html','Bellalun':ROOT+'bellalun/index.html'}
- for key,target in [('vxvue','/vxvue-desktop'),('alm','/static/alm-ai/index.html')]:
+ for key,target in [('vxvue','/vxvue-desktop'),('alm','/static/alm-ai/index.html'),('plm','/static/plm-ai/index.html')]:
   old=BeautifulSoup(client.get(ROOT+key+'/index.html').text,'html.parser')
   assert old.select_one('meta[http-equiv="refresh"]')['content']=='0;url='+target
   assert old.select_one('a')['href']==target

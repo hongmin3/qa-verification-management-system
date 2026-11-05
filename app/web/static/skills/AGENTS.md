@@ -2,8 +2,8 @@
 
 사용자가 요청한 공통 안내 진입점은 `/static/skills/index.html`이다.
 
-- 새 스킬 상세 안내와 개선 문서는 `<스킬 ID>/` 아래에 만든다. 현재 ID는 vxvue·bellalun·xipl·alm이다.
-- 목록의 카드는 실제 상세 사용 안내로 직접 연결한다. VXvue는 `/vxvue-desktop`, ALM은 `/static/alm-ai/index.html`을 사용한다. 기존 안내 앞에 링크만 둔 소개 페이지를 추가하지 않는다. XIPL·Bellalun 하위 index는 실제 상세 가이드를 담는다. 업데이트 문서는 목록에서 별도 링크로 제공한다.
+- 새 스킬 상세 안내와 개선 문서는 `<스킬 ID>/` 아래에 만든다. 현재 ID는 vxvue·bellalun·xipl·alm·plm이다.
+- 목록의 카드는 실제 상세 사용 안내로 직접 연결한다. VXvue는 `/vxvue-desktop`, ALM은 `/static/alm-ai/index.html`, PLM은 `/static/plm-ai/index.html`을 사용한다. 기존 안내 앞에 링크만 둔 소개 페이지를 추가하지 않는다. XIPL·Bellalun 하위 index는 실제 상세 가이드를 담는다. 업데이트 문서는 목록에서 별도 링크로 제공한다.
 - 스킬을 업데이트할 때 해당 `index.html`과 `updates.html`을 같은 변경으로 갱신한다. 날짜·변경 내용·지원 환경·검증 결과·미검증·설치 영향과 필요한 링크를 남긴다.
 - 새 배포 파일이 있으면 `<스킬 ID>/releases/<버전>/`에 보존하고 상세 페이지에서 현재 권장 판으로 연결한다. 공개 불가 자료·비밀값은 Git에 넣지 않고 기존 private 배포 절차를 따른다.
 - 기존 `/vxvue-desktop`과 `/static/alm-ai/`는 설치·다운로드 연결을 보존한다. 새 안내·개선 문서는 이 skills 하위에 추가한다. 기존 교육 대용량 자료를 복제하지 않는다.
