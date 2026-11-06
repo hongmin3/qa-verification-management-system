@@ -85,6 +85,10 @@ QA Manual Hub 는 모든 대상 문서를 **중앙 서버에 실제 복사해 �
 - 자기 계정 잠금, 마지막 Admin 강등 등은 구조적으로 차단
 
 **목록 / 정렬 / 검색**
+- 검색 조건·정렬을 URL로 공유하며 새로고침·뒤로가기에도 복원
+- 최대 표시 건수와 파일 본문 일치 문맥·원문 판·추출 상태 표시
+- PDF·DOCX·XLSX·TXT·MD 본문 검색. 기존 파일은 Search의 관리자 갱신으로 Current부터 처리
+- 이미지 OCR·암호 파일은 본문 검색 대상으로 오해하지 않도록 상태 표시
 - 모든 표의 머리글 클릭으로 정렬. Documents 는 기본이 **제품 기준**
 - 개정 번호는 자연 정렬 (`V1.0.9` < `V1.0.10`), 사람 이름은 한글 가나다순
 - 빈 값은 오름차순·내림차순 모두 항상 마지막
@@ -223,7 +227,7 @@ base path 하나뿐입니다 — 이 값이 asset URL, react-router basename, AP
 ## 데이터 모델
 
 11개 테이블. 상세 컬럼은 `backend/app/models.py` 와
-`backend/alembic/versions/0001_initial_schema.py` 에 있습니다.
+`backend/alembic/versions/0001_initial_schema.py`와 본문 검색 추가 열의 `0002_file_body_search.py`에 있습니다.
 
 ```
 users ─────┬──< sessions
@@ -666,7 +670,7 @@ UTF-8 페이지에서 항상 UTF-8 로 보냅니다. 자동화가 필요하면 P
 | 공유폴더 자동 스캔 / 신규 문서 탐지 | SHA-256 인덱스로 중복 탐지 즉시 가능 |
 | Revision 자동 추출 / 추천 | 업로드 창이 파일명에서 Version·Revision·개정일 등을 짐작해 칸을 채움(사용자가 확인 후 저장). 문서 내용에서 뽑는 기능은 미구현 |
 | PDF / DOCX 본문 diff | 미구현 |
-| 본문 Full-text Search / OCR | 현재 PostgreSQL ILIKE. 다음 단계는 `tsvector` 컬럼 |
+| 이미지 문서 OCR | 미제공. 텍스트가 없는 PDF는 상태를 표시 |
 | 알림 (Email / Teams) | 미구현. 감사 로그가 이벤트 소스 역할 가능 |
 | HTTPS / MFA | nginx 구조 준비됨 |
 

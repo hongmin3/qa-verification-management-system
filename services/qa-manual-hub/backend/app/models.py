@@ -237,6 +237,13 @@ class StoredFile(TimestampMixin, Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    # Derived text only; original file identity/storage and revision ownership stay unchanged.
+    body_status: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'pending'"))
+    body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    body_detail: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    body_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    body_index_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    body_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 # --------------------------------------------------------------------------- #

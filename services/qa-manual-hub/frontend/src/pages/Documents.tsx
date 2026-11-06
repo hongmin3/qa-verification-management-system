@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
+import { readFilters, useQuerySort, writeFilters } from '../queryState'
 import {
   Alert,
   Card,
@@ -13,7 +14,6 @@ import {
   dateKey,
   fmtDate,
   fmtDateTime,
-  useSort,
   type SortColumn,
 } from '../components/ui'
 import { DocumentForm } from './ProductDetail'
@@ -42,14 +42,17 @@ const COLUMNS: readonly SortColumn<DocumentRow, SortKey>[] = [
   { key: 'versions', value: (d) => d.version_count },
 ]
 
+const BLANK = { product_id: '', category_id: '', status: 'active', q: '' }
+
 export default function Documents() {
   const [rows, setRows] = useState<DocumentRow[] | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [productId, setProductId] = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [status, setStatus] = useState('active')
-  const [q, setQ] = useState('')
+  const [params, setParams] = useSearchParams()
+  const { product_id: productId, category_id: categoryId, status, q } = readFilters(params, BLANK)
+  function setFilter(key: keyof typeof BLANK, value: string) {
+    setParams((previous) => writeFilters(previous, { ...readFilters(previous, BLANK), [key]: value }, BLANK))
+  }
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -79,10 +82,7 @@ export default function Documents() {
 
   // Sorted in the browser: the endpoint returns the full filtered set, so
   // reordering is instant and costs no round-trip.
-  const { sort, toggle, sorted } = useSort(rows, COLUMNS, {
-    key: 'product',
-    dir: 'asc',
-  })
+  const { sort, toggle, sorted } = useQuerySort(rows, COLUMNS)
 
   const productCount = useMemo(
     () => new Set((sorted ?? []).map((d) => d.product_id)).size,
@@ -115,7 +115,7 @@ export default function Documents() {
       <Card>
         <div className="filter-bar">
           <Field label="Product">
-            <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+            <select value={productId} onChange={(e) => setFilter('product_id', e.target.value)}>
               <option value="">전체</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -126,7 +126,7 @@ export default function Documents() {
             </select>
           </Field>
           <Field label="Category">
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <select value={categoryId} onChange={(e) => setFilter('category_id', e.target.value)}>
               <option value="">전체</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -136,7 +136,7 @@ export default function Documents() {
             </select>
           </Field>
           <Field label="Status">
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select value={status} onChange={(e) => setFilter('status', e.target.value)}>
               <option value="active">Active</option>
               <option value="archived">Archived</option>
               <option value="all">전체</option>
@@ -146,7 +146,7 @@ export default function Documents() {
             <input
               type="search"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => setFilter('q', e.target.value)}
               placeholder="부분 검색"
             />
           </Field>
@@ -154,10 +154,7 @@ export default function Documents() {
             <button
               type="button"
               onClick={() => {
-                setProductId('')
-                setCategoryId('')
-                setStatus('active')
-                setQ('')
+                setParams(new URLSearchParams())
               }}
             >
               초기화

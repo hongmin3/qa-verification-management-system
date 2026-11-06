@@ -8249,7 +8249,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 | 조건 | 뜻 |
 |---|---|
-| 통합 검색(`q`) | 문서 이름, 제품 이름·코드, 분류, 문서 설명, Revision, Version, 문서 번호, 언어, 개정 내용, 메모, 업로더 이름·로그인 ID, 원본 파일명을 모두 훑는다 |
+| 통합 검색(`q`) | 문서 이름, 제품 이름·코드, 분류, 문서 설명, Revision, Version, 문서 번호, 언어, 개정 내용, 메모, 업로더 이름·로그인 ID, 원본 파일명과 추출된 파일 본문을 훑는다 |
 | 제품, 분류 | 하나씩 고른다 |
 | Document Name / Document Number / Revision / Version / Language / Original File Name | 각각 부분 일치 |
 | Uploaded By | 업로더 표시 이름 또는 로그인 ID 부분 일치 |
@@ -8266,7 +8266,25 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 
 > **예시** `VW-BLV-OM`을 통합 검색에 넣으면 문서 번호가 `VW-BLV-OM-001`인 버전이 나온다.
 
-**지킬 것** 파일 본문은 검색하지 않는다.
+**결과 표시** 파일 본문에 일치하면 그 주변 문구와 원문 판을 표시한다. 화면에는 최대 200건을 표시하며 전체 건수와 혼동하지 않게 표시 상한을 안내한다. 정렬은 표시한 결과에 적용한다.
+
+필터·정렬·상세 조건 펼침 상태는 URL에 담는다. 공유·새로고침·뒤로가기 후에도 같은 조건으로 조회한다. 이전 검색의 늦은 응답으로 새 결과를 덮어쓰지 않는다.
+
+**본문 검색 준비** PDF·DOCX·XLSX·TXT·MD에서 읽을 수 있는 글을 파일 해시별로 추출한다. 새 버전 업로드가 확정된 뒤 별도 작업으로 처리하며 업로드 원본·Revision은 바꾸지 않는다.
+
+관리자는 기존 파일의 본문 색인을 명시적으로 갱신한다. Current 파일부터 작은 묶음으로 처리하며 기본 2개, 최대 5개다. 중지하면 현재 묶음까지 마치고 같은 조건으로 재개한다. 화면을 열기만 해서는 갱신하지 않는다.
+
+| 추출 제한 | 값 |
+|---|---|
+| 파일 크기 | 50MiB |
+| 파일별 처리 시간 | 별도 프로세스에서 8초 |
+| 저장할 본문 | 최대 1,000,000자 |
+| PDF 페이지 | 최대 500쪽 |
+| Office 압축 해제 | 합계 32MiB·512항목, XML 하나 8MiB |
+
+> **주의** 이미지 PDF의 OCR은 제공하지 않는다. 암호·지원하지 않는 형식·크기 제한·시간 초과·원문 판 불일치·추출 실패는 검색 가능한 것처럼 표시하지 않고 상태와 이유를 구분한다. 일부만 추출했으면 그 범위를 표시한다.
+
+**지킬 것** 기존 로그인·관리자 권한을 사용한다. 강제 비밀번호 변경이 남은 관리자는 갱신할 수 없다. 파일 매크로·외부 연결·AI는 실행하지 않는다. 기존 API의 응답 배열과 메타데이터 필터를 유지한다. 본문 열과 상태를 더하는 DB 변경은 기존 파일·버전 행을 보존한다.
 
 ### REQ-HUB-009 Recent Updates
 
@@ -10313,6 +10331,12 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 
 > **참고** 파일 경로와 기본값은 `services/qa-manual-hub/backend/tests/test_deploy_scripts.py`가 확인한다. 실제 컨테이너 실행은 Docker 가 있는 PC에서 사람이 확인한다.
 
+### TEST-HUB-008 파일 본문과 검색 조건 보존
+
+임시 파일로 TXT 인코딩·PDF·Office 표시 본문·암호·손상·크기·시간 상한과 원본 보존을 확인한다.
+별도 임시 DB에서 실제 업로드·본문 검색·관리자 갱신·Current와 과거 판 선택·추가 DB 열을 확인한다. 운영 PostgreSQL은 사용하지 않는다.
+화면은 URL 조건·표시 상한·본문 문맥·권한별 갱신 버튼·중지·재개를 확인한다.
+
 ## 12. 요구사항 추적성
 
 | Requirement | Implementation | Test | Status |
@@ -10561,7 +10585,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-HUB-005 | `services/qa-manual-hub/backend/app/routers/documents.py`, `services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx` | TEST-HUB-005 | implemented |
 | REQ-HUB-006 | `services/qa-manual-hub/backend/app/routers/documents.py` | TEST-HUB-001: `services/qa-manual-hub/backend/tests/test_documents.py` | implemented |
 | REQ-HUB-007 | `services/qa-manual-hub/backend/app/storage.py`, `services/qa-manual-hub/backend/app/routers/documents.py`, `services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx` | TEST-HUB-001: `services/qa-manual-hub/backend/tests/test_documents.py` | implemented |
-| REQ-HUB-008 | `services/qa-manual-hub/backend/app/routers/search.py`, `services/qa-manual-hub/frontend/src/pages/Search.tsx` | TEST-HUB-002: `services/qa-manual-hub/backend/tests/test_documents.py` | implemented |
+| REQ-HUB-008 | `services/qa-manual-hub/backend/app/routers/search.py`, `services/qa-manual-hub/backend/app/body_extract.py`, `services/qa-manual-hub/backend/app/body_index.py`, `services/qa-manual-hub/frontend/src/pages/Search.tsx`, `services/qa-manual-hub/frontend/src/queryState.ts` | TEST-HUB-002, TEST-HUB-008, `tests/test_manual_hub_body.py`, `services/qa-manual-hub/frontend/tests/shareable-search.cjs`, `services/qa-manual-hub/frontend/tests/body-search.cjs` | implemented |
 | REQ-HUB-009 | `services/qa-manual-hub/backend/app/routers/dashboard.py`, `services/qa-manual-hub/frontend/src/pages/Misc.tsx` | TEST-HUB-003: `services/qa-manual-hub/backend/tests/test_audit.py` | implemented |
 | REQ-HUB-010 | `services/qa-manual-hub/backend/app/routers/dashboard.py`, `services/qa-manual-hub/frontend/src/pages/Misc.tsx` | TEST-HUB-003: `services/qa-manual-hub/backend/tests/test_audit.py` | implemented |
 | REQ-HUB-011 | `services/qa-manual-hub/frontend/src/pages/Misc.tsx`, `services/qa-manual-hub/backend/app/routers/auth.py` | TEST-HUB-005 | implemented |

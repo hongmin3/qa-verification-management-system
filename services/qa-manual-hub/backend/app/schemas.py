@@ -320,6 +320,9 @@ class SetCurrentRequest(BaseModel):
 # search
 # --------------------------------------------------------------------------- #
 class SearchHit(BaseModel):
+    snippet: str | None = None
+    body_status: str = "pending"
+    body_detail: str | None = None
     document_id: uuid.UUID
     document_name: str
     product_id: uuid.UUID

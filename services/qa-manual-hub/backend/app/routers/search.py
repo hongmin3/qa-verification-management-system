@@ -10,12 +10,16 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from pydantic import BaseModel, Field
+from threading import Lock
+from sqlalchemy import and_, case, func, or_, select, text
 from sqlalchemy.orm import Session as DbSession
 
 from ..db import get_db
 from ..deps import get_current_user
+from ..body_extract import INDEX_VERSION, snippet
+from ..body_index import index_stored_file
 from ..models import (
     Document,
     DocumentCategory,
@@ -52,6 +56,14 @@ def search(
     db: DbSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[SearchHit]:
+    index_current = and_(
+        StoredFile.body_sha256 == StoredFile.sha256,
+        StoredFile.body_index_version == INDEX_VERSION,
+    )
+    searchable_body = case(
+        (and_(index_current, StoredFile.body_status.in_(('ready', 'truncated'))), StoredFile.body_text),
+        else_=None,
+    )
     stmt = (
         select(
             Document.id,
@@ -71,6 +83,9 @@ def search(
             StoredFile.original_file_name,
             DocumentVersion.status,
             Document.current_version_id,
+            searchable_body,
+            case((index_current, StoredFile.body_status), else_='pending'),
+            case((StoredFile.id.is_(None), None), (index_current, StoredFile.body_detail), else_='원본 해시 또는 추출기 판이 달라 재색인이 필요합니다.'),
         )
         .join(Product, Product.id == Document.product_id)
         .join(DocumentCategory, DocumentCategory.id == Document.category_id)
@@ -107,6 +122,7 @@ def search(
                 func.lower(func.coalesce(StoredFile.original_file_name, "")).like(
                     needle
                 ),
+                func.lower(func.coalesce(searchable_body, "")).like(needle),
             )
         )
 
@@ -183,6 +199,9 @@ def search(
             file_name_value,
             ver_status,
             current_id,
+            body_text,
+            body_status,
+            body_detail,
         ) = row
         hits.append(
             SearchHit(
@@ -203,6 +222,64 @@ def search(
                 original_file_name=file_name_value,
                 version_status=ver_status,
                 is_current=bool(ver_id and current_id and ver_id == current_id),
+                snippet=snippet(body_text, q),
+                body_status=body_status or 'pending',
+                body_detail=body_detail,
             )
         )
     return hits
+
+
+class ReindexRequest(BaseModel):
+    cursor: uuid.UUID | None = None
+    limit: int = Field(default=2, ge=1, le=5)
+    current_only: bool = True
+    force: bool = False
+
+
+_reindex_lock = Lock()
+
+
+def _require_reindex_admin(user: User = Depends(get_current_user)) -> User:
+    """Keep the maintenance gate compatible with installed Hub auth modules."""
+    if not user.is_admin:
+        raise HTTPException(403, '관리자 권한이 필요합니다.')
+    if user.must_change_password:
+        raise HTTPException(428, '비밀번호를 먼저 변경해야 합니다.')
+    return user
+
+
+@router.post('/reindex')
+def reindex(payload: ReindexRequest, request: Request,
+            db: DbSession = Depends(get_db),
+            user: User = Depends(_require_reindex_admin)):
+    """Explicit bounded batches, current revisions first; no startup backfill."""
+    origin = request.headers.get('origin')
+    if origin:
+        from urllib.parse import urlsplit
+        if urlsplit(origin).netloc != request.headers.get('host'):
+            raise HTTPException(403, '다른 사이트에서 색인을 갱신할 수 없습니다.')
+    if request.headers.get('sec-fetch-site') == 'cross-site':
+        raise HTTPException(403, '다른 사이트에서 색인을 갱신할 수 없습니다.')
+    if not _reindex_lock.acquire(blocking=False):
+        raise HTTPException(409, '다른 색인 갱신이 진행 중입니다.')
+    try:
+        if db.get_bind().dialect.name == 'postgresql' and not db.scalar(text('SELECT pg_try_advisory_xact_lock(748392015)')):
+            raise HTTPException(409, '다른 색인 갱신이 진행 중입니다.')
+        stmt = select(StoredFile).where(StoredFile.id.in_(select(DocumentVersion.stored_file_id)))
+        if payload.current_only:
+            stmt = stmt.where(StoredFile.id.in_(select(DocumentVersion.stored_file_id).join(Document, Document.current_version_id == DocumentVersion.id)))
+        if payload.cursor:
+            stmt = stmt.where(StoredFile.id > payload.cursor)
+        remaining = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        rows = list(db.scalars(stmt.order_by(StoredFile.id).limit(payload.limit)))
+        values = []
+        for stored in rows:
+            index_stored_file(db, stored, payload.force)
+            values.append({'id': str(stored.id), 'status': stored.body_status, 'detail': stored.body_detail})
+        db.commit()
+        done = remaining <= len(rows)
+        return {'processed': len(rows), 'results': values, 'next_cursor': None if done or not rows else str(rows[-1].id),
+                'done': done, 'current_only': payload.current_only, 'remaining': max(0, remaining - len(rows))}
+    finally:
+        _reindex_lock.release()

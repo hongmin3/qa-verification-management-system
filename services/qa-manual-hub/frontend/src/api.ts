@@ -5,6 +5,7 @@
 
 import type {
   AppSettings,
+  BodyIndexResult,
   AuditRow,
   Category,
   Dashboard,
@@ -253,6 +254,8 @@ export const api = {
   // --- search / dashboard / audit --------------------------------------- //
   search: (params: Record<string, unknown>) =>
     request<SearchHit[]>(`/search${query(params)}`),
+  reindexSearch: (options: { cursor?: string; limit?: number; current_only?: boolean; force?: boolean }) =>
+    request<BodyIndexResult>('/search/reindex', json('POST', options)),
   dashboard: () => request<Dashboard>('/dashboard'),
   recentUpdates: (limit = 50) =>
     request<RecentUpload[]>(`/recent-updates${query({ limit })}`),

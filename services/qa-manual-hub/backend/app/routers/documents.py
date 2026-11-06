@@ -35,6 +35,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession, lazyload
 
 from .. import audit
+from ..body_index import index_uploaded_file
 from ..db import get_db
 from ..deps import get_current_user, require_password_current
 from ..models import (
@@ -590,6 +591,7 @@ def upload_version(
         raise
 
     db.refresh(new_version)
+    background_tasks.add_task(index_uploaded_file, stored.id)
     background_tasks.add_task(_warm_preview_cache, saved.storage_key, saved.extension)
     warning = None
     if duplicates:

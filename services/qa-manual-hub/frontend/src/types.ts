@@ -129,6 +129,9 @@ export interface VersionUploadResult {
 }
 
 export interface SearchHit {
+  snippet?: string | null
+  body_status?: BodyStatus
+  body_detail?: string | null
   document_id: string
   document_name: string
   product_id: string
@@ -146,6 +149,16 @@ export interface SearchHit {
   original_file_name: string | null
   version_status: string | null
   is_current: boolean
+}
+
+export type BodyStatus = 'pending' | 'ready' | 'truncated' | 'no_text' | 'encrypted' | 'unsupported' | 'too_large' | 'failed' | 'timeout' | 'missing' | 'hash_mismatch'
+export interface BodyIndexResult {
+  processed: number
+  results: { id: string; status: BodyStatus; detail?: string | null }[]
+  next_cursor: string | null
+  done: boolean
+  current_only: boolean
+  remaining: number
 }
 
 export interface DashboardCounts {

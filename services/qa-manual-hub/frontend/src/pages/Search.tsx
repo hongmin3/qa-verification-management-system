@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
+import { useAuth } from '../auth'
+import { BodyIndexPanel, BodyMatch } from '../components/BodySearch'
+import { readFilters, useQuerySort, writeFilters } from '../queryState'
 import {
   Alert,
   Card,
@@ -12,7 +15,6 @@ import {
   dateKey,
   fmtDate,
   fmtDateTime,
-  useSort,
   type SortColumn,
 } from '../components/ui'
 import type { Category, Product, SearchHit } from '../types'
@@ -63,18 +65,21 @@ const BLANK = {
 }
 
 export default function Search() {
-  const [form, setForm] = useState({ ...BLANK })
+  const { user } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const [form, setForm] = useState(() => readFilters(params, BLANK))
+  const filterKey = JSON.stringify(readFilters(params, BLANK))
+  const [refresh, setRefresh] = useState(0)
   const [hits, setHits] = useState<SearchHit[] | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [advanced, setAdvanced] = useState(false)
+  const advanced = params.get('view') === 'advanced' || (params.get('view') !== 'basic' &&
+    Object.keys(BLANK).some((key) => !['q', 'product_id', 'category_id'].includes(key) &&
+      params.has(key)))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { sort, toggle, sorted } = useSort(hits, COLUMNS, {
-    key: 'product',
-    dir: 'asc',
-  })
+  const { sort, toggle, sorted } = useQuerySort(hits, COLUMNS)
 
   useEffect(() => {
     Promise.all([api.products({ include_inactive: true }), api.categories()])
@@ -83,24 +88,27 @@ export default function Search() {
         setCategories(c)
       })
       .catch(() => undefined)
-    void run({ ...BLANK })
   }, [])
 
-  async function run(params: typeof BLANK) {
+  useEffect(() => {
+    let active = true
+    const applied = JSON.parse(filterKey) as typeof BLANK
+    setForm(applied)
     setBusy(true)
+    setHits(null)
     setError(null)
-    try {
-      setHits(await api.search(params as unknown as Record<string, unknown>))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '검색에 실패했습니다.')
-    } finally {
-      setBusy(false)
-    }
-  }
+    // Keep the existing array API contract and pin the displayed upper bound.
+    api.search({ ...applied, limit: 200 })
+      .then((result) => { if (active) setHits(result) })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : '검색에 실패했습니다.') })
+      .finally(() => { if (active) setBusy(false) })
+    return () => { active = false }
+  }, [filterKey, refresh])
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    void run(form)
+    setParams((previous) => writeFilters(previous, form, BLANK))
+    setRefresh((value) => value + 1)
   }
 
   function set<K extends keyof typeof BLANK>(key: K, value: (typeof BLANK)[K]) {
@@ -113,12 +121,14 @@ export default function Search() {
         <div>
           <h1>Search</h1>
           <div className="desc">
-            제품·문서명·Revision·Version·Document Number·언어·파일명·업로더·날짜로 부분 검색
+            제품·문서 정보와 색인된 원문 본문을 함께 검색합니다.
           </div>
         </div>
       </div>
 
       {error && <Alert kind="error">{error}</Alert>}
+      <BodyIndexPanel admin={!!user?.is_admin} locked={!!user?.must_change_password}
+        runBatch={api.reindexSearch} onUpdated={() => setRefresh((value) => value + 1)} />
 
       <Card>
         <form onSubmit={submit}>
@@ -128,7 +138,7 @@ export default function Search() {
                 type="search"
                 value={form.q}
                 onChange={(e) => set('q', e.target.value)}
-                placeholder="모든 항목에서 부분 일치 검색"
+                placeholder="문서 정보·색인된 본문에서 검색"
                 autoFocus
               />
             </Field>
@@ -165,12 +175,17 @@ export default function Search() {
               type="button"
               onClick={() => {
                 setForm({ ...BLANK })
-                void run({ ...BLANK })
+                setParams(new URLSearchParams())
+                setRefresh((value) => value + 1)
               }}
             >
               초기화
             </button>
-            <button type="button" className="btn-link" onClick={() => setAdvanced((v) => !v)}>
+            <button type="button" className="btn-link" onClick={() => setParams((previous) => {
+              const next = new URLSearchParams(previous)
+              next.set('view', advanced ? 'basic' : 'advanced')
+              return next
+            })}>
               {advanced ? '상세 조건 접기' : '상세 조건 펼치기'}
             </button>
           </div>
@@ -291,7 +306,12 @@ export default function Search() {
         </form>
       </Card>
 
-      <Card title="검색 결과" sub={sorted ? `${sorted.length}건` : undefined} flush>
+      <Card title="검색 결과" sub={sorted ? `표시 ${sorted.length}건` : undefined} flush>
+        <p className="faint small" role="status">
+          최대 200건까지 표시합니다. 정렬은 표시된 결과에 적용됩니다.
+          {sorted && sorted.length >= 200 && ' 전체 결과 수는 확인되지 않았습니다. 상세 조건으로 검색 범위를 좁혀 주세요.'}
+          {' 본문 색인이 준비되지 않은 파일은 문서 정보로만 검색합니다. 이미지 문자의 OCR 검색은 제공하지 않습니다.'}
+        </p>
         {!sorted ? (
           <Loading />
         ) : sorted.length === 0 ? (
@@ -353,6 +373,7 @@ export default function Search() {
                       <Link className="doc-link" to={`/documents/${h.document_id}`}>
                         {h.document_name}
                       </Link>
+                      <BodyMatch hit={h} />
                     </td>
                     <td className="faint">{h.category_name}</td>
                     <td>

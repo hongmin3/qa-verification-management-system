@@ -9,6 +9,7 @@
 | 하려는 일 | 볼 문서 |
 |---|---|
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
+| 매뉴얼 검색 조건 공유·본문 검색·색인 갱신 | [Manual Hub](../services/qa-manual-hub/README.md) · [검색 개선 계획](superpowers/plans/2026-11-06-manual-hub-search.md) · SPEC의 REQ-HUB-008과 TEST-HUB-008 |
 | Bellalun 공용 서버 설치·조회·최신 지침 동기화 | 앱 안 `/static/skills/bellalun/index.html` · [운영 절차](BELLALUN_SHARED.md) · [사양](../specs/bellalun-shared.md) · [구현 계획](superpowers/plans/2026-11-03-bellalun-shared.md) |
 | **매일 어떤 자동화가 돌고 어디로 보고되는지** | [SPEC 4절](../SPEC.md#4-전체-자동화-흐름) · 설치·실행 확인 결과는 [progress](../progress.md) |
 | 개발 사양·변경 이력·진행 상태 확인 | [SPEC](../SPEC.md) · [CHANGELOG](../CHANGELOG.md) · [progress](../progress.md) |

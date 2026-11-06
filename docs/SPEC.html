@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="b43f2f076c9e1e4bda97a9cd34499c366708b3472be84a3c6bd9847675c68cdb">
+<meta name="spec-source-sha256" content="ce12939c0bf529192aedd0b1149aaaeee9d10af8044aa787ea6296fae2782e6f">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>343</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>211</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>97</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>343</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>212</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>97</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -537,6 +537,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-HUBOPS-002">TEST-HUBOPS-002</a></li>
 <li class="toc-id kind-test"><a href="#TEST-HUBOPS-003">TEST-HUBOPS-003</a></li>
 <li class="toc-id kind-test"><a href="#TEST-HUBOPS-004">TEST-HUBOPS-004</a></li>
+<li class="toc-id kind-test"><a href="#TEST-HUB-008">TEST-HUB-008 <span>파일 본문과 검색 조건 보존</span></a></li>
 <li class="toc-2"><a href="#sec-12">12. 요구사항 추적성</a></li>
 <li class="toc-2"><a href="#sec-13">13. 미확정 사항</a></li>
 <li class="toc-2"><a href="#doc-qa-intelligence">QA 검증 관리 시스템 — QA Intelligence Agent 기능 사양</a></li>
@@ -1023,7 +1024,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-005">REQ-HUB-005</a></td><td data-label="이름">문서 상세 화면</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/documents.py</code>, <code>services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-005">TEST-HUB-005</a></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-006">REQ-HUB-006</a></td><td data-label="이름">파일 다운로드</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/documents.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-001">TEST-HUB-001</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-007">REQ-HUB-007</a></td><td data-label="이름">미리보기와 매뉴얼 뷰어</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/storage.py</code>, <code>services/qa-manual-hub/backend/app/routers/documents.py</code>, <code>services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-001">TEST-HUB-001</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td></tr>
-<tr><td data-label="ID"><a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a></td><td data-label="이름">검색</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a></td><td data-label="이름">검색</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/backend/app/body_extract.py</code>, <code>services/qa-manual-hub/backend/app/body_index.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code>, <code>services/qa-manual-hub/frontend/src/queryState.ts</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>, <a class="idref" href="#TEST-HUB-008">TEST-HUB-008</a>, <code>tests/test_manual_hub_body.py</code>, <code>services/qa-manual-hub/frontend/tests/shareable-search.cjs</code>, <code>services/qa-manual-hub/frontend/tests/body-search.cjs</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-009">REQ-HUB-009</a></td><td data-label="이름">Recent Updates</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/dashboard.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-003">TEST-HUB-003</a>: <code>services/qa-manual-hub/backend/tests/test_audit.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-010">REQ-HUB-010</a></td><td data-label="이름">Settings 화면</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/backend/app/routers/dashboard.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-003">TEST-HUB-003</a>: <code>services/qa-manual-hub/backend/tests/test_audit.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-HUB-011">REQ-HUB-011</a></td><td data-label="이름">My Account</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code>, <code>services/qa-manual-hub/backend/app/routers/auth.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-HUB-005">TEST-HUB-005</a></td></tr>
@@ -10968,14 +10969,21 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-req" id="REQ-HUB-008">
 <h3><span class="idtag">REQ-HUB-008</span> 검색</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a></span><span class="meta nohist"><b>변경 이력</b> CHANGELOG에 이 ID로 기록된 변경 없음</span></div>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/backend/app/body_extract.py</code>, <code>services/qa-manual-hub/backend/app/body_index.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code>, <code>services/qa-manual-hub/frontend/src/queryState.ts</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>, <a class="idref" href="#TEST-HUB-008">TEST-HUB-008</a>, <code>tests/test_manual_hub_body.py</code>, <code>services/qa-manual-hub/frontend/tests/shareable-search.cjs</code>, <code>services/qa-manual-hub/frontend/tests/body-search.cjs</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a></span></div>
+<details class="history"><summary>변경 이력 3</summary>
+<ul>
+<li><span class="hist">2026-11-06 기존 매뉴얼 검색 개선</span> <a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a>: 검색·<span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록의 조건과 정렬을 URL에 보존한다. 검색 결과의 표시 상한과 표시한 결과에만 적용되는 정렬을 안내한다.</li>
+<li><span class="hist">2026-11-06 기존 매뉴얼 검색 개선</span> <a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a>: 파일 본문 검색과 일치 문맥·원문 판·색인 상태를 더했다. 기존 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>는 관리자가 <span class="term" title="그 문서의 지금 최신본이다. 문서마다 하나이거나 아직 없다. 문서 행의 current_version_id 열 하나로 정한다" tabindex="0">Current</span>부터 작은 묶음으로 갱신하며 중지·재개할 수 있다. 원본·<span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>·기존 로그인과 API 응답 배열을 유지한다.</li>
+<li><span class="hist">2026-11-06 기존 매뉴얼 검색 개선</span> <a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a>: 본문 추출의 파일·시간·압축 해제·출력 크기를 제한하고 OCR 미제공·암호·미지원·실패·일부 추출 상태를 구분한다.</li>
+</ul>
+</details>
 <p><strong>하는 일</strong> 통합 검색 칸 하나로 여러 항목을 한꺼번에 부분 일치로 찾는다. 상세 조건으로 좁힐 수도 있다.</p>
 <p><strong>언제</strong> 왼쪽 메뉴 &quot;Search&quot;. &quot;상세 조건 펼치기&quot;로 항목별 조건을 연다. API <code>GET /api/search</code>.</p>
 <p><strong>입력</strong></p>
 <div class="table-wrap"><table>
 <thead><tr><th>조건</th><th>뜻</th></tr></thead>
 <tbody>
-<tr><td>통합 검색(<code>q</code>)</td><td><span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 이름, <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 이름·코드, 분류, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 설명, <span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span>, Version, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 번호, 언어, 개정 내용, 메모, 업로더 이름·로그인 ID, 원본 파일명을 모두 훑는다</td></tr>
+<tr><td>통합 검색(<code>q</code>)</td><td><span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 이름, <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 이름·코드, 분류, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 설명, <span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span>, Version, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 번호, 언어, 개정 내용, 메모, 업로더 이름·로그인 ID, 원본 파일명과 추출된 파일 본문을 훑는다</td></tr>
 <tr><td><span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>, 분류</td><td>하나씩 고른다</td></tr>
 <tr><td><span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">Document</span> Name / <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">Document</span> Number / <span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span> / Version / Language / Original File Name</td><td>각각 부분 일치</td></tr>
 <tr><td>Uploaded By</td><td>업로더 표시 이름 또는 로그인 ID 부분 일치</td></tr>
@@ -10992,7 +11000,24 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <aside class="callout callout-example"><span class="callout-label">예시</span>
 <p><code>VW-BLV-OM</code>을 통합 검색에 넣으면 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 번호가 <code>VW-BLV-OM-001</code>인 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span>이 나온다.</p>
 </aside>
-<p><strong>지킬 것</strong> 파일 본문은 검색하지 않는다.</p>
+<p><strong>결과 표시</strong> 파일 본문에 일치하면 그 주변 문구와 원문 판을 표시한다. 화면에는 최대 200건을 표시하며 전체 건수와 혼동하지 않게 표시 상한을 안내한다. 정렬은 표시한 결과에 적용한다.</p>
+<p>필터·정렬·상세 조건 펼침 상태는 URL에 담는다. 공유·새로고침·뒤로가기 후에도 같은 조건으로 조회한다. 이전 검색의 늦은 응답으로 새 결과를 덮어쓰지 않는다.</p>
+<p><strong>본문 검색 준비</strong> PDF·DOCX·XLSX·TXT·MD에서 읽을 수 있는 글을 파일 해시별로 추출한다. 새 <span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 업로드가 확정된 뒤 별도 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>으로 처리하며 업로드 원본·<span class="term" title="문서에 적힌 개정 번호다. 형식을 정하지 않고 적힌 그대로 넣는다. 예: Rev.1.3, V1.0.12W1" tabindex="0">Revision</span>은 바꾸지 않는다.</p>
+<p>관리자는 기존 파일의 본문 색인을 명시적으로 갱신한다. <span class="term" title="그 문서의 지금 최신본이다. 문서마다 하나이거나 아직 없다. 문서 행의 current_version_id 열 하나로 정한다" tabindex="0">Current</span> 파일부터 작은 묶음으로 처리하며 기본 2개, 최대 5개다. 중지하면 현재 묶음까지 마치고 같은 조건으로 재개한다. 화면을 열기만 해서는 갱신하지 않는다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>추출 제한</th><th>값</th></tr></thead>
+<tbody>
+<tr><td>파일 크기</td><td>50MiB</td></tr>
+<tr><td>파일별 처리 시간</td><td>별도 프로세스에서 8초</td></tr>
+<tr><td>저장할 본문</td><td>최대 1,000,000자</td></tr>
+<tr><td>PDF 페이지</td><td>최대 500쪽</td></tr>
+<tr><td>Office 압축 해제</td><td>합계 32MiB·512항목, XML 하나 8MiB</td></tr>
+</tbody>
+</table></div>
+<aside class="callout callout-warn"><span class="callout-label">주의</span>
+<p>이미지 PDF의 OCR은 제공하지 않는다. 암호·지원하지 않는 형식·크기 제한·시간 초과·원문 판 불일치·추출 실패는 검색 가능한 것처럼 표시하지 않고 상태와 이유를 구분한다. 일부만 추출했으면 그 범위를 표시한다.</p>
+</aside>
+<p><strong>지킬 것</strong> 기존 로그인·관리자 권한을 사용한다. 강제 비밀번호 변경이 남은 관리자는 갱신할 수 없다. 파일 매크로·외부 연결·AI는 실행하지 않는다. 기존 API의 응답 배열과 메타데이터 필터를 유지한다. 본문 열과 상태를 더하는 DB 변경은 기존 파일·<span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 행을 보존한다.</p>
 </section>
 <section class="card kind-req" id="REQ-HUB-009">
 <h3><span class="idtag">REQ-HUB-009</span> Recent Updates</h3>
@@ -13156,6 +13181,12 @@ npm run build:platform
 <p>파일 경로와 기본값은 <code>services/qa-manual-hub/backend/tests/test_deploy_scripts.py</code>가 확인한다. 실제 컨테이너 실행은 Docker 가 있는 PC에서 사람이 확인한다.</p>
 </aside>
 </section>
+<section class="card kind-test" id="TEST-HUB-008">
+<h3><span class="idtag">TEST-HUB-008</span> 파일 본문과 검색 조건 보존</h3>
+<p>임시 파일로 TXT 인코딩·PDF·Office 표시 본문·암호·손상·크기·시간 상한과 원본 보존을 확인한다.
+별도 임시 DB에서 실제 업로드·본문 검색·관리자 갱신·<span class="term" title="그 문서의 지금 최신본이다. 문서마다 하나이거나 아직 없다. 문서 행의 current_version_id 열 하나로 정한다" tabindex="0">Current</span>와 과거 판 선택·추가 DB 열을 확인한다. 운영 PostgreSQL은 사용하지 않는다.
+화면은 URL 조건·표시 상한·본문 문맥·권한별 갱신 버튼·중지·재개를 확인한다.</p>
+</section>
 </section>
 <section class="chapter" id="sec-12">
 <h2>12. 요구사항 추적성</h2>
@@ -13406,7 +13437,7 @@ npm run build:platform
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-005">REQ-HUB-005</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/documents.py</code>, <code>services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-005">TEST-HUB-005</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-006">REQ-HUB-006</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/documents.py</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-001">TEST-HUB-001</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-007">REQ-HUB-007</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/storage.py</code>, <code>services/qa-manual-hub/backend/app/routers/documents.py</code>, <code>services/qa-manual-hub/frontend/src/pages/DocumentDetail.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-001">TEST-HUB-001</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
-<tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>: <code>services/qa-manual-hub/backend/tests/test_documents.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
+<tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-008">REQ-HUB-008</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/search.py</code>, <code>services/qa-manual-hub/backend/app/body_extract.py</code>, <code>services/qa-manual-hub/backend/app/body_index.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Search.tsx</code>, <code>services/qa-manual-hub/frontend/src/queryState.ts</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-002">TEST-HUB-002</a>, <a class="idref" href="#TEST-HUB-008">TEST-HUB-008</a>, <code>tests/test_manual_hub_body.py</code>, <code>services/qa-manual-hub/frontend/tests/shareable-search.cjs</code>, <code>services/qa-manual-hub/frontend/tests/body-search.cjs</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-009">REQ-HUB-009</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/dashboard.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-003">TEST-HUB-003</a>: <code>services/qa-manual-hub/backend/tests/test_audit.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-010">REQ-HUB-010</a></td><td data-label="Implementation"><code>services/qa-manual-hub/backend/app/routers/dashboard.py</code>, <code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-003">TEST-HUB-003</a>: <code>services/qa-manual-hub/backend/tests/test_audit.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-HUB-011">REQ-HUB-011</a></td><td data-label="Implementation"><code>services/qa-manual-hub/frontend/src/pages/Misc.tsx</code>, <code>services/qa-manual-hub/backend/app/routers/auth.py</code></td><td data-label="Test"><a class="idref" href="#TEST-HUB-005">TEST-HUB-005</a></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
