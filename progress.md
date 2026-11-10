@@ -4,7 +4,8 @@
 
 - 별도 작업 트리에서 `reference` 종류를 더했다. 화면 등록·교체·삭제, `.md`·`.txt` 파싱, 지식 폴더 수집과 PC 내려받기 제외, VXvue 챗봇·공용 AI 연결의 등록본 읽기를 연결했다.
 - 검증: `tests/test_knowledge_reference.py` 8 passed. 전체 시험은 2420 passed·16 skipped·2 failed다. 실패 2건(`tests/test_manual_review_shared.py` PDF 원본 경로)은 변경을 뺀 상태에서도 같은 `FileNotFoundError` 로 실패하는 긴 임시 경로 문제다. 준비 검사 failed=0.
-- `e9924d0`(신규 PC 동기화 전환)과 병합한 뒤 관련 시험 226 passed·2 skipped. 앞의 실패 2건은 `docs/CLEAN_PC.md` 의 짧은 basetemp 로 통과했다. 운영 반영 결과는 아래 줄에 적는다.
+- `e9924d0`(신규 PC 동기화 전환)과 병합한 뒤 관련 시험 226 passed·2 skipped. 앞의 실패 2건은 `docs/CLEAN_PC.md` 의 짧은 basetemp 로 통과했다. `83762b2` 로 master 에 게시했다.
+- 운영 반영: 실행·대기 작업 0건 확인 뒤 대상 9개 파일이 서버에서 직전 판과 같음(줄바꿈 CRLF만 다름)을 확인했다. `backups/deploy-knowledge-reference-20261110T062258Z.tgz` 로 백업하고 교체해 해시 일치·구문 검사 통과, 서버에서 새 시험 8 passed. 사용자가 재기동했고 active, `/health`·지식 현황판·VXvue·XIPL 상세·QA 홈·챗봇 화면이 200이다. VXvue 상세에 `참고 자료` 구역이 릴리즈노트와 QA 규칙 사이에 보이고 XIPL 에는 없다. 공용 AI 연결 `get_status` 는 문서 28개·실패 0건이다. 실제 파일 등록은 사용자가 할 운영 자료라 시험하지 않았다.
 
 ## 2026-11-10 신규 PC 동기화 담당 전환과 예약 활성화 (REQ-BELLALUNSHARED-005·006)
 
