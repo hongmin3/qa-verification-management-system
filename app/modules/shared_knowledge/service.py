@@ -36,6 +36,8 @@ def definitions():
         if tool["name"] not in _ALLOWED:
             continue
         tool = json.loads(json.dumps(tool))
+        for viewer_input in ('compact', 'columns'):
+            tool['inputSchema']['properties'].pop(viewer_input, None)
         name = tool["name"]
         tool["name"] = "xipl_" + name
         tool["description"] = "XIPL 공용 문서(VXvue·Bellalun): " + (
@@ -138,7 +140,8 @@ def call(name, arguments, project_root):
     session = DesktopTools(current, [], Path(project_root) / "data/shared_knowledge/unused-trace")
     session.corpus = Corpus(current["root"], current["index"],
                             document_kinds={r["document_id"]: r["kind"] for r in current["documents"]})
-    value = session.call(base_name, args)
+    # XIPL keeps its existing row metadata contract; compact views belong to VXvue/Bellalun.
+    value = session.call(base_name, {**args, 'compact': False})
     _verify_snapshot(current)
     if isinstance(value, dict):
         value.update(snapshot_id=current["id"], library="XIPL", instructions=_INSTRUCTIONS)

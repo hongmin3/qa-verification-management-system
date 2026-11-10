@@ -91,6 +91,19 @@ function sections(text) {
   }
   return result;
 }
+function workflowVersions(text) {
+  const lines = normalize(text).split('\n');
+  const visible = visibleMarkdown(normalize(text)).split('\n');
+  const versions = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^##\s/.test(visible[i])) continue;
+    let j = i + 1;
+    while (j < lines.length && !lines[j].trim()) j++;
+    const version = lines[j]?.match(WORKFLOW_MARKER_LINE)?.[1];
+    if (version) versions.push(version);
+  }
+  return versions;
+}
 function ticks(text) { return [...text.matchAll(/`([^`\n]+)`/g)].map(m => m[1].trim()); }
 function fileToken(token) {
   return !/[<>\n]|\{\{|:\/\//.test(token) && /\.[a-zA-Z0-9]+(?:#[^\s]+)?$/.test(token);
@@ -261,12 +274,14 @@ function checkProject(projectRoot, options = {}) {
     const plannedTests = new Set(); const requiredTests = new Set();
     const plannedPaths = new Map();
     // 무엇이 게이트에서 실행되는가: 호출자가 목록을 주면(키트: check-kit.js가 돌리는 테스트) 그 목록,
-    // 아니면 프로젝트의 botyard.json verify 명령이 하나라도 있을 때 그 프로젝트의 테스트 전부로 본다.
+    // 아니면 유효한 verify 명령과 verifyTests의 정확한 경로 선언을 함께 확인한다.
     const gated = options.gatedTests ? ref => options.gatedTests.has(ref.replace(/\\/g, '/')) : (() => {
-      let verify = [];
-      try { verify = JSON.parse(fs.readFileSync(path.join(root, 'botyard.json'), 'utf8')).verify; } catch { /* no gate */ }
-      const on = Array.isArray(verify) && verify.some(v => typeof v === 'string' && v.trim());
-      return () => on;
+      let config = {};
+      try { config = JSON.parse(fs.readFileSync(path.join(root, 'botyard.json'), 'utf8')); } catch { /* no gate */ }
+      if (!config || typeof config !== 'object') config = {};
+      const on = Array.isArray(config.verify) && config.verify.length > 0 && config.verify.every(v => typeof v === 'string' && v.trim());
+      const tests = new Set(Array.isArray(config.verifyTests) ? config.verifyTests.filter(v => typeof v === 'string').map(v => v.replace(/\\/g, '/')) : []);
+      return ref => on && tests.has(ref.replace(/\\/g, '/'));
     })();
     for (const doc of specDocuments) {
       const label = doc.label;
@@ -331,7 +346,7 @@ function checkProject(projectRoot, options = {}) {
     const labels = specDocuments.length > 1 ? 'specification documents' : 'SPEC.md';
     // 이번 workflow 판에서는 경고다. 다음 판에서 오류로 올린다(docs/project-readiness.md).
     if (manualVerified.length) warning('TRACE_VERIFIED_MANUAL', `${labels}: ${manualVerified.length} verified row(s) have only manual TEST procedures (${manualVerified.slice(0, 5).join(', ')}); set Status to implemented, or add an automated test that the gate runs`);
-    if (ungatedVerified.length) warning('TRACE_VERIFIED_UNGATED', `${labels}: ${ungatedVerified.length} verified row(s) have automated tests that no gate runs (${ungatedVerified.slice(0, 5).join(', ')}); ${options.gatedTests ? 'register the test in the gate' : 'add the test command to botyard.json "verify"'}, or set Status to implemented`);
+    if (ungatedVerified.length) warning('TRACE_VERIFIED_UNGATED', `${labels}: ${ungatedVerified.length} verified row(s) have automated tests that no gate runs (${ungatedVerified.slice(0, 5).join(', ')}); ${options.gatedTests ? 'register the test in the gate' : 'add a verify command and its exact test paths to botyard.json "verifyTests"'}, or set Status to implemented`);
     for (const [kind, paths] of [['IMPLEMENTATION', implPaths], ['TEST', testPaths]]) {
       result.counts[kind === 'TEST' ? 'testPaths' : 'implementationPaths'] = paths.size;
       for (const [token, label] of paths) {
@@ -406,4 +421,4 @@ function main(args) {
   }
 }
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
-module.exports = { checkProject, visibleMarkdown, sections, testRef, legacyWorkflowSections, MANAGED_MARKERS, STATUSES, SPEC_SECTIONS, FEATURE_SECTIONS };
+module.exports = { checkProject, visibleMarkdown, sections, workflowVersions, testRef, legacyWorkflowSections, MANAGED_MARKERS, STATUSES, SPEC_SECTIONS, FEATURE_SECTIONS };

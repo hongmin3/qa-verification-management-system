@@ -242,7 +242,7 @@ class ReviewStore:
         return path.parent / record['file']
 
 
-def read_review(store, source_id, view='summary', offset=0, limit=20, paragraphs=None):
+def read_review(store, source_id, view='summary', offset=0, limit=20, paragraphs=None, changed_only=False):
     if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 40:
         raise ValueError('조회 시작 위치와 개수(1~40)를 확인하세요.')
     data = store.inventory(source_id)
@@ -254,6 +254,17 @@ def read_review(store, source_id, view='summary', offset=0, limit=20, paragraphs
     if view not in ('paragraphs', 'comments'):
         raise ValueError('조회 종류를 확인하세요.')
     rows = data[view]
+    if not isinstance(changed_only, bool) or (changed_only and view != 'paragraphs'):
+        raise ValueError('changed_only는 문단 조회에서만 사용합니다.')
+    if changed_only and paragraphs is not None:
+        raise ValueError('changed_only와 문단 번호 선택은 함께 사용하지 않습니다.')
+    if changed_only and data.get('source_kind') == 'pdf':
+        raise ValueError('PDF 변경·취소선은 이미지로 확인하세요. changed_only를 적용하지 않았습니다.')
+    original_count = len(rows)
+    if changed_only:
+        rows = [p for p in rows if p.get('inserted') or p.get('deleted') or p.get('has_strike')
+                or p.get('comment_ids') or p.get('events') or p.get('unsupported_symbols')
+                or any(i.get('inserted') or i.get('deleted') for i in p.get('images', []))]
     if paragraphs is not None:
         if view != 'paragraphs' or not isinstance(paragraphs, list) or not 1 <= len(paragraphs) <= 40 or any(type(n) is not int or not 1 <= n <= len(rows) for n in paragraphs):
             raise ValueError('원본 문단 번호를 1~40개 지정하세요.')
@@ -267,6 +278,8 @@ def read_review(store, source_id, view='summary', offset=0, limit=20, paragraphs
         if 'text' in row:
             row['quote_transport_verbatim'] = mask_text(row['text'])[0] == row['text']
     return {'source_id': source_id, 'source_sha256': data['sha256'], 'view': view, 'results': selected,
+            'selection': {'changed_only': changed_only, 'omitted': original_count - len(rows),
+                          'scope': '추출된 변경·취소선·메모·그림 변경 문단. 서식 변경 전수 판정은 아니며 전체 검토는 changed_only=false로 재조회.' if changed_only else '전체 문단'},
             'total': total, 'truncated': truncated, 'next_offset': end if truncated else None,
             'quote_note': '조회는 민감정보 보호를 적용합니다. quote_transport_verbatim이 false이면 검색용 원문과 다릅니다. 생성 보고서의 현재 문구는 서버 원본에서 직접 채웁니다.'}
 

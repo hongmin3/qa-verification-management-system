@@ -16,7 +16,7 @@ def definitions():
         {'name': 'get_manual_review', 'description': '공통 매뉴얼 검토: 등록 문서(document_id+snapshot_id) 또는 업로드 자료(source_id)의 전체 본문·변경추적·취소선·메모·원문 이미지 조회. summary에서 source_id를 받고 paragraphs/comments를 next_offset 끝까지 읽기. 현재 text는 원문 그대로이며 before/deleted와 혼합하지 않기.',
          'inputSchema': {'type': 'object', 'properties': {'source_id': {'type': 'string'}, 'document_id': {'type': 'string'}, 'snapshot_id': {'type': 'string'},
              'view': {'type': 'string', 'enum': ['summary', 'paragraphs', 'comments', 'page', 'images']}, 'offset': {'type': 'integer', 'minimum': 0},
-             'limit': {'type': 'integer', 'minimum': 1, 'maximum': 40}, 'paragraphs': numbers,
+             'limit': {'type': 'integer', 'minimum': 1, 'maximum': 40}, 'paragraphs': numbers, 'changed_only': {'type': 'boolean'},
              'page': {'type': 'integer', 'minimum': 1}, 'basis': {'type': 'string', 'enum': ['source', 'saved', 'final']}}, 'additionalProperties': False}},
         {'name': 'make_manual_review_report', 'description': '요청한 검토보고서 HTML·Excel 생성. 현재 문구는 quote_paragraphs(생략 시 paragraphs) 원문에서 서버가 채우며 상단에 펼쳐 표시. current_meaning에 한국어 뜻, evidence에 확인한 공식 근거의 위치·원문·한국어 해설, reason에 AI 대조 판단, proposed에 구체적 한국어 수정 요청을 작성. short_comment는 위치에 붙일 짧은 한국어 메모이며 이 값만 복사. 한국어 초안과 뜬금없는 한국어 조각을 language_context로 구분하되 기능 오류 검토는 유지. 문체·판정은 최신 통합 QA MD 35절 적용. 생성 문장의 띄어쓰기 오류와 한글에 붙은 숫자(최대200개)는 교정 후 재생성. 근거 문서 자체 오류(kind=source)는 paragraphs·quote_paragraphs를 비우고 location에 그 문서의 이름과 위치를 씀. 시마주판의 일반 기능 오류 같은 참고 항목은 review_scope=reference로 보내 HTML·Excel에서 거를 수 있게 함. 원본 수정 없음. 원문 순서·기존 ID·실제 쪽수와 문단 구분 유지. 선택 필드 없는 기존 호출도 지원.',
          'inputSchema': {'type': 'object', 'properties': {'source_id': {'type': 'string'}, 'title': {'type': 'string'},

@@ -572,8 +572,14 @@ class Corpus:
                     'results': results,
                     'scope': scope, 'limitations': LIMITATIONS}
 
-    def get_document(self, document_id, section=None, offset=0, limit=10, context=0):
+    def get_document(self, document_id, section=None, offset=0, limit=10, context=0, columns=None):
         self.validate_pagination(limit, offset)
+        if columns is not None and (not isinstance(columns, list) or not 1 <= len(columns) <= 100
+                or any(not isinstance(c, str) or not re.fullmatch('[A-Z]{1,3}', c)
+                       or sum((ord(ch)-64) * 26 ** i for i, ch in enumerate(reversed(c))) > 16384 for c in columns)):
+            raise ValueError('columns는 A~XFD 열 이름 1~100개입니다.')
+        if columns is not None and not document_id.lower().endswith('.xlsx'):
+            raise ValueError('columns는 XLSX 원문 조회에서만 사용합니다.')
         if isinstance(context, bool) or not isinstance(context, int) or not 0 <= context <= 3:
             raise ValueError('context must be an integer from 0 to 3')
         if not isinstance(document_id, str):
@@ -604,8 +610,29 @@ class Corpus:
             total = db.execute('SELECT count(*) FROM chunks c WHERE ' + condition, params).fetchone()[0]
             selected = db.execute('SELECT c.*,d.metadata AS doc_metadata,d.sha FROM chunks c JOIN documents d ON c.document_id=d.id WHERE ' + condition + ' ORDER BY c.id LIMIT ? OFFSET ?', [*params,limit,offset]).fetchall()
             records = [self.record(r, full=True) for r in selected]
+            selection = {}
+            if columns is not None:
+                omitted = set()
+                for record in records:
+                    details = record.get('details', {})
+                    cells = details.get('cells', {})
+                    chosen = {ref: v for ref, v in cells.items() if re.match('[A-Z]+', ref)[0] in columns}
+                    omitted.update(re.match('[A-Z]+', ref)[0] for ref in cells if ref not in chosen)
+                    if 'cells' not in details:
+                        # Compact ID ranges cannot be projected without reconstructing source rows.
+                        record['column_selection_unavailable'] = True
+                        continue
+                    record['details'] = {**details, 'cells': chosen,
+                                         'headers': {c: v for c, v in details.get('headers', {}).items() if c in columns}}
+                    record['evidence'] = '\n'.join(f"{ref}: {v['text']}" + (f"\nComment: {v['comment']}" if v.get('comment') else '') for ref, v in chosen.items())
+                    record['location'] = {**record['location'], 'cells': list(chosen)}
+                    for key in ('cell_roles', 'noncurrent_cells'):
+                        if key in record:
+                            record[key] = {ref: v for ref, v in record[key].items() if ref in chosen}
+                selection = {'selection': {'columns': columns, 'omitted_columns': sorted(omitted),
+                                           'scope': '선택 열만 조회. 전체 원문은 columns를 생략.'}}
             self.verify_snapshot(db)
-            return {'status': 'evidence-found' if records else 'section-not-found', 'results': records,
+            return {**selection, 'status': 'evidence-found' if records else 'section-not-found', 'results': records,
                     'matched': total, 'returned': len(records), 'truncated': offset + len(records) < total,
                     'next_offset': offset + len(records), 'scope': scope, 'limitations': LIMITATIONS}
 

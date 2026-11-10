@@ -77,6 +77,16 @@ Redmine은 실시간 원본이므로 문서 판(snapshot_id)을 받지 않는다
 
 **안 될 때** 설정 누락·인증 실패·범위 밖 프로젝트를 빈 검색으로 숨기지 않는다. 이슈 등록·수정·첨부 본문 다운로드는 제공하지 않는다.
 
+### REQ-BELLALUNSHARED-005 작업별 지침과 서버 배급 범위
+
+REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이어 읽기·과거 전문 호환을 Bellalun에도 적용한다. `mail`을 포함한 같은 유형 선택을 제공하고 제품별 QA 원문과 자료 판은 분리한다.
+
+서버 배급에는 서버 연결용 Skill과 통합 QA 원문을 사용한다. 로컬 설치·실행·자동 자체검토 참조는 배급에서 제외하고 로컬 파일은 보존한다. 개별 자료 응답에 지침 전문을 반복하지 않으며 지침 도구로 조회한다. 응답 축약·열 선택은 같은 공통 코드와 검증을 사용한다.
+
+### REQ-BELLALUNSHARED-006 클린 PC 작업 재개 자료
+
+코드·설치 절차·검증 방법은 Git에 게시하고 제품 원문·QA 원문·로컬 Skill·검증 기록은 서버에 보관한다. 로컬 Skill·별칭·연결 코드 묶음은 파일 목록과 SHA256을 포함하고 config·자격 증명·캐시·백업은 넣지 않는다. 새 PC에서는 경로와 Python을 새 환경에 맞추고 기존 파일이 다르면 덮어쓰지 않는다. 제품 원문과 내부 지침은 Git에 넣지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-BELLALUNSHARED-001 판·원문·지침
@@ -99,6 +109,8 @@ Redmine은 실시간 원본이므로 문서 판(snapshot_id)을 받지 않는다
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
+| REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py` | verified |
+| REQ-BELLALUNSHARED-005 | `app/core/qa_workflow.py`, `app/modules/bellalun_shared/service.py`, `scripts/sync_bellalun_shared.py` | `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/snapshot_files.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py`, `tests/test_snapshot_files.py` | verified |
 | REQ-BELLALUNSHARED-004 | `app/modules/vxvue_chatbot/redmine.py`, `app/modules/bellalun_shared/service.py`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_bellalun_redmine.py`, `tests/test_vxvue_redmine.py` | verified |

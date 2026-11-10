@@ -1,5 +1,16 @@
 {
   "verify": [
     ".venv/Scripts/python.exe -m pytest -q"
+  ],
+  "verifyTests": [
+    "tests/test_qa_workflow_sections.py",
+    "tests/test_qa_context_filters.py",
+    "tests/test_qa_client_handoff.py",
+    "tests/test_bellalun_shared.py",
+    "tests/test_bellalun_redmine.py",
+    "tests/test_vxvue_desktop.py",
+    "tests/test_vxvue_redmine.py",
+    "tests/test_skill_knowledge.py",
+    "tests/test_xipl_shared.py"
   ]
 }

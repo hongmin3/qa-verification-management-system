@@ -50,6 +50,27 @@ def installed_skill(plugin, skill, codex_home=None):
 
 
 def read_bundle(plugin, skill, codex_home=None):
+    if plugin == 'vxvue-server-ai@vxvue-server-local' and skill == 'vxvue-ai':
+        # The repository owns the server connector. Installed plugin caches may be older.
+        # Scheduled workers copy this module into a flat, versioned worker folder.
+        # The already-loaded app settings identify the owning checkout in either layout.
+        from app.core.config import get_settings
+        relative = Path('deploy/claude-desktop/skill/vxvue-ai/SKILL.md')
+        source = Path(__file__).resolve().parents[2] / relative
+        if not source.is_file():
+            source = get_settings().root / relative
+        data = source.read_bytes()
+        text = data.decode('utf-8-sig').replace('\r\n', '\n').replace('\r', '\n')
+        if not text.strip():
+            raise ValueError('서버 연결 Skill 원본이 비어 있습니다.')
+        body = '# 서버 연결 Skill 동기화본\n\n## SKILL.md\n' + text
+        bridge = source.parents[2] / 'server.cjs'
+        metadata = {'schema': 1, 'plugin': plugin, 'skill': skill, 'version': 'server-managed',
+                    'files': [{'path': 'SKILL.md', 'sha256': digest(data)}],
+                    'content_hash': digest(body.encode('utf-8')), 'code_hash': digest(bridge.read_bytes())}
+        if source.read_bytes() != data:
+            raise ValueError('내보내기 도중 서버 연결 지침이 바뀌었습니다.')
+        return metadata, body
     package, source, version = installed_skill(plugin, skill, codex_home)
     references = source / "references"
     paths = [source / "SKILL.md"]

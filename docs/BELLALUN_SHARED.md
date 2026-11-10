@@ -24,14 +24,15 @@ Bellalun Redmine은 VXvue와 같은 읽기 모듈(`app/modules/vxvue_chatbot/red
 python -X utf8 scripts/sync_bellalun_shared.py --skill-root "<공통 Bellalun Skill 폴더>" --knowledge-root "<Bellalun 지식 폴더>" --upload-to "<QA 서버 base URL>"
 ```
 
-공통 Skill의 SKILL.md와 참조 MD  전체를 읽고 참조·빈 파일·변경 도중 충돌을 확인한다.
+공통 Skill의 SKILL.md와 참조 MD를 읽고 참조·빈 파일·변경 도중 충돌을 확인한다.
+서버에는 서버 연결용 Skill과 통합 QA만 내보낸다. 로컬 설치·실행·과거 자체검토 참조는 로컬에 보존한다.
 실행 코드·설정·키는 내보내지 않는다. 통합 QA 사본과 자동 생성 Skill 지침만 갱신한다.
 사본 교체 전 백업은 `data/bellalun_sync/backups`에 둔다. 다른 수동 작성 파일은 덮어쓰지 않는다.
 그 뒤 기존 수집·해시 변경분 업로드·서버 확정 경로를 사용한다.
 과거 분리 QA 지침과 프롬프트는 현재 서버 수집 범위에서 제외하며 담당자 원본은 보존한다.
 
 업로드 결과가 SUCCESS인지, failed·unreadable·kept_previous가 없는지 읽는다.
-서버 상태→지침 전문을 다시 읽고 통합 QA와 Skill 문서의 해시를 원본과 대조한다.
+서버 상태→지침의 core·작업 유형을 다시 읽고 통합 QA와 Skill 문서의 해시를 원본과 대조한다. section 생략/full은 전문을 제공한다.
 검색 후보·원문·PDF 페이지를 실제로 조회한다. 수집 성공은 제품 검증 Pass가 아니다.
 
 ## PC 예약

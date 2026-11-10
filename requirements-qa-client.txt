@@ -1,0 +1,4 @@
+# Optional local Bellalun MCP and PDF readers, verified on the source PC.
+mcp==1.30.0
+pypdf==6.10.0
+pypdfium2==5.14.0

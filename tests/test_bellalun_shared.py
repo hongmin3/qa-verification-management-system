@@ -116,6 +116,18 @@ def test_bellalun_old_snapshot_and_failed_sources(shared):
     assert value(rpc(client, 'bellalun_search_documents', snapshot_id=old, query='TC_UNIQUE'))['results']
 
 
+def test_bellalun_manual_review_uses_own_snapshot_and_selection(shared):
+    client, _, _ = shared
+    sid = value(rpc(client, 'bellalun_get_status'))['snapshot_id']
+    summary = value(rpc(client, 'bellalun_get_manual_review', snapshot_id=sid,
+                        document_id='(매뉴얼) Operation.docx'))
+    assert summary['paragraph_count'] == 1
+    selected = value(rpc(client, 'bellalun_get_manual_review', snapshot_id=sid,
+                         source_id=summary['source_id'], view='paragraphs', changed_only=True))
+    assert selected['total'] == 0 and selected['selection']['omitted'] == 1
+    assert rpc(client, 'bellalun_get_manual_review', snapshot_id=sid, document_id='VXvue.docx')['isError']
+
+
 def test_bellalun_rejects_foreign_id_paths_arguments_tampering_and_auth(shared):
     client, _, _ = shared
     sid = value(rpc(client, 'bellalun_get_status'))['snapshot_id']
@@ -144,7 +156,8 @@ def test_bellalun_export_and_config(tmp_path):
     (target / 'unrelated.md').write_text('PRESERVE')
     result = export_common_skill(skill, target)
     content = Path(result['path']).read_bytes()
-    assert b'INVESTIGATION_UNIQUE' in content
+    assert b'INVESTIGATION_UNIQUE' not in content  # local-only references stay on the PC
+    assert b'bellalun_get_workflow' in content
     assert export_common_skill(skill, target)['sha256'] == result['sha256']
     assert (target / 'Bellalun Viewer QA 지침.md').read_bytes() == (skill / 'references/bellalun-qa-guide.md').read_bytes()
     assert (target / 'unrelated.md').read_text() == 'PRESERVE'
@@ -240,7 +253,7 @@ def test_bellalun_download_contains_portable_skill(shared):
     text = guide.read_text(encoding='utf8')
     for word in ('Claude Desktop', 'Claude Code', 'Codex', 'bellalun_get_status', 'Redmine', '동기화'):
         assert word in text
-    release = guide.parent / 'releases/2026-11-10.1/bellalun-server-ai-skill.zip'
+    release = guide.parent / 'releases/2026-11-10.2/bellalun-server-ai-skill.zip'
     with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
         assert archive.namelist() == dynamic.namelist()
         assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())

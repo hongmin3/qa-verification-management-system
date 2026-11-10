@@ -135,6 +135,9 @@ class KnowledgeTools:
             from app.modules.vxvue_chatbot.redmine import call as redmine_call
             return redmine_call(name, arguments)
         arguments = dict(arguments)
+        compact = arguments.pop('compact', False)
+        if not isinstance(compact, bool):
+            raise ValueError('compact는 boolean입니다.')
         if name in ("search_documents", "find_testcases", "trace_requirements", "compare_packages"):
             arguments.setdefault("limit", 6)
         elif name == "get_document":
@@ -155,7 +158,11 @@ class KnowledgeTools:
         if name == "get_status":
             status = self.corpus.get_status()
             status.pop("latest_rules", None)  # full latest rules already in system prompt
-            return compact_response({**status, "snapshot_id": self.snapshot["id"], "source_failures": self.snapshot.get("failures", [])}, inventory=True)
+            value = compact_response({**status, "snapshot_id": self.snapshot["id"], "source_failures": self.snapshot.get("failures", [])}, inventory=True)
+            if compact:
+                from app.core.qa_workflow import compact_inventory
+                return compact_inventory(value)
+            return value
         if name == "read_attachment":
             return self.read_attachment(**arguments)
         if name == "get_document_pages":
@@ -190,6 +197,9 @@ class KnowledgeTools:
         if name not in allowed:
             raise ValueError("허용되지 않은 도구입니다.")
         value = compact_response(self._decorate(getattr(self.corpus, name)(**arguments)))
+        if compact:
+            from app.core.qa_workflow import compact_evidence
+            value = compact_evidence(value)
         if name == "get_document" and any(d.get("document_id") == arguments.get("document_id") and d.get("kind") == "qa_rules" for d in self.snapshot["documents"]):
             from app.modules.vxvue_chatbot.qa_protection import mask_qa_payload
             rules = self._source(arguments["document_id"]).read_text(encoding="utf-8-sig")
@@ -307,7 +317,14 @@ def tools():
     ]
     from app.modules.vxvue_chatbot.redmine import definitions as redmine_definitions
     from app.modules.vxvue_chatbot.word_reports import definitions as word_definitions
-    return word_definitions() + redmine_definitions() + [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
+    result = word_definitions() + redmine_definitions() + [{"name": name, "description": description, "inputSchema": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}, "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}} for name, description, properties, required in definitions]
+    for tool in result:
+        if tool['name'] in ('get_status', 'search_documents', 'get_document', 'find_testcases', 'trace_requirements'):
+            tool['inputSchema']['properties']['compact'] = {'type': 'boolean', 'description': '문서별 반복 정보는 documents에서 조회. false는 기존 형식.'}
+        if tool['name'] == 'get_document':
+            tool['inputSchema']['properties']['columns'] = {'type': 'array', 'minItems': 1, 'maxItems': 100,
+                                                          'items': {'type': 'string', 'pattern': '^[A-Z]{1,3}$'}}
+    return result
 
 
 def serve(session, source=sys.stdin, target=sys.stdout):

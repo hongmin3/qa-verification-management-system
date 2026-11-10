@@ -23,7 +23,8 @@ _ALLOWED = {'get_status', 'search_documents', 'get_document', 'get_document_page
 _REQUIRED = {'specification', 'manual', 'testcase', 'qa_rules', 'skill_instruction'}
 _KINDS = _REQUIRED | {'release_note', 'instruction_prompt'}
 INSTRUCTIONS = """Bellalun 공용 서버 자료입니다. Bellalun 질문에서는 VXvue get_status/get_workflow 대신
-bellalun_get_status → bellalun_get_workflow 전문 → bellalun_search_documents → bellalun_get_document 순서로 조회합니다.
+bellalun_get_status → bellalun_get_workflow(section="core"와 작업 유형) → bellalun_search_documents → bellalun_get_document 순서로 조회합니다.
+공통·목차를 읽고 작업 유형의 선행 규칙도 읽습니다. 복합 작업은 해당 유형을 모두 읽고 불명확하면 section="full"을 읽습니다.
 같은 작업에는 같은 Bellalun snapshot_id를 사용하고 지침의 truncated가 참이면 next_offset으로 끝까지 읽습니다.
 아래 공통 Skill의 개인 PC 경로·로컬 스크립트·로컬 MCP 이름은 이 서버에서 실행하지 않습니다.
 서버 도구로 사양·매뉴얼·TC를 나눠 검색하고 원문·인접 문맥을 읽습니다. 조회한 범위와 미조회 범위를 구분합니다.
@@ -55,7 +56,7 @@ def definitions():
         name = tool['name']
         tool['name'] = 'bellalun_' + name
         tool['description'] = 'Bellalun 서버: ' + (
-            '먼저 문서 목록·해시·snapshot_id·추출 한계를 확인하고 bellalun_get_workflow를 끝까지 읽는다.'
+            '문서 목록·해시·snapshot_id·추출 한계를 확인하고 bellalun_get_workflow(section=core)와 작업 유형·선행 규칙을 읽는다.'
             if name == 'get_status' else tool['description'].replace('VXvue', 'Bellalun'))
         if name != 'get_status':
             tool['inputSchema']['properties']['snapshot_id'] = {'type': 'string'}
@@ -63,10 +64,17 @@ def definitions():
         result.append(tool)
     from app.modules.vxvue_chatbot.redmine import bellalun_definitions as redmine_definitions
     result.extend(redmine_definitions())
-    result.append({'name': 'bellalun_get_workflow', 'description': '최신 Bellalun 공통 Skill·통합 QA 지침 전문. truncated이면 next_offset으로 이어 읽기.',
+    result.append({'name': 'bellalun_get_workflow', 'description': 'Bellalun 공통 Skill·QA. section=core로 목차·공통, 작업 유형은 선행 규칙 포함. 생략/full은 전문. 같은 section으로 이어 읽기.',
                    'inputSchema': {'type': 'object', 'properties': {'snapshot_id': {'type': 'string'},
-                       'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 12000}},
+                       'section': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 12000}},
                        'required': ['snapshot_id'], 'additionalProperties': False}})
+    from app.core.qa_workflow import SECTION_SCHEMA
+    result[-1]['inputSchema']['properties']['section'] = SECTION_SCHEMA
+    from app.modules.manual_review.shared_tools import definitions as review_definitions
+    review = next(t for t in review_definitions() if t['name'] == 'get_manual_review')
+    review['name'] = 'bellalun_get_manual_review'
+    review['description'] = 'Bellalun 매뉴얼 원문·변경 문단 조회. changed_only=true는 변경·취소선·메모·그림 변경만. 전체 검토는 false. ' + review['description']
+    result.append(review)
     return result
 
 
@@ -222,7 +230,7 @@ def call(name, arguments, project_root):
     schema = next((t['inputSchema'] for t in definitions() if t['name'] == name), None)
     if schema is None or not isinstance(arguments, dict) or set(arguments) - set(schema['properties']):
         raise ValueError('허용된 Bellalun 읽기 도구와 입력을 확인하세요.')
-    if any(k not in arguments for k in schema['required']):
+    if any(k not in arguments for k in schema.get('required', [])):
         if name in REDMINE_TOOLS:
             raise ValueError('필수 Bellalun Redmine 조회 항목이 빠졌습니다.')
         raise ValueError('필수 Bellalun 조회 항목이 빠졌습니다. bellalun_get_status부터 조회하세요.')
@@ -236,14 +244,24 @@ def call(name, arguments, project_root):
         raise ValueError('bellalun_get_status가 반환한 snapshot_id가 필요합니다.')
     current = snapshot(project_root, sid)
     _verify_snapshot(current)
+    if base_name == 'get_manual_review':
+        from app.modules.manual_review.shared_tools import call as review_call
+        value = review_call('get_manual_review', {**args, 'snapshot_id': current['id']},
+                            project_root, lambda requested: current if requested == current['id'] else None)
+        _verify_snapshot(current)
+        return _private_paths(value)
     if base_name == 'get_workflow':
         from app.modules.vxvue_chatbot.desktop_polarion import integer
         offset, limit = args.get('offset', 0), args.get('limit', 12000)
         integer(offset, 0, 10_000_000); integer(limit, 1, 12000)
-        body = current['workflow']; end = min(offset + limit, len(body))
-        return {'snapshot_id': current['id'], 'text': body[offset:end], 'total_chars': len(body),
+        from app.core.qa_workflow import select_sections
+        from app.modules.vxvue_chatbot.qa_protection import mask_qa_text
+        rules, section_meta = select_sections(current['rules'], args.get('section'))
+        body, protection = mask_qa_text(_private_paths(INSTRUCTIONS + '\n\n' + current['skill_text'] + '\n\n' + rules), current['rules'])
+        end = min(offset + limit, len(body))
+        return {**section_meta, 'snapshot_id': current['id'], 'text': body[offset:end], 'total_chars': len(body),
                 'truncated': end < len(body), 'next_offset': end if end < len(body) else None,
-                'protection': current['protection']}
+                'protection': protection.as_dict()}
     if 'document_id' in args and args['document_id'] not in {r['document_id'] for r in current['documents']}:
         raise ValueError('해당 Bellalun 판 목록의 문서 ID만 조회할 수 있습니다.')
     if base_name == 'get_document_page' and not args['document_id'].lower().endswith('.pdf'):
@@ -254,5 +272,7 @@ def call(name, arguments, project_root):
     value = session.call(base_name, args)
     _verify_snapshot(current)
     if isinstance(value, dict):
-        value.update(snapshot_id=current['id'], library='Bellalun Viewer', instructions=INSTRUCTIONS)
+        value.update(snapshot_id=current['id'], library='Bellalun Viewer')
+        if base_name == 'get_status' and 'metadata_view' in value:
+            value['metadata_view'] = 'bellalun_get_status(compact=false)'
     return _private_paths(value)

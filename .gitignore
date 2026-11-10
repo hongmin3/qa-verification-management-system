@@ -73,3 +73,7 @@ data/shared_knowledge/
 data/bellalun_sync/
 data/headless-probe.txt
 data/task-config-backup/
+# 작업별 QA 지침 검증·클린 PC용 비공개 묶음
+/data/qa-context-verification/
+/data/qa-client-handoff/
+/data/test-qa-context*/

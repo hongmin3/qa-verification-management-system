@@ -1,8 +1,8 @@
 {
   "version": 1,
   "files": {
-    "project-readiness.js": "0b1074b6fb81fd82ad6fb92fb59d9d152e08f8d653e4c6c35f70bc2d2d6a8813",
-    "agents-spec-section.md": "107c40f3c8eb9f75fca38e881f1ce1c325eb683a64c20e075ac53fa2d2b1824c",
+    "project-readiness.js": "ee05563ce3a0a67bf49fea1a61bec4632930bab1eeea9c0af1a40ab77d71ab8a",
+    "agents-spec-section.md": "47409bb999cfb92599a3a4015b7632f7a4c1deb7dd4e732c421b5fedc8dd8de4",
     "render-spec-html.js": "dd78350612849406d461dde27f002a494eb2a181636ba6aaf4757f4f2b6f9bcc",
     "spec-preservation.js": "63a9ff982282c4d3ca3ac271499ec710c3cdf4b3e12c1d6dfeaac7f49798bb17",
     "changelog-template.md": "755091aa8eb9e08243808da015a724ddbb34c67fe713e0faabda6fb590a89402"

@@ -49,8 +49,13 @@ def export_common_skill(skill_root, knowledge_root, backup_root=None):
         payloads.append((path, data))
     records = [{'path': p.relative_to(skill_root).as_posix(), 'sha256': hashlib.sha256(d).hexdigest()} for p, d in payloads]
     body = '# Bellalun 공통 Skill 동기화본\n\n원본의 로컬 명령은 서버 연결에서 실행하지 않는다. 서버 도구 지침을 우선한다.\n'
-    body += '\n\n'.join('## ' + p.relative_to(skill_root).as_posix() + '\n' + d.decode('utf-8-sig')
-                           for p, d in payloads if p != qa)
+    # Local install/retrieval/review references are not executable on the server.
+    # Keep them intact locally and export the maintained server connector instead.
+    adapter = Path(__file__).resolve().parents[1] / 'deploy/bellalun-skill/bellalun-server-ai/SKILL.md'
+    adapter_data = adapter.read_bytes()
+    body += '\n\n## 서버 연결 지침\n' + adapter_data.decode('utf-8-sig')
+    records = [r for r in records if r['path'] == 'references/bellalun-qa-guide.md']
+    records.append({'path': 'server-adapter/SKILL.md', 'sha256': hashlib.sha256(adapter_data).hexdigest()})
     data = (MARKER + '<!-- source-hashes ' + json.dumps(records, ensure_ascii=False, sort_keys=True) + ' -->\n' + body).encode('utf8')
     if any(p.read_bytes() != d for p, d in payloads):
         raise ValueError('내보내기 도중 공통 Skill이 바뀌었습니다. 다시 실행하세요.')
@@ -59,6 +64,13 @@ def export_common_skill(skill_root, knowledge_root, backup_root=None):
         raise ValueError('기존 수동 작성 파일은 덮어쓰지 않습니다.')
     qa_target = knowledge_root / 'Bellalun Viewer QA 지침.md'
     qa_data = dict(payloads)[qa]
+    from app.core.qa_workflow import validate_guide
+    validation = validate_guide(qa_data.decode('utf-8-sig'), 'Bellalun',
+                                qa_target.read_text(encoding='utf-8-sig') if qa_target.exists() else None)
+    if validation['errors']:
+        raise ValueError('; '.join(validation['errors']))
+    if adapter.read_bytes() != adapter_data:
+        raise ValueError('내보내기 도중 서버 연결 지침이 바뀌었습니다.')
     if qa_target.exists() and qa_target.read_bytes() != qa_data:
         backup = Path(backup_root or Path(__file__).resolve().parents[1] / 'data/bellalun_sync/backups')
         backup.mkdir(parents=True, exist_ok=True)
@@ -66,7 +78,7 @@ def export_common_skill(skill_root, knowledge_root, backup_root=None):
         shutil.copy2(qa_target, backup / name)
     _write(qa_target, qa_data); _write(target, data)
     return {'path': str(target), 'sha256': hashlib.sha256(data).hexdigest(),
-            'qa_sha256': hashlib.sha256(qa_data).hexdigest(), 'files': records}
+            'qa_sha256': hashlib.sha256(qa_data).hexdigest(), 'files': records, 'validation': validation}
 
 
 def main():

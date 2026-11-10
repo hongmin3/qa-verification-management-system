@@ -5,9 +5,46 @@ from pathlib import Path
 import re
 import time
 import uuid
+from html.parser import HTMLParser
+from html import escape
 
 from app.parsers.polarion_issue import html_to_text
 from app.core.security_filter import mask_payload
+
+
+class _DisplayHTML(HTMLParser):
+    """Drop layout-only attributes, keeping text, links, tables and revision semantics."""
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.parts = []
+
+    def handle_starttag(self, tag, attrs):
+        keep = []
+        for key, value in attrs:
+            if key in ('class', 'style'):
+                if value and re.search(r'line-through|strike|deleted|inserted|underline', value, re.I):
+                    keep.append((key, value))
+            elif key not in ('width', 'height', 'align', 'valign', 'face', 'size', 'color'):
+                keep.append((key, value))
+        self.parts.append('<' + tag + ''.join(' ' + k + ('="' + escape(v, quote=True) + '"' if v is not None else '') for k, v in keep) + '>')
+
+    def handle_endtag(self, tag): self.parts.append('</' + tag + '>')
+    def handle_data(self, data): self.parts.append(data)
+    def handle_entityref(self, name): self.parts.append('&' + name + ';')
+    def handle_charref(self, name): self.parts.append('&#' + name + ';')
+    def handle_comment(self, data): self.parts.append('<!--' + data + '-->')
+
+
+def _compact_html(value):
+    if isinstance(value, list):
+        return [_compact_html(v) for v in value]
+    if isinstance(value, dict):
+        result = {k: _compact_html(v) for k, v in value.items()}
+        if value.get('type') == 'text/html' and isinstance(value.get('value'), str):
+            parser = _DisplayHTML(); parser.feed(value['value']); parser.close()
+            result['value'] = ''.join(parser.parts)
+        return result
+    return value
 
 
 def integer(value, minimum, maximum):
@@ -21,7 +58,7 @@ class PolarionLookup:
         self.root = Path(root) / "data/vxvue_desktop/polarion"
         self.client = client
 
-    def _save(self, response, source):
+    def _save(self, response, source, compact=False):
         self.root.mkdir(parents=True, exist_ok=True)
         for path in self.root.glob("*.json"):
             if re.fullmatch(r"[0-9a-f]{32}\.json", path.name) and path.stat().st_mtime < time.time() - 86400:
@@ -45,9 +82,9 @@ class PolarionLookup:
         value["protection"] = report.as_dict()
         result_id = uuid.uuid4().hex
         (self.root / f"{result_id}.json").write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
-        return self.read(result_id)
+        return self.read(result_id, compact=compact)
 
-    def read(self, result_id, offset=0, limit=12000):
+    def read(self, result_id, offset=0, limit=12000, compact=False):
         if not isinstance(result_id, str) or not re.fullmatch(r"[0-9a-f]{32}", result_id):
             raise ValueError("수집 결과 번호를 확인하세요.")
         integer(offset, 0, 100_000_000)
@@ -56,11 +93,17 @@ class PolarionLookup:
         if not path.is_file() or path.stat().st_mtime < time.time() - 86400:
             raise ValueError("수집 결과가 만료됐습니다. Polarion을 다시 조회하세요.")
         text = path.read_text(encoding="utf-8")
+        if not isinstance(compact, bool):
+            raise ValueError('compact는 boolean입니다.')
+        if compact:
+            value = _compact_html(json.loads(text))
+            value['selection'] = {'omitted': 'HTML 표시용 속성; 원본은 compact=false로 조회'}
+            text = json.dumps(value, ensure_ascii=False)
         end = min(offset + limit, len(text))
-        return {"result_id": result_id, "text": text[offset:end], "offset": offset, "total_chars": len(text),
+        return {"result_id": result_id, "view": 'compact' if compact else 'full', "text": text[offset:end], "offset": offset, "total_chars": len(text),
                 "truncated": end < len(text), "next_offset": end if end < len(text) else None}
 
-    def query(self, query, page=1, page_size=10):
+    def query(self, query, page=1, page_size=10, compact=False):
         if not isinstance(query, str) or not query.strip() or len(query) > 8000:
             raise ValueError("Polarion 필터는 1~8,000자로 입력하세요.")
         integer(page, 1, 100000)
@@ -77,14 +120,14 @@ class PolarionLookup:
             more = True
         if more and not response["data"]:
             raise ValueError("Polarion이 다음 페이지를 알렸지만 현재 목록이 비었습니다. 재조회가 필요합니다.")
-        result = self._save(response, {"path": path, "query": query, "page": page, "page_size": page_size})
+        result = self._save(response, {"path": path, "query": query, "page": page, "page_size": page_size}, compact)
         items = response.get("data") or []
         return {**result, "page": page, "returned": len(items), "total_count": (response.get("meta") or {}).get("totalCount"),
                 "next_page": page + 1 if more else None,
                 "items": [{"id": i.get("id"), "title": (i.get("attributes") or {}).get("title"),
                            "type": (i.get("attributes") or {}).get("type")} for i in items]}
 
-    def item(self, vp_id, section="item", page=1):
+    def item(self, vp_id, section="item", page=1, compact=False):
         if not isinstance(vp_id, str) or not re.fullmatch(r"VP-\d{1,12}", vp_id, re.I):
             raise ValueError("VP-1234 형식의 번호를 입력하세요.")
         integer(page, 1, 100000)
@@ -101,5 +144,5 @@ class PolarionLookup:
         expected_type = dict if section == "item" else list
         if not isinstance(response.get("data"), expected_type) or response.get("errors"):
             raise ValueError("Polarion 항목 응답 형식이 맞지 않습니다. 조회 실패를 빈 결과로 처리하지 않았습니다.")
-        return {**self._save(response, {"path": path, "vp_id": vp_id.upper(), "section": section, "page": page}),
+        return {**self._save(response, {"path": path, "vp_id": vp_id.upper(), "section": section, "page": page}, compact),
                 "next_page": page + 1 if (response.get("links") or {}).get("next") else None}

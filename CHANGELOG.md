@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-11-10 작업별 지침과 필요한 원문 조회
+
+- REQ-VXVUECHATBOT-019: 공통 섹션 목차·작업 유형·선행 규칙을 선택하고 같은 판·선택으로 이어 읽는다. 기존 전문 조회와 표지가 없는 과거 판을 유지한다. 지침 추가는 관련 주제 안에 넣고 무손실·표지·선행 규칙·크기를 검사한다.
+- REQ-VXVUECHATBOT-019: 반복 문서 정보를 모으고 원문·해시·위치·유효성·경고를 보존한다. XLSX 열 선택, Polarion HTML 표시 속성 축약, 매뉴얼의 추출된 변경 문단 선택을 제공하며 전체 원문도 계속 조회할 수 있다.
+- REQ-BELLALUNSHARED-005: Bellalun에도 같은 섹션과 검증 메일 유형을 적용한다. 서버 배급은 연결 Skill과 통합 QA를 사용하고 로컬 실행·과거 자체검토 참조는 로컬에 보존한다. 개별 자료 응답의 반복 지침을 제거하고 Bellalun 판의 매뉴얼 조회를 연결했다.
+- REQ-BELLALUNSHARED-006: 클린 PC용 비공개 자료 묶음·파일 해시·경로 재설정·기존 파일 충돌 검사와 재개 절차를 제공한다. 제품 원문·내부 지침은 서버에 보관하고 자격 증명은 제외한다.
+
 ## 2026-11-10 Bellalun Redmine 읽기와 공용 Redmine 전문 검색 수정
 
 - REQ-BELLALUNSHARED-004: Bellalun 서버 연결에 bellalun_get_redmine_issue·bellalun_search_redmine_issues·bellalun_read_redmine_result를 추가했다. VXvue와 같은 읽기 모듈을 쓰고 VDMS Series QA Defect(75)를 기본, Software Dev(86)·이전 세대 VDMS 1000B(35·37)를 지정 범위로 둔다. 결과 보관과 프로젝트 범위는 제품별로 분리한다.

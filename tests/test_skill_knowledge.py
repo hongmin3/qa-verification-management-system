@@ -28,6 +28,23 @@ def config(folder):
     return SimpleNamespace(product="Sample", knowledge_source=SimpleNamespace(dir=str(folder), skill_sync=SimpleNamespace(enabled=True, plugin="sample@local", skill="qa")))
 
 
+def test_server_connector_uses_repository_source_instead_of_installed_cache():
+    meta, body = skill_knowledge.read_bundle('vxvue-server-ai@vxvue-server-local', 'vxvue-ai')
+    source = Path(__file__).resolve().parents[1] / 'deploy/claude-desktop/skill/vxvue-ai/SKILL.md'
+    assert source.read_text(encoding='utf-8-sig') in body
+    assert meta['files'][0]['sha256'] == skill_knowledge.digest(source.read_bytes())
+
+
+def test_server_connector_still_works_in_flat_installed_schedule_worker(tmp_path):
+    import importlib.util
+    path = tmp_path / 'data/knowledge_retry/worker-123/skill_knowledge.py'
+    path.parent.mkdir(parents=True)
+    path.write_bytes(Path(skill_knowledge.__file__).read_bytes())
+    spec = importlib.util.spec_from_file_location('installed_skill_knowledge', path)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    assert module.read_bundle('vxvue-server-ai@vxvue-server-local', 'vxvue-ai') == skill_knowledge.read_bundle('vxvue-server-ai@vxvue-server-local', 'vxvue-ai')
+
+
 def test_export_latest_numeric_version_only_md_and_hashes(tmp_path):
     home, folder = tmp_path / "codex", tmp_path / "knowledge"
     package(home, "0.3.9", "old")

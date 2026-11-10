@@ -20,6 +20,10 @@ def unified_parts(text: str) -> tuple[str, str]:
         body = '\n'.join(line for line in part.splitlines() if line.strip() and not line.lstrip().startswith(('#', '<!--')))
         if not body.strip():
             raise ValueError('통합 QA 지침에 빈 운영 지침 또는 상세 규칙 구역이 있습니다.')
+    from app.core.qa_workflow import validate_guide
+    validation = validate_guide(text, 'VXvue')
+    if validation['errors']:
+        raise ValueError('; '.join(validation['errors']))
     return operations, details
 
 

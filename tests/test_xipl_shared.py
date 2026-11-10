@@ -76,6 +76,18 @@ def value(result):
     return json.loads(result["content"][0]["text"])
 
 
+def test_xipl_schema_keeps_legacy_inputs_while_viewer_tools_offer_compaction(shared):
+    client, _, _, _ = shared
+    reply = client.post('/vxvue-desktop/rpc', json={
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}).json()
+    tools = {tool['name']: tool for tool in reply['result']['tools']}
+    for name in ('xipl_get_status', 'xipl_search_documents', 'xipl_get_document'):
+        properties = tools[name]['inputSchema']['properties']
+        assert 'compact' not in properties and 'columns' not in properties
+    assert 'compact' in tools['get_status']['inputSchema']['properties']
+    assert 'compact' in tools['bellalun_get_status']['inputSchema']['properties']
+
+
 def test_shared_rpc_status_search_source_and_pdf_without_vxvue_rules(shared):
     client, _, _, word = shared
     listed=client.post('/vxvue-desktop/rpc',json={'jsonrpc':'2.0','id':2,'method':'tools/list'}).json()

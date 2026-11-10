@@ -336,6 +336,16 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 **지킬 것** 사내 양식과 생성 문서는 Git에 넣지 않는다. 양식이 없으면 오류를 알린다. 원본 문서는 수정하지 않는다. 결과는 무작위 주소로 내려받으며 주소를 아는 사내 사용자는 접근할 수 있다.
 
+### REQ-VXVUECHATBOT-019 작업별 지침과 필요한 원문 조회
+
+공용 연결의 `get_workflow`는 선택 입력 `section`으로 작업 유형을 받는다. `core`는 공통 규칙과 섹션 목차를 반환한다. 선택한 유형은 공통 규칙과 해당 유형의 선행 섹션을 함께 반환한다. `full` 또는 입력 생략은 기존 전문을 반환한다. 표지가 없는 과거 자료는 전문을 반환하고 대체 조회임을 알린다.
+
+공통 섹션 ID는 core·spec·tc·issue·doc·verify·release·mail·integ·auto·usage·meta·revlog다. 알 수 없는 ID, 표지 짝 오류, 없는 선행 섹션과 순환 참조는 실패로 알린다. 개정 이력은 선택 조회에서 자동 포함하지 않는다. 같은 판·섹션·보호 결과의 문자 위치로 이어 읽는다.
+
+검색·상태·원문 응답은 반복 문서 정보를 문서별로 모을 수 있다. 근거·해시·위치·경고·적용 조건·변경 추적·실패와 이어 읽기는 보존하고 기존 상세 형식도 선택할 수 있다. 큰 원문의 선택 조회는 생략 범위를 표시하고 전체 원문 조회를 유지한다. Polarion HTML 표시 정보 축약, XLSX 열 선택, 매뉴얼 변경 문단 선택을 제공한다.
+
+지침 개편은 기존 문장·절 번호·제목을 보존한다. 지침 추가는 관련 유형의 기존 주제 안에 넣고 목차·표지·선행 참조·크기와 직전 판 대비 무손실을 검사한다. 크기 상한 초과는 경고하며 규칙을 잘라내지 않는다. 상세 기준과 검증 방법은 `docs/qa-context-budget.md`에 둔다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -372,6 +382,7 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
+| REQ-VXVUECHATBOT-019 | `app/core/qa_workflow.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/manual_review/shared_tools.py` | `tests/test_qa_workflow_sections.py`, `tests/test_qa_context_filters.py` | verified |
 | REQ-VXVUECHATBOT-011 | `app/modules/vxvue_chatbot/desktop.py`, `deploy/claude-desktop/server.cjs`, `scripts/build_vxvue_desktop.py`, `scripts/configure_vxvue_desktop.py` | `tests/test_vxvue_desktop.py` | implemented |
 | REQ-VXVUECHATBOT-012 | `app/modules/vxvue_chatbot/desktop_polarion.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
 | REQ-VXVUECHATBOT-013 | `app/modules/vxvue_chatbot/desktop_enroll.py`, `app/core/vxdesk_storage.py`, `deploy/claude-desktop/server.cjs`, `scripts/vxvue_desktop_devices.py` | TEST-VXVUECHATBOT-006: `tests/test_vxvue_desktop_enroll.py`, `tests/test_vxvue_desktop_bridge.py` | implemented |
