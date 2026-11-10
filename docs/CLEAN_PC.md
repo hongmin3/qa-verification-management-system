@@ -41,9 +41,14 @@ scp "<SSH_USER>@<QA_HOST>:<서버 앱 경로>/data/qa-client-handoff/current.jso
 Get-FileHash -Algorithm SHA256 <받은 ZIP>
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m pip install -r requirements-qa-client.txt
-.\.venv\Scripts\python.exe -X utf8 scripts/install_qa_client.py --archive <받은 ZIP> --knowledge-root <Bellalun 원문 폴더>
+py -3.12 -m venv .venv\qa-client
+.\.venv\qa-client\Scripts\python.exe -m pip install -r requirements-qa-client.txt openpyxl python-docx PyYAML pytest Pillow
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\qa-client\Scripts\python.exe -m pip check
+.\.venv\qa-client\Scripts\python.exe -X utf8 scripts/install_qa_client.py --archive <받은 ZIP> --knowledge-root <Bellalun 원문 폴더>
 ```
+
+앱 환경과 로컬 Bellalun 연결 환경은 분리한다. `requirements-qa-client.txt`를 앱 `.venv`에 설치하면 `sse-starlette`가 앱의 `fastapi`와 맞지 않는 `starlette`를 끌어올 수 있다. 이미 섞였다면 앱 환경의 `starlette`를 `requirements.txt` 판으로 되돌리고 `mcp`·`sse-starlette`·`httpx-sse`를 앱 환경에서 제거한 뒤 두 환경의 `pip check`를 다시 읽는다. 설치기는 실행한 Python(`sys.executable`)을 연결 설정과 `knowledge-config.json`에 기록하므로 연결 환경의 Python으로 실행하고, 반복 설치도 같은 경로 표기로 실행한다.
 
 설치기는 ZIP 목록과 모든 파일 해시를 검사하고 새 홈·Python·지식 폴더 경로를 설정한다. 기존 파일이 다르면 저장 전에 중단한다. 사용자 설정과 API 키는 생성·변경하지 않는다. 연결 샘플은 `~/.local/share/qa-client-handoff/mcp-connection.json`에 생성된다.
 
@@ -56,13 +61,25 @@ Codex·Claude Desktop의 기존 연결 설정과 비교해 `bellalun-ai` 항목�
 node .project-check/project-readiness.js .
 ```
 
+공용 Temp의 `pytest-of-<사용자>` 권한 오류를 피하려고 `--basetemp`를 줄 때는 저장소 밖의 짧은 경로(예: `$env:LOCALAPPDATA\Temp\qapt`)를 쓴다. 저장소 안이나 `CLAUDE.md`·`AGENTS.md`가 있는 상위 폴더 아래면 Claude CLI 격리 검사가 의도대로 실행을 거부하고, 경로가 길면 Windows 경로 길이 제한으로 Bellalun 시험이 `FileNotFoundError`로 실패한다.
+
 로컬 Redmine 조회가 필요하면 본인 계정의 읽기 권한으로 `config/redmine.json`을 새로 설정한다. 기존 서버 인증을 쓰는 공용 Redmine 도구와 별개다. 공용 연결만으로 가능한 작업에는 개인 키를 만들 필요가 없다.
 
 ## 기존 예약을 복원한 경우
 
 VXvue의 `QA_ProductKnowledge_Sync`는 버전별 Worker 폴더의 코드 사본을 실행한다. Git을 갱신해도 기존 예약의 사본은 바뀌지 않는다. 예약 XML을 복원했다면 인계 ZIP의 `resume/update_context_worker.ps1`을 프로젝트 루트에서 실행해 Preview를 읽는다. 필요한 경우 관리자 PowerShell에서 같은 명령에 `-Apply`를 붙인다. 이 도구는 이전 XML을 백업하고 코드 동작만 바꾸며 시각·계정·설정이 같은지 재조회한다. 실행 중인 Worker가 있으면 종료될 때까지 기다린다.
 
-새 예약이 필요할 때는 저장소의 `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 설정을 먼저 확인한다. 예약 설치는 관리자 권한이 필요하다. 로컬 Redmine watch는 자동 등록하지 않았으며 검색 조건·실행 주기를 정한 뒤 별도로 등록한다.
+새 예약이 필요할 때는 저장소의 `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`와 `scripts/install_bellalun_shared_schedule.ps1 -CheckOnly`로 설정을 먼저 확인한다. 예약 설치는 관리자 권한이 필요하다. 동기화 담당 PC는 한 대만 둔다. 이전 PC의 예약을 중지한 것을 확인한 뒤 새 PC 예약을 켠다. 로컬 Redmine watch는 자동 등록하지 않았으며 검색 조건·실행 주기를 정한 뒤 별도로 등록한다.
+
+새 예약은 앱 `.venv`의 Python으로 실행하고 `--project-root`와 시작 위치를 예약이 쓰는 저장소 사본으로 둔다. 그 사본은 예약이 남아 있는 동안 지우지 않는다. 사용자 환경변수 `QA_KNOWLEDGE_DIR_VXVUE`·`QA_KNOWLEDGE_DIR_BELLALUN_VIEWER`는 새 PC의 원문 폴더를 가리켜야 한다. 없으면 설정 파일의 이전 PC 경로를 찾다가 `NEEDS_CONFIG`가 된다.
+
+예약을 켜기 전에 확인한다.
+
+1. 예약의 실행 파일·인수·시작 위치·계정·트리거와 Worker 폴더 4개 파일(`retry_product_knowledge.py`, `knowledge_retry.py`, `knowledge_push.py`, `skill_knowledge.py`)의 SHA256을 저장소 원본과 대조한다.
+2. 로컬 수집 대상과 서버 `/knowledge/product-knowledge/state`의 `(종류, 파일명, SHA256)`을 비교한다. 정상 동기화는 수집이 모두 성공하면 서버에만 있는 파일을 정리(`allow_prune`)하므로, 서버에만 있는 파일이 하나라도 있으면 원문을 먼저 맞추고 켜지 않는다.
+3. 켠 뒤 첫 실행의 `LastTaskResult`, `output/logs/product_knowledge_retry.log`, `data/knowledge_retry/*.json` 상태와 서버 목록을 다시 읽어 개수·해시가 보존됐는지 확인한다.
+
+Bellalun 공통 지침 내보내기는 줄바꿈을 LF로 맞춰 만든다. Git의 `core.autocrlf` 체크아웃 여부에 따라 서버 `[Skill 지침] Bellalun Viewer.md`가 바뀌지 않는다. 이전 판으로 만든 동기화본은 첫 실행에서 한 번 LF판으로 바뀔 수 있다.
 
 ## 개발·배포 재개 기준
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="cfb74b3e4852ab264c2aa2a05d29c9d5e7b026fc86dcaef9ef2edfd190c74bf9">
+<meta name="spec-source-sha256" content="6d84d21dd0eddf0b68a783a69a562487e05dac0f906b0d2a553f9c96cf09f9bd">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -18139,8 +18139,9 @@ Redmine은 실시간 원본이므로 <span class="term" title="한 제품 안의
 <section class="card kind-req" id="REQ-BELLALUNSHARED-005">
 <h3><span class="idtag">REQ-BELLALUNSHARED-005</span> 작업별 지침과 서버 배급 범위</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/qa_workflow.py</code>, <code>app/modules/bellalun_shared/service.py</code>, <code>scripts/sync_bellalun_shared.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_bellalun_shared.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-11-10 신규 PC 동기화 담당 전환</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: Bellalun 공통 지침 내보내기가 서버 연결 지침을 LF로 맞춰 읽는다. <code>core.autocrlf</code> 체크아웃에서 내용이 같은데도 서버 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 동기화본과 원본 해시가 바뀌던 결함을 고쳤다.</li>
 <li><span class="hist">2026-11-10 작업별 지침과 필요한 원문 조회</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: Bellalun에도 같은 섹션과 검증 메일 유형을 적용한다. 서버 배급은 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>과 통합 QA를 사용하고 로컬 실행·과거 자체검토 참조는 로컬에 보존한다. 개별 자료 응답의 반복 지침을 제거하고 Bellalun 판의 매뉴얼 조회를 연결했다.</li>
 </ul>
 </details>
@@ -18150,8 +18151,9 @@ Redmine은 실시간 원본이므로 <span class="term" title="한 제품 안의
 <section class="card kind-req" id="REQ-BELLALUNSHARED-006">
 <h3><span class="idtag">REQ-BELLALUNSHARED-006</span> 클린 PC 작업 재개 자료</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>scripts/package_qa_client.py</code>, <code>scripts/install_qa_client.py</code>, <code>docs/CLEAN_PC.md</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_client_handoff.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<details class="history"><summary>변경 이력 2</summary>
 <ul>
+<li><span class="hist">2026-11-10 신규 PC 동기화 담당 전환</span> <a class="idref" href="#REQ-BELLALUNSHARED-006">REQ-BELLALUNSHARED-006</a>: 클린 PC 절차에 앱·로컬 연결 Python 환경 분리, Pillow 포함 연결 의존성, 새 예약의 경로·환경변수와 활성화 전 서버 목록 대조·활성화 후 확인 <span class="term" title="실행 안의 한 부분이다. 사전 점검, SRS 수집, 이슈 수집, TC 색인, 변경 감지, 다섯 가지 분석, 사양–TC 연결 점검, 매뉴얼 누락 후보 점검이 있다. 실행 기록에는 영어 키로 저장한다(예: collect_srs, events, NEW_ISSUE)" tabindex="0">단계</span>를 적었다.</li>
 <li><span class="hist">2026-11-10 작업별 지침과 필요한 원문 조회</span> <a class="idref" href="#REQ-BELLALUNSHARED-006">REQ-BELLALUNSHARED-006</a>: 클린 PC용 비공개 자료 묶음·파일 해시·경로 재설정·기존 파일 충돌 검사와 재개 절차를 제공한다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 원문·내부 지침은 서버에 <span class="term" title="목록에서 숨기도록 상태를 바꾸는 것이다. 파일과 이력은 지우지 않는다. 상태 값은 archived 다" tabindex="0">보관</span>하고 자격 증명은 제외한다.</li>
 </ul>
 </details>

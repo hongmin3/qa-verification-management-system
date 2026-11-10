@@ -3,8 +3,21 @@
 ## 2026-11-10 사람이 올리는 참고 자료 구역 (REQ-KNOW-025)
 
 - 별도 작업 트리에서 `reference` 종류를 더했다. 화면 등록·교체·삭제, `.md`·`.txt` 파싱, 지식 폴더 수집과 PC 내려받기 제외, VXvue 챗봇·공용 AI 연결의 등록본 읽기를 연결했다.
-- 검증: `tests/test_knowledge_reference.py` 8 passed. 전체 시험은 2420 passed·16 skipped·2 failed다. 실패 2건(`tests/test_manual_review_shared.py` PDF 원본 경로)은 변경을 뺀 상태에서도 같은 `FileNotFoundError` 로 실패하는 Windows 임시 경로 문제다. 준비 검사 failed=0.
-- 게시·배포 보류: 다른 세션이 같은 `CHANGELOG.md`·`progress.md`·`docs/SPEC.html` 을 편집 중이고 서버는 그 세션의 재기동을 기다린다. 커밋은 `claude/knowledge-reference-20261110` 브랜치에만 했다. 운영 반영 때는 서버의 `config/products/vxvue.yaml` 에도 `reference: {hidden: false}` 를 더해야 화면에 보인다.
+- 검증: `tests/test_knowledge_reference.py` 8 passed. 전체 시험은 2420 passed·16 skipped·2 failed다. 실패 2건(`tests/test_manual_review_shared.py` PDF 원본 경로)은 변경을 뺀 상태에서도 같은 `FileNotFoundError` 로 실패하는 긴 임시 경로 문제다. 준비 검사 failed=0.
+- `e9924d0`(신규 PC 동기화 전환)과 병합한 뒤 관련 시험 226 passed·2 skipped. 앞의 실패 2건은 `docs/CLEAN_PC.md` 의 짧은 basetemp 로 통과했다. 운영 반영 결과는 아래 줄에 적는다.
+
+## 2026-11-10 신규 PC 동기화 담당 전환과 예약 활성화 (REQ-BELLALUNSHARED-005·006)
+
+- 사용자가 이전 PC 예약 중지와 이 PC로의 동기화 담당 전환을 승인했다. 관리자로 설치해 둔 `QA_ProductKnowledge_Sync`·`Bellalun_SharedKnowledge_Sync`·`Bellalun_SharedKnowledge_Request`의 실행 파일·인수·시작 위치·계정·트리거를 재조회하고 Worker 4개 파일 SHA256이 저장소 `791e144`와 같음을 확인했다.
+- 활성화 전 로컬 수집 대상과 서버 목록을 `(종류, 파일명, SHA256)`으로 비교했다. VXvue 28=28, Bellalun 14=14, 서버에만 있는 파일 0건이라 정상 동기화의 정리 대상이 없었다. 사용자 환경변수 두 개가 이 PC 원문 폴더를 가리킨다.
+- Bellalun 내보내기를 임시 사본으로 미리 실행해 `core.autocrlf` 체크아웃에서 서버 연결 지침의 줄바꿈만 달라 서버 Skill 동기화본이 바뀌는 결함을 찾았다. 회귀 시험을 먼저 추가해 실패를 확인하고 연결 지침을 LF로 읽도록 고쳤다.
+- 세 예약을 켰다. VXvue는 예약 실행에서 SUCCESS(업로드 0건·서버 보유분 28건·정리 0건)였고, Bellalun 매일 예약은 수동 시작으로 종료 코드 0, 요청 확인 예약은 1분마다 종료 코드 0이었다. 활성화 후 서버 목록은 VXvue 28→28, Bellalun 14→14이고 삭제·추가가 없다. 바뀐 것은 줄바꿈을 정리한 `[Skill 지침] Bellalun Viewer.md` 1건이다.
+- Claude Desktop 설정을 백업한 뒤 `bellalun-ai` 항목만 병합했다(기존 `vxvue-ai`·환경설정 보존). Codex·Claude Code·Claude Desktop이 같은 연결 Python과 `server.py`를 가리키며, Claude Code의 두 Skill은 Codex 폴더에 junction으로 연결돼 있다. Claude Code에서 로컬 검색과 매뉴얼 원문 단위 조회, Codex에서 `bellalun_get_status` 실제 호출이 성공했다.
+- 설치된 로컬 Skill 시험의 지침 동기화 거부 시험은 새 무손실 guard(ValueError)가 먼저 거부해 실패했다. guard는 유지하고 두 거부 중 하나와 지식폴더 사본 미변경을 확인하도록 보완했다(로컬 Skill 시험 44 passed). 연결 시험의 hook 시험 1건은 처음에 Codex에 Bellalun lifecycle hook이 없어 실패했고, 아래 hook 설치 뒤 통과했다.
+- 이 PC의 첫 전체 시험은 2418 passed·12 skipped·1 failed다. 실패한 `test_dashboard_sorting_in_http_browser`는 단독 2회와 변경 전 `791e144` 사본에서 통과해 전체 실행 부하의 브라우저 대기 실패로 분류했다. 처음 basetemp를 저장소 안이나 긴 경로로 준 실행은 Claude CLI 격리 검사와 Windows 경로 길이 제한으로 실패해 결과에서 제외하고 절차를 `docs/CLEAN_PC.md`에 적었다. 준비 검사는 failed=0이다.
+- 사용자 요청으로 Bellalun 종료 전 검토 hook(`lifecycle.py`)을 Claude Code `~/.claude/settings.json`과 Codex `~/.codex/hooks.json`의 SessionStart·UserPromptSubmit·PostToolUse·Stop에 추가했다. 기존 hook은 보존하고 두 설정을 `~/.local/state/bellalun-ai/hooks-20261110T145746/`에 백업했다. `verify_hooks.py`가 두 호스트에서 비활성 세션 통과·검토 요청·반복 방지·완료 기록을 확인했고 연결 시험은 21 passed가 됐다. Codex 실행에서도 새 hook이 검토 상태를 남겼다. ChatGPT 데스크톱 앱은 로컬 MCP 설정이 없고 ChatGPT 커넥터는 공개 HTTPS 서버만 연결하므로, 사내망 서버나 PC 로컬 연결을 등록하지 않았다.
+- 원본 저장소 master(`008f34f`)의 이전 PC 미커밋 변경 38개를 `data/qa-context-verification/master-integration-before-20261110/`에 백업하고 원격 판과 줄바꿈을 무시해 비교했다. 21개는 원격과 같고 15개는 원격에 더 완성된 판이 있는 초안이었다. master를 `df121d7`로 fast-forward한 뒤 이 PC 고유 내용인 `botyard.json`의 자동 반영 끄기와 SRS 예약 스크립트의 새 PC 경로는 로컬 변경으로 다시 적용했다. Akela 기록은 원격 순서를 유지하고 이 PC 실행 기록만 덧붙였다.
+- 시험 basetemp 조건을 Akela 학습 `LRN-20261110-01`로 vet·사용자 승인·capture 후 기록했다. 로컬 Redmine watch는 검색 조건·주기가 정해지지 않아 등록하지 않았다.
 
 ## 2026-11-10 작업별 QA 지침과 클린 PC 재개 자료 (REQ-VXVUECHATBOT-019·REQ-BELLALUNSHARED-005·006)
 
