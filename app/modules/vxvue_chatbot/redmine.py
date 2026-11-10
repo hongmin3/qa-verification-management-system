@@ -17,11 +17,18 @@ DEFAULT_PROJECTS = (61, 29, 107)
 # XIPL(33)·QXLink(QA Defect)(41): VXvue 검증이 참조하는 연동 모듈. 명시 지정·번호 조회만 허용한다.
 ALLOWED_PROJECTS = DEFAULT_PROJECTS + (33, 41)
 MAX_BYTES = 10 * 1024 * 1024
+# Redmine search.json event types for issues: 'issue' (open) and 'issue-closed'.
+ISSUE_RESULT_TYPES = ('issue', 'issue-closed', 'issue closed')
 
 
 class RedmineLookup(PolarionLookup):
+    DEFAULT = DEFAULT_PROJECTS
+    ALLOWED = ALLOWED_PROJECTS
+    SUBDIR = 'data/vxvue_desktop/redmine'
+    LABEL = 'VXvue'
+
     def __init__(self, settings, root=None, transport=None):
-        self.root = Path(root or settings.root) / 'data/vxvue_desktop/redmine' if root or hasattr(settings, 'root') else Path('data/vxvue_desktop/redmine')
+        self.root = Path(root or settings.root) / self.SUBDIR if root or hasattr(settings, 'root') else Path(self.SUBDIR)
         self.host = str(settings.secrets.redmine_host).rstrip('/')
         self.key = settings.secrets.redmine_api_key
         parts = urlsplit(self.host)
@@ -59,10 +66,9 @@ class RedmineLookup(PolarionLookup):
             raise ValueError('Redmine 응답 형식이 맞지 않습니다.')
         return value
 
-    @staticmethod
-    def _authorize_issue(issue):
-        if not isinstance(issue, dict) or issue.get('is_private') is True or (issue.get('project') or {}).get('id') not in ALLOWED_PROJECTS:
-            raise ValueError('이 이슈는 공용 VXvue 조회 범위에 없습니다.')
+    def _authorize_issue(self, issue):
+        if not isinstance(issue, dict) or issue.get('is_private') is True or (issue.get('project') or {}).get('id') not in self.ALLOWED:
+            raise ValueError(f'이 이슈는 공용 {self.LABEL} 조회 범위에 없습니다.')
 
     @staticmethod
     def _public_issue(issue):
@@ -76,12 +82,31 @@ class RedmineLookup(PolarionLookup):
         return value
 
     @staticmethod
-    def _public_match(issue, terms):
+    def _public_fields(issue):
+        """Readable text per field label: subject, description, public journals, custom fields."""
         from app.parsers.polarion_issue import html_to_text
-        texts = [issue.get('subject', ''), issue.get('description', '')]
-        texts += [j.get('notes', '') for j in issue.get('journals', [])]
-        public = ' '.join(' '.join(html_to_text(str(text))[0].casefold().split()) for text in texts)
-        return all(' '.join(term.casefold().split()) in public for term in terms)
+
+        def norm(text):
+            return ' '.join(html_to_text(str(text or ''))[0].casefold().split())
+        fields = [('제목', norm(issue.get('subject'))), ('상세 설명', norm(issue.get('description')))]
+        fields.append(('댓글', ' '.join(norm(j.get('notes')) for j in issue.get('journals', []))))
+        for field in issue.get('custom_fields') or []:
+            if isinstance(field, dict) and isinstance(field.get('name'), str):
+                value = field.get('value')
+                value = ' '.join(map(str, value)) if isinstance(value, list) else value
+                if value not in (None, ''):
+                    fields.append((field['name'], norm(value)))
+        return fields
+
+    @classmethod
+    def _public_match(cls, issue, terms):
+        """Labels of public fields containing a term, or None when not every term is found."""
+        fields = cls._public_fields(issue)
+        public = ' '.join(text for _, text in fields)
+        wanted = [' '.join(term.casefold().split()) for term in terms]
+        if not all(term in public for term in wanted):
+            return None
+        return [label for label, text in fields if any(term in text for term in wanted)]
 
     @staticmethod
     def _metadata(issue):
@@ -123,12 +148,12 @@ class RedmineLookup(PolarionLookup):
     def search(self, keywords, project_ids=None, status='*', page=1, page_size=50, full_text=False):
         if not isinstance(keywords, str) or not keywords.strip() or len(keywords) > 500:
             raise ValueError('검색어는 1~500자로 입력하세요.')
-        project_ids = list(DEFAULT_PROJECTS) if project_ids is None else project_ids
+        project_ids = list(self.DEFAULT) if project_ids is None else project_ids
         if not isinstance(project_ids, list) or not 1 <= len(project_ids) <= 10:
             raise ValueError('프로젝트 번호는 1~10개입니다.')
         for project in project_ids:
             integer(project, 1, 2_147_483_647)
-            if project not in ALLOWED_PROJECTS: raise ValueError('허용 프로젝트는 61, 29, 107, 33, 41입니다.')
+            if project not in self.ALLOWED: raise ValueError('허용 프로젝트는 ' + ', '.join(map(str, self.ALLOWED)) + '입니다.')
         if len(set(project_ids)) != len(project_ids): raise ValueError('프로젝트 번호가 중복됐습니다.')
         if not isinstance(status, str) or status not in ('*', 'open', 'closed') and not re.fullmatch(r'[1-9][0-9]*', status):
             raise ValueError('상태는 *, open, closed 또는 상태 번호입니다.')
@@ -145,7 +170,9 @@ class RedmineLookup(PolarionLookup):
             try:
                 params = {'offset': (page-1)*page_size, 'limit': page_size}
                 if full_text:
-                    params.update(q=keywords, issues=1, all_words=1, open_issues=0, titles_only=0)
+                    # Redmine treats any present open_issues/titles_only value as on, so '0' would
+                    # restrict the search to open issues and titles. Omit both to search everything.
+                    params.update(q=keywords, issues=1, all_words=1)
                     data = self._get(f'/projects/{project}/search.json', params)
                     rows = data.get('results')
                 else:
@@ -163,7 +190,7 @@ class RedmineLookup(PolarionLookup):
                 page_seen = set()
                 for row in rows:
                     if full_text:
-                        if not isinstance(row, dict) or row.get('type') not in ('issue', 'issue closed'): raise ValueError('전문 검색에 이슈 외 결과가 있습니다.')
+                        if not isinstance(row, dict) or row.get('type') not in ISSUE_RESULT_TYPES: raise ValueError('전문 검색에 이슈 외 결과가 있습니다.')
                         integer(row.get('id'), 1, 2_147_483_647)
                         requested_id = row['id']
                         row = self._get(f"/issues/{requested_id}.json", {'include':'journals'}).get('issue')
@@ -181,8 +208,10 @@ class RedmineLookup(PolarionLookup):
                     page_seen.add(meta['id'])
                     if full_text:
                         row = self._public_issue(row)
-                        if not self._public_match(row, terms):
+                        matched_in = self._public_match(row, terms)
+                        if matched_in is None:
                             continue
+                        meta['matched_in'] = matched_in
                     if meta['id'] in seen:
                         continue
                     if full_text and status != '*':
@@ -196,28 +225,60 @@ class RedmineLookup(PolarionLookup):
         return {'items': items, 'project_ids': project_ids, 'status': status, 'search_mode': 'full_text' if full_text else 'subject',
                 'page': page, 'page_size': page_size, 'total_count_by_project': totals, 'next_pages': next_pages,
                 'returned': len(items), 'complete': False, 'errors': errors,
-                'limitations': ['공개 이슈 후보만 제공하며 비공개·확인 불가 후보와 전체 건수는 집계하지 않습니다. 전문 검색은 공개 본문 일치를 다시 확인합니다. 제목·전문 조회 모두 전체 수집 완료를 뜻하지 않으며 다음 페이지는 원본 후보 페이지입니다.'],
+                'limitations': ['공개 이슈 후보만 제공하며 비공개·확인 불가 후보와 전체 건수는 집계하지 않습니다. 전문 검색은 종료 이슈를 포함하고 공개 제목·본문·댓글·사용자 정의 항목에서 일치를 다시 확인해 matched_in에 항목 이름을 남깁니다. 제목·전문 조회 모두 전체 수집 완료를 뜻하지 않으며 다음 페이지는 원본 후보 페이지입니다.'],
                 'collected_at': datetime.now(timezone.utc).isoformat(), 'scope': '목록 메타데이터만 조회. 전체 수집과 상세 분석 완료는 별개.'}
 
 
-def lookup():
+def lookup(cls=None):
     from app.core.config import get_settings
-    return RedmineLookup(get_settings())
+    return (cls or RedmineLookup)(get_settings())
 
 
-def call(name, arguments):
+def call(name, arguments, cls=None, prefix=''):
+    """Run a Redmine read tool; `prefix` strips a product prefix such as 'bellalun_'."""
+    cls = cls or RedmineLookup
+    name = name.removeprefix(prefix)
     if name == 'read_redmine_result':
         from app.core.config import get_settings
-        reader = object.__new__(RedmineLookup)
-        reader.root = get_settings().root / 'data/vxvue_desktop/redmine'
+        reader = object.__new__(cls)
+        reader.root = get_settings().root / cls.SUBDIR
         return reader.read(**arguments)
-    return getattr(lookup(), {'get_redmine_issue': 'issue', 'search_redmine_issues': 'search'}[name])(**arguments)
+    reader = lookup() if cls is RedmineLookup else lookup(cls)
+    return getattr(reader, {'get_redmine_issue': 'issue', 'search_redmine_issues': 'search'}[name])(**arguments)
 
 
-def definitions():
+SEARCH_SCOPE = 'XIPL(33)·QXLink QA Defect(41)는 project_ids로 지정.'
+
+
+def definitions(cls=None, prefix='', scope_note=None):
+    cls = cls or RedmineLookup
+    scope_note = SEARCH_SCOPE if scope_note is None else scope_note
+    default = '·'.join(map(str, cls.DEFAULT))
     string={'type':'string'}; positive={'type':'integer','minimum':1}
     specs=[
-        ('get_redmine_issue','Redmine 이슈 상세·journals·첨부 목록·relations 읽기. 첨부 본문은 미수집. 잘리면 read_redmine_result로 이어 읽기.',{'issue_id':positive},['issue_id']),
-        ('search_redmine_issues','Redmine 여러 프로젝트 제목 검색. 기본 61·29·107 및 모든 상태. XIPL(33)·QXLink QA Defect(41)는 project_ids로 지정. full_text=true는 전문 검색. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(ALLOWED_PROJECTS)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'}},['keywords']),
-        ('read_redmine_result','수집·보호한 Redmine 상세를 문자 위치로 이어 읽기. 24시간 보관.',{'result_id':string,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':12000}},['result_id'])]
-    return [{'name':n,'description':d,'inputSchema':{'type':'object','properties':p,'required':r,'additionalProperties':False},'annotations':{'readOnlyHint':True,'destructiveHint':False,'openWorldHint':False}} for n,d,p,r in specs]
+        ('get_redmine_issue',f'{cls.LABEL} Redmine 이슈 상세·journals·첨부 목록·relations·사용자 정의 항목 읽기. 첨부 본문은 미수집. 잘리면 {prefix}read_redmine_result로 이어 읽기.',{'issue_id':positive},['issue_id']),
+        ('search_redmine_issues',f'{cls.LABEL} Redmine 여러 프로젝트 제목 검색. 기본 {default} 및 모든 상태. {scope_note} full_text=true는 종료 이슈를 포함한 전문 검색이며 공개 제목·본문·댓글·사용자 정의 항목 일치를 확인해 matched_in에 남긴다. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목(전문 검색은 matched_in 포함)만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(cls.ALLOWED)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'}},['keywords']),
+        ('read_redmine_result',f'수집·보호한 {cls.LABEL} Redmine 상세를 문자 위치로 이어 읽기. 24시간 보관.',{'result_id':string,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':12000}},['result_id'])]
+    return [{'name':prefix+n,'description':d,'inputSchema':{'type':'object','properties':p,'required':r,'additionalProperties':False},'annotations':{'readOnlyHint':True,'destructiveHint':False,'openWorldHint':False}} for n,d,p,r in specs]
+
+
+class BellalunRedmineLookup(RedmineLookup):
+    """Bellalun Viewer issues: Mammo System(VDMS Series) and the previous VDMS 1000B generation."""
+    # 75 = VDMS Series > QA Defect (기본), 86 = VDMS Series > Software Dev,
+    # 35 = old VDMS 1000B > QA Defect, 37 = old VDMS 1000B > Dev Defect (참고 이력, 명시 지정만).
+    DEFAULT = (75,)
+    ALLOWED = (75, 86, 35, 37)
+    SUBDIR = 'data/bellalun_shared/redmine'
+    LABEL = 'Bellalun'
+
+
+BELLALUN_PREFIX = 'bellalun_'
+BELLALUN_SCOPE = 'VDMS Series Software Dev(86)와 이전 세대 VDMS 1000B QA Defect(35)·Dev Defect(37)는 project_ids로 지정.'
+
+
+def bellalun_definitions():
+    return definitions(BellalunRedmineLookup, BELLALUN_PREFIX, BELLALUN_SCOPE)
+
+
+def bellalun_call(name, arguments):
+    return call(name, arguments, BellalunRedmineLookup, BELLALUN_PREFIX)

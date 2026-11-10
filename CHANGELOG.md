@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-11-10 Bellalun Redmine 읽기와 공용 Redmine 전문 검색 수정
+
+- REQ-BELLALUNSHARED-004: Bellalun 서버 연결에 bellalun_get_redmine_issue·bellalun_search_redmine_issues·bellalun_read_redmine_result를 추가했다. VXvue와 같은 읽기 모듈을 쓰고 VDMS Series QA Defect(75)를 기본, Software Dev(86)·이전 세대 VDMS 1000B(35·37)를 지정 범위로 둔다. 결과 보관과 프로젝트 범위는 제품별로 분리한다.
+- REQ-VXVUECHATBOT-016: 전문 검색이 `open_issues=0`·`titles_only=0`을 보내 Redmine이 열린 이슈의 제목만 검색하던 문제를 고쳤다(QA Defect `저장`: 5건 → 441건 범위). 종료 이슈 결과 유형 `issue-closed`를 이슈로 받아들인다. 공개 사용자 정의 항목도 일치 확인에 포함하고 일치한 항목 이름을 `matched_in`으로 돌려준다.
+- 규칙 구현현황 표에 VXvue QA 지침 81절(기존 변경사항 Checklist 첨삭과 ALM 신규 TC 이관)을 초안 제공 업무로 분류했다.
+- 규칙 구현현황 표에 VXvue QA 지침 81절(기존 변경사항 Checklist 첨삭과 ALM 신규 TC 이관)을 초안 제공 업무로 분류했다.
+
 ## 2026-11-06 기존 매뉴얼 검색 개선
 
 - REQ-HUB-008: 검색·문서 목록의 조건과 정렬을 URL에 보존한다. 검색 결과의 표시 상한과 표시한 결과에만 적용되는 정렬을 안내한다.

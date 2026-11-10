@@ -54,7 +54,7 @@ bellalun_trace_requirements를 추가한다. 모두 읽기 전용이다.
 
 PDF는 원본 페이지 이미지, DOCX는 문단·표 위치를 사용하며 렌더링하지 않은 쪽수를 만들지 않는다.
 Bellalun에 VXvue의 Polarion·Generator 판단 규칙을 적용하지 않는다.
-실시간 Bellalun Redmine 조회는 이번 범위에 없으며 로컬 전용 도구와 지원 차이를 명시한다.
+Bellalun Redmine 조회는 REQ-BELLALUNSHARED-004를 따른다.
 
 ### REQ-BELLALUNSHARED-003 안내와 배포
 
@@ -63,6 +63,20 @@ Skill ZIP은 개인 경로·키·제품 원문 없이 서버 도구 순서만 �
 기존 로컬 bellalun-ai 및 공통 원본은 덮어쓰지 않고 별도 bellalun-server-ai 이름을 사용한다.
 기존 확장 다운로드는 최신 Bellalun 도구를 포함한다. 인증을 완화하거나 키를 공유하지 않는다.
 
+### REQ-BELLALUNSHARED-004 Bellalun Redmine 읽기
+
+**하는 일** 기존 연결에 bellalun_get_redmine_issue, bellalun_search_redmine_issues, bellalun_read_redmine_result를 추가한다.
+VXvue의 REQ-VXVUECHATBOT-016과 같은 읽기 모듈·보호 규칙(GET만, redirect 금지, 비공개 이슈·댓글 제외, 전체 건수 null, complete=false, 시간·크기 상한)을 사용하고 제품 범위만 다르다.
+
+**범위** 기본 검색은 Mammo System(VDMS Series) > QA Defect(75)다. Software Dev(86)와 이전 세대 VDMS 1000B QA Defect(35)·Dev Defect(37)는 프로젝트 번호로 지정하거나 이슈 번호로 읽을 때만 허용한다.
+다른 프로젝트(VXvue 포함)의 이슈는 반환하지 않고, VXvue 도구도 Bellalun 프로젝트 이슈를 반환하지 않는다. 상세 결과는 `data/bellalun_shared/redmine`에 따로 보관하며 다른 제품의 결과 번호로 읽지 못한다.
+Redmine은 실시간 원본이므로 문서 판(snapshot_id)을 받지 않는다.
+
+**전문 검색** 종료 이슈를 포함하고 공개 제목·본문·댓글·사용자 정의 항목(원인/분석·수정내용 등)의 일치를 확인해 `matched_in`에 항목 이름을 반환한다.
+연구소 결론이 댓글이 아닌 원인/분석 항목에만 있는 이슈도 찾는다.
+
+**안 될 때** 설정 누락·인증 실패·범위 밖 프로젝트를 빈 검색으로 숨기지 않는다. 이슈 등록·수정·첨부 본문 다운로드는 제공하지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-BELLALUNSHARED-001 판·원문·지침
@@ -70,6 +84,11 @@ Skill ZIP은 개인 경로·키·제품 원문 없이 서버 도구 순서만 �
 합성 사양·매뉴얼·TC·지침으로 실제 인증 RPC에서 목록·검색·원문·지침 이어 읽기를 확인한다.
 갱신 전후 판, 필수 자료 누락, 해시 오류, 저장된 판 변조, 다른 제품 판, 경로 탈출,
 잘못된 인증·입력과 PDF/DOCX 차이를 확인한다. 기존 VXvue·XIPL 회귀도 실행한다.
+
+### TEST-BELLALUNSHARED-004 Bellalun Redmine 범위와 전문 검색
+
+종료 이슈 결과와 사용자 정의 항목 일치(`matched_in`), `open_issues`·`titles_only` 미전송, Bellalun·VXvue 상호 프로젝트 거절,
+결과 보관 분리와 교차 읽기 거절, 문서 판 없이 도구 연결, VXvue 도구 정의 불변을 확인한다. 기존 VXvue Redmine 회귀도 실행한다.
 
 ### TEST-BELLALUNSHARED-002 동기화와 배포물
 
@@ -82,4 +101,5 @@ Skill ZIP은 개인 경로·키·제품 원문 없이 서버 도구 순서만 �
 |---|---|---|---|
 | REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/snapshot_files.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py`, `tests/test_snapshot_files.py` | verified |
+| REQ-BELLALUNSHARED-004 | `app/modules/vxvue_chatbot/redmine.py`, `app/modules/bellalun_shared/service.py`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_bellalun_redmine.py`, `tests/test_vxvue_redmine.py` | verified |
 | REQ-BELLALUNSHARED-003 | `app/web/static/skills/bellalun/index.html`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_bellalun_shared.py`, `tests/test_skill_management.py` | verified |

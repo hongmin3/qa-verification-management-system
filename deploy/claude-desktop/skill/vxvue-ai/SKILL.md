@@ -13,7 +13,7 @@ XIPL·XIPL.STUDIO의 공용 매뉴얼과 개정 이력은 같은 서버 연결�
 
 1. 연결된 VXvue AI의 `get_status`로 현재 `snapshot_id`를 받는다. timeout이면 1초 간격으로 총 3회까지 호출한다. 계속 실패하면 원인과 확인사항을 알리고 중단한다. 로컬 색인·rawfile·다른 연결로 옮기기 전에는 사용자 승인을 받는다. 도구가 없거나 결과가 `VXvue AI 연결 실패`이면 그 원인과 할 일을 사용자에게 그대로 알린다. 자료를 읽었다고 주장하지 않는다. `connection.update_required`가 참이면 새 설치 파일 안내도 전한다.
 2. `get_workflow(snapshot_id=...)`를 호출하고 `truncated`가 참이면 `next_offset`으로 끝까지 읽는다. 서버가 제공하는 최신 Skill·프롬프트·QA 규칙을 이번 작업에 적용한다. 이전 대화의 대상·제외 범위·쪽수·판정을 새 작업의 고정값으로 사용하지 않는다.
-3. Redmine 번호는 `get_redmine_issue`, 여러 프로젝트 검색은 `search_redmine_issues`를 쓴다. 기본 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 모든 상태를 조회한다. 연동 모듈 XIPL(33)·QXLink(QA Defect)(41)는 `project_ids`로 지정해 검색하며 번호 조회도 된다. 전문 검색은 `full_text=true`를 쓴다. `next_pages`·오류·limitations를 확인한다. 공용 공개 후보 조회이므로 전체 건수는 null이고 complete=false다. 다음 페이지가 없어도 전체 자료 조사 완료로 표시하지 않는다. 잘린 상세는 `read_redmine_result`로 이어 읽는다.
+3. Redmine 번호는 `get_redmine_issue`, 여러 프로젝트 검색은 `search_redmine_issues`를 쓴다. 기본 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 모든 상태를 조회한다. 연동 모듈 XIPL(33)·QXLink(QA Defect)(41)는 `project_ids`로 지정해 검색하며 번호 조회도 된다. 전문 검색은 `full_text=true`를 쓴다. 종료 이슈를 포함하며 공개 제목·본문·댓글·사용자 정의 항목 일치를 확인해 `matched_in`에 항목 이름을 남긴다. `next_pages`·오류·limitations를 확인한다. 공용 공개 후보 조회이므로 전체 건수는 null이고 complete=false다. 다음 페이지가 없어도 전체 자료 조사 완료로 표시하지 않는다. 잘린 상세는 `read_redmine_result`로 이어 읽는다.
 
 4. VP 번호이면 `get_polarion_item`으로 전체 속성과 관계를 읽는다. `read_polarion_result`로 잘린 내용을 끝까지 읽는다. 관계가 링크만 제공하면 `section="links"`로 연결 목록을 읽고 필요한 연결 VP를 추가 조회한다. 댓글·첨부 목록도 각 section과 next_page로 이어 읽는다.
 5. Polarion 필터는 고치지 않고 `polarion_query`에 전달한다. 전체 수집 요청은 `next_page`가 없을 때까지 모든 페이지를 읽는다. 수집 건수·남은 페이지·실패를 구분한다. 목록 수집을 분석 완료로 표시하지 않는다.

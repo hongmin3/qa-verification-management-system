@@ -240,6 +240,9 @@ RULE_CAPABILITY: dict[str, RuleCapability] = dict(
         _cap("80", "검증 완료 후 Issue 댓글·변경사항 Checklist TC 검토", MODE_DRAFT_ONLY, STATUS_NOT_PLANNED,
              note="사용자 수행 결과와 최신 Checklist 원본을 대조해 댓글·이번 결과 기록·TC 보완을 제안하는 대화형 후속 업무다. "
                   "규칙 원문 제공만으로 구현됨으로 보지 않는다. 수행 결과를 직접 확인하거나 Excel·Polarion을 자동 변경하는 기능은 없다."),
+        _cap("81", "S02·S03 기존 변경사항 Checklist 첨삭과 ALM 신규 TC 이관", MODE_DRAFT_ONLY, STATUS_NOT_PLANNED,
+             note="기존 Checklist를 ALM 신규 등록용으로 다듬는 대화형 업무다. 첨삭·질문·붙여넣기 자료까지 제안하며 "
+                  "ALM 등록과 Excel 변경은 ALM 스킬과 사용자 확인 범위에서 따로 수행한다. QA Agent 미반영."),
     ]
 )
 

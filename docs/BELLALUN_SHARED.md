@@ -13,7 +13,8 @@
 
 실제 제품 자료·공통 QA 원문·manifest·키는 저장소에 넣지 않는다.
 원본이 바뀌면 서버에 동기화하고 SHA256을 대조한다. 안내의 접근 범위는 기존 사내 접속·PC 등록 정책이다.
-Bellalun 실시간 Redmine 조회, 로컬 Skill 수정 MCP, Viewer·장비 실행은 서버 지원 범위가 아니다.
+Bellalun Redmine은 VXvue와 같은 읽기 모듈(`app/modules/vxvue_chatbot/redmine.py`)을 Bellalun 프로젝트 범위(기본 75, 지정 86·35·37)로 사용한다. 도구와 보호 규칙은 [VXvue Redmine 읽기 연결](VXVUE_REDMINE_TOOLS.md)과 같다.
+로컬 Skill 수정 MCP, Viewer·장비 실행, 이슈 등록·수정은 서버 지원 범위가 아니다.
 
 ## 수동 동기화
 

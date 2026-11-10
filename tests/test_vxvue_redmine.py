@@ -98,7 +98,7 @@ def test_private_row_does_not_hide_later_public_match():
 
 def test_fulltext_closed_issues_are_included_with_all_statuses():
     def transport(r):
-        if r.url.path=='/projects/107/search.json':return httpx.Response(200,json={'results':[{'id':5,'type':'issue closed'},{'id':6,'type':'issue'}],'total_count':2,'offset':0,'limit':2})
+        if r.url.path=='/projects/107/search.json':return httpx.Response(200,json={'results':[{'id':5,'type':'issue-closed'},{'id':6,'type':'issue'}],'total_count':2,'offset':0,'limit':2})
         issue_id=int(r.url.path.split('/')[-1].split('.')[0])
         return httpx.Response(200,json={'issue':{'id':issue_id,'project':{'id':107,'name':'QA'},'status':{'id':5,'name':'Closed'},'subject':'verified'}})
     result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('verified',project_ids=[107],full_text=True,page_size=2)
@@ -149,7 +149,8 @@ def test_fulltext_project_url_does_not_override_scope_to_all():
     def transport(request):
         assert request.url.path == '/projects/61/search.json'
         assert 'scope' not in request.url.params
-        assert request.url.params['open_issues'] == '0'
+        # Redmine turns these on for any present value; '0' would mean open-only, titles-only.
+        assert 'open_issues' not in request.url.params and 'titles_only' not in request.url.params
         return httpx.Response(200,json={'results':[],'total_count':0,'offset':0,'limit':50})
     result=redmine.RedmineLookup(cfg(),transport=httpx.MockTransport(transport)).search('Focal None',project_ids=[61],full_text=True)
     assert not result['errors']
