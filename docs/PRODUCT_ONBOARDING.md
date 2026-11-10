@@ -93,6 +93,8 @@ python scripts/sync_product_knowledge.py --product "Acme Viewer" --upload-to htt
 | `[QA 작성 규칙]` | qa_rules | X (규칙 로더가 읽음) |
 | `*지침 프롬프트*`, `*지침_프롬프트*` | instruction_prompt | X (규칙 로더가 읽음) |
 
+참고 자료(`reference`)에는 파일명 규약이 없다. 지식 폴더에 두어도 수집하지 않으며, 제품 상세 화면의 `참고 자료` 구역에서 사람이 직접 올린 파일만 등록된다. 이 구역은 제품 설정에 `reference: {hidden: false}` 를 적은 제품에만 보인다(SPEC REQ-KNOW-025).
+
 `(TC)` 접두사가 있으면 `*Checklist*` 패턴보다 먼저 testcase로 확정된다 — 분류 우선순위가
 정해져 있다.
 

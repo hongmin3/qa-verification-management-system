@@ -13,9 +13,10 @@ from datetime import date
 from pathlib import Path
 
 from app.core import document_cache
-from app.core.product_config import KIND_LABELS, SOURCE_ALM, SOURCE_EXTERNAL, ProductConfig, registration_refusal
+from app.core.product_config import KIND_LABELS, PERSON_ONLY_KINDS, SOURCE_ALM, SOURCE_EXTERNAL, ProductConfig, registration_refusal
 from app.core.product_knowledge import (
     DATE_REVISION_RE,
+    FOLDER_KINDS,
     REGISTERABLE_KINDS,
     REV_REVISION_RE,
     VERSION_REVISION_RE,
@@ -29,6 +30,8 @@ SPEC_EXTENSIONS = {".pdf", ".docx"}
 #: 사양서는 Excel 로 관리하는 문서(VSS Specification 등)도 있다. 파서가 `.xlsx` 본문을 읽는다 (REQ-KNOW-018).
 SPECIFICATION_EXTENSIONS = SPEC_EXTENSIONS | {".xlsx"}
 TC_EXTENSIONS = {".xlsx"}
+#: 참고 자료는 형식 규약 없이 받는다. 파서가 읽을 수 있는 형식 모두다 (REQ-KNOW-025).
+REFERENCE_EXTENSIONS = SPECIFICATION_EXTENSIONS | {".md", ".txt"}
 #: 등록 부가 정보의 출처 가운데 사람이 올리지 않은 것. 나머지(`upload`, 빈 값)는 사람이 올린 등록이다 (REQ-KNOW-005).
 AUTOMATIC_DOCUMENT_SOURCES = frozenset({"product_knowledge", SOURCE_ALM, SOURCE_EXTERNAL})
 
@@ -59,6 +62,8 @@ class Registration:
 def extensions_for(kind: str) -> set[str]:
     if kind == "testcase":
         return TC_EXTENSIONS
+    if kind in PERSON_ONLY_KINDS:
+        return REFERENCE_EXTENSIONS
     return SPECIFICATION_EXTENSIONS if kind == "specification" else SPEC_EXTENSIONS
 
 
@@ -90,7 +95,12 @@ def replacement_name(target_name: str, uploaded_name: str, today: date) -> str:
 
 
 def kind_mismatch(config: ProductConfig, kind: str, file_name: str) -> str | None:
-    """파일 이름으로 보면 문서 표의 다른 종류일 때 그 종류. 규약에 맞지 않는 이름은 None (REQ-KNOW-003·019)."""
+    """파일 이름으로 보면 문서 표의 다른 종류일 때 그 종류. 규약에 맞지 않는 이름은 None (REQ-KNOW-003·019).
+
+    참고 자료는 이름 규약을 보지 않으므로 항상 None 이다 (REQ-KNOW-025).
+    """
+    if kind in PERSON_ONLY_KINDS:
+        return None
     named = classify(re.split(r"[\\/]", file_name)[-1], config.knowledge_source.classify or None)
     return named if named in REGISTERABLE_KINDS and named != kind else None
 
@@ -104,9 +114,10 @@ def person_documents(storage, product: str) -> list[dict]:
     """담당자 PC 가 지식 폴더로 내려받을 화면 등록본 목록 (REQ-SYNC-004).
 
     원본 파일이 없는 등록은 내려받을 수 없으므로 뺀다. 옛 등록에 sha256 이 없으면 파일에서 구한다.
+    참고 자료는 서버에만 두므로 내려보내지 않는다 (REQ-KNOW-025).
     """
     documents = []
-    for kind in REGISTERABLE_KINDS:
+    for kind in FOLDER_KINDS:
         for document in storage.active_documents(kind, product):
             path = Path(document["path"])
             if not registered_by_person(document) or not path.is_file():

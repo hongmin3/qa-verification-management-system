@@ -128,7 +128,28 @@ class ManifestDocuments:
             fingerprints.append(digest)
             self.docs.append({"id": f"manifest-{index}", "kind": asset["kind"], "name": name,
                               "path": str(path), "expected_sha256": digest})
+        for document in self._reference_documents():
+            fingerprints.append(document["expected_sha256"])
+            self.docs.append(document)
         self.fingerprint = hashlib.sha256("".join(fingerprints).encode()).hexdigest()
+
+    def _reference_documents(self):
+        """사람이 화면에서 올린 참고 자료. 지식 사본에는 없고 서버 문서 표에만 있다 (REQ-KNOW-025)."""
+        if not self.db_path.is_file():
+            return []
+        from app.core.storage import Storage
+
+        documents = []
+        for document in Storage(self.db_path).active_documents("reference", "VXvue"):
+            path = Path(document["path"])
+            name = Path(document["name"].replace("\\", "/")).name
+            try:
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError as exc:
+                raise ValueError(f"참고 자료 원본을 읽지 못했습니다: {name}") from exc
+            documents.append({"id": f"reference-{document['id']}", "kind": "reference", "name": name,
+                              "path": str(path), "expected_sha256": digest})
+        return documents
 
     def active_documents(self, kind, product):
         return [d for d in self.docs if d["kind"] == kind]

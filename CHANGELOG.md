@@ -5,6 +5,13 @@
 - REQ-BELLALUNSHARED-005: 서버형 `bellalun-server-ai`를 Bellalun 기본 Skill로 두고 "벨라룬" 호출도 받게 했다. 로컬 Skill은 로컬 작업을 명시할 때만 쓴다.
 - REQ-BELLALUNSHARED-006: `scripts/sync_server_skills.py`가 Claude Code·Codex에 설치된 서버 배포 Skill 4개를 서버 판에 맞춘다. 묶음 경로와 ALM·PLM 해시 연결을 쓰기 전에 검증하고, 바뀐 파일만 백업 후 교체하며 로컬 전용 파일은 보존한다.
 
+## 2026-11-10 사람이 올리는 참고 자료 구역
+
+- REQ-KNOW-025: 제품 상세 화면의 `릴리즈노트` 와 `QA 규칙` 사이에 `참고 자료` 구역을 더했다. 담당자가 `.pdf`·`.docx`·`.xlsx`·`.md`·`.txt` 를 이름 규약 없이 올린다. VXvue 에만 켰고 다른 제품은 설정에 `reference.hidden: false` 를 적어야 보인다.
+- REQ-KNOW-025: 참고 자료는 사람이 화면에서 올린 등록만 인정한다. 설정의 출처 값과 관계없이 `manual` 로 보고, 지식 폴더 수집·업로드·담당자 PC 내려받기는 이 종류를 만들거나 지우지 않는다.
+- REQ-KNOW-025: VXvue 챗봇과 공용 AI 연결이 참고 자료 등록본을 바로 읽는다. 그래서 등록 뒤 수집 요청을 남기지 않고 `AI 반영` 칸은 바로 `반영됨` 이다.
+- REQ-KNOW-018: 출처 프로필 표에 `reference` 키를 더했다.
+
 ## 2026-11-10 신규 PC 동기화 담당 전환
 
 - REQ-BELLALUNSHARED-005: Bellalun 공통 지침 내보내기가 서버 연결 지침을 LF로 맞춰 읽는다. `core.autocrlf` 체크아웃에서 내용이 같은데도 서버 Skill 동기화본과 원본 해시가 바뀌던 결함을 고쳤다.
