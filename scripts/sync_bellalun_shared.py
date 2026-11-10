@@ -92,7 +92,7 @@ def main():
     parser.add_argument('--knowledge-root', required=True, type=Path)
     parser.add_argument('--upload-to', required=True)
     parser.add_argument('--only-when-requested', action='store_true',
-                        help='서버 화면의 수집 요청이 있을 때만 올린다 (1분 간격 예약용, REQ-KNOW-024)')
+                        help='서버 화면의 수집 요청이 있을 때만 올린다 (5분 간격 예약용, REQ-KNOW-024)')
     args = parser.parse_args()
     try:
         os.environ['QA_KNOWLEDGE_DIR_BELLALUN_VIEWER'] = str(args.knowledge_root.resolve())

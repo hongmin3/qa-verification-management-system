@@ -31,7 +31,7 @@ Bellalun 안내 화면에서 연결과 `bellalun-server-ai` Skill을 설치한�
 별도 Bellalun 예약은 매일 10:10과 사용자 로그인 때 실행하고 실패하면 15분 간격 3회 재시도한다.
 로그인된 담당자 PC에서 실행하며 기존 VXvue 예약을 대체하지 않는다.
 
-화면 등록·교체가 남긴 수집 요청은 1분마다 도는 `Bellalun_SharedKnowledge_Request` 예약이 처리한다(REQ-KNOW-024).
+화면 등록·교체가 남긴 수집 요청은 5분마다 도는 `Bellalun_SharedKnowledge_Request` 예약이 처리한다(REQ-KNOW-024).
 요청이 없으면 서버에 묻기만 하고 올리지 않는다.
 
 ### REQ-BELLALUNSHARED-002 인증된 판 고정 조회
@@ -109,7 +109,7 @@ REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이�
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
-| REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `scripts/sync_server_skills.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py`, `tests/test_sync_server_skills.py` | verified |
+| REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `scripts/sync_server_skills.py`, `scripts/run_scheduled_python.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py`, `tests/test_sync_server_skills.py`, `tests/test_hidden_schedule.py` | verified |
 | REQ-BELLALUNSHARED-005 | `app/core/qa_workflow.py`, `app/modules/bellalun_shared/service.py`, `scripts/sync_bellalun_shared.py` | `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/snapshot_files.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py`, `tests/test_snapshot_files.py` | verified |

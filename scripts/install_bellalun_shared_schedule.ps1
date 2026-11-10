@@ -8,7 +8,9 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $script = Join-Path $PSScriptRoot 'sync_bellalun_shared.py'
-foreach ($path in @($Python,$script,(Join-Path $SkillRoot 'SKILL.md'),$KnowledgeRoot)) {
+$pythonw = Join-Path (Split-Path $Python -Parent) 'pythonw.exe'
+$hiddenRunner = Join-Path $PSScriptRoot 'run_scheduled_python.py'
+foreach ($path in @($Python,$pythonw,$hiddenRunner,$script,(Join-Path $SkillRoot 'SKILL.md'),$KnowledgeRoot)) {
     if (-not (Test-Path -LiteralPath $path)) { throw "동기화 경로에 접근할 수 없습니다: $path" }
     if ($path.Contains('"')) { throw '경로에 따옴표를 사용할 수 없습니다.' }
 }
@@ -27,10 +29,10 @@ if ($oldRequest -and ($oldRequest.Actions.Count -ne 1 -or $oldRequest.Actions[0]
     throw '같은 이름의 다른 예약이 있습니다. 기존 예약을 덮어쓰지 않습니다.'
 }
 $arguments = '-X utf8 "{0}" --skill-root "{1}" --knowledge-root "{2}" --upload-to "{3}"' -f $script,$SkillRoot,$KnowledgeRoot,$TargetUrl
-# 화면 등록·교체가 남긴 수집 요청을 1분 안에 처리한다 (REQ-KNOW-024). 요청이 없으면 서버에 한 번 묻고 끝난다.
+# 화면 등록·교체가 남긴 수집 요청을 5분마다 확인한다 (REQ-KNOW-024).
 $requestArguments = $arguments + ' --only-when-requested'
 Write-Output 'Bellalun 지식 동기화: 매일 10:10 및 사용자 로그인 때 실행, 실패 시 15분 간격 3회 재시도. 로그인된 PC에서 실행합니다.'
-Write-Output 'Bellalun 화면 요청 확인: 1분마다 서버의 수집 요청(화면 등록·교체, 지금 수집)을 묻고 요청이 있을 때만 올립니다.'
+Write-Output 'Bellalun 화면 요청 확인: 5분마다 창 없이 요청을 묻고 요청이 있을 때만 올립니다.'
 if ($CheckOnly) { Write-Output '경로와 예약 구성 확인 완료. 예약은 변경하지 않았습니다.'; exit 0 }
 if ($old) {
     $backup = Join-Path $projectRoot 'data/bellalun_sync/backups'
@@ -44,17 +46,19 @@ if ($oldRequest) {
 }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
-$action = New-ScheduledTaskAction -Execute $Python -Argument $arguments -WorkingDirectory $projectRoot
+$hiddenArguments = '-X utf8 "{0}" --error-log "{1}" -- "{2}" {3}' -f $hiddenRunner,(Join-Path $projectRoot 'output/logs/Bellalun_SharedKnowledge_Sync-last-error.log'),$Python,$arguments
+$action = New-ScheduledTaskAction -Execute $pythonw -Argument $hiddenArguments -WorkingDirectory $projectRoot
 $triggers = @((New-ScheduledTaskTrigger -Daily -At '10:10'),(New-ScheduledTaskTrigger -AtLogOn -User $identity))
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 15)
 Register-ScheduledTask -TaskName $name -Action $action -Trigger $triggers -Settings $settings -Principal $principal -Force | Out-Null
 $installed = Get-ScheduledTask -TaskName $name
-if ($installed.Actions[0].Arguments -ne $arguments -or $installed.Triggers.Count -ne 2) { throw '설치 후 예약 구성이 일치하지 않습니다.' }
-$requestAction = New-ScheduledTaskAction -Execute $Python -Argument $requestArguments -WorkingDirectory $projectRoot
+if ($installed.Actions[0].Arguments -ne $hiddenArguments -or $installed.Triggers.Count -ne 2) { throw '설치 후 예약 구성이 일치하지 않습니다.' }
+$hiddenRequestArguments = '-X utf8 "{0}" --error-log "{1}" -- "{2}" {3}' -f $hiddenRunner,(Join-Path $projectRoot 'output/logs/Bellalun_SharedKnowledge_Request-last-error.log'),$Python,$requestArguments
+$requestAction = New-ScheduledTaskAction -Execute $pythonw -Argument $hiddenRequestArguments -WorkingDirectory $projectRoot
 # 반복 기간을 두지 않으면 계속 반복한다. 이미 실행 중이면 그 분은 건너뛴다(IgnoreNew).
-$requestTrigger = New-ScheduledTaskTrigger -Once -At ([datetime]::Today) -RepetitionInterval (New-TimeSpan -Minutes 1)
+$requestTrigger = New-ScheduledTaskTrigger -Once -At ([datetime]::Today) -RepetitionInterval (New-TimeSpan -Minutes 5)
 $requestSettings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1)
 Register-ScheduledTask -TaskName $requestName -Action $requestAction -Trigger $requestTrigger -Settings $requestSettings -Principal $principal -Force | Out-Null
 $installedRequest = Get-ScheduledTask -TaskName $requestName
-if ($installedRequest.Actions[0].Arguments -ne $requestArguments) { throw '설치 후 화면 요청 확인 예약 구성이 일치하지 않습니다.' }
+if ($installedRequest.Actions[0].Arguments -ne $hiddenRequestArguments) { throw '설치 후 화면 요청 확인 예약 구성이 일치하지 않습니다.' }
 Write-Output 'Bellalun 예약 설치 및 재조회 완료. 기존 VXvue 예약은 유지했습니다.'

@@ -76,11 +76,39 @@ Claude Code·Codex에 설치된 서버 배포 Skill(`vxvue-ai`, `bellalun-server
 
 `--check`는 쓰지 않고 바뀐 파일만 알린다. 실제 실행은 `~/.claude/skills`와 `~/.codex/skills`의 바뀐 파일만 백업(`~/.local/state/qa-skill-sync/backups/`) 뒤 교체하고 로컬에만 있는 파일은 지우지 않는다. 결과는 `~/.local/state/qa-skill-sync/last-result.json`에 남는다. 서버 Skill은 자주 바뀌지 않으므로 Windows 예약 `QA_ServerSkills_Sync`가 로그온 때와 매일 09:55에 한 번 실행한다. Claude Desktop에 ZIP으로 올린 Skill은 앱 안에 저장되므로 이 도구가 바꾸지 않는다. 서버 안내 화면에서 새 판을 받아 다시 올린다.
 
-반대 방향(로컬 → 서버)은 두 경로다. 제품 원문과 Bellalun 통합 QA 지침은 동기화 담당 PC의 예약이 매일 올리고, 서버 화면의 수집 요청은 1분 안에 처리한다. 로컬 통합 QA 지침(`references/bellalun-qa-guide.md`)을 `bellalun_update_skill_file`이나 종료 전 자체검토(`applied`)로 고치면 그 순간 `Bellalun_SharedKnowledge_Sync`를 한 번 시작한다. 변경을 감시하는 추가 반복 실행은 두지 않는다.
+예약은 새 PC에서 한 번 등록한다. 아래 명령은 프로젝트 루트에서 실행하고 서버 주소를 바꾼다. 같은 이름의 예약이 있으면 기존 구성을 먼저 비교한다. 로그인한 사용자 권한으로 실행하며 비밀번호를 저장하지 않는다.
+
+```powershell
+$taskName = 'QA_ServerSkills_Sync'
+if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { throw '기존 예약을 먼저 비교하세요.' }
+$projectRoot = (Get-Location).Path
+$pythonPath = (Resolve-Path '.venv/Scripts/python.exe').Path
+$pythonwPath = (Resolve-Path '.venv/Scripts/pythonw.exe').Path
+$scriptPath = (Resolve-Path 'scripts/sync_server_skills.py').Path
+$runnerPath = (Resolve-Path 'scripts/run_scheduled_python.py').Path
+$errorLog = Join-Path $projectRoot 'output/logs/QA_ServerSkills_Sync-last-error.log'
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+$arguments = '-X utf8 "{0}" --error-log "{1}" -- "{2}" -X utf8 "{3}" --server http://<QA_HOST>:<포트>' -f $runnerPath,$errorLog,$pythonPath,$scriptPath
+$action = New-ScheduledTaskAction -Execute $pythonwPath -Argument $arguments -WorkingDirectory $projectRoot
+$triggers = @((New-ScheduledTaskTrigger -Daily -At '09:55'), (New-ScheduledTaskTrigger -AtLogOn -User $identity))
+$principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 15)
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $triggers -Settings $settings -Principal $principal
+Get-ScheduledTask -TaskName $taskName | Select-Object TaskName,State,Actions,Triggers
+Start-ScheduledTask -TaskName $taskName
+```
+
+실행이 끝나면 `Get-ScheduledTaskInfo -TaskName QA_ServerSkills_Sync`의 `LastRunTime`·`LastTaskResult`와 결과 파일의 `checked_at`·`status`·Skill별 결과를 함께 읽는다. 종료 코드 0과 새 실행 시각을 확인한다. 이 예약이 쓰는 저장소 경로는 예약을 옮기기 전까지 보존한다. PC가 꺼져 있으면 실행하지 않으며 다음 로그온 때 확인한다.
+
+반대 방향(로컬 → 서버)은 두 경로다. 제품 원문과 Bellalun 통합 QA 지침은 동기화 담당 PC의 예약이 매일 올리고, 서버 화면의 수집 요청은 5분마다 확인한 뒤 처리한다. 로컬 통합 QA 지침(`references/bellalun-qa-guide.md`)을 `bellalun_update_skill_file`이나 종료 전 자체검토(`applied`)로 고치면 그 순간 `Bellalun_SharedKnowledge_Sync`를 한 번 시작한다. 변경을 감시하는 추가 반복 실행은 두지 않는다.
+
+동기화 예약은 `pythonw.exe`와 `scripts/run_scheduled_python.py`로 실행해 CMD·터미널 창을 만들지 않는다. 자식 Python에도 `CREATE_NO_WINDOW`를 적용하고 종료 코드를 작업 스케줄러에 전달한다. 성공 기록은 기존 작업의 상태·로그를 읽고, 실패 출력은 `output/logs/<예약명>-last-error.log`에 마지막 64KB만 저장한다. 마지막 오류 파일이 남아 있어도 현재 실행 실패라는 뜻은 아니므로 기록 시각과 `LastTaskResult`를 함께 확인한다.
 
 ## 기존 예약을 복원한 경우
 
 VXvue의 `QA_ProductKnowledge_Sync`는 버전별 Worker 폴더의 코드 사본을 실행한다. Git을 갱신해도 기존 예약의 사본은 바뀌지 않는다. 예약 XML을 복원했다면 인계 ZIP의 `resume/update_context_worker.ps1`을 프로젝트 루트에서 실행해 Preview를 읽는다. 필요한 경우 관리자 PowerShell에서 같은 명령에 `-Apply`를 붙인다. 이 도구는 이전 XML을 백업하고 코드 동작만 바꾸며 시각·계정·설정이 같은지 재조회한다. 실행 중인 Worker가 있으면 종료될 때까지 기다린다.
+
+이전 전환 도구는 기존 실행 방식과 주기를 유지한다. 창 없는 실행과 5분 주기는 최신 저장소의 예약 설치기를 `-CheckOnly`로 확인한 뒤 적용한다. VXvue 설치기는 창 숨김 실행기도 Worker 폴더에 함께 복사하므로 설치 원본 checkout에 의존하지 않는다.
 
 새 예약이 필요할 때는 저장소의 `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`와 `scripts/install_bellalun_shared_schedule.ps1 -CheckOnly`로 설정을 먼저 확인한다. 예약 설치는 관리자 권한이 필요하다. 동기화 담당 PC는 한 대만 둔다. 이전 PC의 예약을 중지한 것을 확인한 뒤 새 PC 예약을 켠다. 로컬 Redmine watch는 자동 등록하지 않았으며 검색 조건·실행 주기를 정한 뒤 별도로 등록한다.
 
@@ -88,7 +116,7 @@ VXvue의 `QA_ProductKnowledge_Sync`는 버전별 Worker 폴더의 코드 사본�
 
 예약을 켜기 전에 확인한다.
 
-1. 예약의 실행 파일·인수·시작 위치·계정·트리거와 Worker 폴더 4개 파일(`retry_product_knowledge.py`, `knowledge_retry.py`, `knowledge_push.py`, `skill_knowledge.py`)의 SHA256을 저장소 원본과 대조한다.
+1. 예약의 실행 파일·인수·시작 위치·계정·트리거와 Worker 폴더 5개 파일(`retry_product_knowledge.py`, `run_scheduled_python.py`, `knowledge_retry.py`, `knowledge_push.py`, `skill_knowledge.py`)의 SHA256을 저장소 원본과 대조한다.
 2. 로컬 수집 대상과 서버 `/knowledge/product-knowledge/state`의 `(종류, 파일명, SHA256)`을 비교한다. 정상 동기화는 수집이 모두 성공하면 서버에만 있는 파일을 정리(`allow_prune`)하므로, 서버에만 있는 파일이 하나라도 있으면 원문을 먼저 맞추고 켜지 않는다.
 3. 켠 뒤 첫 실행의 `LastTaskResult`, `output/logs/product_knowledge_retry.log`, `data/knowledge_retry/*.json` 상태와 서버 목록을 다시 읽어 개수·해시가 보존됐는지 확인한다.
 

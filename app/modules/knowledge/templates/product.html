@@ -234,7 +234,7 @@ document.querySelectorAll('.knowledge-sync-form').forEach(form => {
     }
   });
 });
-// 남은 수집 요청이 끝나면 저절로 새로 고친다 (REQ-KNOW-021). 담당자 PC 가 1분마다 요청을 보고 올린다.
+// 남은 수집 요청이 끝나면 저절로 새로 고친다 (REQ-KNOW-021). 담당자 PC 가 5분마다 요청을 보고 올린다.
 (() => {
   const pending = document.getElementById('kn-collect-pending');
   if (!pending) return;

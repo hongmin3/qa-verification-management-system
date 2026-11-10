@@ -51,7 +51,7 @@ def test_collect_without_folder_access_leaves_a_request(env):
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "REQUESTED"
-    assert "1분 안에" in body["detail"]
+    assert "5분 주기" in body["detail"]
     pending = env.client.get("/knowledge/product-knowledge/request", params={"product": "VXvue"}).json()
     assert pending["requested_at"]
     page = env.client.get("/knowledge/products/vxvue").text

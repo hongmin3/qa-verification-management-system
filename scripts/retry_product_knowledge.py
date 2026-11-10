@@ -28,12 +28,12 @@ def main():
         from app.core.product_knowledge import resolve_config, source_available
         config = resolve_config(args.product)
         ready = bool(config and source_available(config))
-        print(f"지식 폴더 접근: {'정상' if ready else '확인 필요'} / 매일 10:00 KST · 서버 화면 등록본 내려받기 후 업로드 · 미완료 시 15분마다 재시도 · 1분마다 화면 수집 요청 확인")
+        print(f"지식 폴더 접근: {'정상' if ready else '확인 필요'} / 매일 10:00 KST · 서버 화면 등록본 내려받기 후 업로드 · 미완료 시 15분마다 재시도 · 5분마다 화면 수집 요청 확인")
         return 0 if ready else 1
     log = settings.root / "output" / "logs" / "product_knowledge_retry.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(filename=log, encoding="utf-8", level=logging.INFO, format="%(asctime)s %(message)s")
-    # httpx 는 요청마다 INFO 한 줄을 남긴다. 1분마다 묻는 수집 요청 조회가 그대로 쌓이지 않게 막는다.
+    # httpx 는 요청마다 INFO 한 줄을 남긴다. 5분마다 묻는 수집 요청 조회가 그대로 쌓이지 않게 막는다.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     if (Path(__file__).parent / "knowledge_retry.py").is_file():
         from knowledge_retry import run_due
@@ -41,7 +41,7 @@ def main():
     else:
         from app.core.knowledge_retry import run_due
         from app.core.knowledge_push import fetch_collect_request, push_product
-    # 화면 `지금 수집` 요청(REQ-KNOW-021). 예약이 1분마다 돌며 이것을 묻는다.
+    # 화면 `지금 수집` 요청(REQ-KNOW-021). 예약이 5분마다 돌며 이것을 묻는다.
     check_request = lambda: fetch_collect_request(args.product, args.upload_to)
     result = run_due(args.product, args.upload_to, state_dir=settings.root / "data" / "knowledge_retry", push=push_product,
                      check_request=check_request)
@@ -55,7 +55,7 @@ def main():
             time.sleep(min(remaining, 30))
         result = run_due(args.product, args.upload_to, state_dir=settings.root / "data" / "knowledge_retry", push=push_product,
                          check_request=check_request)
-    # 예약이 1분마다 돌므로 할 일 없는 실행은 로그에 남기지 않는다(하루 1,440줄이 쌓인다).
+    # 예약이 5분마다 돌므로 할 일 없는 실행은 로그에 남기지 않는다(하루 288줄이 쌓인다).
     if result["status"] != "NOT_DUE":
         logging.info("%s %s next_retry=%s", result["status"], result["detail"], result.get("next_retry_at"))
     print(f"[{args.product}] {result['status']} · {result['detail']}")

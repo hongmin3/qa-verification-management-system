@@ -12,6 +12,8 @@ Bellalun 담당자도 기존 공용 AI 연결에서 사양·매뉴얼·TC와 최
 
 공용 연결은 `core`의 공통 규칙·목차에서 작업 유형과 선행 규칙을 골라 읽습니다. 기존 전문 조회도 유지하며 검증 메일은 두 제품 모두 `mail`을 사용합니다. 새 PC로 옮길 때는 [클린 PC 재개 절차](docs/CLEAN_PC.md)에 따라 Git 코드와 서버의 비공개 자료 묶음을 복원합니다.
 
+Claude Code·Codex의 VXvue·Bellalun·ALM·PLM Skill은 서버 배포본으로 맞춥니다. "벨라룬"은 서버 조회가 기본입니다. [서버 기준 Skill과 동기화](docs/CLEAN_PC.md#서버-기준-skill과-동기화)에서 수동 갱신과 로그온·매일 09:55 자동 갱신 예약을 설정합니다.
+
 QA 홈의 **스킬 관리**(`/static/skills/index.html`)에서 카드를 누르면 각 스킬의 실제 상세 사용 안내가 바로 열립니다. VXvue·ALM·PLM은 각 상세 안내로, XIPL·Bellalun은 각 하위 가이드로 연결하며 업데이트·개선 문서는 목록에서 별도로 엽니다.
 
 ALM Skill 1.3.0에는 Checklist의 신규 Import·SRS verifies 일괄 연결·미서명 문서 구성과 저장 후 전체 대조 절차가 포함됩니다. 실제 작업은 기존 로그인 Edge·Chrome의 Computer Use 연결 또는 허용된 기존 서비스 API를 사용합니다. 운영에서 확인한 절차를 반영했으며 새 버전의 범위·필드·권한은 다시 확인합니다. 전자서명과 최종 승인은 사용자가 직접 합니다.

@@ -12,6 +12,7 @@
     "tests/test_vxvue_redmine.py",
     "tests/test_skill_knowledge.py",
     "tests/test_xipl_shared.py",
-    "tests/test_sync_server_skills.py"
+    "tests/test_sync_server_skills.py",
+    "tests/test_hidden_schedule.py"
   ]
 }

@@ -132,8 +132,8 @@ PC 예약과 앱 내장 예약은 한국 시간이다. 서버 cron 은 서버 �
 | 10분마다 (매일) | 운영 서버 앱 내장 예약(`qa_agent_limit_catchup`) | Claude 사용량 한도 뒤 다시 돌기 | 한도(세션·주간)가 풀린 제품이 있으면 그 제품의 점검을 한 번 다시 띄운다 | 아래 04:00 줄과 같다 | 아래 04:00 줄과 같다 | REQ-QAINTEL-025 |
 | 앱 시작 1분 뒤, 그 뒤 10분마다 | 운영 서버 앱 내장 예약(`qa_agent_missed_schedule`) | 놓친 오늘 예약 만회 | 04:00 에 앱이 꺼져 있었으면 오늘 몫의 일일 점검을 한 번 띄운다 | 점검 결과와 같다 | 점검 결과와 같다 | REQ-QAINTEL-035 |
 | 04:00 (수집은 매 업무일. AI 분석은 검증기간 매 업무일, 차수 대기 매주 첫 업무일, 중지 시 없음) | 운영 서버 앱 내장 예약(제품마다 `qa_agent_<slug>`, 예: `qa_agent_vxvue`) | QA Intelligence Agent 점검 | Polarion 을 직접 읽어 마지막 저장 자료와 비교한다. AI 분석일이면 바뀐 것만 분석해 결과를 저장한다(4.3절). 대한민국 공휴일(`config/holidays/kr.yaml`)에는 띄우지 않는다 | `/qa-agent` 대시보드, `/qa-agent/changes`, `output/daily_qa/<실행 ID>/` | 변경 리포트 메일 한 통, AI 분석을 했으면 요약 메일 한 통 | REQ-DAILY-001, REQ-DAILY-008, REQ-QAINTEL-001, REQ-QAINTEL-038, REQ-SCHED-002, REQ-ALMCHG-001, REQ-ALMCHG-004 |
-| 10:00 (매일), 미완료 시 15분마다. 1분마다 화면 수집 요청 확인 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 서버 화면 등록본 내려받기 뒤 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 서버 화면에서 등록·교체한 최신본을 지식 폴더로 내려받은 뒤 지식 폴더를 올린다. 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다. 화면에서 `지금 수집` 요청이 있으면 바로 올린다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002, REQ-SYNC-004, REQ-KNOW-021, REQ-KNOW-024 |
-| 1분마다 (로그인 중) | 담당자 PC 작업 스케줄러(`Bellalun_SharedKnowledge_Request`) | Bellalun 화면 요청 업로드(`scripts/sync_bellalun_shared.py --only-when-requested`) | 서버에 남은 수집 요청(화면 등록·교체, `지금 수집`)이 있을 때만 공통 지침을 내보내고 서버 화면 등록본을 내려받은 뒤 지식 폴더를 올린다. 요청이 없으면 묻기만 하고 끝난다. 매일 업로드는 10:10 예약(`Bellalun_SharedKnowledge_Sync`)이 한다 | 서버 `/knowledge/products/bellalun-viewer`, PC `data/knowledge_retry/` | 화면 상태 표시 | REQ-KNOW-024, REQ-BELLALUNSHARED-001 |
+| 10:00 (매일), 미완료 시 15분마다. 5분마다 화면 수집 요청 확인 | 담당자 PC 작업 스케줄러(`QA_ProductKnowledge_Sync`, `Asia/Seoul`) | 서버 화면 등록본 내려받기 뒤 지식 폴더 업로드(`scripts/retry_product_knowledge.py`) | 서버 화면에서 등록·교체한 최신본을 지식 폴더로 내려받은 뒤 지식 폴더를 올린다. 그날 완료하지 못한 동기화를 다시 시도한다. PC 시작 때 놓친 실행을 만회한다. 화면에서 `지금 수집` 요청이 있으면 바로 올린다 | 서버 `/knowledge`, `/vxvue-chatbot` 갱신 상태와 PC `data/knowledge_retry/`·`output/logs/product_knowledge_retry.log` | 화면 상태 표시 | REQ-SYNC-002, REQ-SYNC-004, REQ-KNOW-021, REQ-KNOW-024 |
+| 5분마다 (로그인 중) | 담당자 PC 작업 스케줄러(`Bellalun_SharedKnowledge_Request`) | Bellalun 화면 요청 업로드(`scripts/sync_bellalun_shared.py --only-when-requested`) | 서버에 남은 수집 요청(화면 등록·교체, `지금 수집`)이 있을 때만 공통 지침을 내보내고 서버 화면 등록본을 내려받은 뒤 지식 폴더를 올린다. 요청이 없으면 묻기만 하고 끝난다. 매일 업로드는 10:10 예약(`Bellalun_SharedKnowledge_Sync`)이 한다 | 서버 `/knowledge/products/bellalun-viewer`, PC `data/knowledge_retry/` | 화면 상태 표시 | REQ-KNOW-024, REQ-BELLALUNSHARED-001 |
 | 10:00 (평일) | 담당자 PC 작업 스케줄러(`Redmine 24시간 알림 자동화`) | Redmine 알림. 다른 저장소 redmine-handler-notifier 의 기능 | 마지막 알림 뒤에 바뀐 Open 이슈를 담당자별로 모은다. 월요일에는 전체 Open 이슈를 모은다 | 그 저장소의 `logs/` | 켜 두었을 때만 Teams 메시지 | 이 저장소 밖 |
 | 10:20 (평일), 로그온 15분 뒤 | 담당자 PC 작업 스케줄러(`QA_SRS_Collect`) | SRS 수집·PDF 배포(`scripts/collect_srs_spec.py`) 뒤 사양서 동기화(`scripts/sync_vxvue_spec.py`) | Polarion SRS를 수집하고 PDF를 만든다. 최종 경로의 읽기·페이지·해시를 검사한 뒤 지식 폴더와 동기화 완료본에 놓는다. 이어서 같은 작업의 두 번째 동작이 새 사양서 PDF 를 서버에 등록하고 이전 판을 지운다. 그날 완료본이 있으면 다시 수집하지 않는다 | `output/srs_crawler/`, 지식 폴더, 서버 Knowledge 목록, `output/logs/sync_vxvue_spec.log` | 분석·메일은 기존 QA Agent가 담당 | REQ-SYNC-003, REQ-SYNC-001 |
 
@@ -5352,7 +5352,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 **하는 일** 담당자가 지식 폴더에 새 파일을 넣은 뒤 제품 상세 화면의 `지금 수집` 을 누르면, 그 시점의 지식 폴더 전체가 수집·등록된다. 다음 날 10:00 예약을 기다리지 않아도 된다.
 
-> **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 1분 안에 요청을 보고 폴더를 올린다. 올리기가 끝나면 화면이 저절로 새로 고쳐지고 새 매뉴얼이 목록에 있다.
+> **예시** 담당자가 VXvue 지식 폴더에 새 매뉴얼을 넣고 `/knowledge/products/vxvue` 의 `지금 수집` 을 누른다. 운영 서버는 폴더를 볼 수 없으므로 수집 요청만 남긴다. 담당자 PC 가 5분 안에 요청을 보고 폴더를 올린다. 올리기가 끝나면 화면이 저절로 새로 고쳐지고 새 매뉴얼이 목록에 있다.
 
 **언제** 제품 상세 화면 머리의 `지금 수집`(`POST /knowledge/products/<slug>/collect`). 제품 설정에 지식 폴더가 있을 때만 버튼이 보인다.
 
@@ -5360,7 +5360,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 1. 이 서버가 지식 폴더를 읽을 수 있으면 바로 수집하고 등록한다(REQ-KNOW-011, REQ-KNOW-012). 결과 문구를 알림 창으로 보인다.
 2. 읽을 수 없으면 수집 요청을 남긴다. 요청 시각은 `data/product_knowledge/<slug>/collect_request.json` 에 쓴다. 이미 요청이 있으면 시각만 새로 쓴다.
-3. 담당자 PC 의 예약 작업(REQ-SYNC-002)이 1분마다 `GET /knowledge/product-knowledge/request?product=` 로 남은 요청을 묻는다.
+3. 담당자 PC 의 예약 작업(REQ-SYNC-002)이 5분마다 `GET /knowledge/product-knowledge/request?product=` 로 남은 요청을 묻는다.
 4. 남은 요청이 있고 PC 가 아직 처리하지 않은 요청이면, 그날 업로드를 이미 마쳤어도 바로 올린다. 올리기 결과가 서버에 닿았으면(`FAILED` 가 아니면) 그 요청 시각을 PC 상태 파일에 적어 같은 요청을 두 번 처리하지 않는다.
    - `FAILED` 이면 요청 시각을 적지 않는다. 15분 뒤 같은 요청을 다시 처리한다.
 
@@ -5374,7 +5374,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | 경우 | 사용자에게 보이는 것 |
 |---|---|
 | 서버가 바로 수집함 | 수집·등록 결과 문구(REQ-KNOW-011) |
-| 요청을 남김 | "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다." |
+| 요청을 남김 | "수집 요청을 남겼습니다. 담당자 PC 가 5분 주기로 요청을 확인한 뒤 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다." |
 | 남은 요청이 있을 때 화면 | 버튼 옆에 "수집 요청 대기 중 (요청 시각)" 과 지난 시간("N분 지남"). 화면이 15초마다 남은 요청을 묻고, 요청이 끝나면 새로 고친다 |
 | 남은 요청이 10분 넘게 끝나지 않음 | 대기 문구 뒤에 "담당자 PC 가 꺼져 있거나 올리기가 오래 걸리고 있습니다." 를 붙인다 |
 
@@ -5420,7 +5420,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 이유: 지식 폴더는 담당자 PC 에 있어 서버가 지울 수 없다. 기억하지 않으면 지운 문서가 다음 날 되살아난다.
 
-- 사람이 지우면 REQ-KNOW-024 처럼 수집 요청을 남긴다. 담당자 PC 가 1분 안에 다시 올리면 AI 사본에서도 빠진다.
+- 사람이 지우면 REQ-KNOW-024 처럼 수집 요청을 남긴다. 담당자 PC 가 5분 안에 다시 올리면 AI 사본에서도 빠진다.
 
 ### REQ-KNOW-023 교체 파일 이름 맞추기
 
@@ -5451,9 +5451,9 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 ### REQ-KNOW-024 화면 등록 뒤 AI 사본 반영
 
-**하는 일** 화면에서 문서를 등록하거나 교체하면, 공용 AI 연결(VXvue·Bellalun·XIPL)이 1분 안에 새 판을 쓰게 한다. 제품 상세 화면은 문서마다 AI 연결이 그 판을 쓰는지 보여 준다.
+**하는 일** 화면에서 문서를 등록하거나 교체하면, 공용 AI 연결(VXvue·Bellalun·XIPL)이 5분 안에 새 판을 쓰게 한다. 제품 상세 화면은 문서마다 AI 연결이 그 판을 쓰는지 보여 준다.
 
-> **예시** 2026-11-04 12:07 담당자가 `(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx` 를 새 파일로 교체했다. 화면의 마지막 갱신 시각은 바뀌었지만, AI 연결은 다음 날 10:00 업로드 전까지 11월 3일 판을 읽었다. 이 요구사항 뒤에는 교체가 끝날 때 수집 요청이 남고, 담당자 PC 가 1분 안에 지식 사본을 다시 올린다.
+> **예시** 2026-11-04 12:07 담당자가 `(TC) R-20-643_VXvue_변경사항 영향성평가_Checklist.xlsx` 를 새 파일로 교체했다. 화면의 마지막 갱신 시각은 바뀌었지만, AI 연결은 다음 날 10:00 업로드 전까지 11월 3일 판을 읽었다. 이 요구사항 뒤에는 교체가 끝날 때 수집 요청이 남고, 담당자 PC 가 5분 안에 지식 사본을 다시 올린다.
 
 이유: 공용 AI 연결은 서버 문서 표가 아니라 담당자 PC 가 올린 지식 사본(`data/product_knowledge/<제품>/manifest.json` 과 원본)만 읽는다(REQ-SYNC-002, REQ-SYNC-004).
 
@@ -5468,7 +5468,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 1. 등록·교체가 끝나면 제품 설정의 지식 폴더(`knowledge_source.dir`)를 본다.
 2. 지식 폴더가 있으면 `지금 수집` 과 같은 수집 요청을 남긴다(REQ-KNOW-021 2번). 이미 요청이 있으면 시각만 새로 쓴다.
-3. 담당자 PC 의 1분 예약이 요청을 보고, 서버 화면 등록본을 내려받은 뒤 지식 사본을 올린다(REQ-SYNC-004, REQ-SYNC-002).
+3. 담당자 PC 의 5분 예약이 요청을 보고, 서버 화면 등록본을 내려받은 뒤 지식 사본을 올린다(REQ-SYNC-004, REQ-SYNC-002).
    - VXvue: `QA_ProductKnowledge_Sync`
    - Bellalun Viewer: `Bellalun_SharedKnowledge_Request`(`scripts/sync_bellalun_shared.py --only-when-requested`). 요청이 있을 때만 공통 지침을 내보내고 올린다. 매일 업로드는 지금처럼 10:10 예약이 한다.
 4. 지식 폴더 설정이 없는 제품은 요청을 남기지 않는다. 등록 결과에 AI 연결에는 따로 업로드해야 반영된다는 안내를 붙인다.
@@ -5477,7 +5477,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 | 경우 | 사용자에게 보이는 것 |
 |---|---|
-| 요청을 남김 | 완료 팝업과 화면 알림에 "AI 연결 반영을 요청했습니다. 담당자 PC 가 1분 안에 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 '반영됨'으로 바뀝니다." |
+| 요청을 남김 | 완료 팝업과 화면 알림에 "AI 연결 반영을 요청했습니다. 담당자 PC 가 5분 주기로 요청을 확인한 뒤 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 '반영됨'으로 바뀝니다." |
 | 지식 폴더 설정이 없음 | "이 제품은 지식 사본을 올리는 담당자 PC 설정이 없습니다. 지식 폴더 업로드를 따로 실행해야 AI 연결에 반영됩니다." |
 | 요청 파일을 쓰지 못함 | 등록은 그대로 성공이다. 안내에 요청을 남기지 못한 이유와 `지금 수집` 을 누르라는 문장을 붙인다 |
 
@@ -5507,7 +5507,7 @@ JSON 응답(REQ-KNOW-020)에는 `ai_refresh`(`status`: `REQUESTED`·`NO_UPLOADER
 
 - 화면에서 지울 때도 같은 요청을 남긴다. 지운 문서가 AI 사본에서 빠지는 규칙은 REQ-KNOW-022 4·5번이다.
 
-**열어 둔 화면에서 교체** 담당자 PC 가 화면 등록본을 내려받아 다시 올리면, 서버는 그 문서를 지식 폴더 사본으로 다시 등록하고 문서 번호가 바뀐다(REQ-SYNC-004). 이 요구사항 때문에 교체 뒤 1분 안에 번호가 바뀐다. 그 전에 연 화면의 `교체` 는 없어진 번호를 보낸다.
+**열어 둔 화면에서 교체** 담당자 PC 가 화면 등록본을 내려받아 다시 올리면, 서버는 그 문서를 지식 폴더 사본으로 다시 등록하고 문서 번호가 바뀐다(REQ-SYNC-004). 이 요구사항 때문에 교체 뒤 5분 안에 번호가 바뀐다. 그 전에 연 화면의 `교체` 는 없어진 번호를 보낸다.
 
 > **예시** 2026-11-04 14:30 에 연 VXvue 화면에는 체크리스트 번호가 367 이었다. 14:38 동기화로 번호가 368 이 됐고, 그 화면에서 `교체` 를 누르자 "교체할 문서를 찾을 수 없습니다." 가 나왔다.
 
@@ -6975,7 +6975,7 @@ python scripts/sync_vxvue_spec.py [--target-url http://<서버 주소>:24357] [-
 
 이유: 서버가 PC 폴더를 마운트하는 방법은 쓰지 않는다. PC 가 Wi-Fi DHCP 라 주소가 바뀌고, 사내 DNS 에 이름이 없으며, 외근 때는 망에 없기 때문이다. 폴더를 볼 수 있는 쪽이 밀어 올리고, 서버는 마지막 업로드본을 계속 쓴다.
 
-**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 10:00 KST부터 1분 간격으로 실행한다. 매일 업로드와 15분 재시도 시각은 아래 상태 파일이 정하고, 1분 간격은 화면의 수집 요청(REQ-KNOW-021)을 빨리 보기 위한 것이다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
+**언제** 담당자 PC의 기존 작업 `QA_ProductKnowledge_Sync`를 10:00 KST부터 5분 간격으로 실행한다. 매일 업로드와 15분 재시도 시각은 아래 상태 파일이 정하고, 5분 간격은 화면의 수집 요청(REQ-KNOW-021)을 빨리 보기 위한 것이다. PC가 꺼져 있으면 PC 시작 때와 놓친 예약을 실행할 수 있을 때 만회한다.
 
 ```text
 python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<서버 주소>:24357
@@ -6992,13 +6992,16 @@ python scripts/retry_product_knowledge.py --product VXvue --upload-to http://<�
 
 **설치** `scripts/install_product_knowledge_schedule.ps1 -CheckOnly`로 입력 경로와 대상 서버를 확인한 뒤 관리자 PowerShell에서 같은 스크립트를 실행한다. 기존 예약 XML을 백업하고 같은 작업을 바꾼다. 수집·재시도·업로드 처리 코드의 해시로 운영 프로젝트 아래 실행본을 설치한다. 코드 변경 뒤 다시 설치해 갱신한다. 별도 중복 작업을 만들지 않는다.
 
-예약은 1분마다 돌므로 재시도 시각까지 기다리지 않고 끝낸다(`--wait-retry` 를 붙이지 않는다).
+예약은 `pythonw.exe`와 `scripts/run_scheduled_python.py`로 창 없이 실행한다. 자식 실행에도 `CREATE_NO_WINDOW`를 적용한다. 자식 종료 코드를 보존하고 실패 출력의 마지막 64KB를 `output/logs/<예약명>-last-error.log`에 남긴다. 성공·요청 없는 실행은 이 오류 파일에 쓰지 않는다. 원래 계정·작업 위치·매일 실행 시각은 보존한다.
+
+
+예약은 5분마다 돌므로 재시도 시각까지 기다리지 않고 끝낸다(`--wait-retry` 를 붙이지 않는다).
 
 이유: 기다리는 동안에는 다음 실행이 건너뛰어져 수집 요청을 늦게 본다.
 
 할 일이 없는 실행(`NOT_DUE`)은 `output/logs/product_knowledge_retry.log`에 아무 줄도 남기지 않는다. 수집 요청을 묻는 HTTP 요청 줄도 남기지 않는다.
 
-이유: 1분마다 한 줄씩 남기면 하루 약 1,440줄이 쌓여 실제 업로드 기록을 찾기 어렵다.
+이유: 5분마다 한 줄씩 남기면 하루 약 288줄이 쌓여 실제 업로드 기록을 찾기 어렵다.
 
 **입력**
 
@@ -9835,7 +9838,7 @@ REQ-KNOW-024 를 `tests/test_knowledge_ai_refresh.py` 로 확인한다. 설정·
 4. 지식 폴더 설정이 없는 제품은 `NO_UPLOADER` 이고 요청 파일을 만들지 않는다.
 5. AI 사본에 이전 판이 있으면 문서 표의 `AI 반영` 칸이 반영 대기이고 머리에 "AI 연결에 아직 반영되지 않은 문서 1개" 가 보인다. AI 사본을 새 판으로 바꾸면 반영됨이 된다. AI 사본이 없는 제품에는 칸이 없다.
 6. PC 쪽 요청 전용 실행(`run_due(daily=False)`)은 요청이 없으면 올리지 않고, 새 요청은 한 번만 올린다.
-7. `scripts/sync_bellalun_shared.py --only-when-requested` 는 요청이 있을 때만 공통 지침을 내보내고 올린다. 설치 스크립트는 1분 간격 `Bellalun_SharedKnowledge_Request` 예약을 등록한다.
+7. `scripts/sync_bellalun_shared.py --only-when-requested` 는 요청이 있을 때만 공통 지침을 내보내고 올린다. 설치 스크립트는 5분 간격 `Bellalun_SharedKnowledge_Request` 예약을 등록한다.
 8. 화면에서 지운 이름(대소문자 무시)은 업로드 확정 때 AI 사본 목록에서 빠지고 수집 제외 목록에 사유와 함께 남는다. 파일은 남고 서버 상태에도 보인다. 같은 이름을 다시 등록하면 AI 사본에 돌아온다(REQ-KNOW-022).
 9. 화면에서 지우면 수집 요청이 남는다.
 10. 열어 둔 화면의 교체: 동기화로 번호가 바뀐 뒤 옛 번호와 문서 이름으로 교체하면 현재 문서가 교체된다. 이름이 없거나 맞는 문서가 없으면 새로 고침 안내와 함께 400 이다. 다른 제품의 번호는 지금처럼 거절한다.
@@ -10599,7 +10602,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-DEPLOY-004 | `deploy/nginx/qa-platform.conf` | TEST-DEPLOY-001: `tests/test_serve_bind.py` | implemented |
 | REQ-SYNC-001 | `app/modules/knowledge/vxvue_spec_sync.py`, `scripts/sync_vxvue_spec.py`, `config/products/vxvue.yaml` | TEST-SYNC-001: `tests/test_vxvue_spec_sync.py`, `tests/test_sync_vxvue_spec_cli.py`, `tests/test_knowledge_screens.py` | implemented |
 | REQ-SYNC-003 | `app/modules/knowledge/srs_crawler/pipeline.py`, `app/modules/knowledge/srs_crawler/publish.py`, `scripts/collect_srs_spec.py`, `config/srs-crawler.yaml`, `app/modules/knowledge/srs_crawler/problem_state.py`, `scripts/install_srs_schedule.ps1` | TEST-SYNC-003: `tests/test_srs_crawler.py`, `tests/srs_crawler/test_richtext.py`, `tests/srs_crawler/test_render_recovery.py`, `tests/srs_crawler/test_validate.py` | verified |
-| REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py` | verified |
+| REQ-SYNC-002 | `app/core/knowledge_push.py`, `app/core/knowledge_upload.py`, `scripts/retry_product_knowledge.py`, `scripts/install_product_knowledge_schedule.ps1`, `scripts/run_scheduled_python.py`, `app/core/knowledge_retry.py` | TEST-SYNC-002: `tests/test_knowledge_upload.py`, `tests/test_knowledge_sync_integrity.py`, `tests/test_product_knowledge_retry.py`, `tests/test_product_knowledge_retry_script.py`, `tests/test_hidden_schedule.py` | verified |
 | REQ-SYNC-004 | `app/core/knowledge_push.py`, `app/modules/knowledge/router.py`, `app/core/knowledge_registry.py` | TEST-SYNC-004: `tests/test_knowledge_pull.py` | verified |
 | NFR-SEC-002 | `app/core/config.py`, `app/core/secrets_loader.py`, `app/core/notifier.py`, `scripts/deploy.ps1` | TEST-SEC-002: `tests/test_secrets_file.py` | implemented |
 | NFR-SEC-003 | `app/core/knowledge_upload.py`, `app/core/uploads.py`, `app/modules/knowledge/router.py` | TEST-SEC-003: `tests/test_knowledge_upload.py` | implemented |

@@ -95,7 +95,7 @@ def test_registration_leaves_an_ai_refresh_request(env):
     body = response.json()
     assert body["status"] == "DONE"
     assert body["ai_refresh"]["status"] == "REQUESTED"
-    assert "1분 안에" in body["ai_refresh"]["detail"]
+    assert "5분 주기" in body["ai_refresh"]["detail"]
     pending = env.client.get("/knowledge/product-knowledge/request", params={"product": "VXvue"}).json()
     assert pending["requested_at"] == body["ai_refresh"]["requested_at"]
 
@@ -203,7 +203,7 @@ def test_bellalun_installer_registers_a_minute_request_task():
     text = (ROOT / "scripts" / "install_bellalun_shared_schedule.ps1").read_text(encoding="utf-8-sig")
     assert "$requestName = 'Bellalun_SharedKnowledge_Request'" in text
     assert "$requestArguments = $arguments + ' --only-when-requested'" in text
-    assert "-RepetitionInterval (New-TimeSpan -Minutes 1)" in text
+    assert "-RepetitionInterval (New-TimeSpan -Minutes 5)" in text
     assert "-MultipleInstances IgnoreNew" in text
 
 

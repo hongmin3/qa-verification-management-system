@@ -105,12 +105,12 @@ def collect_product_knowledge(slug: str):
         return _sync_now(config)
     requested_at = request_collect(config.product)
     return {"status": "REQUESTED", "requested_at": requested_at,
-            "detail": "수집 요청을 남겼습니다. 담당자 PC 가 1분 안에 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다."}
+            "detail": "수집 요청을 남겼습니다. 담당자 PC 가 5분 주기로 요청을 확인한 뒤 지식 폴더를 올립니다. 끝나면 화면이 저절로 새로 고쳐집니다."}
 
 
 @router.get("/knowledge/product-knowledge/request")
 def collect_request_state(product: str):
-    """담당자 PC 가 1분마다 묻는 남은 수집 요청 (REQ-KNOW-021). 없으면 `requested_at` 이 빈 문자열이다."""
+    """담당자 PC 가 5분마다 묻는 남은 수집 요청 (REQ-KNOW-021). 없으면 `requested_at` 이 빈 문자열이다."""
     product = product.strip()
     config = resolve_config(product)
     name = config.product if config else product
@@ -122,7 +122,7 @@ def _owned_dirs() -> list[Path]:
     return [settings.path("storage.specification_dir"), settings.path("storage.testcase_dir")]
 
 
-AI_REFRESH_REQUESTED = ("AI 연결 반영을 요청했습니다. 담당자 PC 가 1분 안에 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 "
+AI_REFRESH_REQUESTED = ("AI 연결 반영을 요청했습니다. 담당자 PC 가 5분 주기로 요청을 확인한 뒤 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 "
                         "'반영됨'으로 바뀝니다.")
 AI_REFRESH_DIRECT = "AI 연결이 서버 등록본을 바로 읽습니다."
 AI_REFRESH_NO_UPLOADER = ("이 제품은 지식 사본을 올리는 담당자 PC 설정이 없습니다. 지식 폴더 업로드를 따로 실행해야 "
