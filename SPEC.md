@@ -4540,7 +4540,7 @@ REQ-QAINTEL-019 가 대신한다.
 
   - 제품별 상태 판정(정상·주의·오류): REQ-KNOW-019
 
-  - 화면(현황판, 제품 상세, 설정된 제품만 쓰기, 파일 등록·교체, TC 열 지정, 내려받기·지우기): REQ-KNOW-001 ~ REQ-KNOW-005, REQ-KNOW-020, REQ-KNOW-024(등록 뒤 AI 사본 반영)
+  - 화면(현황판, 제품 상세, 설정된 제품만 쓰기, 파일 등록·교체, TC 열 지정, 내려받기·지우기): REQ-KNOW-001 ~ REQ-KNOW-005, REQ-KNOW-020, REQ-KNOW-024(등록 뒤 AI 사본 반영), REQ-KNOW-025(사람이 올리는 참고 자료)
 
   - 등록 문서를 분석에 넘기기와 파싱 결과 저장: REQ-KNOW-006, REQ-KNOW-007
 
@@ -5193,7 +5193,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 > **예시** `vxvue.yaml` 의 `specification.source` 는 `alm_crawler` 다. `allow_manual` 을 적지 않았다면 VXvue 사양서에는 업로드 버튼이 없고 업로드 주소도 409 로 거절한다. `bellalun-viewer.yaml` 은 `manual` 이라서 `새 문서 등록` 과 `교체` 가 보인다. 코드에는 두 제품 이름이 나오지 않는다.
 
-**입력** 제품 설정 파일(REQ-CONF-003)의 여섯 키다. 모두 같은 모양(`source`, `required`)이다.
+**입력** 제품 설정 파일(REQ-CONF-003)의 일곱 키다. 모두 같은 모양(`source`, `required`)이다.
 
 | 키 | 자료 종류 | `source` 기본값 | `required` 기본값 |
 |---|---|---|---|
@@ -5203,6 +5203,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 | `qa_rules` | QA 규칙 | `knowledge_folder` | 예 |
 | `instruction_prompt` | 지침 프롬프트 | `knowledge_folder` | 아니오 |
 | `release_note` | 릴리즈노트 | `knowledge_folder` | 아니오 |
+| `reference` | 참고 자료 | `manual`(바꿀 수 없음) | 아니오 |
 
 이유: 일일 QA 점검은 최신 사양서·TC·QA 규칙을 분석 자료로 쓴다. 매뉴얼·지침 프롬프트·릴리즈노트는 없는 제품도 있다. 단일 이슈 분석의 G1 관문은 사용을 종료했다.
 
@@ -5222,7 +5223,7 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 
 | `source` | 화면 등록·교체 | 등록 주소가 받는 요청 | 지우기 | 상태 판정이 보는 동기화 기록 |
 |---|---|---|---|---|
-| `manual` | 보인다(사양서·매뉴얼·TC·릴리즈노트만) | `source` 를 보내지 않았거나 `manual` 인 요청 | 된다 | 그 종류가 수집 기록에 있을 때 지식 폴더 기록 |
+| `manual` | 보인다(사양서·매뉴얼·TC·릴리즈노트·참고 자료만) | `source` 를 보내지 않았거나 `manual` 인 요청 | 된다 | 그 종류가 수집 기록에 있을 때 지식 폴더 기록 |
 | `alm_crawler` | 없다 | `source=alm_crawler` 를 보낸 요청(사양서 동기화)만 | `source=alm_crawler` 일 때만 | 그 종류 이름의 동기화 기록과, 수집 기록에 그 종류가 있으면 지식 폴더 기록 |
 | `external_sync` | 없다 | `source=external_sync` 를 보낸 요청만 | `source=external_sync` 일 때만 | 위와 같다 |
 | `knowledge_folder` | 없다 | 받지 않는다(지식 폴더 업로드 확정만 등록한다) | 되지 않는다 | 지식 폴더 기록(`product_knowledge`) |
@@ -5240,7 +5241,8 @@ cron 매일 14:15(서버 시간) -> 백업 ZIP -> 지문·DB 검사 확인
 - 공통 Knowledge 코드(`app/core/knowledge_*.py`, `app/core/product_knowledge.py`, `app/modules/knowledge/`)에 제품 이름으로 나뉘는 조건문을 두지 않는다.
 - 같은 뜻의 값을 두 곳에 적지 않는다. 사양서 출처는 예전부터 있던 `specification.source` 를 그대로 쓴다.
 - 지식 폴더 수집(REQ-KNOW-011, REQ-SYNC-002)은 출처와 관계없이 폴더에 있는 자료를 등록한다. VXvue 사양서처럼 ALM 산출물이 지식 폴더를 거쳐 오는 경우도 자동 경로로 본다.
-- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서는 `.pdf`·`.docx`·`.xlsx`, 매뉴얼·릴리즈노트는 `.pdf`·`.docx`, TC 는 `.xlsx` 다.
+- 업로드할 수 있는 파일 형식은 파서가 정한다. 사양서는 `.pdf`·`.docx`·`.xlsx`, 매뉴얼·릴리즈노트는 `.pdf`·`.docx`, TC 는 `.xlsx`, 참고 자료는 `.pdf`·`.docx`·`.xlsx`·`.md`·`.txt` 다.
+- 참고 자료(`reference`)는 사람이 화면에서 올린 등록만 받는다(REQ-KNOW-025).
 
 ### REQ-KNOW-019 제품별 Knowledge 상태 판정
 
@@ -5514,6 +5516,45 @@ JSON 응답(REQ-KNOW-020)에는 `ai_refresh`(`status`: `REQUESTED`·`NO_UPLOADER
 3. 찾지 못하면 "교체할 문서를 찾을 수 없습니다. 화면을 연 뒤 문서가 바뀌었을 수 있습니다. 화면을 새로 고친 뒤 다시 교체하세요." 를 보인다(400).
 
 > **주의** 번호의 문서가 있는데 다른 제품이나 다른 종류이면 지금처럼 거절한다. 이름으로 대신 찾는 것은 번호의 문서가 없어졌을 때뿐이다.
+
+### REQ-KNOW-025 사람이 올리는 참고 자료
+
+**하는 일** 사양서·매뉴얼·릴리즈노트 어디에도 맞지 않는 자료를 담당자가 화면에서 형식 제한 없이 올린다. 올린 자료는 VXvue AI 챗봇과 공용 AI 연결이 다른 문서처럼 검색한다.
+
+> **예시** 담당자가 다운로드 폴더의 `VSS.Vieworks_Spec.md`(VSS 장치 항목 표)를 VXvue 상세 화면 `참고 자료` 구역의 `새 문서 등록` 으로 올린다. 이름 규약을 맞추지 않아도 등록되고, 공용 AI 연결의 문서 검색에 바로 나온다.
+
+| 용어 | 뜻 |
+|---|---|
+| 참고 자료(`reference`) | 사람이 화면에서 올린 등록만 인정하는 자료 종류 |
+
+**언제** 제품 설정에서 이 구역을 보이게 한 제품(`reference.hidden: false`)의 상세 화면에서 담당자가 등록·교체·삭제할 때.
+
+**입력** `.pdf`·`.docx`·`.xlsx`·`.md`·`.txt` 파일 하나. 파일 이름 규약(REQ-KNOW-008)은 보지 않는다.
+
+**순서**
+
+1. 제품 상세 화면에서 이 구역은 `릴리즈노트` 와 `QA 규칙` 사이에 보인다.
+2. 담당자는 등록 주소(`POST /knowledge/products/<slug>/documents`, `kind=reference`)로 올린다. 등록 판단(`registration_refusal`)은 출처를 밝히지 않았거나 `manual` 인 요청만 받고, 다른 출처를 밝힌 요청은 409 로 거절한다.
+3. 파일 이름이 다른 종류의 규약에 맞아도 거절하거나 "종류 확인 요청" 으로 보지 않는다.
+4. 등록·교체·이전 판 정리는 REQ-KNOW-003·004·023 과 같다. 같은 이름의 새 파일을 올리면 이전 등록을 뺀다.
+5. `.md`·`.txt` 는 UTF-8 글로 읽는다. 읽을 수 있는 글이 없으면 REQ-KNOW-003 의 "파일을 읽지 못해 등록하지 않았습니다." 로 거절한다.
+
+**결과**
+
+- 문서 표에 등록되고 VXvue AI 챗봇(REQ-VXCHAT 계열)이 등록본을 검색한다.
+- 공용 AI 연결은 지식 사본(manifest)과 함께 서버의 참고 자료 등록본을 읽는다. 그래서 `AI 반영` 칸은 원본 파일이 있으면 바로 `반영됨` 이다.
+- 등록 뒤 수집 요청(REQ-KNOW-024)을 남기지 않는다. 결과 안내는 "AI 연결이 서버 등록본을 바로 읽습니다." 다.
+
+**설정** 제품 설정의 `reference` 키. 기본값은 `hidden: true` 다. `source` 는 어떤 값을 적어도 `manual` 로 본다. `required` 기본값은 아니오다.
+
+이유: 이 구역을 쓰지 않는 제품의 화면과 상태 판정을 바꾸지 않는다. 공용 AI 연결에 서버 등록본을 읽는 길이 있는 제품만 켠다.
+
+**지킬 것**
+
+- 지식 폴더 수집·업로드(REQ-KNOW-011, REQ-SYNC-002)는 이 종류를 만들거나 지우지 않는다. 폴더에 같은 이름의 파일이 있어도 참고 자료 등록을 건드리지 않는다.
+- 담당자 PC 가 내려받는 화면 등록본 목록(REQ-SYNC-004)에 참고 자료를 넣지 않는다.
+
+이유: 사람이 직접 올린 것만 참고 자료로 인정한다. 지식 폴더로 내려가면 다음 업로드에서 이름 규약에 따라 다른 종류로 분류될 수 있다.
 
 ### REQ-CONF-001 설정 파일 읽기
 
@@ -9805,6 +9846,24 @@ python -m pytest tests/test_knowledge_ai_refresh.py -q
 
 사람이 확인하는 절차: 배포 뒤 운영 화면에서 문서를 교체하고, 2분 안에 `AI 반영` 칸이 반영됨으로 바뀌며 `get_status` 의 그 문서 sha256 이 새 파일과 같은지 본다.
 
+### TEST-KNOW-012
+
+REQ-KNOW-025 를 `tests/test_knowledge_reference.py` 로 확인한다. 설정·DB·업로드 폴더·AI 사본은 모두 임시 폴더다. 운영 서버를 부르지 않는다.
+
+1. VXvue 상세 화면에 `참고 자료` 구역이 `릴리즈노트` 와 `QA 규칙` 사이에 있고 `새 문서 등록` 이 보인다. 설정을 적지 않은 제품에는 구역이 없다.
+2. 이름 규약 없는 `.md` 를 올리면 등록되고, 본문 글이 파싱 저장본에 남는다. 응답의 `ai_refresh.status` 는 `DIRECT` 이고 수집 요청 파일을 만들지 않는다.
+3. `(사양서)` 로 시작하는 이름도 참고 자료로 받고 "종류 확인 요청" 으로 보지 않는다.
+4. 등록 판단(`check_request`, `registration_refusal`)은 `alm_crawler`·`knowledge_folder`·`external_sync` 를 밝힌 요청을 409 로 거절한다. 설정에 `source: knowledge_folder` 를 적은 제품도 출처를 `manual` 로 보고 화면 등록을 받는다.
+5. 지식 폴더 업로드는 `reference` 종류를 거절하고, 폴더 수집 등록(`register_collected`)은 같은 이름·같은 바이트의 폴더 파일이 있어도 참고 자료 등록을 지우지 않는다.
+6. 담당자 PC 내려받기 목록에 참고 자료가 없다.
+7. 공용 AI 연결의 문서 목록(`ManifestDocuments`)과 VXvue 챗봇 종류 목록에 참고 자료 등록본이 들어가고, 제품 상세의 `AI 반영` 칸이 `반영됨` 이다.
+
+```text
+python -m pytest tests/test_knowledge_reference.py -q
+```
+
+사람이 확인하는 절차: 배포 뒤 VXvue 상세 화면에서 `.md` 파일을 참고 자료로 올리고, 공용 AI 연결 `search_documents` 결과에 그 문서가 나오는지 본다.
+
 ### TEST-CONF-001
 
 REQ-CONF-002 와 REQ-WEB-004 를 `tests/test_secrets_file.py` 로 확인한다: 줄 형식·키만 있는 한 줄·따옴표·CRLF, 별칭, 모르는 키 무시, JSON 과 깨진 JSON, 자리표시 값은 없는 값, 우선순위(환경변수 > json > txt > .env), 앞 출처가 비면 다음으로, BOM, 파일 없음, 상태에 Key 가 나오지 않음, `/config/status` 응답에 Key 가 없음.
@@ -10498,6 +10557,7 @@ Docker Compose 실행을 사람이 확인한다(REQ-HUBOPS-012).
 | REQ-KNOW-022 | `app/core/storage.py`, `app/modules/knowledge/router.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_upload.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py`, TEST-KNOW-011: `tests/test_knowledge_ai_refresh.py` | verified |
 | REQ-KNOW-023 | `app/core/knowledge_registry.py`, `app/modules/knowledge/router.py` | TEST-KNOW-009: `tests/test_knowledge_manual_spec.py` | verified |
 | REQ-KNOW-024 | `app/modules/knowledge/router.py`, `app/core/knowledge_status.py`, `app/core/knowledge_upload.py`, `app/modules/knowledge/templates/product.html`, `app/core/knowledge_retry.py`, `scripts/sync_bellalun_shared.py`, `scripts/install_bellalun_shared_schedule.ps1` | TEST-KNOW-011: `tests/test_knowledge_ai_refresh.py` | verified |
+| REQ-KNOW-025 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `app/core/knowledge_registry.py`, `app/core/knowledge_status.py`, `app/modules/knowledge/router.py`, `app/parsers/document_parser.py`, `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/vxvue_chatbot/desktop.py`, `config/products/vxvue.yaml` | TEST-KNOW-012: `tests/test_knowledge_reference.py` | verified |
 | REQ-CONF-001 | `app/core/config.py`, `config.yaml` | TEST-CONF-003, `tests/test_backup.py`, `tests/test_config_local.py` | implemented |
 | REQ-CONF-002 | `app/core/secrets_loader.py`, `app/core/config.py` | TEST-CONF-001: `tests/test_secrets_file.py` | implemented |
 | REQ-CONF-003 | `app/core/product_config.py`, `app/core/product_knowledge.py`, `config/products/vxvue.yaml`, `config/products/bellalun-viewer.yaml` | TEST-CONF-002: `tests/test_product_config.py` | implemented |

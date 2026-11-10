@@ -37,7 +37,7 @@ from pathlib import Path
 from app.core.config import get_settings
 from app.core.product_config import ProductConfig
 
-# 자산 종류. `documents` 테이블에 등록되는 것은 specification / manual / testcase / release_note 넷이고,
+# 자산 종류. `documents` 테이블에 등록되는 것은 specification / manual / testcase / release_note / reference 다섯이고,
 # qa_rules / instruction_prompt 는 app/core/qa_rules.py 가 읽는 규칙 자산이다.
 KIND_SPECIFICATION = "specification"
 KIND_MANUAL = "manual"
@@ -47,9 +47,13 @@ KIND_INSTRUCTION_PROMPT = "instruction_prompt"
 KIND_SKILL_INSTRUCTION = "skill_instruction"
 # 제품 릴리즈노트. 화면에서 관리하고 챗봇이 검색한다. 사양서·TC 를 읽는 분석은 읽지 않는다.
 KIND_RELEASE_NOTE = "release_note"
+# 사람이 화면에서 올린 참고 자료. 파일명 규약이 없어 지식 폴더 수집은 이 종류를 만들지도 지우지도 않는다 (REQ-KNOW-025).
+KIND_REFERENCE = "reference"
 KIND_UNKNOWN = "unknown"
 
-REGISTERABLE_KINDS = (KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE, KIND_RELEASE_NOTE)
+REGISTERABLE_KINDS = (KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE, KIND_RELEASE_NOTE, KIND_REFERENCE)
+#: 지식 폴더와 주고받는 등록 종류. 참고 자료는 서버에만 둔다.
+FOLDER_KINDS = (KIND_SPECIFICATION, KIND_MANUAL, KIND_TESTCASE, KIND_RELEASE_NOTE)
 RULE_KINDS = (KIND_QA_RULES, KIND_INSTRUCTION_PROMPT)
 
 # 같은 논리 문서에 여러 형식이 있으면 이 순서로 하나만 고른다. 원본(PDF/DOCX/XLSX)이
@@ -664,7 +668,7 @@ def _is_same_file(document_path: str, asset: dict) -> bool:
         return False
 
 
-def register_collected(product: str, storage=None, root: Path | None = None, kinds: tuple[str, ...] = REGISTERABLE_KINDS) -> RegisterOutcome:
+def register_collected(product: str, storage=None, root: Path | None = None, kinds: tuple[str, ...] = FOLDER_KINDS) -> RegisterOutcome:
     """수집된 자산을 `documents` 테이블에 등록해 분석 대상으로 만든다.
 
     수집(파일 복사)만으로는 분석에 쓰이지 않는다 — `Storage.active_documents` 가 보는 것은
@@ -691,8 +695,9 @@ def register_collected(product: str, storage=None, root: Path | None = None, kin
 
     # 종류가 어긋나게 등록된 문서까지 보려면 전 종류를 함께 본다 (매뉴얼이 specification 으로
     # 등록돼 있는 실제 사례가 있었다).
+    # 참고 자료는 사람이 올린 등록만 인정하므로 폴더 수집이 지우거나 대체하지 않는다 (REQ-KNOW-025).
     existing_all: list[dict] = []
-    for kind in REGISTERABLE_KINDS:
+    for kind in FOLDER_KINDS:
         for document in storage.active_documents(kind, product):
             existing_all.append({**document, "kind": kind})
 

@@ -27,10 +27,12 @@ _SOURCE_ALIASES = {"alm": SOURCE_ALM}
 
 # 자료 종류. 값은 `app/core/product_knowledge.KIND_*` 와 같다 (이 모듈이 그 모듈을 import 하면
 # 순환이 생겨 문자열로 둔다). 순서가 화면 순서다.
-ASSET_KINDS = ("specification", "testcase", "manual", "release_note", "qa_rules", "instruction_prompt", "skill_instruction")
+ASSET_KINDS = ("specification", "testcase", "manual", "release_note", "reference", "qa_rules", "instruction_prompt", "skill_instruction")
 # 사람이 화면에서 올릴 수 있는 종류. 규칙 자산은 규칙 로더가 수집 기록만 읽으므로 뺀다.
-UPLOADABLE_KINDS = ("specification", "testcase", "manual", "release_note")
-DEFAULT_REQUIRED = {"specification": True, "testcase": True, "manual": False, "release_note": False, "qa_rules": True, "instruction_prompt": False, "skill_instruction": False}
+UPLOADABLE_KINDS = ("specification", "testcase", "manual", "release_note", "reference")
+# 사람이 화면에서 올린 등록만 인정하는 종류. 설정의 `source` 와 관계없이 `manual` 로 본다 (REQ-KNOW-025).
+PERSON_ONLY_KINDS = ("reference",)
+DEFAULT_REQUIRED = {"specification": True, "testcase": True, "manual": False, "release_note": False, "reference": False, "qa_rules": True, "instruction_prompt": False, "skill_instruction": False}
 
 
 def normalize_source(value: str) -> str:
@@ -53,6 +55,11 @@ class KnowledgeAssetSource(BaseModel):
 
 def _folder_source() -> KnowledgeAssetSource:
     return KnowledgeAssetSource(source=SOURCE_FOLDER)
+
+
+def _reference_source() -> KnowledgeAssetSource:
+    """참고 자료는 켠 제품에만 보인다 (REQ-KNOW-025)."""
+    return KnowledgeAssetSource(source=SOURCE_MANUAL, hidden=True)
 
 
 class SpecificationSyncConfig(KnowledgeAssetSource):
@@ -197,6 +204,7 @@ class ProductConfig(BaseModel):
     testcase: TestCaseSyncConfig = Field(default_factory=TestCaseSyncConfig)
     manual: KnowledgeAssetSource = Field(default_factory=_folder_source)
     release_note: KnowledgeAssetSource = Field(default_factory=_folder_source)
+    reference: KnowledgeAssetSource = Field(default_factory=_reference_source)
     qa_rules: KnowledgeAssetSource = Field(default_factory=_folder_source)
     instruction_prompt: KnowledgeAssetSource = Field(default_factory=_folder_source)
     skill_instruction: KnowledgeAssetSource = Field(default_factory=_folder_source)
@@ -215,6 +223,8 @@ class ProductConfig(BaseModel):
         return getattr(self, kind)
 
     def source_of(self, kind: str) -> str:
+        if kind in PERSON_ONLY_KINDS:
+            return SOURCE_MANUAL
         return normalize_source(self.asset_source(kind).source)
 
     def is_required(self, kind: str) -> bool:
@@ -255,6 +265,7 @@ KIND_LABELS = {
     "testcase": "Test Case / Checklist",
     "manual": "Manual / Protocol",
     "release_note": "릴리즈노트",
+    "reference": "참고 자료",
     "qa_rules": "QA 규칙",
     "instruction_prompt": "지침 프롬프트",
     "skill_instruction": "Skill 지침",

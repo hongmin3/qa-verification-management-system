@@ -1,5 +1,11 @@
 # 진행 상태
 
+## 2026-11-10 사람이 올리는 참고 자료 구역 (REQ-KNOW-025)
+
+- 별도 작업 트리에서 `reference` 종류를 더했다. 화면 등록·교체·삭제, `.md`·`.txt` 파싱, 지식 폴더 수집과 PC 내려받기 제외, VXvue 챗봇·공용 AI 연결의 등록본 읽기를 연결했다.
+- 검증: `tests/test_knowledge_reference.py` 8 passed. 전체 시험은 2420 passed·16 skipped·2 failed다. 실패 2건(`tests/test_manual_review_shared.py` PDF 원본 경로)은 변경을 뺀 상태에서도 같은 `FileNotFoundError` 로 실패하는 Windows 임시 경로 문제다. 준비 검사 failed=0.
+- 게시·배포 보류: 다른 세션이 같은 `CHANGELOG.md`·`progress.md`·`docs/SPEC.html` 을 편집 중이고 서버는 그 세션의 재기동을 기다린다. 커밋은 `claude/knowledge-reference-20261110` 브랜치에만 했다. 운영 반영 때는 서버의 `config/products/vxvue.yaml` 에도 `reference: {hidden: false}` 를 더해야 화면에 보인다.
+
 ## 2026-11-10 작업별 QA 지침과 클린 PC 재개 자료 (REQ-VXVUECHATBOT-019·REQ-BELLALUNSHARED-005·006)
 
 - VXvue·Bellalun의 공통 섹션 선택·선행 규칙·목차·전문 호환과 보호 후 이어 읽기를 연결했다. 두 제품 모두 검증 메일 `mail`을 사용한다. 문서별 반복 정보와 상태의 버전 언급 목록을 줄이고 기존 상세 조회도 유지한다.

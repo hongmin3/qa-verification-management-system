@@ -26,7 +26,7 @@ from app.core.knowledge_registry import (
 from app.core.knowledge_upload import UploadRejected
 from app.core.knowledge_upload import commit as commit_upload
 from app.core.knowledge_upload import server_state, store_asset
-from app.core.product_config import SOURCE_LABELS, SOURCE_MANUAL, can_manual_upload, normalize_source
+from app.core.product_config import PERSON_ONLY_KINDS, SOURCE_LABELS, SOURCE_MANUAL, can_manual_upload, normalize_source
 from app.core.product_knowledge import REGISTERABLE_KINDS, document_logical_key, load_manifest, resolve_config, scan_source, source_available, sync_and_register
 from app.core.storage import Storage
 from app.core.uploads import save_upload
@@ -124,6 +124,7 @@ def _owned_dirs() -> list[Path]:
 
 AI_REFRESH_REQUESTED = ("AI 연결 반영을 요청했습니다. 담당자 PC 가 1분 안에 지식 사본을 올리면 문서 표의 'AI 반영' 칸이 "
                         "'반영됨'으로 바뀝니다.")
+AI_REFRESH_DIRECT = "AI 연결이 서버 등록본을 바로 읽습니다."
 AI_REFRESH_NO_UPLOADER = ("이 제품은 지식 사본을 올리는 담당자 PC 설정이 없습니다. 지식 폴더 업로드를 따로 실행해야 "
                           "AI 연결에 반영됩니다.")
 
@@ -212,7 +213,8 @@ def _register(config, kind: str, file: UploadFile, replace_id: int | None, sourc
         return {"status": "NEEDS_MAPPING", "next": url} if as_json else RedirectResponse(url, status_code=303)
     except RegistrationError as exc:
         raise HTTPException(exc.status, exc.message)
-    refresh = _request_ai_refresh(config)
+    # 참고 자료는 AI 연결이 서버 등록본을 바로 읽어 수집 요청이 필요 없다 (REQ-KNOW-025).
+    refresh = {"status": "DIRECT", "detail": AI_REFRESH_DIRECT} if kind in PERSON_ONLY_KINDS else _request_ai_refresh(config)
     if as_json:
         saved = storage.get_document(outcome.document_id) or {}
         saved_path = Path(saved.get("path") or path)
@@ -486,8 +488,8 @@ def delete_document(document_id: int, source: str = Form(""), next: str = Form("
     if not source.strip() or normalize_source(source) == SOURCE_MANUAL:
         # 사람이 지운 이름은 지식 폴더 수집이 되살리지 않는다. 자동 출처의 옛 판 정리는 적지 않는다 (REQ-KNOW-022).
         storage.remember_deleted(document["product"], document["kind"], document["name"])
-        if config is not None:
-            # AI 사본에서도 빠지도록 담당자 PC 가 다시 올리게 한다 (REQ-KNOW-024).
+        if config is not None and document["kind"] not in PERSON_ONLY_KINDS:
+            # AI 사본에서도 빠지도록 담당자 PC 가 다시 올리게 한다 (REQ-KNOW-024). 참고 자료는 서버 등록본만 쓴다.
             _request_ai_refresh(config)
     path = Path(document["path"])
     if path.exists():

@@ -37,6 +37,12 @@ def extract_document_text(path: Path) -> str:
         return extract_docx_text(path)
     if suffix == ".xlsx":
         return "\n".join(text for _, _, _, text in _xlsx_rows(path))
+    if suffix in (".md", ".txt"):
+        # 참고 자료(REQ-KNOW-025)의 글 파일. UTF-8 이 아니면 읽지 못한 것으로 본다.
+        try:
+            return path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise ValueError(f"UTF-8 글 파일이 아닙니다: {path.name}") from exc
     raise ValueError(f"지원하지 않는 문서 형식입니다: {suffix}")
 
 

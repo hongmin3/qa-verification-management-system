@@ -18,6 +18,7 @@ from app.core.product_config import (
     ASSET_KINDS,
     AUTOMATIC_SOURCES,
     KIND_LABELS,
+    PERSON_ONLY_KINDS,
     SOURCE_ALM,
     SOURCE_EXTERNAL,
     SOURCE_FOLDER,
@@ -54,7 +55,8 @@ SOURCE_MESSAGES = {
 }
 #: 등록 부가 정보의 출처 → 문서 행의 출처 이름 (REQ-KNOW-020).
 DOCUMENT_SOURCE_LABELS = {"product_knowledge": "지식 폴더", SOURCE_ALM: "ALM 자동", SOURCE_EXTERNAL: "외부 자동화"}
-UPLOAD_ACCEPT = {"specification": ".pdf,.docx,.xlsx", "manual": ".pdf,.docx", "release_note": ".pdf,.docx", "testcase": ".xlsx"}
+UPLOAD_ACCEPT = {"specification": ".pdf,.docx,.xlsx", "manual": ".pdf,.docx", "release_note": ".pdf,.docx", "testcase": ".xlsx",
+                 "reference": ".pdf,.docx,.xlsx,.md,.txt"}
 
 
 @dataclass
@@ -182,6 +184,9 @@ def _ai_status(ctx: _Context, kind: str, document: dict, metadata: dict, exists:
     """
     if not ctx.manifest_assets:
         return ""
+    if kind in PERSON_ONLY_KINDS:
+        # 공용 AI 연결이 서버의 참고 자료 등록본을 바로 읽는다 (REQ-KNOW-025).
+        return "반영됨" if exists else "반영 대기"
     if str(metadata.get("source") or "") == "product_knowledge":
         return "반영됨"
     asset = ctx.manifest_by_name.get((kind, document["name"]))
