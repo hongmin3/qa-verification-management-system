@@ -81,11 +81,11 @@ Redmine은 실시간 원본이므로 문서 판(snapshot_id)을 받지 않는다
 
 REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이어 읽기·과거 전문 호환을 Bellalun에도 적용한다. `mail`을 포함한 같은 유형 선택을 제공하고 제품별 QA 원문과 자료 판은 분리한다.
 
-서버 배급에는 서버 연결용 Skill과 통합 QA 원문을 사용한다. 로컬 설치·실행·자동 자체검토 참조는 배급에서 제외하고 로컬 파일은 보존한다. 개별 자료 응답에 지침 전문을 반복하지 않으며 지침 도구로 조회한다. 응답 축약·열 선택은 같은 공통 코드와 검증을 사용한다.
+서버 배급에는 서버 연결용 Skill과 통합 QA 원문을 사용한다. 로컬 설치·실행·자동 자체검토 참조는 배급에서 제외하고 로컬 파일은 보존한다. 개별 자료 응답에 지침 전문을 반복하지 않으며 지침 도구로 조회한다. 응답 축약·열 선택은 같은 공통 코드와 검증을 사용한다. 서버 연결용 Skill은 Bellalun 작업의 기본 Skill이며 "벨라룬"이라는 호출도 받는다. 로컬 Skill은 사용자가 로컬 폴더·로컬 스크립트·로컬 Redmine 내보내기·Skill 원본 수정을 명시한 작업에만 쓴다.
 
 ### REQ-BELLALUNSHARED-006 클린 PC 작업 재개 자료
 
-코드·설치 절차·검증 방법은 Git에 게시하고 제품 원문·QA 원문·로컬 Skill·검증 기록은 서버에 보관한다. 로컬 Skill·별칭·연결 코드 묶음은 파일 목록과 SHA256을 포함하고 config·자격 증명·캐시·백업은 넣지 않는다. 새 PC에서는 경로와 Python을 새 환경에 맞추고 기존 파일이 다르면 덮어쓰지 않는다. 제품 원문과 내부 지침은 Git에 넣지 않는다.
+코드·설치 절차·검증 방법은 Git에 게시하고 제품 원문·QA 원문·로컬 Skill·검증 기록은 서버에 보관한다. 로컬 Skill·별칭·연결 코드 묶음은 파일 목록과 SHA256을 포함하고 config·자격 증명·캐시·백업은 넣지 않는다. 새 PC에서는 경로와 Python을 새 환경에 맞추고 기존 파일이 다르면 덮어쓰지 않는다. 제품 원문과 내부 지침은 Git에 넣지 않는다. PC에 설치된 서버 배포 Skill(`vxvue-ai`·`bellalun-server-ai`·`alm`·`plm`)은 서버 판을 기준으로 맞춘다. 내려받은 묶음은 쓰기 전에 Skill 폴더 밖 경로가 없는지 검사하고, ALM·PLM은 `current.json`→`manifest.json`→ZIP SHA256 연결을 확인한다. 바뀐 파일만 폴더 백업 뒤 원자적으로 쓰고 로컬에만 있는 파일은 지우지 않는다. 한 Skill의 실패가 다른 Skill 동기화를 막지 않는다.
 
 ## 11. 테스트 사양
 
@@ -109,7 +109,7 @@ REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이�
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
-| REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py` | verified |
+| REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `scripts/sync_server_skills.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py`, `tests/test_sync_server_skills.py` | verified |
 | REQ-BELLALUNSHARED-005 | `app/core/qa_workflow.py`, `app/modules/bellalun_shared/service.py`, `scripts/sync_bellalun_shared.py` | `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-002 | `app/modules/bellalun_shared/service.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/snapshot_files.py` | `tests/test_bellalun_shared.py`, `tests/test_vxvue_desktop.py`, `tests/test_xipl_shared.py`, `tests/test_snapshot_files.py` | verified |

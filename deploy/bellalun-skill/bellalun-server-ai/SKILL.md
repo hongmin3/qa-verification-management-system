@@ -1,12 +1,12 @@
 ---
 name: bellalun-server-ai
-description: Bellalun Viewer 사양·매뉴얼·TC·DICOM·Mammo 검증을 공용 QA 서버의 최신 자료와 통합 QA 지침으로 조사한다. 기존 VXvue AI 서버 연결의 bellalun_ 도구가 필요하다.
+description: Bellalun Viewer 사양·매뉴얼·TC·Issue·Redmine·DICOM·Mammo 검증의 기본 스킬이다. 사용자가 "벨라룬", "벨라룬 AI", "벨라룬 스킬"이라고 불러도 이 스킬을 쓴다. 공용 QA 서버의 최신 자료와 통합 QA 지침으로 조사하며 기존 VXvue AI 서버 연결의 bellalun_ 도구가 필요하다.
 ---
 
 # Bellalun 공용 서버 AI
 
 개인 PC 경로가 필요 없는 서버형 Bellalun Skill이다. 최신 업무 규칙은 서버에서 매번 받는다.
-기존 로컬 bellalun-ai와 별개이며 사용자가 서버 조회를 선택한 작업에 적용한다.
+Bellalun 작업의 기본 스킬이다. 로컬 bellalun-ai·bellalun-local-knowledge는 사용자가 로컬 지식 폴더·로컬 스크립트·로컬 Redmine 상세 내보내기·스킬 원본 수정을 명시한 작업에만 쓴다.
 
 1. 연결된 QA 서버(VXvue AI)의 `bellalun_get_status`에서 문서 목록·해시·추출 한계와 `snapshot_id`를 받는다. timeout이면 1초 간격 총 3회까지 시도한다. 실패하면 원인·확인사항을 알리고 중단하며 로컬 자료로 전환하기 전에 사용자에게 묻는다.
 2. `bellalun_get_workflow(snapshot_id=..., section="core")`로 공통 규칙과 목차를 읽고, 작업 유형(spec·tc·issue·doc·verify·release·mail·integ·auto·usage·meta)의 section을 선택해 선행 규칙까지 읽는다. 각 선택에서 truncated이면 같은 section과 next_offset으로 끝까지 읽는다. 복합 작업은 관련 유형을 모두 읽고 범위가 불명확하거나 지침 자체를 개편하면 section="full" 전문을 읽는다. 과거 판의 legacy_fallback이면 전문을 읽는다. 최신 원문·현재 요청을 적용하고 과거 판정을 재사용하지 않는다.

@@ -1,5 +1,10 @@
 # 변경 이력
 
+## 2026-11-10 서버 기준 Skill과 양방향 동기화
+
+- REQ-BELLALUNSHARED-005: 서버형 `bellalun-server-ai`를 Bellalun 기본 Skill로 두고 "벨라룬" 호출도 받게 했다. 로컬 Skill은 로컬 작업을 명시할 때만 쓴다.
+- REQ-BELLALUNSHARED-006: `scripts/sync_server_skills.py`가 Claude Code·Codex에 설치된 서버 배포 Skill 4개를 서버 판에 맞춘다. 묶음 경로와 ALM·PLM 해시 연결을 쓰기 전에 검증하고, 바뀐 파일만 백업 후 교체하며 로컬 전용 파일은 보존한다.
+
 ## 2026-11-10 신규 PC 동기화 담당 전환
 
 - REQ-BELLALUNSHARED-005: Bellalun 공통 지침 내보내기가 서버 연결 지침을 LF로 맞춰 읽는다. `core.autocrlf` 체크아웃에서 내용이 같은데도 서버 Skill 동기화본과 원본 해시가 바뀌던 결함을 고쳤다.

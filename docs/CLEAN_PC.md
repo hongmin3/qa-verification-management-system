@@ -65,6 +65,19 @@ node .project-check/project-readiness.js .
 
 로컬 Redmine 조회가 필요하면 본인 계정의 읽기 권한으로 `config/redmine.json`을 새로 설정한다. 기존 서버 인증을 쓰는 공용 Redmine 도구와 별개다. 공용 연결만으로 가능한 작업에는 개인 키를 만들 필요가 없다.
 
+## 서버 기준 Skill과 동기화
+
+Claude Code·Codex에 설치된 서버 배포 Skill(`vxvue-ai`, `bellalun-server-ai`, `alm`, `plm`)은 서버 판이 기준이다. "벨라룬"이라고만 불러도 서버형 `bellalun-server-ai`를 쓰고, 로컬 `bellalun-ai`·`bellalun-local-knowledge`는 로컬 폴더·로컬 스크립트·로컬 Redmine 내보내기·Skill 원본 수정을 명시할 때만 쓴다.
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 scripts/sync_server_skills.py --server http://<QA_HOST>:<포트> --check
+.\.venv\Scripts\python.exe -X utf8 scripts/sync_server_skills.py --server http://<QA_HOST>:<포트>
+```
+
+`--check`는 쓰지 않고 바뀐 파일만 알린다. 실제 실행은 `~/.claude/skills`와 `~/.codex/skills`의 바뀐 파일만 백업(`~/.local/state/qa-skill-sync/backups/`) 뒤 교체하고 로컬에만 있는 파일은 지우지 않는다. 결과는 `~/.local/state/qa-skill-sync/last-result.json`에 남는다. 서버 Skill은 자주 바뀌지 않으므로 Windows 예약 `QA_ServerSkills_Sync`가 로그온 때와 매일 09:55에 한 번 실행한다. Claude Desktop에 ZIP으로 올린 Skill은 앱 안에 저장되므로 이 도구가 바꾸지 않는다. 서버 안내 화면에서 새 판을 받아 다시 올린다.
+
+반대 방향(로컬 → 서버)은 두 경로다. 제품 원문과 Bellalun 통합 QA 지침은 동기화 담당 PC의 예약이 매일 올리고, 서버 화면의 수집 요청은 1분 안에 처리한다. 로컬 통합 QA 지침(`references/bellalun-qa-guide.md`)을 `bellalun_update_skill_file`이나 종료 전 자체검토(`applied`)로 고치면 그 순간 `Bellalun_SharedKnowledge_Sync`를 한 번 시작한다. 변경을 감시하는 추가 반복 실행은 두지 않는다.
+
 ## 기존 예약을 복원한 경우
 
 VXvue의 `QA_ProductKnowledge_Sync`는 버전별 Worker 폴더의 코드 사본을 실행한다. Git을 갱신해도 기존 예약의 사본은 바뀌지 않는다. 예약 XML을 복원했다면 인계 ZIP의 `resume/update_context_worker.ps1`을 프로젝트 루트에서 실행해 Preview를 읽는다. 필요한 경우 관리자 PowerShell에서 같은 명령에 `-Apply`를 붙인다. 이 도구는 이전 XML을 백업하고 코드 동작만 바꾸며 시각·계정·설정이 같은지 재조회한다. 실행 중인 Worker가 있으면 종료될 때까지 기다린다.

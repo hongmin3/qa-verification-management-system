@@ -1,5 +1,11 @@
 # 진행 상태
 
+## 2026-11-10 서버 기준 Skill과 양방향 동기화 (REQ-BELLALUNSHARED-005·006)
+
+- 사용자 요청으로 서버형 `bellalun-server-ai`를 Bellalun 기본 Skill로 바꿨다. "벨라룬" 호출을 받도록 설명을 고치고 공용 서버 Skill 2026-11-10.3 ZIP과 안내·업데이트 화면을 갱신했다. 로컬 `bellalun-ai`·`bellalun-local-knowledge`와 로컬 연결 안내는 로컬 작업을 명시할 때만 쓰도록 백업 후 고쳤다.
+- 점검 결과 이 PC의 `vxvue-ai`·`bellalun-server-ai` 설치본이 서버보다 오래된 판이었다(섹션 선택·Bellalun Redmine 안내 누락). `scripts/sync_server_skills.py`로 Claude Code·Codex의 서버 배포 Skill 4개를 서버 판에 맞춘다. 경로 검사와 ALM·PLM 해시 연결 검증 뒤 바뀐 파일만 백업 후 교체한다. 회귀 시험 9개를 먼저 작성했다.
+- 로컬 → 서버 반영은 1분 감시를 추가하지 않고, 서버로 내보내는 통합 QA 지침이 `bellalun_update_skill_file`이나 자체검토 `applied`로 바뀐 순간 기존 Bellalun 업로드 예약을 한 번 시작하게 했다. 기존 1분 요청 예약 1회 실행은 약 0.8초였고, 감시를 더하면 0.04초가 늘어났지만 변경 시점이 정해져 있어 감시 대신 이 방식을 택했다.
+
 ## 2026-11-10 신규 PC 동기화 담당 전환과 예약 활성화 (REQ-BELLALUNSHARED-005·006)
 
 - 사용자가 이전 PC 예약 중지와 이 PC로의 동기화 담당 전환을 승인했다. 관리자로 설치해 둔 `QA_ProductKnowledge_Sync`·`Bellalun_SharedKnowledge_Sync`·`Bellalun_SharedKnowledge_Request`의 실행 파일·인수·시작 위치·계정·트리거를 재조회하고 Worker 4개 파일 SHA256이 저장소 `791e144`와 같음을 확인했다.
