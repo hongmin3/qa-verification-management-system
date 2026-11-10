@@ -257,3 +257,23 @@ def test_bellalun_download_contains_portable_skill(shared):
     with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
         assert archive.namelist() == dynamic.namelist()
         assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())
+
+
+def test_bellalun_export_ignores_adapter_checkout_line_endings(tmp_path, monkeypatch):
+    """A CRLF checkout (core.autocrlf) must not change the exported server document."""
+    import scripts.sync_bellalun_shared as sync
+    skill = tmp_path / 'skill'; (skill / 'references').mkdir(parents=True)
+    (skill / 'SKILL.md').write_text('# Skill\n', encoding='utf8')
+    (skill / 'references/investigation.md').write_text('# 조사\n', encoding='utf8')
+    (skill / 'references/bellalun-qa-guide.md').write_text('# 통합 QA\nQA_UNIQUE', encoding='utf8')
+    text = sync.ADAPTER.read_bytes().replace(b'\r\n', b'\n')
+    digests = []
+    for name, data in (('lf', text), ('crlf', text.replace(b'\n', b'\r\n'))):
+        adapter = tmp_path / name / 'SKILL.md'; adapter.parent.mkdir()
+        adapter.write_bytes(data)
+        monkeypatch.setattr(sync, 'ADAPTER', adapter)
+        target = tmp_path / f'knowledge-{name}'; target.mkdir()
+        result = sync.export_common_skill(skill, target)
+        assert b'\r\n' not in Path(result['path']).read_bytes()
+        digests.append((result['sha256'], result['files']))
+    assert digests[0] == digests[1]

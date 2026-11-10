@@ -12,6 +12,12 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 MARKER = '<!-- bellalun-common-export:v1 -->\n'
+ADAPTER = Path(__file__).resolve().parents[1] / 'deploy/bellalun-skill/bellalun-server-ai/SKILL.md'
+
+
+def _read_adapter():
+    # A core.autocrlf checkout must not change the exported server document or its hashes.
+    return ADAPTER.read_bytes().replace(b'\r\n', b'\n')
 
 
 def _write(path, data):
@@ -51,8 +57,7 @@ def export_common_skill(skill_root, knowledge_root, backup_root=None):
     body = '# Bellalun 공통 Skill 동기화본\n\n원본의 로컬 명령은 서버 연결에서 실행하지 않는다. 서버 도구 지침을 우선한다.\n'
     # Local install/retrieval/review references are not executable on the server.
     # Keep them intact locally and export the maintained server connector instead.
-    adapter = Path(__file__).resolve().parents[1] / 'deploy/bellalun-skill/bellalun-server-ai/SKILL.md'
-    adapter_data = adapter.read_bytes()
+    adapter_data = _read_adapter()
     body += '\n\n## 서버 연결 지침\n' + adapter_data.decode('utf-8-sig')
     records = [r for r in records if r['path'] == 'references/bellalun-qa-guide.md']
     records.append({'path': 'server-adapter/SKILL.md', 'sha256': hashlib.sha256(adapter_data).hexdigest()})
@@ -69,7 +74,7 @@ def export_common_skill(skill_root, knowledge_root, backup_root=None):
                                 qa_target.read_text(encoding='utf-8-sig') if qa_target.exists() else None)
     if validation['errors']:
         raise ValueError('; '.join(validation['errors']))
-    if adapter.read_bytes() != adapter_data:
+    if _read_adapter() != adapter_data:
         raise ValueError('내보내기 도중 서버 연결 지침이 바뀌었습니다.')
     if qa_target.exists() and qa_target.read_bytes() != qa_data:
         backup = Path(backup_root or Path(__file__).resolve().parents[1] / 'data/bellalun_sync/backups')

@@ -1,5 +1,16 @@
 # 진행 상태
 
+## 2026-11-10 신규 PC 동기화 담당 전환과 예약 활성화 (REQ-BELLALUNSHARED-005·006)
+
+- 사용자가 이전 PC 예약 중지와 이 PC로의 동기화 담당 전환을 승인했다. 관리자로 설치해 둔 `QA_ProductKnowledge_Sync`·`Bellalun_SharedKnowledge_Sync`·`Bellalun_SharedKnowledge_Request`의 실행 파일·인수·시작 위치·계정·트리거를 재조회하고 Worker 4개 파일 SHA256이 저장소 `791e144`와 같음을 확인했다.
+- 활성화 전 로컬 수집 대상과 서버 목록을 `(종류, 파일명, SHA256)`으로 비교했다. VXvue 28=28, Bellalun 14=14, 서버에만 있는 파일 0건이라 정상 동기화의 정리 대상이 없었다. 사용자 환경변수 두 개가 이 PC 원문 폴더를 가리킨다.
+- Bellalun 내보내기를 임시 사본으로 미리 실행해 `core.autocrlf` 체크아웃에서 서버 연결 지침의 줄바꿈만 달라 서버 Skill 동기화본이 바뀌는 결함을 찾았다. 회귀 시험을 먼저 추가해 실패를 확인하고 연결 지침을 LF로 읽도록 고쳤다.
+- 세 예약을 켰다. VXvue는 예약 실행에서 SUCCESS(업로드 0건·서버 보유분 28건·정리 0건)였고, Bellalun 매일 예약은 수동 시작으로 종료 코드 0, 요청 확인 예약은 1분마다 종료 코드 0이었다. 활성화 후 서버 목록은 VXvue 28→28, Bellalun 14→14이고 삭제·추가가 없다. 바뀐 것은 줄바꿈을 정리한 `[Skill 지침] Bellalun Viewer.md` 1건이다.
+- Claude Desktop 설정을 백업한 뒤 `bellalun-ai` 항목만 병합했다(기존 `vxvue-ai`·환경설정 보존). Codex·Claude Code·Claude Desktop이 같은 연결 Python과 `server.py`를 가리키며, Claude Code의 두 Skill은 Codex 폴더에 junction으로 연결돼 있다. Claude Code에서 로컬 검색과 매뉴얼 원문 단위 조회, Codex에서 `bellalun_get_status` 실제 호출이 성공했다.
+- 설치된 로컬 Skill 시험의 지침 동기화 거부 시험은 새 무손실 guard(ValueError)가 먼저 거부해 실패했다. guard는 유지하고 두 거부 중 하나와 지식폴더 사본 미변경을 확인하도록 보완했다(로컬 Skill 시험 44 passed). 연결 시험은 20 passed·1 failed이며, 실패는 Codex에 Bellalun lifecycle hook이 설치되지 않은 환경 상태다. 요청 없는 hook은 추가하지 않았다.
+- 이 PC의 첫 전체 시험은 2418 passed·12 skipped·1 failed다. 실패한 `test_dashboard_sorting_in_http_browser`는 단독 2회와 변경 전 `791e144` 사본에서 통과해 전체 실행 부하의 브라우저 대기 실패로 분류했다. 처음 basetemp를 저장소 안이나 긴 경로로 준 실행은 Claude CLI 격리 검사와 Windows 경로 길이 제한으로 실패해 결과에서 제외하고 절차를 `docs/CLEAN_PC.md`에 적었다. 준비 검사는 failed=0이다.
+- 로컬 Redmine watch는 조건·주기가 정해지지 않아 등록하지 않았다. 원본 저장소의 이전 PC 미커밋 변경은 정리·커밋하지 않고 보존했다.
+
 ## 2026-11-10 작업별 QA 지침과 클린 PC 재개 자료 (REQ-VXVUECHATBOT-019·REQ-BELLALUNSHARED-005·006)
 
 - VXvue·Bellalun의 공통 섹션 선택·선행 규칙·목차·전문 호환과 보호 후 이어 읽기를 연결했다. 두 제품 모두 검증 메일 `mail`을 사용한다. 문서별 반복 정보와 상태의 버전 언급 목록을 줄이고 기존 상세 조회도 유지한다.
