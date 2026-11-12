@@ -1,5 +1,18 @@
 # 변경 이력
 
+## 2026-11-12 DK 연동 이슈(#25575) 작업 회고 반영 — 읽기 도구 보완과 PC 보조 스크립트
+
+- REQ-VXVUECHATBOT-021: `search_documents`·`find_testcases`·`get_document` 응답이 24,000자를 넘으면 근거 본문은 줄이지 않고 결과 건수만 줄여 `next_offset`으로 이어 읽게 했다. `find_testcases`에 `offset`을 추가했다.
+- REQ-VXVUECHATBOT-021: `get_document`의 `offset`이 결과 순번임을 도구 설명에 밝히고, DOCX 원본 문단 번호로 읽는 `paragraph_from`·`paragraph_to`를 추가했다.
+- REQ-VXVUECHATBOT-021: 문서 검색과 Redmine 제목 검색에 한영 동의어 확장을 추가했다. 묶음은 버키/Bucky/Receptor/리셉터, 재실행/restart/재기동/재시작, 유지/remember이며 `expand_synonyms=false`로 끈다.
+- REQ-VXVUECHATBOT-021: `get_workflow(section=<유형>, exclude_core=true)`로 이미 읽은 core·연결 안내를 빼고 읽을 수 있게 했다.
+- REQ-VXVUECHATBOT-020: 초안 검증 규칙을 의존성 없는 `redmine_draft_rules.py`로 분리했다. 보호 처리로 payload를 돌려주지 못하는 경우에도 `checks_passed`·`payload_source="pc"`로 규칙 검사 결과를 구분해 알린다.
+- PC 보조 스크립트 `scripts/vxvue_issue_tools/`를 추가했다.
+  - 영상 프레임·확대 추출
+  - 시간대가 맞는 로그 수집·공유 읽기 복사
+  - 연동 환경 정보 출력
+  - Redmine 등록: 기본은 시험 실행이며, 승인한 해시와 일치할 때만 실제 등록한다. Grade를 지정하지 않으면 C로 넣는다.
+
 ## 2026-11-12 Redmine 초안 응답 보완 운영 배포
 
 - REQ-VXVUECHATBOT-020: 초안 오류·응답 보호 시 전송 JSON과 해시를 생략하는 보완을 운영 서버에 배포했다. 서버 회귀 시험 22건, 실제 MCP의 해시 일치·보호 대상 거절·키 비노출과 주요 주소 7개의 HTTP 200을 확인했다. 다른 미배포 기능은 이번 범위에 포함하지 않았다.

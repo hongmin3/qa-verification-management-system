@@ -363,7 +363,29 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 **안 될 때** 검증 오류가 있거나 공용 연결의 보호 처리가 전송 내용을 바꾸면 `ok=false`와 오류 종류만 반환한다. 이때 `payload`와 `draft_sha256`은 반환하지 않는다. 공유 경로·IP·이메일 등이 포함된 초안도 이 제한을 따른다. 원문은 사용자 PC에서 관리하며, 응답 보호 예외를 추가하지 않는다.
 
+**검증 결과와 전송 내용 분리** 규칙 검사 결과는 `checks_passed`로 따로 돌려준다. 규칙 검사는 통과했지만 보호 처리 때문에 payload를 돌려주지 못하면 `ok=false`, `checks_passed=true`, `payload_source="pc"`를 반환한다. 이때 전송용 payload와 해시는 사용자 PC의 `scripts/vxvue_issue_tools/register_redmine_issue.py`가 만든다.
+
+이 스크립트는 서버와 같은 규칙 원본 `redmine_draft_rules.py`를 경로로 직접 읽으므로 같은 입력이면 같은 `draft_sha256`이 나온다. 규칙 원본은 외부 패키지나 패키지 상대 import를 쓰지 않는다.
+
+이유: 공유 경로가 들어간 초안은 모두 보호 대상이라, 검증 결과와 전송 내용을 한 필드에 묶으면 규칙 위반이 없어도 항상 실패로 보였다(2026-11-12 #25575 작업).
+
 **지킬 것** `ok=true`인 MCP 응답의 `draft_sha256`은 최종 반환 `payload`의 정규화 JSON과 일치한다. 정규화는 UTF-8, 키 정렬, 공백 없는 구분자와 원래 유니코드 문자로 수행한다. 민감정보를 탐지한 초안은 원문 값을 응답에 다시 담지 않는다.
+
+### REQ-VXVUECHATBOT-021 응답 크기·문단 범위·동의어·core 제외 읽기
+
+**하는 일** 공용 연결의 읽기 응답이 클라이언트에서 파일로 빠지거나 같은 지침을 다시 읽지 않게 한다.
+
+| 기능 | 동작 |
+|---|---|
+| 응답 크기 상한 | `compact=true`(기본)인 `search_documents`·`find_testcases`·`get_document` 응답이 24,000자를 넘으면 결과 건수만 줄인다. `truncated=true`·`next_offset`·`response_budget`으로 나머지를 이어 읽게 한다. 결과 1건이 상한보다 크면 그대로 반환하고 표시한다. |
+| 이어 읽기 | `find_testcases`도 `offset`을 받는다. |
+| 문단 범위 | `get_document`의 `offset`은 결과(구간) 순번이며 문단 번호가 아니라고 도구 설명에 적는다. DOCX 원본 문단 번호로 읽으려면 `paragraph_from`·`paragraph_to`(`location.paragraph`)를 쓴다. |
+| 한영 동의어 | `search_documents`·`find_testcases`(`match_mode=any`)는 동의어를 검색어에 덧붙이고 `synonym_expansion`에 남긴다. `search_redmine_issues` 제목 검색 첫 페이지는 단어 하나를 바꾼 변형 검색어 최대 3개를 더 검색해 합치고, 추가 결과에 `matched_query`를 단다. 묶음: 버키/Bucky/Receptor/리셉터, 재실행/restart/재기동/재시작, 유지/remember. `expand_synonyms=false`로 끈다. |
+| core 제외 | `get_workflow(section=<유형>, exclude_core=true)`는 core·머리 공통 문장·목차·연결 안내·Skill 지침을 빼고, 작업 유형과 core 외 선행 섹션만 반환한다. core·full과 함께 쓰면 오류다. |
+
+**지킬 것** 근거 본문·셀·해시·위치는 줄이지 않는다. 동의어 확장은 후보를 더할 뿐 원래 검색어 결과를 바꾸거나 지우지 않는다.
+
+이유: 2026-11-12 DK 연동 이슈 작업에서 `get_document`·`find_testcases` 응답이 65~92k자가 되어 파일로 빠졌다. `offset 2186`이 문단 3057을 돌려줬고, issue 섹션을 읽을 때마다 core가 다시 포함돼 약 6만 자를 다섯 번에 나눠 읽었다.
 
 ## 11. 테스트 사양
 
@@ -420,4 +442,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-017 | `app/modules/vxvue_chatbot/qa_protection.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_qa_protection.py`, `tests/test_vxvue_redmine.py` | implemented |
 
 | REQ-VXVUECHATBOT-018 | `app/modules/vxvue_chatbot/word_reports.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_word_reports.py` | implemented |
-| REQ-VXVUECHATBOT-020 | `app/modules/vxvue_chatbot/redmine_draft.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_redmine_draft.py` | implemented |
+| REQ-VXVUECHATBOT-020 | `app/modules/vxvue_chatbot/redmine_draft.py`, `app/modules/vxvue_chatbot/redmine_draft_rules.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py`, `scripts/vxvue_issue_tools/register_redmine_issue.py` | `tests/test_vxvue_redmine_draft.py`, `tests/test_vxvue_read_budget.py`, `tests/test_vxvue_issue_tools.py` | implemented |
+| REQ-VXVUECHATBOT-021 | `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/redmine.py`, `app/core/qa_workflow.py`, `app/core/qa_synonyms.py` | `tests/test_vxvue_read_budget.py` | implemented |

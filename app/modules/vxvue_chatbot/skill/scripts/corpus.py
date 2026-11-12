@@ -572,8 +572,15 @@ class Corpus:
                     'results': results,
                     'scope': scope, 'limitations': LIMITATIONS}
 
-    def get_document(self, document_id, section=None, offset=0, limit=10, context=0, columns=None):
+    def get_document(self, document_id, section=None, offset=0, limit=10, context=0, columns=None,
+                     paragraph_from=None, paragraph_to=None):
+        """offset은 결과(구간) 순번이다. DOCX 문단 번호로 읽으려면 paragraph_from/paragraph_to를 쓴다."""
         self.validate_pagination(limit, offset)
+        for name, value in (('paragraph_from', paragraph_from), ('paragraph_to', paragraph_to)):
+            if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 0):
+                raise ValueError(f'{name}는 0 이상의 정수입니다.')
+        if paragraph_from is not None and paragraph_to is not None and paragraph_to < paragraph_from:
+            raise ValueError('paragraph_to는 paragraph_from 이상입니다.')
         if columns is not None and (not isinstance(columns, list) or not 1 <= len(columns) <= 100
                 or any(not isinstance(c, str) or not re.fullmatch('[A-Z]{1,3}', c)
                        or sum((ord(ch)-64) * 26 ** i for i, ch in enumerate(reversed(c))) > 16384 for c in columns)):
@@ -601,6 +608,15 @@ class Corpus:
             if section:
                 condition += " AND (c.unit=? OR c.unit=? OR instr(lower(COALESCE(json_extract(c.metadata,'$.location.section'),'')),?)>0)"
                 params += [section, section.removeprefix(doc_id + '::'), normalize(section)]
+            if paragraph_from is not None or paragraph_to is not None:
+                # DOCX 구간의 location.paragraph(원본 문단 번호) 범위. 다른 형식에는 문단 번호가 없다.
+                condition += " AND json_extract(c.metadata,'$.location.paragraph') IS NOT NULL"
+                if paragraph_from is not None:
+                    condition += " AND CAST(json_extract(c.metadata,'$.location.paragraph') AS INTEGER)>=?"
+                    params.append(paragraph_from)
+                if paragraph_to is not None:
+                    condition += " AND CAST(json_extract(c.metadata,'$.location.paragraph') AS INTEGER)<=?"
+                    params.append(paragraph_to)
             if section and context:
                 units = db.execute('SELECT id,unit FROM chunks WHERE document_id=? ORDER BY id', (doc_id,)).fetchall()
                 anchor = next((i for i, row in enumerate(units) if row['unit'] == section.removeprefix(doc_id + '::')), None)
@@ -636,8 +652,8 @@ class Corpus:
                     'matched': total, 'returned': len(records), 'truncated': offset + len(records) < total,
                     'next_offset': offset + len(records), 'scope': scope, 'limitations': LIMITATIONS}
 
-    def find_testcases(self, query, model=None, limit=20):
-        return self.search_documents(query, limit=limit, document_kind='testcase', model=model)
+    def find_testcases(self, query, model=None, limit=20, offset=0):
+        return self.search_documents(query, limit=limit, document_kind='testcase', model=model, offset=offset)
 
     def compare_packages(self, query, packages, limit=10):
         if not isinstance(packages, list) or not 2 <= len(packages) <= 10 or any(not isinstance(p, str) or not p.strip() for p in packages):

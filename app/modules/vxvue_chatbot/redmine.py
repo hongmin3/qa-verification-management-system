@@ -145,7 +145,8 @@ class RedmineLookup(PolarionLookup):
         except ValueError as exc:
             raise ValueError(str(exc).replace('Polarion', 'Redmine')) from None
 
-    def search(self, keywords, project_ids=None, status='*', page=1, page_size=50, full_text=False):
+    def search(self, keywords, project_ids=None, status='*', page=1, page_size=50, full_text=False, expand_synonyms=True):
+        if not isinstance(expand_synonyms, bool): raise ValueError('expand_synonyms는 참 또는 거짓입니다.')
         if not isinstance(keywords, str) or not keywords.strip() or len(keywords) > 500:
             raise ValueError('검색어는 1~500자로 입력하세요.')
         project_ids = list(self.DEFAULT) if project_ids is None else project_ids
@@ -222,11 +223,33 @@ class RedmineLookup(PolarionLookup):
                     items.append(meta)
             except ValueError as exc:
                 errors.append({'project_id': project, 'error': str(exc)})
-        return {'items': items, 'project_ids': project_ids, 'status': status, 'search_mode': 'full_text' if full_text else 'subject',
+        expansion = None
+        if expand_synonyms and not full_text and page == 1:
+            # 한영 동의어(REQ-VXVUECHATBOT-021): 단어 하나를 바꾼 변형 검색어로 제목을 더 찾아 합친다.
+            from app.core.qa_synonyms import variants
+            expansion = {'queries': [], 'added': 0, 'next_pages': {}, 'errors': []}
+            for variant in variants(keywords, limit=3):
+                sub = self.search(variant, project_ids, status, 1, page_size, False, expand_synonyms=False)
+                expansion['queries'].append(variant)
+                for meta in sub['items']:
+                    if meta['id'] not in seen:
+                        seen.add(meta['id'])
+                        items.append({**meta, 'matched_query': variant})
+                        expansion['added'] += 1
+                if sub['next_pages']:
+                    expansion['next_pages'][variant] = sub['next_pages']
+                expansion['errors'] += [{**e, 'query': variant} for e in sub['errors']]
+            if not expansion['queries']:
+                expansion = None
+        result = {'items': items, 'project_ids': project_ids, 'status': status, 'search_mode': 'full_text' if full_text else 'subject',
                 'page': page, 'page_size': page_size, 'total_count_by_project': totals, 'next_pages': next_pages,
                 'returned': len(items), 'complete': False, 'errors': errors,
                 'limitations': ['공개 이슈 후보만 제공하며 비공개·확인 불가 후보와 전체 건수는 집계하지 않습니다. 전문 검색은 종료 이슈를 포함하고 공개 제목·본문·댓글·사용자 정의 항목에서 일치를 다시 확인해 matched_in에 항목 이름을 남깁니다. 제목·전문 조회 모두 전체 수집 완료를 뜻하지 않으며 다음 페이지는 원본 후보 페이지입니다.'],
                 'collected_at': datetime.now(timezone.utc).isoformat(), 'scope': '목록 메타데이터만 조회. 전체 수집과 상세 분석 완료는 별개.'}
+        if expansion:
+            result['synonym_expansion'] = expansion
+            result['returned'] = len(items)
+        return result
 
 
 def lookup(cls=None):
@@ -257,7 +280,7 @@ def definitions(cls=None, prefix='', scope_note=None):
     string={'type':'string'}; positive={'type':'integer','minimum':1}
     specs=[
         ('get_redmine_issue',f'{cls.LABEL} Redmine 이슈 상세·journals·첨부 목록·relations·사용자 정의 항목 읽기. 첨부 본문은 미수집. 잘리면 {prefix}read_redmine_result로 이어 읽기.',{'issue_id':positive},['issue_id']),
-        ('search_redmine_issues',f'{cls.LABEL} Redmine 여러 프로젝트 제목 검색. 기본 {default} 및 모든 상태. {scope_note} full_text=true는 종료 이슈를 포함한 전문 검색이며 공개 제목·본문·댓글·사용자 정의 항목 일치를 확인해 matched_in에 남긴다. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목(전문 검색은 matched_in 포함)만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(cls.ALLOWED)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'}},['keywords']),
+        ('search_redmine_issues',f'{cls.LABEL} Redmine 여러 프로젝트 제목 검색. 기본 {default} 및 모든 상태. {scope_note} full_text=true는 종료 이슈를 포함한 전문 검색이며 공개 제목·본문·댓글·사용자 정의 항목 일치를 확인해 matched_in에 남긴다. 프로젝트별 next_pages와 errors 확인. 목록은 번호·프로젝트·상태·제목(전문 검색은 matched_in 포함)만.',{'keywords':string,'project_ids':{'type':'array','minItems':1,'maxItems':10,'items':{'type':'integer','enum':list(cls.ALLOWED)}},'status':string,'page':positive,'page_size':{'type':'integer','minimum':1,'maximum':100},'full_text':{'type':'boolean'},'expand_synonyms':{'type':'boolean','description':'제목 검색 첫 페이지에서 한영 동의어 변형(버키/Bucky/Receptor, 재실행/재기동/restart, 유지/remember)도 검색해 합친다. 기본 true. 추가 결과는 matched_query 표시.'}},['keywords']),
         ('read_redmine_result',f'수집·보호한 {cls.LABEL} Redmine 상세를 문자 위치로 이어 읽기. 24시간 보관.',{'result_id':string,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':12000}},['result_id'])]
     return [{'name':prefix+n,'description':d,'inputSchema':{'type':'object','properties':p,'required':r,'additionalProperties':False},'annotations':{'readOnlyHint':True,'destructiveHint':False,'openWorldHint':False}} for n,d,p,r in specs]
 

@@ -17,6 +17,10 @@ VXvue에는 등록 준비용 읽기 도구 `get_redmine_field_map`과 네트워�
 
 초안 검사는 제목·본문 6개 섹션 순서·필수 번호·경로·민감정보를 확인한다. `ok=true`인 응답만 전송용 `payload`와 그 내용의 `draft_sha256`을 제공한다. 오류가 있거나 응답 보호로 내용이 바뀌면 두 필드를 생략한다. 공유 경로·IP·이메일 등이 포함된 초안은 공용 연결에서 전송 JSON을 받을 수 없다. 원문은 사용자 PC에서 관리하며 가려진 응답을 등록 본문으로 쓰지 않는다. 이 실패 처리 보완의 운영 반영 여부는 [진행 상태](../progress.md)를 따른다.
 
+규칙 검사는 통과했는데 보호 처리 때문에 payload를 돌려주지 못하면 `checks_passed=true`, `payload_source="pc"`가 함께 온다. 이때 전송용 payload와 해시는 PC의 [`scripts/vxvue_issue_tools/register_redmine_issue.py`](../scripts/vxvue_issue_tools/README.md)가 서버와 같은 규칙 원본(`redmine_draft_rules.py`)으로 만든다. 이 스크립트는 기본이 시험 실행이며, 승인한 `draft_sha256`과 일치할 때만 등록한다.
+
+제목 검색(`search_redmine_issues`)은 첫 페이지에서 한영 동의어 변형을 최대 3개 더 검색해 합친다. 추가로 찾은 결과에는 `matched_query`가 붙는다. `expand_synonyms=false`로 끈다(REQ-VXVUECHATBOT-021).
+
 ## 서버 설정
 
 기존 비밀정보 체계에 `REDMINE_HOST`와 `REDMINE_API_KEY`를 넣는다. 환경변수 > secrets.json > secrets.txt > .env 순서다. 호스트는 HTTP(S) 주소와 선택적 `/redmine` 경로만 허용한다. 값이 없으면 도구가 설정 누락을 알린다. 기존 서버 전용 자격증명이 있으면 운영자가 재사용 여부를 확인한다. 개인 PC 키를 자동 전송하지 않는다.

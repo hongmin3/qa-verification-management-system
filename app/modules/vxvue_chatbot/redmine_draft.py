@@ -4,21 +4,12 @@ The server never writes to Redmine. These tools only read field metadata (GET) o
 a draft locally, so the PC can register an issue with the user's own API key after approval.
 """
 from datetime import datetime, timezone
-import hashlib
-import json
-import re
 
-from .desktop_polarion import integer
 from .redmine import RedmineLookup
+from .redmine_draft_rules import SECRET_PATTERNS, SECTIONS, SHARE_PREFIX, integer  # noqa: F401  (재노출)
+from .redmine_draft_rules import validate as _validate_rules
 
 DRAFT_TOOLS = ('get_redmine_field_map', 'validate_redmine_draft')
-SECTIONS = ('[Issue Title]', '[Precondition]', '[Step]', '[Actual Result]', '[Expected Result]', '[Log, Data]')
-SHARE_PREFIX = '\\\\10.1.1.100\\'
-SECRET_PATTERNS = (
-    (re.compile(r'(?i)(api[_-]?key|x-redmine-api-key|bearer|password|passwd|token)\s*[:=]\s*\S{8,}'), '인증 정보로 보이는 값'),
-    (re.compile(r'\b[0-9a-f]{40}\b'), 'API 키 형식(40자리 16진수)'),
-    (re.compile(r'[\w.+-]+@[\w-]+\.[\w.-]+'), '이메일 주소'),
-)
 WRITE_RULES = """[Redmine 등록(쓰기) 규칙]
 1. 이 서버 연결은 Redmine에 쓰지 않는다. 등록·수정은 사용자 PC에서 사용자 본인 API 키(사용자 환경변수 REDMINE_API_KEY)로만 한다. 키가 없으면 등록 기능을 안내만 한다.
 2. 등록·수정·삭제는 사용자가 "해당 초안"을 명시적으로 승인한 뒤에만 한다. 분석 요청, 초안 요청, "이슈인지 확인해줘", 질문형 문장, 이전 초안 승인은 승인이 아니다. 승인은 초안 1건에만 유효하고 초안이 바뀌면 다시 승인받는다.
@@ -81,103 +72,13 @@ class FieldMapLookup(RedmineLookup):
         return result
 
 
-def _check_body(description, issue_number_known):
-    errors, warnings = [], []
-    positions = [description.find(s) for s in SECTIONS]
-    missing = [s for s, p in zip(SECTIONS, positions) if p < 0]
-    if missing:
-        errors.append('본문 섹션 누락: ' + ', '.join(missing))
-    else:
-        if positions != sorted(positions):
-            errors.append('본문 섹션 순서가 맞지 않습니다: ' + ' → '.join(SECTIONS))
-    actual = description.find('[Actual Result]')
-    expected = description.find('[Expected Result]')
-    if actual >= 0 and expected >= 0 and actual > expected:
-        errors.append('[Actual Result]가 [Expected Result]보다 앞에 있어야 합니다.')
-    # "필요/중요"는 허용하고 "-어요/-해요/-세요" 같은 해요체 어미만 잡는다.
-    if re.search(r'(어요|아요|해요|세요|네요|되요|돼요|에요|예요|나요|군요|죠|지요)[.!]?\s*$', description, re.M):
-        warnings.append('"-요" 어미가 있습니다. 결과 서술은 "-됨/-함" 형태로 씁니다.')
-    if expected >= 0:
-        exp_text = description[expected:description.find('[Log, Data]') if '[Log, Data]' in description else None]
-        if '할 것 같음' in exp_text and '사양 확인 필요' not in exp_text:
-            warnings.append('근거가 불명확한 Expected에는 "사양 확인 필요"를 함께 적습니다.')
-    log_at = description.find('[Log, Data]')
-    if log_at >= 0:
-        log_lines = [l.strip() for l in description[log_at + len('[Log, Data]'):].splitlines() if l.strip()]
-        paths = [l for l in log_lines if '10.1.1.100' in l]
-        if not paths:
-            warnings.append('[Log, Data]에 공용서버 경로가 없습니다.')
-        for line in paths:
-            if not line.startswith(SHARE_PREFIX):
-                errors.append('공용서버 경로는 \\\\10.1.1.100\\ 로 시작해야 합니다(역슬래시 2개).')
-            if issue_number_known and not re.search(r'\\#\d{4,6}\s*$', line):
-                errors.append('[Log, Data] 경로 끝에 Defect\\#이슈번호가 필요합니다.')
-            elif not issue_number_known and not re.search(r'\\#(\d{4,6})?\s*$', line):
-                warnings.append('[Log, Data] 경로 끝은 Defect\\# (등록 후 번호 기입) 형식이어야 합니다.')
-        if len(log_lines) > len(paths):
-            warnings.append('[Log, Data]에는 경로만 적습니다.')
-    return errors, warnings
-
-
 def validate(subject, description, project_id=61, tracker_id=None, priority_id=None, category_id=None,
              custom_fields=None, issue_number_known=False):
-    """Pure validation; no network. Returns a normalized payload and its SHA-256 for approval binding."""
-    errors, warnings = [], []
-    if not isinstance(subject, str) or not subject.strip():
-        errors.append('제목이 비어 있습니다.')
-        subject = ''
-    if not isinstance(description, str) or not description.strip():
-        errors.append('본문이 비어 있습니다.')
-        description = ''
-    subject = subject.strip()
-    if len(subject) > 255:
-        errors.append('제목은 255자 이하입니다.')
-    if subject and not re.match(r'^\([^)]+\)\s*\[[^\]]+\]\s*\S', subject):
-        warnings.append('제목 형식 권장: "(모델) [연동형태] 현상"')
-    integer(project_id, 1, 2_147_483_647)
-    if project_id not in RedmineLookup.ALLOWED:
-        errors.append('허용 프로젝트는 ' + ', '.join(map(str, RedmineLookup.ALLOWED)) + '입니다.')
-    for label, value in (('tracker_id', tracker_id), ('priority_id', priority_id)):
-        if value is None:
-            errors.append(f'{label}가 필요합니다(get_redmine_field_map 참고).')
-        else:
-            integer(value, 1, 2_147_483_647)
-    if category_id is not None:
-        integer(category_id, 1, 2_147_483_647)
-    fields = []
-    for field in custom_fields or []:
-        if not isinstance(field, dict) or not isinstance(field.get('id'), int) or 'value' not in field:
-            errors.append('custom_fields 항목은 {"id": 정수, "value": 값} 형식입니다.')
-            continue
-        value = field['value']
-        if not isinstance(value, (str, int, float, list)):
-            errors.append(f'custom_fields {field["id"]} 값 형식이 맞지 않습니다.')
-            continue
-        fields.append({'id': field['id'], 'value': value})
-    if fields and len({f['id'] for f in fields}) != len(fields):
-        errors.append('custom_fields에 같은 id가 중복됩니다.')
-    if not any(f['id'] == 54 for f in fields):
-        warnings.append('발생 버전(cf 54) 버전 ID가 없습니다.')
-    body_errors, body_warnings = _check_body(description, bool(issue_number_known))
-    errors += body_errors
-    warnings += body_warnings
-    blob = subject + '\n' + description + '\n' + json.dumps(fields, ensure_ascii=False)
-    for pattern, label in SECRET_PATTERNS:
-        if pattern.search(blob):
-            errors.append(f'민감정보로 보이는 값이 있습니다: {label}. 제거 후 다시 검증하세요.')
-    issue = {'project_id': project_id, 'tracker_id': tracker_id, 'priority_id': priority_id,
-             'subject': subject, 'description': description}
-    if category_id is not None:
-        issue['category_id'] = category_id
-    if fields:
-        issue['custom_fields'] = sorted(fields, key=lambda f: f['id'])
-    canonical = json.dumps({'issue': issue}, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
-    result = {'ok': not errors, 'errors': errors, 'warnings': warnings,
-              'note': '서버는 검증만 하며 Redmine에 쓰지 않습니다. 등록은 사용자 승인 후 PC에서 사용자 키로 수행합니다.',
-              'rules': WRITE_RULES}
-    if not errors:
-        result.update(payload={'issue': issue},
-                      draft_sha256=hashlib.sha256(canonical.encode('utf-8')).hexdigest())
+    """Pure validation; no network. 규칙 원본은 redmine_draft_rules.py (PC 등록 스크립트와 공유)."""
+    result = _validate_rules(subject, description, project_id, tracker_id, priority_id, category_id,
+                             custom_fields, issue_number_known, allowed_projects=RedmineLookup.ALLOWED)
+    result.update(note='서버는 검증만 하며 Redmine에 쓰지 않습니다. 등록은 사용자 승인 후 PC에서 사용자 키로 수행합니다.',
+                  rules=WRITE_RULES)
     return result
 
 
@@ -191,10 +92,19 @@ def call(name, arguments):
         if result['ok']:
             protected, _ = mask_payload(result['payload'])
             if protected != result['payload']:
-                result.update(ok=False, errors=[
-                    '공용 연결의 민감정보 보호 처리가 전송 내용을 바꾸므로 payload와 해시를 반환하지 않습니다. 원문은 사용자 PC에서 관리하세요.'])
+                # 규칙 검사는 통과했지만 공용 연결의 보호 처리가 전송 내용(공유 경로 등)을 바꾼다.
+                # 검증 결과(checks_passed)와 전송용 payload를 분리한다: payload·해시는 돌려주지 않고,
+                # PC 등록 스크립트가 같은 규칙 원본(redmine_draft_rules.py)으로 원문 payload를 만든다.
+                result.update(ok=False, checks_passed=True, payload_source='pc', errors=[
+                    '규칙 검사는 통과했습니다. 공용 연결의 보호 처리가 공유 경로 등 전송 내용을 바꾸므로 payload와 해시는 반환하지 않습니다. '
+                    '전송용 payload는 PC에서 scripts/vxvue_issue_tools/register_redmine_issue.py 로 같은 규칙으로 만듭니다.'])
                 result.pop('payload')
                 result.pop('draft_sha256')
+            else:
+                result['checks_passed'] = True
+                result['payload_source'] = 'server'
+        else:
+            result['checks_passed'] = False
         return result
     raise ValueError('허용되지 않은 도구입니다.')
 

@@ -69,13 +69,15 @@ def parse_sections(text):
     return chunks, metadata, ''.join(outside)
 
 
-def select_sections(text, section=None):
+def select_sections(text, section=None, exclude_core=False):
     if section is not None and (not isinstance(section, str) or section not in ('full', *SECTION_IDS)):
         raise ValueError('지원되는 QA section을 지정하세요.')
     chunks, metadata, outside = parse_sections(text)
     catalog = [{**m, 'chars': sum(len(body) for sid, body in chunks if sid == m['id'])}
                for m in metadata.values()]
     meta = {'section': section or 'full', 'sections': catalog, 'legacy_fallback': not bool(chunks)}
+    if exclude_core and section in (None, 'full', 'core'):
+        raise ValueError('exclude_core는 core·full이 아닌 작업 유형 section과 함께 씁니다.')
     if section in (None, 'full') or not chunks:
         return text, {**meta, 'selected_sections': list(metadata)}
     if 'core' not in metadata or section not in metadata:
@@ -89,6 +91,11 @@ def select_sections(text, section=None):
                 include(dependency)
     for sid in list(selected):
         include(sid)
+    if exclude_core:
+        # 이미 읽은 core는 빼고 작업 유형과 core 외 선행 규칙만 보낸다. 머리 공통 문장·목차도 core와 함께 읽었다.
+        ids = [sid for sid in metadata if sid in selected and sid != 'core']
+        return ''.join(body for sid, body in chunks if sid in ids), {
+            **meta, 'selected_sections': ids, 'excluded_sections': ['core']}
     ids = [sid for sid in metadata if sid in selected]
     index = '\n## 작업별 QA 섹션 목차\n' + '\n'.join(
         f'- {m["id"]}: {m["title"]} ({m["chars"]}자; 선행: {",".join(m["requires"]) or "없음"})'

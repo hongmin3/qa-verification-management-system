@@ -206,6 +206,37 @@ def client_paths(value, root):
     return value
 
 
+# 한 응답이 클라이언트에서 파일로 빠지지 않도록 결과 목록 응답을 이 글자 수 안으로 나눈다(REQ-VXVUECHATBOT-021).
+# 근거 본문은 줄이지 않고 결과 건수만 줄이며, 나머지는 next_offset으로 이어 읽는다.
+RESPONSE_CHAR_BUDGET = 24000
+_BUDGET_TOOLS = ('search_documents', 'find_testcases', 'get_document')
+
+
+def fit_response_budget(value, offset=0, budget=RESPONSE_CHAR_BUDGET):
+    import json
+    if not isinstance(value, dict) or not isinstance(value.get('results'), list):
+        return value
+    size = lambda v: len(json.dumps(v, ensure_ascii=False))
+    if size(value) <= budget:
+        return value
+    keep = list(value['results'])
+    while len(keep) > 1 and size({**value, 'results': keep}) > budget:
+        keep.pop()
+    dropped = len(value['results']) - len(keep)
+    out = {**value, 'results': keep}
+    if isinstance(value.get('documents'), list):
+        ids = {r.get('document_id') for r in keep if isinstance(r, dict)}
+        out['documents'] = [d for d in value['documents'] if d.get('document_id') in ids]
+    note = {'limit_chars': budget}
+    if dropped:
+        out.update(returned=len(keep), truncated=True, next_offset=offset + len(keep))
+        note.update(deferred_results=dropped, note='근거 본문은 줄이지 않았다. 나머지 결과는 같은 조건의 next_offset으로 이어 읽는다.')
+    else:
+        note.update(single_result_over_budget=True, note='결과 1건이 상한보다 크다. 본문은 그대로 반환했다.')
+    out['response_budget'] = note
+    return out
+
+
 class DesktopTools(KnowledgeTools):
     def call(self, name, arguments):
         from app.core.qa_workflow import compact_evidence, compact_inventory
@@ -213,10 +244,22 @@ class DesktopTools(KnowledgeTools):
         compact = args.pop('compact', True)
         if not isinstance(compact, bool):
             raise ValueError('compact는 boolean입니다.')
+        expand = args.pop('expand_synonyms', True)
+        if not isinstance(expand, bool):
+            raise ValueError('expand_synonyms는 boolean입니다.')
+        added = []
+        if expand and name in ('search_documents', 'find_testcases') and args.get('match_mode', 'any') == 'any':
+            from app.core.qa_synonyms import expand_any
+            args['query'], added = expand_any(args.get('query'))
         value = super().call(name, args)
+        if added and isinstance(value, dict):
+            value = {**value, 'synonym_expansion': {'added_terms': added, 'mode': 'any'}}
         if compact and name == 'get_status':
             return compact_inventory(value)
-        return compact_evidence(value) if compact else value
+        value = compact_evidence(value) if compact else value
+        if compact and name in _BUDGET_TOOLS:
+            value = fit_response_budget(value, args.get('offset', 0) or 0)
+        return value
 
     def _decorate(self, value):
         result = super()._decorate(value)
@@ -275,6 +318,9 @@ def definitions(context=None):
         properties = tool['inputSchema']['properties']
         if tool['name'] == 'get_workflow':
             properties['section'] = SECTION_SCHEMA
+            properties['exclude_core'] = {'type': 'boolean', 'description': '이미 읽은 core·연결 안내를 빼고 작업 유형 섹션과 선행 규칙만 읽기(section이 core/full이 아닐 때). 이어 읽기도 같은 값을 유지.'}
+        if tool['name'] in ('search_documents', 'find_testcases'):
+            properties['expand_synonyms'] = {'type': 'boolean', 'description': '한영 동의어(버키/Bucky/Receptor, 재실행/재기동/restart, 유지/remember) 자동 추가. 기본 true, match_mode=any에서만.'}
         if tool['name'] in ('polarion_query', 'get_polarion_item', 'read_polarion_result'):
             properties['compact'] = {'type': 'boolean', 'description': 'HTML 표시 속성만 축약. 이어 읽기는 같은 compact 값을 유지.'}
     for tool in result:
@@ -338,8 +384,14 @@ def workflow(current, args, extra=""):
     integer(limit, 1, 12000)
     from .qa_protection import mask_qa_text
     from app.core.qa_workflow import select_sections
-    rules, section_meta = select_sections(current['rules'], args.get('section'))
-    body, protection = mask_qa_text(INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n" + rules + ("\n\n" + extra if extra else ""), current["rules"])
+    exclude_core = args.get('exclude_core', False)
+    if not isinstance(exclude_core, bool):
+        raise ValueError('exclude_core는 boolean입니다.')
+    rules, section_meta = select_sections(current['rules'], args.get('section'), exclude_core=exclude_core)
+    # exclude_core: core와 함께 이미 읽은 연결 안내·Skill 지침·공통 안내는 다시 보내지 않는다.
+    head = "" if exclude_core else INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n"
+    tail = "" if exclude_core else ("\n\n" + extra if extra else "")
+    body, protection = mask_qa_text(head + rules + tail, current["rules"])
     end = min(offset + limit, len(body))
     return {**section_meta, "snapshot_id": current["id"], "skill_version": (current["skill_metadata"] or {}).get("version"),
             "text": body[offset:end], "protection": protection.as_dict(), "total_chars": len(body), "truncated": end < len(body),

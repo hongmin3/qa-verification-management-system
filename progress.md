@@ -1,5 +1,20 @@
 # 진행 상태
 
+## 2026-11-12 DK 연동 이슈 회고 반영 선택 배포 (REQ-VXVUECHATBOT-020·021)
+
+- 배포 대상: `qa_workflow.py`·`qa_synonyms.py`(신규)·`desktop.py`·`mcp_server.py`·`redmine.py`·`redmine_draft.py`·`redmine_draft_rules.py`(신규)·`skill/scripts/corpus.py`·`tests/test_vxvue_read_budget.py`.
+- 사전 확인: 전송 직전에 서버의 대상 파일 6개와 테스트 파일이 줄바꿈 정규화 해시로 HEAD 판과 같았고, 새 파일 2개는 서버에 없었다.
+- 백업: `backups/deploy-dk-retro-20261112T062451Z/original`.
+- 전송 확인: 전송 후 해시가 일치했다. 서버 관련 시험은 94 passed다.
+- 재기동: 유휴 확인(QA 실행·대기 0) 뒤 `qa-verification`을 재기동했다. 결과는 active, health ok다.
+- 로컬 시험: 전체 2,484 passed·12 skipped·2 failed다. 실패 2건(`test_manual_review_shared` PDF 원본 경로 FileNotFoundError)은 HEAD 판 worktree에서도 같게 실패해 이번 변경과 무관하다. 시각에 따라 흔들리는 `test_alm_change_mail_base` 1건은 단독 재실행에서 통과했다.
+- 준비 검사: `project-readiness` failed=0이다. 기존 경고는 남아 있다.
+- PC 보조 스크립트는 #25575 공유폴더 자료로 시험했다. 결과는 다음과 같다.
+  - 영상: 1단계 35프레임과 2단계 15프레임·확대를 추출했다.
+  - 증거 수집: 4건을 선택했고 범위 밖 세션은 제외했다. 크기는 모두 일치했다.
+  - 환경 정보: 로그 기준 INNOGEN-S40·COM4를 확인했다. XML 선택값은 미확정이다.
+  - 등록: 시험 실행에서 해시가 서버 규칙과 같았다. 승인 해시가 다르면 쓰기 0회로 거부됐다. 실제 등록은 하지 않았다.
+
 ## 2026-11-12 Redmine 초안 응답 보완 운영 배포 (REQ-VXVUECHATBOT-020)
 
 - 사용자 배포 요청에 따라 `68fe2cc`의 `app/modules/vxvue_chatbot/redmine_draft.py`와 회귀 시험 파일만 선택 배포했다. 전송 직전 전체 배포 범위 해시가 앞선 조회와 같고 QA 점검·분석 작업이 0건임을 확인했다. 운영 서버는 여러 시점의 파일이 섞여 있으므로 전체를 이 커밋과 같다고 보지 않는다. 그 밖의 미배포 변경은 이번 범위에 포함하지 않았다.
