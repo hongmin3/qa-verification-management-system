@@ -1,5 +1,15 @@
 # 진행 상태
 
+## 2026-11-12 스냅샷 색인 재사용 선택 배포 (REQ-VXVUECHATBOT-022·021)
+
+- 배포 대상: `knowledge.py`·`shared_knowledge/service.py`·`desktop.py`·`redmine.py`·`qa_synonyms.py`와 관련 테스트 4개(커밋 `b12acf0`).
+- 사전 확인: 서버 대상 파일이 줄바꿈 정규화 해시로 직전 배포판 `a4686b0`과 같았다. 새 테스트 파일은 서버에 없었다.
+- 백업: `backups/deploy-snapshot-reuse-20261112T070817Z/original`. 전송 후 해시 일치.
+- 서버 시험 97 passed. 배포 스크립트의 시험 목록에 서버에 없는 `tests/test_unified_qa_rules.py`가 있어 첫 실행은 0건이었고, 그 파일을 빼고 다시 실행했다.
+- 재기동: 유휴 확인 뒤 재기동, active, health ok.
+- 로컬 시험: 전체 2,491 passed·12 skipped·0 failed. `project-readiness` failed=0.
+- 실측: 재기동 직후와 통합 QA MD(2026-11-12.3) 업로드 직후 모두 `get_status`가 즉시 새 스냅샷을 돌려줬다. 수정 전에는 10~20분 시간 초과됐다.
+
 ## 2026-11-12 DK 연동 이슈 회고 반영 선택 배포 (REQ-VXVUECHATBOT-020·021)
 
 - 배포 대상: `qa_workflow.py`·`qa_synonyms.py`(신규)·`desktop.py`·`mcp_server.py`·`redmine.py`·`redmine_draft.py`·`redmine_draft_rules.py`(신규)·`skill/scripts/corpus.py`·`tests/test_vxvue_read_budget.py`.
