@@ -111,6 +111,9 @@ def snapshot(project_root, snapshot_id=None):
                         raise ValueError("저장된 XIPL 지식 판의 해시를 확인하세요.")
             else:
                 publish_directory(building, final)
+                # building 경로로 만든 색인의 root를 최종 경로로 맞춘다. 맞추지 않으면 첫 조회가 전체를 다시 파싱한다(REQ-VXVUECHATBOT-022).
+                from app.modules.vxvue_chatbot.knowledge import _rebase_index
+                _rebase_index(final / "index.sqlite3", final / "original")
         value = {"id": identity, "root": str(final / "original"), "index": str(final / "index.sqlite3"),
                  "documents": records, "failures": [], "rules": "", "skill_text": "", "skill_metadata": None}
         _snapshots[key] = value

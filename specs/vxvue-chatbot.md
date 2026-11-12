@@ -385,7 +385,17 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 **지킬 것** 근거 본문·셀·해시·위치는 줄이지 않는다. 동의어 확장은 후보를 더할 뿐 원래 검색어 결과를 바꾸거나 지우지 않는다.
 
+새 boolean 옵션(`exclude_core`·`expand_synonyms`)은 `"true"`/`"false"` 문자열도 받는다. 배포 전에 도구 목록을 받은 클라이언트는 옵션을 문자열로 보내기 때문이다. 다른 값은 오류다.
+
 이유: 2026-11-12 DK 연동 이슈 작업에서 `get_document`·`find_testcases` 응답이 65~92k자가 되어 파일로 빠졌다. `offset 2186`이 문단 3057을 돌려줬고, issue 섹션을 읽을 때마다 core가 다시 포함돼 약 6만 자를 다섯 번에 나눠 읽었다.
+
+### REQ-VXVUECHATBOT-022 지식 스냅샷 색인 재사용
+
+**하는 일** 지식 문서가 바뀌어 새 스냅샷을 만들 때, 가장 최근 스냅샷의 색인을 SQLite backup으로 복사해 시작한다. Corpus가 문서별 해시를 비교하므로 바뀐 문서만 다시 파싱한다.
+
+**지킬 것** 색인은 임시 폴더에서 만든 뒤 최종 폴더로 옮긴다. 옮긴 뒤에는 색인에 기록된 원본 폴더(`root`)와 문서 경로(`file_path`)를 최종 경로로 맞춘다. 맞추지 않으면 첫 조회가 전체를 다시 파싱한다. XIPL 공용 지식 스냅샷도 같은 규칙을 따른다. 복사할 색인이 없거나 읽지 못하면 처음부터 만든다. 이전 스냅샷은 바꾸지 않는다.
+
+이유: 2026-11-12에 0.3MB짜리 QA 규칙 MD 한 파일만 바꿔도 40개 문서를 두 번(스냅샷 생성 때, 첫 조회 때) 다시 파싱했다. 서버 CPU 99%가 10분 넘게 이어졌고, 그동안 `get_status`가 시간 초과됐다.
 
 ## 11. 테스트 사양
 
@@ -443,4 +453,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 | REQ-VXVUECHATBOT-018 | `app/modules/vxvue_chatbot/word_reports.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_word_reports.py` | implemented |
 | REQ-VXVUECHATBOT-020 | `app/modules/vxvue_chatbot/redmine_draft.py`, `app/modules/vxvue_chatbot/redmine_draft_rules.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py`, `scripts/vxvue_issue_tools/register_redmine_issue.py` | `tests/test_vxvue_redmine_draft.py`, `tests/test_vxvue_read_budget.py`, `tests/test_vxvue_issue_tools.py` | implemented |
+| REQ-VXVUECHATBOT-022 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/shared_knowledge/service.py` | `tests/test_vxvue_snapshot_reuse.py`, `tests/test_xipl_shared.py` | implemented |
 | REQ-VXVUECHATBOT-021 | `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/redmine.py`, `app/core/qa_workflow.py`, `app/core/qa_synonyms.py` | `tests/test_vxvue_read_budget.py` | implemented |

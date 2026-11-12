@@ -192,3 +192,15 @@ def test_shared_release_note_filter_preserves_registered_kind(shared):
                        query="RELEASE_UNIQUE", document_kind="release_note"))
     assert len(result["results"]) == 1
     assert result["results"][0]["document_kind"] == "release_note"
+
+
+# Validates: REQ-VXVUECHATBOT-022
+def test_shared_published_index_is_not_reparsed_on_first_query(shared, monkeypatch):
+    from app.modules.vxvue_chatbot.skill.scripts import corpus as corpus_module
+    client, _, _, _ = shared
+    real, calls = corpus_module.parse, []
+    monkeypatch.setattr(corpus_module, "parse", lambda path: calls.append(path.name) or real(path))
+    sid = value(rpc(client, "xipl_get_status"))["snapshot_id"]
+    found = value(rpc(client, "xipl_search_documents", snapshot_id=sid, query="XIPL_STUDIO_UNIQUE"))
+    assert found["results"]
+    assert sorted(calls) == sorted(set(calls)) and len(calls) == 3, calls

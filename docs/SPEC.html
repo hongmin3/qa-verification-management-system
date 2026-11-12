@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="4abd16bbbad83c7cbeec8cdbbdc269dc0a5ba1b30235f1049112cfbe30b4e453">
+<meta name="spec-source-sha256" content="7b29979813f4602edf7a85fe0fc1043397b6e3914c742b58cec5ffd810b3e616">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>350</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>351</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -653,6 +653,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-019">REQ-VXVUECHATBOT-019 <span>작업별 지침과 필요한 원문 조회</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020 <span>Redmine 등록 초안 준비와 검증</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021 <span>응답 크기·문단 범위·동의어·core 제외 읽기</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022 <span>지식 스냅샷 색인 재사용</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1142,6 +1143,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-019">REQ-VXVUECHATBOT-019</a></td><td data-label="이름">작업별 지침과 필요한 원문 조회</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/qa_workflow.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="테스트"><code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_qa_context_filters.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a></td><td data-label="이름">Redmine 등록 초안 준비와 검증</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a></td><td data-label="이름">응답 크기·문단 범위·동의어·core 제외 읽기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a></td><td data-label="이름">지식 스냅샷 색인 재사용</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -16968,8 +16970,9 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 </section>
 <section class="card kind-req" id="REQ-VXVUECHATBOT-021">
 <h3><span class="idtag">REQ-VXVUECHATBOT-021</span> 응답 크기·문단 범위·동의어·core 제외 읽기</h3>
-<details class="history"><summary>변경 이력 4</summary>
+<details class="history"><summary>변경 이력 5</summary>
 <ul>
+<li><span class="hist">2026-11-12 지식 업로드 뒤 시간 초과·테스트 실패 개선</span> <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a>: <code>exclude_core</code>·<code>expand_synonyms</code>가 배포 전 도구 목록을 가진 클라이언트의 <code>&quot;true&quot;</code>/<code>&quot;false&quot;</code> 문자열도 받는다.</li>
 <li><span class="hist">2026-11-12 DK 연동 이슈(#25575) 작업 회고 반영 — 읽기 도구 보완과 PC 보조 스크립트</span> <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a>: <code>search_documents</code>·<code>find_testcases</code>·<code>get_document</code> 응답이 24,000자를 넘으면 <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 본문은 줄이지 않고 결과 건수만 줄여 <code>next_offset</code>으로 이어 읽게 했다. <code>find_testcases</code>에 <code>offset</code>을 추가했다.</li>
 <li><span class="hist">2026-11-12 DK 연동 이슈(#25575) 작업 회고 반영 — 읽기 도구 보완과 PC 보조 스크립트</span> <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a>: <code>get_document</code>의 <code>offset</code>이 결과 순번임을 도구 설명에 밝히고, DOCX 원본 문단 번호로 읽는 <code>paragraph_from</code>·<code>paragraph_to</code>를 추가했다.</li>
 <li><span class="hist">2026-11-12 DK 연동 이슈(#25575) 작업 회고 반영 — 읽기 도구 보완과 PC 보조 스크립트</span> <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a>: <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 검색과 Redmine 제목 검색에 한영 동의어 확장을 추가했다. 묶음은 버키/Bucky/Receptor/리셉터, 재실행/restart/재기동/재시작, 유지/remember이며 <code>expand_synonyms=false</code>로 끈다.</li>
@@ -16988,7 +16991,19 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 </tbody>
 </table></div>
 <p><strong>지킬 것</strong> <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 본문·셀·해시·위치는 줄이지 않는다. 동의어 확장은 후보를 더할 뿐 원래 검색어 결과를 바꾸거나 지우지 않는다.</p>
+<p>새 boolean 옵션(<code>exclude_core</code>·<code>expand_synonyms</code>)은 <code>&quot;true&quot;</code>/<code>&quot;false&quot;</code> 문자열도 받는다. 배포 전에 도구 목록을 받은 클라이언트는 옵션을 문자열로 보내기 때문이다. 다른 값은 오류다.</p>
 <p class="why"><span class="why-label">이유</span> 2026-11-12 DK 연동 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>에서 <code>get_document</code>·<code>find_testcases</code> 응답이 65~92k자가 되어 파일로 빠졌다. <code>offset 2186</code>이 문단 3057을 돌려줬고, issue 섹션을 읽을 때마다 core가 다시 포함돼 약 6만 자를 다섯 번에 나눠 읽었다.</p>
+</section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-022">
+<h3><span class="idtag">REQ-VXVUECHATBOT-022</span> 지식 스냅샷 색인 재사용</h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-12 지식 업로드 뒤 시간 초과·테스트 실패 개선</span> <a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a>: 새 지식 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>이 직전 색인을 복사해 바뀐 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>만 다시 파싱한다. 옮긴 색인의 원본 경로를 최종 경로로 맞춰, 첫 조회에서 전체를 다시 파싱하던 문제를 없앴다(XIPL 공용 지식 포함). <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 하나를 올려도 40개 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 두 번 파싱해 <code>get_status</code>가 10분 넘게 시간 초과되던 문제다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 지식 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>가 바뀌어 새 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>을 만들 때, 가장 최근 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>의 색인을 SQLite backup으로 복사해 시작한다. Corpus가 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>별 해시를 비교하므로 바뀐 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>만 다시 파싱한다.</p>
+<p><strong>지킬 것</strong> 색인은 임시 폴더에서 만든 뒤 최종 폴더로 옮긴다. 옮긴 뒤에는 색인에 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>된 원본 폴더(<code>root</code>)와 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 경로(<code>file_path</code>)를 최종 경로로 맞춘다. 맞추지 않으면 첫 조회가 전체를 다시 파싱한다. XIPL 공용 지식 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>도 같은 규칙을 따른다. 복사할 색인이 없거나 읽지 못하면 처음부터 만든다. 이전 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 바꾸지 않는다.</p>
+<p class="why"><span class="why-label">이유</span> 2026-11-12에 0.3MB짜리 <span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span> MD 한 파일만 바꿔도 40개 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 두 번(<span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span> 생성 때, 첫 조회 때) 다시 파싱했다. 서버 CPU 99%가 10분 넘게 이어졌고, 그동안 <code>get_status</code>가 시간 초과됐다.</p>
 </section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
@@ -17048,6 +17063,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 </table></div>
 <p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a> | <code>app/modules/vxvue_chatbot/redmine_draft.py</code>, <code>app/modules/vxvue_chatbot/redmine_draft_rules.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code>, <code>scripts/vxvue_issue_tools/register_redmine_issue.py</code> | <code>tests/test_vxvue_redmine_draft.py</code>, <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_vxvue_issue_tools.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a> | <code>app/modules/vxvue_chatbot/knowledge.py</code>, <code>app/modules/shared_knowledge/service.py</code> | <code>tests/test_vxvue_snapshot_reuse.py</code>, <code>tests/test_xipl_shared.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/core/qa_workflow.py</code>, <code>app/core/qa_synonyms.py</code> | <code>tests/test_vxvue_read_budget.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">

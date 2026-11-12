@@ -56,3 +56,12 @@ def expand_any(query, limit=MAX_VARIANTS):
                 added.append(alt)
     added = added[: limit * 2]
     return (query + ' ' + ' '.join(added)).strip() if added else query, added
+
+
+def flag(value, name):
+    """새 boolean 옵션 값. 배포 전 도구 스키마를 가진 클라이언트는 "true"/"false" 문자열로 보내므로 함께 받는다."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.strip().lower() in ('true', 'false'):
+        return value.strip().lower() == 'true'
+    raise ValueError(f'{name}는 boolean입니다.')

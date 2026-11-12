@@ -14,6 +14,17 @@ from app.modules.manual_review.shared_review import ReviewStore, build_report
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
 
+@pytest.fixture
+def short_tmp():
+    """원본 저장 경로(해시 64자 폴더 + 해시 64자 파일명)는 pytest 기본 임시 경로 아래에서 Windows MAX_PATH(260자)를
+    넘는다(LongPathsEnabled=0인 PC). 운영(Linux)·실제 데이터 경로와 같은 깊이를 재현하도록 짧은 임시 폴더를 쓴다."""
+    import shutil
+    import tempfile
+    path = Path(tempfile.mkdtemp(prefix='mr'))
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
+
+
 def docx_bytes():
     body = f'''<w:document xmlns:w="{W}"><w:body>
       <w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>1. Manual</w:t></w:r></w:p>
@@ -102,9 +113,9 @@ def test_source_id_and_hash_are_checked_and_upload_name_never_becomes_path(tmp_p
         store.inventory(source['source_id'])
 
 
-def test_pdf_page_mapping_does_not_choose_first_duplicate_match(tmp_path):
+def test_pdf_page_mapping_does_not_choose_first_duplicate_match(short_tmp):
     import fitz
-    store, source = store_source(tmp_path)
+    store, source = store_source(short_tmp)
     pdf = fitz.open()
     for _ in range(2):
         page = pdf.new_page()
@@ -206,9 +217,9 @@ def test_pdf_spanning_pages_never_selects_earlier_duplicate():
     assert result['pages'] == [2, 3] or result['status'] in ('ambiguous', 'unverified')
 
 
-def test_pdf_context_is_immutable_between_users(tmp_path):
+def test_pdf_context_is_immutable_between_users(short_tmp):
     import fitz
-    store, source = store_source(tmp_path)
+    store, source = store_source(short_tmp)
     first = fitz.open()
     first.new_page().insert_text((40, 40), '1. Manual')
     second = fitz.open()

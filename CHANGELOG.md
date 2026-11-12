@@ -1,5 +1,11 @@
 # 변경 이력
 
+## 2026-11-12 지식 업로드 뒤 시간 초과·테스트 실패 개선
+
+- REQ-VXVUECHATBOT-022: 새 지식 스냅샷이 직전 색인을 복사해 바뀐 문서만 다시 파싱한다. 옮긴 색인의 원본 경로를 최종 경로로 맞춰, 첫 조회에서 전체를 다시 파싱하던 문제를 없앴다(XIPL 공용 지식 포함). 문서 하나를 올려도 40개 문서를 두 번 파싱해 `get_status`가 10분 넘게 시간 초과되던 문제다.
+- REQ-VXVUECHATBOT-021: `exclude_core`·`expand_synonyms`가 배포 전 도구 목록을 가진 클라이언트의 `"true"`/`"false"` 문자열도 받는다.
+- 테스트: `test_manual_review_shared`의 PDF 두 건은 pytest 임시 경로가 길어 Windows 경로 한도(260자)를 넘었다. 짧은 임시 폴더를 쓰도록 고쳤다. 저장 파일 이름 형식은 기존 데이터와의 호환을 위해 바꾸지 않았다.
+
 ## 2026-11-12 DK 연동 이슈(#25575) 작업 회고 반영 — 읽기 도구 보완과 PC 보조 스크립트
 
 - REQ-VXVUECHATBOT-021: `search_documents`·`find_testcases`·`get_document` 응답이 24,000자를 넘으면 근거 본문은 줄이지 않고 결과 건수만 줄여 `next_offset`으로 이어 읽게 했다. `find_testcases`에 `offset`을 추가했다.

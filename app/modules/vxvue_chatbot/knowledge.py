@@ -40,6 +40,53 @@ def skill_status(project_root, reviewed_hash=""):
         return {"version": None, "status": "error", "code_review_needed": False}
 
 
+def _rebase_index(index_path, new_root):
+    """색인에 기록된 원본 폴더(root)와 문서 경로(file_path)를 new_root로 바꾼다 (REQ-VXVUECHATBOT-022).
+    Corpus는 기록된 root가 다르면 전체를 다시 파싱하므로, 폴더를 옮긴 색인은 이 함수로 맞춘다."""
+    import sqlite3
+    new_root = Path(new_root).resolve()
+    db = sqlite3.connect(index_path)
+    try:
+        row = db.execute("SELECT value FROM meta WHERE key='root'").fetchone()
+        if not row:
+            return
+        rows = db.execute("SELECT id, metadata FROM documents").fetchall()
+        for doc_id, raw in rows:
+            meta = json.loads(raw or "{}")
+            if "file_path" in meta:
+                meta["file_path"] = str(new_root / doc_id)
+                db.execute("UPDATE documents SET metadata=? WHERE id=?", (json.dumps(meta, ensure_ascii=False), doc_id))
+        db.execute("UPDATE meta SET value=? WHERE key='root'", (str(new_root),))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _seed_index(destination, building_index, building_root):
+    """가장 최근 스냅샷 색인을 복사해 새 색인의 시작점으로 쓴다. Corpus가 문서별 해시를 비교하므로
+    바뀐 문서만 다시 파싱한다. 복사할 색인이 없거나 읽지 못하면 처음부터 만든다."""
+    import sqlite3
+    previous = [d for d in Path(destination).iterdir()
+                if d.is_dir() and not d.name.startswith("building-") and (d / "index.sqlite3").is_file()
+                and (d / "manifest.json").is_file()]
+    if not previous:
+        return None
+    source = max(previous, key=lambda d: (d / "manifest.json").stat().st_mtime)
+    try:
+        src = sqlite3.connect(f"file:{(source / 'index.sqlite3').as_posix()}?mode=ro", uri=True)
+        dst = sqlite3.connect(building_index)
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+            src.close()
+        _rebase_index(building_index, building_root)
+        return source.name
+    except sqlite3.Error:
+        Path(building_index).unlink(missing_ok=True)
+        return None
+
+
 def prepare_knowledge(storage, destination, project_root=None):
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
@@ -116,9 +163,12 @@ def prepare_knowledge(storage, destination, project_root=None):
         identity = hashlib.sha256(json.dumps({"documents": records, "failures": failures}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:24]
         final = destination / identity
         if not final.exists():
+            _seed_index(destination, building / "index.sqlite3", root)
             status = Corpus(root, building / "index.sqlite3").get_status()
             failures.extend({"name": entry["document_id"], "error": entry.get("type", "source-read-failed")} for entry in status["scope"].get("errors", []))
             building.rename(final)
+            # 색인은 building 경로로 만들어졌다. 최종 경로로 맞추지 않으면 첫 조회가 전체를 다시 파싱한다.
+            _rebase_index(final / "index.sqlite3", final / "original")
             # TemporaryDirectory may clean a missing path; its moved contents are retained.
         elif (final / "manifest.json").is_file():
             failures = json.loads((final / "manifest.json").read_text(encoding="utf-8")).get("failures", failures)

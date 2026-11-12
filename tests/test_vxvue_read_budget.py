@@ -174,3 +174,25 @@ def test_pc_rules_file_is_standalone_and_matches_server_hash():
                 custom_fields=[{'id': 54, 'value': '2767'}])
     assert module.validate(**args)['draft_sha256'] == validate(**args)['draft_sha256']
     assert 'import' not in ''.join(l for l in path.read_text(encoding='utf-8').splitlines() if l.startswith('from .'))
+
+
+# ---- 옛 도구 스키마 클라이언트: 새 boolean 옵션을 "true"/"false" 문자열로 보낼 수 있다 ------------------
+
+def test_new_flags_accept_boolean_strings_from_stale_clients():
+    from app.modules.vxvue_chatbot.desktop import workflow
+    current = {'id': 's', 'rules': rules(), 'skill_text': 'SKILL_TEXT', 'skill_metadata': {}}
+    lean = workflow(current, {'section': 'issue', 'exclude_core': 'true'})
+    assert 'SKILL_TEXT' not in lean['text'] and 'CORE_KEEP' not in lean['text']
+    assert 'SKILL_TEXT' in workflow(current, {'section': 'issue', 'exclude_core': 'False'})['text']
+    with pytest.raises(ValueError):
+        workflow(current, {'section': 'issue', 'exclude_core': 'yes'})
+
+
+def test_redmine_expand_synonyms_accepts_boolean_strings(monkeypatch):
+    from app.modules.vxvue_chatbot.redmine import RedmineLookup
+    lookup = object.__new__(RedmineLookup)
+    calls = []
+    monkeypatch.setattr(lookup, '_get', lambda path, params=None: calls.append(params['subject']) or
+                        {'issues': [], 'total_count': 0, 'offset': 0, 'limit': params['limit']}, raising=False)
+    lookup.search('버키', project_ids=[61], page_size=5, expand_synonyms='false')
+    assert calls == ['~버키']

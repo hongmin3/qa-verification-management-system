@@ -146,7 +146,8 @@ class RedmineLookup(PolarionLookup):
             raise ValueError(str(exc).replace('Polarion', 'Redmine')) from None
 
     def search(self, keywords, project_ids=None, status='*', page=1, page_size=50, full_text=False, expand_synonyms=True):
-        if not isinstance(expand_synonyms, bool): raise ValueError('expand_synonyms는 참 또는 거짓입니다.')
+        from app.core.qa_synonyms import flag
+        expand_synonyms = flag(expand_synonyms, 'expand_synonyms')
         if not isinstance(keywords, str) or not keywords.strip() or len(keywords) > 500:
             raise ValueError('검색어는 1~500자로 입력하세요.')
         project_ids = list(self.DEFAULT) if project_ids is None else project_ids

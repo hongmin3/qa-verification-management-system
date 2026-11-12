@@ -244,9 +244,8 @@ class DesktopTools(KnowledgeTools):
         compact = args.pop('compact', True)
         if not isinstance(compact, bool):
             raise ValueError('compact는 boolean입니다.')
-        expand = args.pop('expand_synonyms', True)
-        if not isinstance(expand, bool):
-            raise ValueError('expand_synonyms는 boolean입니다.')
+        from app.core.qa_synonyms import flag
+        expand = flag(args.pop('expand_synonyms', True), 'expand_synonyms')
         added = []
         if expand and name in ('search_documents', 'find_testcases') and args.get('match_mode', 'any') == 'any':
             from app.core.qa_synonyms import expand_any
@@ -384,9 +383,8 @@ def workflow(current, args, extra=""):
     integer(limit, 1, 12000)
     from .qa_protection import mask_qa_text
     from app.core.qa_workflow import select_sections
-    exclude_core = args.get('exclude_core', False)
-    if not isinstance(exclude_core, bool):
-        raise ValueError('exclude_core는 boolean입니다.')
+    from app.core.qa_synonyms import flag
+    exclude_core = flag(args.get('exclude_core', False), 'exclude_core')
     rules, section_meta = select_sections(current['rules'], args.get('section'), exclude_core=exclude_core)
     # exclude_core: core와 함께 이미 읽은 연결 안내·Skill 지침·공통 안내는 다시 보내지 않는다.
     head = "" if exclude_core else INSTRUCTIONS + "\n\n" + current["skill_text"] + "\n\n"
