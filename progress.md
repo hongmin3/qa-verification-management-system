@@ -1,5 +1,14 @@
 # 진행 상태
 
+## 2026-11-12 반복 응답 줄이기 선택 배포 (REQ-VXVUECHATBOT-023, 커밋 `d2727e8`)
+
+- 배포 대상: `qa_workflow.py`·`desktop.py`·`bellalun_shared/service.py`·VXvue/Bellalun 서버 Skill·Bellalun 설치 페이지·릴리스 `2026-11-12.1` ZIP·관련 테스트 3개. 백업 `backups/deploy-token-budget-20261112T081135Z`.
+- 사전 대조: 운영 파일은 직전 배포판 `b12acf0`과 같았다. 서버의 `tests/test_bellalun_shared.py`만 `bcd777c`(11/09) 판이어서 그 판을 기준으로 인정하고 교체했다.
+- 서버 시험 111 passed·1 failed. 실패한 `test_bellalun_export_ignores_adapter_checkout_line_endings`는 PC 전용 `scripts/sync_bellalun_shared.py`의 서버 사본이 `bcd777c` 판이라서다. 서버 실행 경로와 무관해 이번 범위에서는 배포하지 않았다.
+- 재기동 후 active·health ok. 로컬 전체 시험 2,494 passed·12 skipped·0 failed. `project-readiness` failed=0.
+- 실측(서버, 배포 후): VXvue `get_status` 18,297 → 5,938자. Bellalun `get_status` 7,569 → 2,887자. 검색 compact 응답에서 공통 limitations·scope가 빠졌다. 이슈 지침은 4페이지(이전 6)이고 2페이지부터 목차가 없다. 안내대로 core를 따로 읽지 않으면 VXvue 약 31k자, Bellalun 약 19k자가 작업마다 줄어든다.
+- PC의 연결 Skill 사본은 `sync_vxvue_local_skill.py`와 `sync_server_skills.py --skill bellalun-server-ai`로 서버판과 맞췄다(Claude·Codex).
+
 ## 2026-11-12 스냅샷 색인 재사용 선택 배포 (REQ-VXVUECHATBOT-022·021)
 
 - 배포 대상: `knowledge.py`·`shared_knowledge/service.py`·`desktop.py`·`redmine.py`·`qa_synonyms.py`와 관련 테스트 4개(커밋 `b12acf0`).
