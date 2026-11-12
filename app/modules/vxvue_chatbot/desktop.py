@@ -249,6 +249,8 @@ def definitions(context=None):
         result.append(tool)
     from .redmine import definitions as redmine_definitions
     result.extend(redmine_definitions())
+    from .redmine_draft import definitions as redmine_draft_definitions
+    result.extend(redmine_draft_definitions())
     extra = [
         ("get_workflow", "최신 Skill·QA 규칙. section=core로 목차·공통, 작업 유형은 선행 규칙 포함. 생략/full은 전문. 같은 section으로 이어 읽기.",
          {"snapshot_id": {"type": "string"}, "section": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["snapshot_id"]),
@@ -303,6 +305,9 @@ def call(name, arguments):
     if name in ("get_redmine_issue", "search_redmine_issues", "read_redmine_result"):
         from .redmine import call as redmine_call
         return redmine_call(name, arguments)
+    if name in ("get_redmine_field_map", "validate_redmine_draft"):
+        from .redmine_draft import call as redmine_draft_call
+        return redmine_draft_call(name, arguments)
     if name == "make_word_report":
         from .word_reports import create
         return create(get_settings().root, **arguments)

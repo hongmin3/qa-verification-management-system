@@ -346,6 +346,25 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 지침 개편은 기존 문장·절 번호·제목을 보존한다. 지침 추가는 관련 유형의 기존 주제 안에 넣고 목차·표지·선행 참조·크기와 직전 판 대비 무손실을 검사한다. 크기 상한 초과는 경고하며 규칙을 잘라내지 않는다. 상세 기준과 검증 방법은 `docs/qa-context-budget.md`에 둔다.
 
+### REQ-VXVUECHATBOT-020 Redmine 등록 초안 준비와 검증
+
+**하는 일** 사용자가 PC에서 Redmine 이슈를 등록하기 전에 필요한 값을 찾고 초안을 검사한다. 공용 연결이 읽기 도구 두 개를 제공한다.
+
+| 도구 | 하는 일 |
+|---|---|
+| `get_redmine_field_map` | 허용 프로젝트의 트래커·범주·우선순위·버전 번호를 읽는다. 사용자 정의 항목은 최근 공개 이슈에서 본 번호와 값을 모아 준다. |
+| `validate_redmine_draft` | 초안의 제목 형식, 본문 6개 섹션 순서, 공용 서버 경로, 필수 번호, 민감정보를 검사한다. 정리한 전송 내용과 그 해시(`draft_sha256`)를 돌려준다. |
+
+**결과** 두 도구는 Redmine 등록 규칙 문장(`WRITE_RULES`)을 함께 돌려준다. 같은 규칙은 통합 QA 지침의 issue 섹션에도 있으므로 `get_workflow` 응답 끝에는 다시 붙이지 않는다.
+
+이유: 지침 응답에 두 번 실리면 같은 규칙을 두 곳에서 관리하게 된다.
+
+**지킬 것** 서버는 Redmine에 쓰지 않는다. 필드 조회는 GET만 쓰고, 초안 검사는 네트워크를 쓰지 않는다. 등록은 사용자 승인 뒤 사용자 PC에서 사용자 본인 키로만 한다.
+
+**안 될 때** 검증 오류가 있거나 공용 연결의 보호 처리가 전송 내용을 바꾸면 `ok=false`와 오류 종류만 반환한다. 이때 `payload`와 `draft_sha256`은 반환하지 않는다. 공유 경로·IP·이메일 등이 포함된 초안도 이 제한을 따른다. 원문은 사용자 PC에서 관리하며, 응답 보호 예외를 추가하지 않는다.
+
+**지킬 것** `ok=true`인 MCP 응답의 `draft_sha256`은 최종 반환 `payload`의 정규화 JSON과 일치한다. 정규화는 UTF-8, 키 정렬, 공백 없는 구분자와 원래 유니코드 문자로 수행한다. 민감정보를 탐지한 초안은 원문 값을 응답에 다시 담지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -401,3 +420,4 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-017 | `app/modules/vxvue_chatbot/qa_protection.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_qa_protection.py`, `tests/test_vxvue_redmine.py` | implemented |
 
 | REQ-VXVUECHATBOT-018 | `app/modules/vxvue_chatbot/word_reports.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_word_reports.py` | implemented |
+| REQ-VXVUECHATBOT-020 | `app/modules/vxvue_chatbot/redmine_draft.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_redmine_draft.py` | implemented |

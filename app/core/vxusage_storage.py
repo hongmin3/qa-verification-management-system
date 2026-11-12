@@ -7,7 +7,7 @@ import uuid
 
 CHANNELS={'desktop','http_mcp','web_chat','owner_ui'}
 FEATURES={'documents','specification','testcase','issue','manual','generator','polarion','redmine','other','diagnostic'}
-TOOLS={'get_status','get_workflow','search_documents','get_document','get_document_page','get_document_pages','find_testcases','compare_packages','trace_requirements','get_generator_evidence','read_attachment','batch_lookup','get_polarion_item','polarion_query','read_polarion_result','get_redmine_issue','search_redmine_issues','read_redmine_result','get_manual_review','make_manual_review_report','begin_vxvue_activity','finish_vxvue_activity','unknown'}
+TOOLS={'get_status','get_workflow','search_documents','get_document','get_document_page','get_document_pages','find_testcases','compare_packages','trace_requirements','get_generator_evidence','read_attachment','batch_lookup','get_polarion_item','polarion_query','read_polarion_result','get_redmine_issue','search_redmine_issues','read_redmine_result','get_redmine_field_map','validate_redmine_draft','get_manual_review','make_manual_review_report','begin_vxvue_activity','finish_vxvue_activity','unknown'}
 EVIDENCE={'document','alm','issue','generator','manual','attachment','none','unknown'}
 STATES={'IN_PROGRESS','ANSWER_RECORDED','ANSWER_GENERATED','INCOMPLETE','FAILED','CANCELLED'}
 

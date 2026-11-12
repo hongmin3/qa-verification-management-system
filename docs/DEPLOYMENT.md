@@ -230,10 +230,14 @@ systemctl show qa-verification -p Restart -p RestartUSec
 있어야 하고, 그 역할을 nginx가 맡는다.
 
 ```text
-브라우저 → nginx :80 ┬ /             → 핵심 앱          127.0.0.1:24357
-                     ├ /manual-hub/  → Manual Hub SPA   (정적 파일)
-                     └ /manual-hub/api → Manual Hub 백엔드 127.0.0.1:24358
+브라우저 → nginx <서버 IP>:24357 ┬ /             → 핵심 앱          127.0.0.1:24357
+                                 ├ /manual-hub/  → Manual Hub SPA   (정적 파일)
+                                 └ /manual-hub/api → Manual Hub 백엔드 127.0.0.1:24358
 ```
+
+포트를 붙인 주소(`http://<서버 IP>:24357/`)로만 들어온다. nginx 는 80 을 듣지 않는다(2026-10-23 사용자 결정).
+앱은 같은 포트의 `127.0.0.1` 에만 뜨고(`config.yaml` `app.host`), nginx 는 서버 IP 의 그 포트를 듣는다.
+설정 파일을 복사한 뒤 `__SERVER_ADDR__` 를 서버 IP 로 바꾼다.
 
 ### 8-1. Manual Hub 설치 (nginx는 건너뛴다)
 
@@ -293,9 +297,10 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 8-4. 확인
 
 ```bash
-curl -fsS http://127.0.0.1/health                    # 핵심 앱
-curl -fsS http://127.0.0.1/manual-hub/api/health     # Manual Hub 백엔드
-curl -fsS http://127.0.0.1/manual-hub/ | head -5     # SPA 셸
+curl -fsS http://<서버 IP>:24357/health                    # 핵심 앱 (nginx 경유)
+curl -fsS http://<서버 IP>:24357/manual-hub/api/health     # Manual Hub 백엔드
+curl -fsS http://<서버 IP>:24357/manual-hub/ | head -5     # SPA 셸
+curl -sS -m 5 http://<서버 IP>/ || echo "80 닫힘 (정상)"   # 포트 없는 주소는 연결되지 않아야 한다
 ```
 
 브라우저에서 홈(`/`)에 "매뉴얼 서버" 카드가 보이고, 클릭하면 Manual Hub가 뜨고, 사이드바의

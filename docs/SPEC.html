@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="91e233f239291c04b995582b13a98d1ff5d7150cd8922ed9a46f02ba446eba82">
+<meta name="spec-source-sha256" content="ebf7887d923f6eea344750e8fd3d173389ba27420bcb90a45ff0a48b4948844e">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>348</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>349</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -651,6 +651,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017 <span>상태 재시도와 승인된 로그 경로</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018 <span>제출용 Word 기본 양식</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-019">REQ-VXVUECHATBOT-019 <span>작업별 지침과 필요한 원문 조회</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020 <span>Redmine 등록 초안 준비와 검증</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1138,6 +1139,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="이름">상태 재시도와 승인된 로그 경로</td><td data-label="상태"><span class="badge st-implemented">implemented</span></td><td data-label="구현"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="테스트"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a></td><td data-label="이름">제출용 Word 기본 양식</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-019">REQ-VXVUECHATBOT-019</a></td><td data-label="이름">작업별 지침과 필요한 원문 조회</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/core/qa_workflow.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/manual_review/shared_tools.py</code></td><td data-label="테스트"><code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_qa_context_filters.py</code></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a></td><td data-label="이름">Redmine 등록 초안 준비와 검증</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -9288,8 +9290,10 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <section class="card kind-req" id="REQ-DEPLOY-001">
 <h3><span class="idtag">REQ-DEPLOY-001</span> listen 주소·포트를 한 곳에서 정하기</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>app/core/config.py</code>, <code>app/serve.py</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-CONF-001">REQ-CONF-001</a>, <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 5</summary>
 <ul>
+<li><span class="hist">2026-11-12 운영 서버에만 있던 변경을 저장소로 정리</span> <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a>·<a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: 2026-10-23에 운영 서버에 반영했지만 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 사본에만 남아 있던 포트 전용 접속 변경을 master에 합쳤다.</li>
+<li><span class="hist">2026-10-23 포트를 붙인 주소로만 접속</span> <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a>: 앱은 <code>127.0.0.1:24357</code> 에만 뜬다(<code>app.host</code>). 바깥 입구는 nginx 가 서버 IP 의 같은 포트에서 연다. 서버 안의 <code>127.0.0.1:24357</code>(SSH 터널 관리자 저장, <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>)은 그대로 앱에 바로 닿는다.</li>
 <li><span class="hist">2026-10-13</span> <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a>: <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 테스트 서버도 <code>app.port</code>(24357)를 읽어 <code>127.0.0.1:24357</code> 에 뜬다. 옛 포트 12000 은 쓰지 않는다.</li>
 <li><span class="hist">2026-09-28 · 지식 폴더 자동 업로드 · 감사 기록 보강 · 문서 보강</span> <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>: README 에 일일 QA 점검의 위치·외부 전송 범위·시험 실행을 넣었다. <code>docs/AUTOMATION.md</code> 에 지식 업로드 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>과 하루 실행 순서를, SPEC <a class="idref" href="#REQ-DAILY-001">REQ-DAILY-001</a> 에 입력 자료가 오는 곳을 적었다. 보안 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>의 &quot;필요한 항목만 보낸다&quot;를 실제 동작(<span class="term" title="Claude 가 읽고 쓰는 격리된 폴더(daily_qa.workspace_dir). 저장소 밖에 둔다" tabindex="0">작업 폴더</span>의 전체 색인 가운데 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> 가 읽은 부분이 나감)대로 고쳤다. <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> 의 긴 문단을 나눴다.</li>
 <li><span class="hist">2026-09-22 · listen 포트를 `config.yaml` 단일 원본으로, 운영 포트 12000 → 24357</span> SPEC 에 <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a> / <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a> 을 추가했다.</li>
@@ -9333,10 +9337,10 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <p><strong>지킬 것</strong></p>
 <ul>
 <li><p>진입점에 포트를 적지 않는다.</p></li>
-<li><p><span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 의 테스트 서버(<span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 스케줄러 <code>QA-Verification-Test-Web</code>)도 같은 <code>app.port</code> 를 읽어 <code>127.0.0.1:24357</code> 에만 뜬다. 다른 PC 에서는 접속할 수 없고, 사내 사용자는 운영 서버 주소(<code>http://&lt;서버 주소&gt;:24357</code> 또는 nginx 80)로 들어간다.</p>
+<li><p><span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 의 테스트 서버(<span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 스케줄러 <code>QA-Verification-Test-Web</code>)도 같은 <code>app.port</code> 를 읽어 <code>127.0.0.1:24357</code> 에만 뜬다. 다른 PC 에서는 접속할 수 없고, 사내 사용자는 운영 서버 주소 <code>http://&lt;서버 주소&gt;:24357</code> 로 들어간다. 운영 서버의 <code>app.host</code> 는 <code>127.0.0.1</code> 이고, 그 포트의 바깥 입구는 nginx 가 연다(<a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>).</p>
 <p class="why"><span class="why-label">이유</span> 2026-10-13 전에는 테스트 서버만 옛 포트 12000 에 남아 있었다. 그래서 <span class="term" title="지식 폴더와 ALM 수집 도구가 있는 QA 담당자의 Windows PC. 예약 작업이 여기서 돈다" tabindex="0">담당자 PC</span> 의 <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 동기화 기본 대상(<code>app.port</code>)과 테스트 서버가 달랐고, 운영 서버 12000 으로 접속하려는 시도도 있었다.</p>
 </li>
-<li><p>nginx 는 YAML 을 읽지 못하므로 <code>deploy/nginx/qa-platform.conf</code> 의 upstream 포트만 자동으로 따라가지 않는다. 두 값이 다르면 검사가 실패해야 한다.</p></li>
+<li><p>nginx 는 YAML 을 읽지 못하므로 <code>deploy/nginx/qa-platform.conf</code> 의 upstream 포트와 listen 포트는 자동으로 따라가지 않는다. 두 값이 <code>app.port</code> 와 다르면 검사가 실패해야 한다.</p></li>
 <li><p>운영 포트는 <code>24357</code> 이다.</p></li>
 </ul>
 <p class="why"><span class="why-label">이유</span> 1024 초과라 관리자 권한이 필요 없다. 서버의 임시 포트 범위(실측 <code>32768~60999</code>) 밖이라 나가는 연결과 겹치지 않는다. 그 호스트의 다른 서비스가 쓰지 않는 포트다.</p>
@@ -9412,13 +9416,27 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 </section>
 <section class="card kind-req" id="REQ-DEPLOY-004">
 <h3><span class="idtag">REQ-DEPLOY-004</span> 통합 nginx 사이트</h3>
-<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>deploy/nginx/qa-platform.conf</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></span></div>
-<details class="history"><summary>변경 이력 1</summary>
+<div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>deploy/nginx/qa-platform.conf</code></span><span class="meta"><b>테스트</b> <a class="idref" href="#TEST-DEPLOY-001">TEST-DEPLOY-001</a>: <code>tests/test_serve_bind.py</code></span><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a></span></div>
+<details class="history"><summary>변경 이력 5</summary>
 <ul>
+<li><span class="hist">2026-11-12 운영 서버에만 있던 변경을 저장소로 정리</span> <a class="idref" href="#REQ-DEPLOY-001">REQ-DEPLOY-001</a>·<a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: 2026-10-23에 운영 서버에 반영했지만 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 사본에만 남아 있던 포트 전용 접속 변경을 master에 합쳤다.</li>
+<li><span class="hist">2026-10-23 포트를 붙인 주소로만 접속</span> <a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: 운영 서버는 <code>http://&lt;서버 주소&gt;:24357/</code> 로만 들어온다. 포트 없는 <code>http://&lt;서버 주소&gt;/</code>(80)는 nginx 가 듣지 않아 연결되지 않는다. <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>도 <code>:24357/manual-hub/</code> 로 연다.</li>
+<li><span class="hist">2026-10-23 포트를 붙인 주소로만 접속</span> <a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: nginx 가 <code>Host</code> 머리글에 포트까지 넘긴다. 포트를 버리면 <span class="term" title="비밀번호 한 칸으로 들어가는 로그인. 로그인하면 8시간 동안 저장할 수 있다" tabindex="0">관리자 로그인</span> 뒤 설정 저장이 다른 주소 요청으로 거절된다.</li>
+<li><span class="hist">2026-10-23 포트를 붙인 주소로만 접속</span> <a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: 앱이 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span> API 를 부르는 주소와 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span> crontab 의 nginx·<span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span> 확인 주소를 <code>:24357</code> 로 바꿨다.</li>
 <li><span class="hist">2026-09-30 · QA Manual Hub 백엔드 포트 24358</span> <a class="idref" href="#REQ-HUBOPS-014">REQ-HUBOPS-014</a>, <a class="idref" href="#REQ-DEPLOY-004">REQ-DEPLOY-004</a>: Manual Hub 백엔드 포트를 흔한 번호 <code>9180</code> 에서 <code>24358</code> 로 바꿨다. 서버에서 비어 있고 임시 포트 범위 밖인 번호다. 포트가 적힌 다섯 곳(통합·단독 nginx, systemd 유닛, <code>install.sh</code>, 개발 서버 프록시)이 어긋나면 테스트가 실패한다. 운영 서버에는 아직 적용하지 않았다(절차는 <code>docs/local/OPERATIONS_LOCAL.md</code>).</li>
 </ul>
 </details>
-<p><strong>하는 일</strong> 한 호스트의 80 포트 하나로 핵심 앱과 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>를 함께 연다.</p>
+<p><strong>하는 일</strong> 포트를 붙인 주소 <code>http://&lt;서버 주소&gt;:24357</code> 하나로 핵심 앱과 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>를 함께 연다. 포트 없는 주소 <code>http://&lt;서버 주소&gt;/</code> 로는 들어갈 수 없다.</p>
+<aside class="callout callout-example"><span class="callout-label">예시</span>
+<p><code>http://10.13.0.222:24357/</code> 은 홈 화면, <code>http://10.13.0.222:24357/manual-hub/</code> 는 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>가 열린다. <code>http://10.13.0.222/</code> 는 연결되지 않는다.</p>
+</aside>
+<p><strong>순서</strong></p>
+<ol>
+<li>앱은 <code>127.0.0.1:&lt;app.port&gt;</code> 에만 뜬다(<code>config.yaml</code> 의 <code>app.host: &quot;127.0.0.1&quot;</code>).</li>
+<li>nginx 는 서버 사내 IP 의 같은 포트(<code>&lt;서버 IP&gt;:&lt;app.port&gt;</code>)만 듣는다. 80 포트는 듣지 않는다.</li>
+<li>nginx 는 받은 주소의 포트까지 앱에 넘긴다(<code>Host</code> 머리글에 <code>$http_host</code>).</li>
+</ol>
+<p class="why"><span class="why-label">이유</span> 앱과 nginx 가 둘 다 <code>0.0.0.0</code> 이면 같은 포트를 잡을 수 없다. 앱 포트를 바깥에 열어 두면 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>가 빠진 입구가 하나 더 생긴다. 포트를 버리고 넘기면 브라우저가 보낸 Origin 과 앱이 보는 주소가 달라져 관리자 저장이 거절된다.</p>
 <p><strong>결과</strong></p>
 <div class="table-wrap"><table>
 <thead><tr><th>경로</th><th>보내는 곳</th></tr></thead>
@@ -9432,13 +9450,18 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <p>모든 경로에 공통으로 적용되는 것:</p>
 <ul>
 <li>요청 본문은 512MB 까지 받는다.</li>
-<li>서버 이름은 자리표 <code>__SERVER_NAME__</code> 과 <code>_</code> 다.</li>
+<li>서버 이름은 자리표 <code>__SERVER_NAME__</code> 과 <code>_</code> 다. 듣는 주소의 자리표 <code>__SERVER_ADDR__</code> 는 설치할 때 서버 IP 로 바꾼다.</li>
 <li>응답 머리에 <code>X-Content-Type-Options: nosniff</code>, <code>Referrer-Policy: same-origin</code> 을 붙인다.</li>
 </ul>
 <p><strong>지킬 것</strong></p>
 <ul>
 <li>이 호스트에 다른 서비스의 사이트가 있으면 그 파일을 고치지 않는다. 이 파일의 location 블록만 옮겨 붙인다.</li>
 <li>정식 인증서를 받기 전에는 평문 HTTP 로 운영한다.</li>
+<li>80 포트를 다시 열지 않는다. 사용자 결정(2026-10-23)이다.</li>
+<li>서버 안에서 <code>127.0.0.1:&lt;app.port&gt;</code> 로 부르면 nginx 를 거치지 않고 앱에 바로 닿는다. SSH 터널로 하는 관리자 저장과 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>이 이 주소를 쓴다.</li>
+<li>앱이 <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span> API 를 부를 때도 nginx 주소(<code>services.manual_hub.api_url</code> = <code>http://&lt;서버 IP&gt;:24357/manual-hub/api</code>)를 쓴다.
+이유: <span class="term" title="매뉴얼 최신본(Current)을 보관하는 하위 서비스다(services/qa-manual-hub). 이 앱과 HTTP 로만 연결한다" tabindex="0">매뉴얼 서버</span>의 <span class="term" title="로그인했다는 표시. 브라우저가 8시간 들고 있다" tabindex="0">로그인 쿠키</span>는 <code>/manual-hub/</code> 경로에만 붙는다. 백엔드 포트로 바로 부르면 로그인이 이어지지 않는다.
+</li>
 </ul>
 </section>
 <section class="card kind-req" id="REQ-SYNC-001">
@@ -12875,6 +12898,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <li>동작 검증: 임시 루트에 다른 포트를 적은 <code>config.yaml</code> 을 놓고 실제 <code>build_settings()</code> 를 통과시켜 <code>app_bind()</code> 의 결과가 따라오는지 본다. 빈 값일 때만 기본값으로 떨어지는지, 정수가 아닌 포트에서 실패하는지도 같은 방식으로 본다.</li>
 <li>텍스트 검사: 세 진입점이 <code>--port</code> 를 들고 있지 않고 <code>app.serve</code> 를 부르는지 본다. 이 검사는 파일에 포트 지정이 없다는 것만 증명하며 서버가 어느 포트에 뜨는지는 증명하지 않는다.</li>
 <li>텍스트 대조: nginx upstream 포트가 <code>config.yaml</code> 의 <code>app.port</code> 와 같은지 본다.</li>
+<li>텍스트 대조: <code>app.host</code> 가 <code>127.0.0.1</code> 이고, nginx 의 listen 이 <code>__SERVER_ADDR__:&lt;app.port&gt;</code> 하나뿐이며(80 없음), <code>Host</code> 머리글이 모두 <code>$http_host</code> 인지 본다. 서버의 nginx 가 이 파일대로 떠 있는지는 증명하지 않는다.</li>
 <li>텍스트 대조: Manual Hub 백엔드 포트(기본 <code>24358</code>)가 통합 nginx, 단독 nginx, systemd 유닛, <code>install.sh</code> 기본값, 개발 서버 프록시 다섯 곳에서 같고 핵심 앱 포트와 다른지 본다(<code>test_manual_hub_backend_port_is_the_same_everywhere</code>).</li>
 </ul>
 <p><code>tests/test_monitor_health.py</code> 의 <code>test_default_base_url_comes_from_config_yaml</code> 은 <span class="term" title="scripts/monitor_health.py 가 상태 주소들을 불러 문제를 JSON 한 줄로 남기는 일이다" tabindex="0">운영 점검</span>의 기본 대상이 같은 설정에서 나오는지를 별도로 본다. 해당 assertion 실패는 검사 실패다.</p>
@@ -12887,7 +12911,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 <ol>
 <li><code>.\scripts\deploy.ps1 -Restart</code> 를 돌려 &quot;배포 및 재기동 완료&quot; 가 나오는지 본다.</li>
 <li>서버에서 <code>systemctl is-active qa-verification</code>, <code>systemctl is-enabled qa-verification</code> 이 <code>active</code>, <code>enabled</code> 인지 본다.</li>
-<li><code>curl -fsS http://127.0.0.1/health</code> 와 <code>curl -fsS http://127.0.0.1/manual-hub/api/health</code> 가 성공하는지 본다.</li>
+<li>다른 PC 에서 <code>http://&lt;서버 주소&gt;:24357/health</code> 와 <code>http://&lt;서버 주소&gt;:24357/manual-hub/api/health</code> 가 성공하고, <code>http://&lt;서버 주소&gt;/</code> 는 연결되지 않는지 본다.</li>
 <li>서버의 <span class="term" title="secrets.txt, secrets.json, .env. API Key·토큰·메일 계정처럼 공개하면 안 되는 값을 둔다. Git 에 올리지 않는다" tabindex="0">비밀 설정 파일</span>과 <code>data/</code> 가 바뀌지 않았는지 본다.</li>
 </ol>
 </section>
@@ -16912,6 +16936,29 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p>검색·상태·원문 응답은 반복 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 정보를 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>별로 모을 수 있다. <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>·해시·위치·경고·적용 조건·변경 추적·실패와 이어 읽기는 보존하고 기존 상세 형식도 선택할 수 있다. 큰 원문의 선택 조회는 생략 범위를 표시하고 전체 원문 조회를 유지한다. <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> HTML 표시 정보 축약, XLSX 열 선택, 매뉴얼 변경 문단 선택을 제공한다.</p>
 <p>지침 개편은 기존 문장·절 번호·제목을 보존한다. 지침 추가는 관련 유형의 기존 주제 안에 넣고 목차·표지·선행 참조·크기와 직전 판 대비 무손실을 검사한다. 크기 상한 초과는 경고하며 규칙을 잘라내지 않는다. 상세 기준과 검증 방법은 <code>docs/qa-context-budget.md</code>에 둔다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-020">
+<h3><span class="idtag">REQ-VXVUECHATBOT-020</span> Redmine 등록 초안 준비와 검증</h3>
+<details class="history"><summary>변경 이력 3</summary>
+<ul>
+<li><span class="hist">2026-11-12 운영 서버에만 있던 변경을 저장소로 정리</span> <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a>: 운영 서버에만 있던 Redmine <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 초안 도구(<code>get_redmine_field_map</code>·<code>validate_redmine_draft</code>)를 저장소로 옮기고 사양을 추가했다. 사용 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 도구 목록에도 두 도구를 넣었다.</li>
+<li><span class="hist">2026-11-12 운영 서버에만 있던 변경을 저장소로 정리</span> <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a>: <code>get_workflow</code> 응답 끝에 Redmine <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 규칙을 다시 붙이지 않는다. 같은 규칙은 통합 QA 지침 2026-11-12.1의 issue 섹션 29.10에서 배급한다.</li>
+<li><span class="hist">2026-11-12 운영 서버에만 있던 변경을 저장소로 정리</span> <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a>: 초안 오류나 응답 보호로 내용이 바뀌는 경우 전송용 JSON과 해시를 반환하지 않는다. 거절한 키가 응답에 다시 담기거나, 보호된 본문과 원래 해시가 다른 문제를 막았다. 이 보완은 운영 서버에 아직 배포하지 않았다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 사용자가 PC에서 Redmine <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>를 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>하기 전에 필요한 값을 찾고 초안을 검사한다. 공용 연결이 읽기 도구 두 개를 제공한다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>도구</th><th>하는 일</th></tr></thead>
+<tbody>
+<tr><td><code>get_redmine_field_map</code></td><td>허용 프로젝트의 트래커·범주·우선순위·<span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 번호를 읽는다. 사용자 정의 항목은 최근 공개 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span>에서 본 번호와 값을 모아 준다.</td></tr>
+<tr><td><code>validate_redmine_draft</code></td><td>초안의 제목 형식, 본문 6개 섹션 순서, 공용 서버 경로, 필수 번호, 민감정보를 검사한다. 정리한 전송 내용과 그 해시(<code>draft_sha256</code>)를 돌려준다.</td></tr>
+</tbody>
+</table></div>
+<p><strong>결과</strong> 두 도구는 Redmine <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 규칙 문장(<code>WRITE_RULES</code>)을 함께 돌려준다. 같은 규칙은 통합 QA 지침의 issue 섹션에도 있으므로 <code>get_workflow</code> 응답 끝에는 다시 붙이지 않는다.</p>
+<p class="why"><span class="why-label">이유</span> 지침 응답에 두 번 실리면 같은 규칙을 두 곳에서 관리하게 된다.</p>
+<p><strong>지킬 것</strong> 서버는 Redmine에 쓰지 않는다. 필드 조회는 GET만 쓰고, 초안 검사는 네트워크를 쓰지 않는다. <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>은 사용자 승인 뒤 사용자 PC에서 사용자 본인 키로만 한다.</p>
+<p><strong>안 될 때</strong> 검증 오류가 있거나 공용 연결의 보호 처리가 전송 내용을 바꾸면 <code>ok=false</code>와 오류 <span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>만 반환한다. 이때 <code>payload</code>와 <code>draft_sha256</code>은 반환하지 않는다. 공유 경로·IP·이메일 등이 포함된 초안도 이 제한을 따른다. 원문은 사용자 PC에서 관리하며, 응답 보호 예외를 추가하지 않는다.</p>
+<p><strong>지킬 것</strong> <code>ok=true</code>인 MCP 응답의 <code>draft_sha256</code>은 최종 반환 <code>payload</code>의 정규화 JSON과 일치한다. 정규화는 UTF-8, 키 정렬, 공백 없는 구분자와 원래 유니코드 문자로 수행한다. 민감정보를 탐지한 초안은 원문 값을 응답에 다시 담지 않는다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -16968,7 +17015,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <tr><td data-label="Requirement"><a class="idref" href="#REQ-VXVUECHATBOT-017">REQ-VXVUECHATBOT-017</a></td><td data-label="Implementation"><code>app/modules/vxvue_chatbot/qa_protection.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code></td><td data-label="Test"><code>tests/test_vxvue_qa_protection.py</code>, <code>tests/test_vxvue_redmine.py</code></td><td data-label="Status"><span class="badge st-implemented">implemented</span></td></tr>
 </tbody>
 </table></div>
-<p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |</p>
+<p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a> | <code>app/modules/vxvue_chatbot/redmine_draft.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code> | <code>tests/test_vxvue_redmine_draft.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">
 <h2>QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</h2>

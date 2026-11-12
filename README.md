@@ -32,6 +32,8 @@ Opus medium을 유지하면서 공통 지침 캐시와 묶음 조회로 반복 �
 
 ---
 
+VXvue의 Redmine 등록 준비에는 필드 조회와 초안 검사 도구를 쓴다. 공용 연결은 등록을 수행하지 않는다. 보호 대상 내용이 포함된 초안의 전송 JSON 반환 제한은 [Redmine 연결 안내](docs/VXVUE_REDMINE_TOOLS.md)를 따른다.
+
 ## 목차
 
 - [무엇을 해결하는가](#무엇을-해결하는가)
@@ -190,11 +192,11 @@ vs React SPA + PostgreSQL) 억지로 한 프로세스에 넣지 않고, 대신 *
 ```text
                         브라우저
                            │
-                      nginx :80
+            nginx <서버 IP>:24357 (80 은 닫음)
         ┌──────────────────┴──────────────────┐
         │ /                                   │ /manual-hub/
         ▼                                     ▼
-  핵심 앱 (uvicorn :24357)              Manual Hub SPA (정적 파일)
+  핵심 앱 (uvicorn 127.0.0.1:24357)            Manual Hub SPA (정적 파일)
   FastAPI + Jinja2                      + 백엔드 (uvicorn :24358)
         │                                     │
         ▼                                     ▼

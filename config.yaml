@@ -1,6 +1,8 @@
 app:
   name: "QA 검증 관리 시스템"
-  host: "0.0.0.0"
+  # nginx 뒤에만 둔다. 외부 입구는 nginx 가 서버 주소의 같은 포트에서 연다
+  # (deploy/nginx/qa-platform.conf). 0.0.0.0 으로 바꾸면 nginx 가 그 포트를 잡지 못한다.
+  host: "127.0.0.1"
   # 이 앱이 listen 하는 포트의 **단일 원본**이다. 여기만 고치면 uvicorn 바인딩과
   # 앱이 자기 자신을 부르는 URL, 운영 점검(scripts/monitor_health.py)이 모두 따라간다
   # (app/serve.py, app/core/config.py 의 app_bind/app_self_url).
@@ -49,14 +51,15 @@ services:
     # 기본값은 같은 서버 nginx가 /manual-hub/ 로 프록시하는 통합 배포 기준이다
     # (deploy/nginx/qa-platform.conf). 별도 호스트로 운영하면 절대 URL을 넣는다.
     url: "/manual-hub/"
-    # 핵심 앱이 매뉴얼 서버 API를 호출할 주소. 통합 배포에서는 같은 호스트의 nginx가
-    # /manual-hub/api 를 매뉴얼 서버 백엔드로 프록시하므로 127.0.0.1로 충분하다
-    # (외부로 나가지 않는다). 매뉴얼 서버를 다른 호스트에 두면 그 주소를 넣는다.
+    # 핵심 앱이 매뉴얼 서버 API를 호출할 주소. 같은 호스트의 nginx 가 /manual-hub/api 를
+    # 매뉴얼 서버 백엔드로 프록시한다. nginx 는 서버 주소의 24357 만 들으므로(80 없음,
+    # 127.0.0.1:24357 은 앱 자신) 서버 주소로 부른다. 백엔드 포트로 바로 부르면 세션 쿠키
+    # 경로(/manual-hub/)가 맞지 않아 로그인이 이어지지 않는다.
     #
     # 자격증명은 secrets.txt의 MANUAL_HUB_USER / MANUAL_HUB_PASSWORD에서 읽는다.
     # 이 주소와 자격증명 둘 다 있어야 연동이 켜지고, 하나라도 없으면 꺼진 채
     # 기존 동작을 그대로 유지한다. secrets.txt는 배포되지 않으므로 서버에서 직접 넣는다.
-    api_url: "http://127.0.0.1/manual-hub/api"
+    api_url: "http://10.13.0.222:24357/manual-hub/api"
 
 # 오래된 파일 자동 정리 (app/core/retention.py). scripts/backup_data.py 가 새 백업을 검증한 뒤 실행한다.
 # 값은 보관 일수이고 0 이면 그 종류는 지우지 않는다. 일일 QA 스냅샷(data/daily_qa/snapshots/)은 지우지 않는다.

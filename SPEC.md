@@ -6754,11 +6754,11 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 **지킬 것**
 
 - 진입점에 포트를 적지 않는다.
-- 담당자 PC 의 테스트 서버(작업 스케줄러 `QA-Verification-Test-Web`)도 같은 `app.port` 를 읽어 `127.0.0.1:24357` 에만 뜬다. 다른 PC 에서는 접속할 수 없고, 사내 사용자는 운영 서버 주소(`http://<서버 주소>:24357` 또는 nginx 80)로 들어간다.
+- 담당자 PC 의 테스트 서버(작업 스케줄러 `QA-Verification-Test-Web`)도 같은 `app.port` 를 읽어 `127.0.0.1:24357` 에만 뜬다. 다른 PC 에서는 접속할 수 없고, 사내 사용자는 운영 서버 주소 `http://<서버 주소>:24357` 로 들어간다. 운영 서버의 `app.host` 는 `127.0.0.1` 이고, 그 포트의 바깥 입구는 nginx 가 연다(REQ-DEPLOY-004).
 
   이유: 2026-10-13 전에는 테스트 서버만 옛 포트 12000 에 남아 있었다. 그래서 담당자 PC 의 사양서 동기화 기본 대상(`app.port`)과 테스트 서버가 달랐고, 운영 서버 12000 으로 접속하려는 시도도 있었다.
 
-- nginx 는 YAML 을 읽지 못하므로 `deploy/nginx/qa-platform.conf` 의 upstream 포트만 자동으로 따라가지 않는다. 두 값이 다르면 검사가 실패해야 한다.
+- nginx 는 YAML 을 읽지 못하므로 `deploy/nginx/qa-platform.conf` 의 upstream 포트와 listen 포트는 자동으로 따라가지 않는다. 두 값이 `app.port` 와 다르면 검사가 실패해야 한다.
 - 운영 포트는 `24357` 이다.
 
 이유: 1024 초과라 관리자 권한이 필요 없다. 서버의 임시 포트 범위(실측 `32768~60999`) 밖이라 나가는 연결과 겹치지 않는다. 그 호스트의 다른 서비스가 쓰지 않는 포트다.
@@ -6827,7 +6827,17 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 ### REQ-DEPLOY-004 통합 nginx 사이트
 
-**하는 일** 한 호스트의 80 포트 하나로 핵심 앱과 매뉴얼 서버를 함께 연다.
+**하는 일** 포트를 붙인 주소 `http://<서버 주소>:24357` 하나로 핵심 앱과 매뉴얼 서버를 함께 연다. 포트 없는 주소 `http://<서버 주소>/` 로는 들어갈 수 없다.
+
+> **예시** `http://10.13.0.222:24357/` 은 홈 화면, `http://10.13.0.222:24357/manual-hub/` 는 매뉴얼 서버가 열린다. `http://10.13.0.222/` 는 연결되지 않는다.
+
+**순서**
+
+1. 앱은 `127.0.0.1:<app.port>` 에만 뜬다(`config.yaml` 의 `app.host: "127.0.0.1"`).
+2. nginx 는 서버 사내 IP 의 같은 포트(`<서버 IP>:<app.port>`)만 듣는다. 80 포트는 듣지 않는다.
+3. nginx 는 받은 주소의 포트까지 앱에 넘긴다(`Host` 머리글에 `$http_host`).
+
+이유: 앱과 nginx 가 둘 다 `0.0.0.0` 이면 같은 포트를 잡을 수 없다. 앱 포트를 바깥에 열어 두면 매뉴얼 서버가 빠진 입구가 하나 더 생긴다. 포트를 버리고 넘기면 브라우저가 보낸 Origin 과 앱이 보는 주소가 달라져 관리자 저장이 거절된다.
 
 **결과**
 
@@ -6841,13 +6851,18 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 모든 경로에 공통으로 적용되는 것:
 
 - 요청 본문은 512MB 까지 받는다.
-- 서버 이름은 자리표 `__SERVER_NAME__` 과 `_` 다.
+- 서버 이름은 자리표 `__SERVER_NAME__` 과 `_` 다. 듣는 주소의 자리표 `__SERVER_ADDR__` 는 설치할 때 서버 IP 로 바꾼다.
 - 응답 머리에 `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` 을 붙인다.
 
 **지킬 것**
 
 - 이 호스트에 다른 서비스의 사이트가 있으면 그 파일을 고치지 않는다. 이 파일의 location 블록만 옮겨 붙인다.
 - 정식 인증서를 받기 전에는 평문 HTTP 로 운영한다.
+- 80 포트를 다시 열지 않는다. 사용자 결정(2026-10-23)이다.
+- 서버 안에서 `127.0.0.1:<app.port>` 로 부르면 nginx 를 거치지 않고 앱에 바로 닿는다. SSH 터널로 하는 관리자 저장과 운영 점검이 이 주소를 쓴다.
+- 앱이 매뉴얼 서버 API 를 부를 때도 nginx 주소(`services.manual_hub.api_url` = `http://<서버 IP>:24357/manual-hub/api`)를 쓴다.
+
+  이유: 매뉴얼 서버의 로그인 쿠키는 `/manual-hub/` 경로에만 붙는다. 백엔드 포트로 바로 부르면 로그인이 이어지지 않는다.
 
 ### REQ-SYNC-001 사양서 동기화
 
@@ -10018,6 +10033,7 @@ REQ-DEPLOY-001을 `tests/test_serve_bind.py`로 검증한다. 세 가지를 분�
 - 동작 검증: 임시 루트에 다른 포트를 적은 `config.yaml` 을 놓고 실제 `build_settings()` 를 통과시켜 `app_bind()` 의 결과가 따라오는지 본다. 빈 값일 때만 기본값으로 떨어지는지, 정수가 아닌 포트에서 실패하는지도 같은 방식으로 본다.
 - 텍스트 검사: 세 진입점이 `--port` 를 들고 있지 않고 `app.serve` 를 부르는지 본다. 이 검사는 파일에 포트 지정이 없다는 것만 증명하며 서버가 어느 포트에 뜨는지는 증명하지 않는다.
 - 텍스트 대조: nginx upstream 포트가 `config.yaml` 의 `app.port` 와 같은지 본다.
+- 텍스트 대조: `app.host` 가 `127.0.0.1` 이고, nginx 의 listen 이 `__SERVER_ADDR__:<app.port>` 하나뿐이며(80 없음), `Host` 머리글이 모두 `$http_host` 인지 본다. 서버의 nginx 가 이 파일대로 떠 있는지는 증명하지 않는다.
 - 텍스트 대조: Manual Hub 백엔드 포트(기본 `24358`)가 통합 nginx, 단독 nginx, systemd 유닛, `install.sh` 기본값, 개발 서버 프록시 다섯 곳에서 같고 핵심 앱 포트와 다른지 본다(`test_manual_hub_backend_port_is_the_same_everywhere`).
 
 `tests/test_monitor_health.py` 의 `test_default_base_url_comes_from_config_yaml` 은 운영 점검의 기본 대상이 같은 설정에서 나오는지를 별도로 본다. 해당 assertion 실패는 검사 실패다.
@@ -10032,7 +10048,7 @@ REQ-DEPLOY-002, 003, 004 는 자동 테스트가 없다(nginx 포트 대조만 T
 
 1. `.\scripts\deploy.ps1 -Restart` 를 돌려 "배포 및 재기동 완료" 가 나오는지 본다.
 2. 서버에서 `systemctl is-active qa-verification`, `systemctl is-enabled qa-verification` 이 `active`, `enabled` 인지 본다.
-3. `curl -fsS http://127.0.0.1/health` 와 `curl -fsS http://127.0.0.1/manual-hub/api/health` 가 성공하는지 본다.
+3. 다른 PC 에서 `http://<서버 주소>:24357/health` 와 `http://<서버 주소>:24357/manual-hub/api/health` 가 성공하고, `http://<서버 주소>/` 는 연결되지 않는지 본다.
 4. 서버의 비밀 설정 파일과 `data/` 가 바뀌지 않았는지 본다.
 
 ### TEST-SYNC-001

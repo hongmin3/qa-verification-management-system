@@ -82,5 +82,5 @@ DB 무결성 오류, stale 작업, 마지막 지식 동기화 실패 시 exit co
 
 ```cron
 15 14 * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/backup_data.py --destination backups >> output/logs/backup.log 2>&1
-*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --check nginx=http://127.0.0.1/health --check manual_hub=http://127.0.0.1/manual-hub/api/health --disk-path . >> output/logs/monitor.log 2>&1
+*/10 * * * * cd /home/ubuntu/ai-regression-impact-analyzer && .venv/bin/python scripts/monitor_health.py --check nginx=http://10.13.0.222:24357/health --check manual_hub=http://10.13.0.222:24357/manual-hub/api/health --disk-path . >> output/logs/monitor.log 2>&1
 ```

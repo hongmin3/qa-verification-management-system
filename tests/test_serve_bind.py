@@ -98,6 +98,32 @@ def test_nginx_upstream_matches_config_yaml():
     )
 
 
+# Validates: REQ-DEPLOY-001, REQ-DEPLOY-004
+def test_app_listens_on_loopback_only():
+    """앱은 nginx 뒤에만 있다. 0.0.0.0 이면 nginx 와 같은 포트를 잡지 못하고, 매뉴얼 서버가 빠진 입구가 하나 더 생긴다."""
+    raw = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    assert raw["app"]["host"] == "127.0.0.1"
+
+
+# Validates: REQ-DEPLOY-004
+def test_nginx_listens_only_on_the_app_port_at_the_server_address():
+    """포트를 붙인 주소로만 들어온다. 80 을 다시 열면 포트 없는 주소가 되살아난다.
+
+    텍스트 검사다 — 서버의 nginx 가 이 파일대로 떠 있는지는 증명하지 않는다.
+    """
+    conf = (ROOT / "deploy/nginx/qa-platform.conf").read_text(encoding="utf-8")
+    listens = re.findall(r"^\s*listen\s+([^;]+);", conf, re.M)
+    assert listens == [f"__SERVER_ADDR__:{_config_port()}"], listens
+
+
+# Validates: REQ-DEPLOY-004
+def test_nginx_forwards_the_host_with_its_port():
+    """`$host` 는 포트를 버린다. 그러면 브라우저 Origin(`…:24357`)과 앱이 보는 주소가 달라져 관리자 저장이 403 이 된다."""
+    conf = (ROOT / "deploy/nginx/qa-platform.conf").read_text(encoding="utf-8")
+    hosts = re.findall(r"proxy_set_header\s+Host\s+(\S+);", conf)
+    assert hosts and set(hosts) == {"$http_host"}, hosts
+
+
 # Validates: REQ-DEPLOY-004, REQ-HUBOPS-014
 def test_manual_hub_backend_port_is_the_same_everywhere():
     """Manual Hub 백엔드 포트는 설정 파일 하나로 모이지 않고 다섯 곳에 적혀 있다. 하나만 바꾸면 502 다."""

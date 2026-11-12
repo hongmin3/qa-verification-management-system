@@ -13,7 +13,7 @@
 | 호스트 | `10.13.0.222` (사내망 전용) |
 | SSH 계정 | `ubuntu` (SSH key 인증) |
 | 핵심 앱 배포 경로 | `/home/ubuntu/ai-regression-impact-analyzer` (구 프로젝트명 유지 — 운영 리스크상 의도적) |
-| 핵심 앱 포트 | `24357` |
+| 핵심 앱 포트 | `24357` (앱은 `127.0.0.1:24357`, 외부 입구는 nginx `10.13.0.222:24357`. 80 은 닫음, 2026-10-23) |
 | Manual Hub APP_ROOT | `/opt/qa-manual-hub` |
 | Manual Hub DATA_ROOT | `/srv/qa-manual-hub` |
 | Manual Hub 백엔드 포트 | `24358` (서버는 전환 전이라 아직 `9180`. 아래 전환 절차) |
@@ -67,14 +67,34 @@ sudo systemctl reload nginx
 ## 헬스체크
 
 ```bash
-curl -fsS http://127.0.0.1/health                  # 핵심 앱 (nginx 경유)
-curl -fsS http://127.0.0.1:24357/health            # 핵심 앱 (직접)
-curl -fsS http://127.0.0.1/manual-hub/api/health   # Manual Hub
+curl -fsS http://10.13.0.222:24357/health                  # 핵심 앱 (nginx 경유)
+curl -fsS http://127.0.0.1:24357/health                    # 핵심 앱 (직접)
+curl -fsS http://10.13.0.222:24357/manual-hub/api/health   # Manual Hub
 ```
 
 ---
 
-## 통합 배포 상태 (2026-09-02 적용·검증 완료)
+## 포트를 붙인 주소로만 접속 (2026-10-23 적용·검증 완료)
+
+| 주소 | 결과 |
+|---|---|
+| `http://10.13.0.222/` | 연결 안 됨(80 을 듣지 않음) |
+| `http://10.13.0.222:24357/` | QA 자동화 홈 (nginx 경유) |
+| `http://10.13.0.222:24357/manual-hub/` | 매뉴얼 서버 |
+
+- 서버의 nginx 사이트는 저장소 파일에서 `__SERVER_ADDR__` → `10.13.0.222`, 매뉴얼 서버 백엔드 `24358` → `9180`(전환 전)으로 바꿔 넣었다.
+- 운영 점검 crontab 의 `--check` 두 주소를 `10.13.0.222:24357` 로 바꿨다.
+- 백업: `~/port-only-backup-<시각>/`(시각은 `~/.last-port-only-backup`). 되돌리기:
+
+```bash
+BK=~/port-only-backup-$(cat ~/.last-port-only-backup)
+sudo cp $BK/config.yaml /home/ubuntu/ai-regression-impact-analyzer/config.yaml
+sudo cp $BK/qa-platform.conf /etc/nginx/sites-available/qa-platform.conf
+crontab $BK/crontab.txt
+sudo systemctl restart qa-verification && sudo nginx -t && sudo systemctl reload nginx
+```
+
+## 통합 배포 상태 (2026-09-02 적용·검증 완료, 주소는 위 2026-10-23 표가 최신)
 
 nginx 사이트를 단독용 `qa-manual-hub.conf` → 통합용 `qa-platform.conf` 로 교체했다.
 **이 호스트의 `/` 는 이제 매뉴얼 서버가 아니라 QA 자동화 홈이다.**

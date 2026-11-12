@@ -8,7 +8,7 @@ _META={
  'find_testcases':('testcase','document'),'trace_requirements':('specification','document'),'compare_packages':('specification','document'),
  'get_status':('diagnostic','none'),'get_workflow':('diagnostic','none'),
  'get_polarion_item':('polarion','alm'),'polarion_query':('polarion','alm'),'read_polarion_result':('polarion','alm'),
- 'get_redmine_issue':('redmine','issue'),'search_redmine_issues':('redmine','issue'),'read_redmine_result':('redmine','issue'),
+ 'get_redmine_issue':('redmine','issue'),'search_redmine_issues':('redmine','issue'),'read_redmine_result':('redmine','issue'),'get_redmine_field_map':('redmine','issue'),'validate_redmine_draft':('redmine','issue'),
  'get_generator_evidence':('generator','generator'),'get_manual_review':('manual','manual'),'make_manual_review_report':('manual','manual'),
  'read_attachment':('documents','attachment'),'begin_vxvue_activity':('diagnostic','none'),'finish_vxvue_activity':('diagnostic','none')}
 _DOCS={'search_documents','get_document','get_document_page','get_document_pages','find_testcases','compare_packages','trace_requirements','batch_lookup'}
