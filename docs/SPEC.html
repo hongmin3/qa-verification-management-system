@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="7b29979813f4602edf7a85fe0fc1043397b6e3914c742b58cec5ffd810b3e616">
+<meta name="spec-source-sha256" content="feb4644ad8b3e02f4f26f6a1771cbedd99f26d0d97026cc360697fa46bc39bb5">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>351</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>352</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -654,6 +654,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020 <span>Redmine 등록 초안 준비와 검증</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021 <span>응답 크기·문단 범위·동의어·core 제외 읽기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022 <span>지식 스냅샷 색인 재사용</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023 <span>반복 응답 줄이기</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1144,6 +1145,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a></td><td data-label="이름">Redmine 등록 초안 준비와 검증</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a></td><td data-label="이름">응답 크기·문단 범위·동의어·core 제외 읽기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a></td><td data-label="이름">지식 스냅샷 색인 재사용</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a></td><td data-label="이름">반복 응답 줄이기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -17005,6 +17007,24 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>지킬 것</strong> 색인은 임시 폴더에서 만든 뒤 최종 폴더로 옮긴다. 옮긴 뒤에는 색인에 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>된 원본 폴더(<code>root</code>)와 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 경로(<code>file_path</code>)를 최종 경로로 맞춘다. 맞추지 않으면 첫 조회가 전체를 다시 파싱한다. XIPL 공용 지식 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>도 같은 규칙을 따른다. 복사할 색인이 없거나 읽지 못하면 처음부터 만든다. 이전 <span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span>은 바꾸지 않는다.</p>
 <p class="why"><span class="why-label">이유</span> 2026-11-12에 0.3MB짜리 <span class="term" title="QA 팀이 정한 TC 설계·자체검토 규칙 문서([QA 작성 규칙] VXvue TC 설계 및 자체검토 가이드_Rev.md)와 지침 프롬프트. &quot;§55&quot; 는 이 문서의 55절을 뜻한다" tabindex="0">QA 규칙</span> MD 한 파일만 바꿔도 40개 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span>를 두 번(<span class="term" title="그날 Polarion 에서 읽은 SRS 전체와 이슈 전체를 저장해 둔 파일이다. SRS 는 data/daily_qa/snapshots/&lt;slug&gt;/srs/&lt;날짜&gt;.json, 이슈는 data/daily_qa/snapshots/&lt;slug&gt;/issues/&lt;날짜&gt;.json 이다. 다음 실행 비교의 기준이 된다" tabindex="0">스냅샷</span> 생성 때, 첫 조회 때) 다시 파싱했다. 서버 CPU 99%가 10분 넘게 이어졌고, 그동안 <code>get_status</code>가 시간 초과됐다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-023">
+<h3><span class="idtag">REQ-VXVUECHATBOT-023</span> 반복 응답 줄이기</h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-12 자주 쓰는 VXvue 도구의 반복 응답 줄이기</span> <a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a>: <code>get_status</code> compact <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록을 이름·<span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·해시 앞 12자·문제 표시만 남겨 약 18k자에서 4k자 안팎으로 줄였다(공용 도구를 쓰는 Bellalun·XIPL status도 같다).</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 자주 부르는 도구가 매번 같은 내용을 다시 보내지 않게 한다.</p>
+<ul>
+<li><p><code>get_status</code>의 compact <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록은 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 이름·<span class="term" title="지식 자산의 분류로 specification(사양서), manual(매뉴얼), testcase(TC), qa_rules(QA 작성 규칙), instruction_prompt(지침 프롬프트), unknown(규약에 맞지 않음)이 있다" tabindex="0">종류</span>·해시 앞 12자와 문제 표시(상태·경고·오류)만 담는다. 청크 수·<span class="term" title="문서의 개정본 하나다. 파일 한 개가 붙는다. DB 에서는 document_versions 한 줄이다" tabindex="0">버전</span> 언급·전체 해시는 <code>compact=false</code>로 본다.</p></li>
+<li><p><code>get_workflow</code> 한 페이지는 기본 20,000자, 최대 24,000자다. 섹션 목차는 첫 페이지(offset 0)에만 보낸다.</p></li>
+<li><p>연결 안내·도구 설명·연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 유형 section 하나로 core·선행 규칙까지 읽게 안내한다. core를 먼저 따로 읽고 다시 유형 section을 읽어 core가 두 번 들어오지 않게 한다.</p></li>
+<li><p>검색·원문 조회의 compact 응답에서 공통 주의사항(<code>limitations</code>)과 오류 없는 범위 정보(<code>scope</code>)를 뺀다. 도구별로 덧붙인 주의사항과 오류가 있는 범위 정보는 남긴다.</p></li>
+<li><p><code>bellalun_get_workflow</code>도 같은 페이지 크기·첫 페이지 목차·<code>exclude_core</code>를 따르고, Bellalun 연결 안내·서버 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>도 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 유형 section 하나를 읽게 안내한다.</p></li>
+</ul>
+<p><strong>지킬 것</strong> <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 본문·위치·오류·경고는 줄이지 않는다. 공통 주의사항은 <code>get_status</code>에서 한 번 알린다.</p>
+<p class="why"><span class="why-label">이유</span> 2026-11-01~12 운영 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>에서 <code>get_workflow</code> 756회·<code>get_status</code> 220회·<code>search_documents</code> 648회가 <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>됐다. <code>get_status</code> 응답 18,300자 중 17,200자가 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록이었고, 지침 매 페이지에 목차 1,350자가, 검색마다 공통 주의사항·범위 약 900자가 반복됐다. 안내대로 core를 먼저 읽으면 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 유형 section에서 core 31,000자를 다시 읽었다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -17064,6 +17084,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p>| <a class="idref" href="#REQ-VXVUECHATBOT-018">REQ-VXVUECHATBOT-018</a> | <code>app/modules/vxvue_chatbot/word_reports.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code> | <code>tests/test_word_reports.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a> | <code>app/modules/vxvue_chatbot/redmine_draft.py</code>, <code>app/modules/vxvue_chatbot/redmine_draft_rules.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code>, <code>scripts/vxvue_issue_tools/register_redmine_issue.py</code> | <code>tests/test_vxvue_redmine_draft.py</code>, <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_vxvue_issue_tools.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a> | <code>app/modules/vxvue_chatbot/knowledge.py</code>, <code>app/modules/shared_knowledge/service.py</code> | <code>tests/test_vxvue_snapshot_reuse.py</code>, <code>tests/test_xipl_shared.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/qa_workflow.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code>, <code>app/modules/bellalun_shared/service.py</code>, <code>deploy/bellalun-skill/bellalun-server-ai/SKILL.md</code> | <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_bellalun_shared.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/core/qa_workflow.py</code>, <code>app/core/qa_synonyms.py</code> | <code>tests/test_vxvue_read_budget.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">

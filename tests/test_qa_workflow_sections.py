@@ -104,8 +104,8 @@ def test_inventory_compaction_preserves_errors_hashes_and_marks_omitted_version_
         {'document_id': 'x', 'sha256': 'abc', 'warnings': ['partial'], 'version_mentions': ['1.2.3'] * 100}]}}
     result = compact_inventory(source)
     doc = result['scope']['documents'][0]
-    assert doc['sha256'] == 'abc' and doc['warnings'] == ['partial']
-    assert doc['version_mentions_count'] == 100 and 'version_mentions' not in doc
+    assert doc['sha12'] == 'abc' and doc['warnings'] == ['partial']
+    assert 'version_mentions' not in doc and 'version_mentions_count' not in doc
     assert result['scope']['errors'] == source['scope']['errors']
     assert result['metadata_view'] == 'get_status(compact=false)'
     assert source['scope']['documents'][0]['version_mentions'] == ['1.2.3'] * 100
@@ -119,4 +119,6 @@ def test_shared_status_tool_honors_its_compact_schema(tmp_path):
     full = session.call('get_status', {'compact':False})
     compact = session.call('get_status', {'compact':True})
     assert len(full['scope']['documents'][0]['version_mentions']) == 2
-    assert compact['scope']['documents'][0]['version_mentions_count'] == 2
+    doc = compact['scope']['documents'][0]
+    assert doc['document_id'] == 'manual.md' and len(doc['sha12']) == 12
+    assert 'version_mentions' not in doc and 'chunk_count' not in doc

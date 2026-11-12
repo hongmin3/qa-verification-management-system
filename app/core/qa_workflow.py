@@ -159,11 +159,23 @@ def compact_evidence(value):
 def compact_inventory(value):
     if not isinstance(value, dict) or not isinstance(value.get('scope', {}).get('documents'), list):
         return value
+    # 작업마다 첫 호출이므로 문서 목록은 이름·종류·해시 앞부분과 문제 표시만 남긴다(REQ-VXVUECHATBOT-023).
+    # 청크 수·버전 언급·파일명 유래 판·전체 해시는 compact=false로 본다.
     documents = []
     for row in value['scope']['documents']:
-        if isinstance(row.get('version_mentions'), list) and row['version_mentions']:
-            row = {**row, 'version_mentions_count': len(row['version_mentions'])}
-            row.pop('version_mentions')
-        documents.append(row)
+        if not isinstance(row, dict):
+            documents.append(row)
+            continue
+        slim = {'document_id': row.get('document_id'), 'document_kind': row.get('document_kind')}
+        if row.get('document_name') not in (None, row.get('document_id')):
+            slim['document_name'] = row['document_name']
+        if isinstance(row.get('sha256'), str):
+            slim['sha12'] = row['sha256'][:12]
+        if row.get('status') not in (None, 'indexed'):
+            slim['status'] = row['status']
+        for key in ('warnings', 'errors', 'product_version'):
+            if row.get(key):
+                slim[key] = row[key]
+        documents.append(slim)
     return {**value, 'scope': {**value['scope'], 'documents': documents},
             'metadata_view': 'get_status(compact=false)'}

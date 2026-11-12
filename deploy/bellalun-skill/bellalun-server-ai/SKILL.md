@@ -9,7 +9,7 @@ description: Bellalun Viewer 사양·매뉴얼·TC·Issue·Redmine·DICOM·Mammo
 Bellalun 작업의 기본 스킬이다. 로컬 bellalun-ai·bellalun-local-knowledge는 사용자가 로컬 지식 폴더·로컬 스크립트·로컬 Redmine 상세 내보내기·스킬 원본 수정을 명시한 작업에만 쓴다.
 
 1. 연결된 QA 서버(VXvue AI)의 `bellalun_get_status`에서 문서 목록·해시·추출 한계와 `snapshot_id`를 받는다. timeout이면 1초 간격 총 3회까지 시도한다. 실패하면 원인·확인사항을 알리고 중단하며 로컬 자료로 전환하기 전에 사용자에게 묻는다.
-2. `bellalun_get_workflow(snapshot_id=..., section="core")`로 공통 규칙과 목차를 읽고, 작업 유형(spec·tc·issue·doc·verify·release·mail·integ·auto·usage·meta)의 section을 선택해 선행 규칙까지 읽는다. 각 선택에서 truncated이면 같은 section과 next_offset으로 끝까지 읽는다. 복합 작업은 관련 유형을 모두 읽고 범위가 불명확하거나 지침 자체를 개편하면 section="full" 전문을 읽는다. 과거 판의 legacy_fallback이면 전문을 읽는다. 최신 원문·현재 요청을 적용하고 과거 판정을 재사용하지 않는다.
+2. 작업 유형(spec·tc·issue·doc·verify·release·mail·integ·auto·meta)을 정해 `bellalun_get_workflow(snapshot_id=..., section=작업 유형)`를 읽는다. 유형 section은 core와 선행 규칙을 포함하므로 core를 따로 먼저 읽지 않는다. 유형을 정할 수 없을 때만 section="core"로 목차를 읽고 이후 유형 section은 `exclude_core=true`로 읽는다. 각 선택에서 truncated이면 같은 section과 next_offset으로 끝까지 읽는다. 복합 작업은 두 번째 유형부터 `exclude_core=true`로 읽고, 지침 자체를 개편할 때만 section="full" 전문을 읽는다. 과거 판의 legacy_fallback이면 전문을 읽는다. 최신 원문·현재 요청을 적용하고 과거 판정을 재사용하지 않는다.
 3. `bellalun_search_documents`로 실제 UI명·동의어·SRS·조건을 여러 번 검색하고 사양·매뉴얼·TC를 대조한다. 같은 작업에는 같은 Bellalun 판을 사용한다. 검색 없음은 미지원이 아니다.
 4. `bellalun_get_document`로 후보 원문·앞뒤 문맥·적용 조건을 읽고 `next_offset`이 있으면 이어 읽는다. PDF 그림·표는 `bellalun_get_document_page`로 직접 확인한다. DOCX 문단·표 번호를 출력 쪽수로 표현하지 않는다. 기존 TC 후보는 `bellalun_find_testcases`, 연결 후보는 `bellalun_trace_requirements`로 찾되 실제 커버리지는 Step·Expected를 검토한다.
 5. 원본 파일명·SHA256·PDF 물리 페이지/문단/시트·행을 근거로 Expected·관찰된 Actual·판단·미확인을 구분한다. 검색·수집 완료를 전수 검토나 실제 제품 Pass로 표시하지 않는다.

@@ -196,3 +196,36 @@ def test_redmine_expand_synonyms_accepts_boolean_strings(monkeypatch):
                         {'issues': [], 'total_count': 0, 'offset': 0, 'limit': params['limit']}, raising=False)
     lookup.search('버키', project_ids=[61], page_size=5, expand_synonyms='false')
     assert calls == ['~버키']
+
+
+# ---- REQ-VXVUECHATBOT-023 반복 응답 줄이기 ------------------------------------------------------------
+
+def test_workflow_catalog_only_on_first_page_and_larger_pages():
+    from app.modules.vxvue_chatbot.desktop import workflow, WORKFLOW_PAGE_MAX
+    current = {'id': 's', 'rules': rules() * 40, 'skill_text': 'SKILL_TEXT', 'skill_metadata': {}}
+    first = workflow(current, {'section': 'issue'})
+    assert 'sections' in first and len(first['text']) == min(20000, first['total_chars'])
+    if first['next_offset']:
+        second = workflow(current, {'section': 'issue', 'offset': first['next_offset']})
+        assert 'sections' not in second and second['selected_sections'] == first['selected_sections']
+    workflow(current, {'section': 'issue', 'limit': WORKFLOW_PAGE_MAX})
+    with pytest.raises(ValueError):
+        workflow(current, {'section': 'issue', 'limit': WORKFLOW_PAGE_MAX + 1})
+
+
+def test_compact_responses_drop_shared_limitations_and_clean_scope_only():
+    from app.modules.vxvue_chatbot.desktop import drop_repeated_notes
+    from app.modules.vxvue_chatbot.skill.scripts.corpus import LIMITATIONS
+    plain = drop_repeated_notes({'results': [1], 'limitations': list(LIMITATIONS), 'scope': {'files': 3, 'errors': []}})
+    assert plain == {'results': [1]}
+    extra = 'An ID reference alone does not prove Trigger/Step/Expected coverage.'
+    kept = drop_repeated_notes({'results': [], 'limitations': LIMITATIONS + [extra], 'scope': {'errors': ['READ_FAILED']}})
+    assert kept['limitations'] == [extra] and kept['scope'] == {'errors': ['READ_FAILED']}
+
+
+def test_instructions_read_one_task_section_instead_of_core_first():
+    from app.modules.vxvue_chatbot.desktop import INSTRUCTIONS, definitions
+    assert 'core를 따로 먼저 읽지 않습니다' in INSTRUCTIONS
+    wf = next(t for t in definitions() if t['name'] == 'get_workflow')
+    assert wf['inputSchema']['properties']['limit']['maximum'] == 24000
+    assert 'core 따로 먼저 읽지 않기' in wf['description']

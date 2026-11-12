@@ -135,7 +135,7 @@ def test_bellalun_rejects_foreign_id_paths_arguments_tampering_and_auth(shared):
         assert rpc(client, 'bellalun_search_documents', query='anything', **args)['isError']
     for doc in ('../manifest.json', 'C:/private.txt', 'VXvue.pdf'):
         assert rpc(client, 'bellalun_get_document', snapshot_id=sid, document_id=doc)['isError']
-    for args in ({'offset': -1}, {'limit': 12001}, {'offset': True}):
+    for args in ({'offset': -1}, {'limit': 24001}, {'offset': True}, {'exclude_core': 'yes'}):
         assert rpc(client, 'bellalun_get_workflow', snapshot_id=sid, **args)['isError']
     original = desktop.get_settings().root / 'data/shared_knowledge/bellalun/snapshots' / sid / 'original'
     (original / '(TC) Existing.md').write_text('TAMPERED', encoding='utf8')
@@ -253,7 +253,7 @@ def test_bellalun_download_contains_portable_skill(shared):
     text = guide.read_text(encoding='utf8')
     for word in ('Claude Desktop', 'Claude Code', 'Codex', 'bellalun_get_status', 'Redmine', '동기화'):
         assert word in text
-    release = guide.parent / 'releases/2026-11-10.3/bellalun-server-ai-skill.zip'
+    release = guide.parent / 'releases/2026-11-12.1/bellalun-server-ai-skill.zip'
     with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
         assert archive.namelist() == dynamic.namelist()
         assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())
@@ -277,3 +277,20 @@ def test_bellalun_export_ignores_adapter_checkout_line_endings(tmp_path, monkeyp
         assert b'\r\n' not in Path(result['path']).read_bytes()
         digests.append((result['sha256'], result['files']))
     assert digests[0] == digests[1]
+
+
+# Validates: REQ-VXVUECHATBOT-023
+def test_bellalun_workflow_reads_one_section_with_lean_pages(shared):
+    client = shared[0]
+    sid = value(rpc(client, 'bellalun_get_status'))['snapshot_id']
+    full = value(rpc(client, 'bellalun_get_workflow', snapshot_id=sid, section='issue', limit=50))
+    assert 'sections' in full and 'SKILL_UNIQUE' in value(rpc(client, 'bellalun_get_workflow', snapshot_id=sid, section='issue'))['text']
+    lean = value(rpc(client, 'bellalun_get_workflow', snapshot_id=sid, section='issue', exclude_core=True))
+    assert 'SKILL_UNIQUE' not in lean['text']
+    if full['next_offset']:
+        page2 = value(rpc(client, 'bellalun_get_workflow', snapshot_id=sid, section='issue', offset=full['next_offset'], limit=50))
+        assert 'sections' not in page2
+    from app.modules.bellalun_shared.service import INSTRUCTIONS, definitions
+    assert 'core를 따로 먼저 읽지 않습니다' in INSTRUCTIONS
+    wf = next(t for t in definitions() if t['name'] == 'bellalun_get_workflow')
+    assert wf['inputSchema']['properties']['limit']['maximum'] == 24000 and 'exclude_core' in wf['inputSchema']['properties']

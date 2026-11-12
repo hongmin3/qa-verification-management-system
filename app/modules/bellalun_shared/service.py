@@ -23,8 +23,9 @@ _ALLOWED = {'get_status', 'search_documents', 'get_document', 'get_document_page
 _REQUIRED = {'specification', 'manual', 'testcase', 'qa_rules', 'skill_instruction'}
 _KINDS = _REQUIRED | {'release_note', 'instruction_prompt'}
 INSTRUCTIONS = """Bellalun 공용 서버 자료입니다. Bellalun 질문에서는 VXvue get_status/get_workflow 대신
-bellalun_get_status → bellalun_get_workflow(section="core"와 작업 유형) → bellalun_search_documents → bellalun_get_document 순서로 조회합니다.
-공통·목차를 읽고 작업 유형의 선행 규칙도 읽습니다. 복합 작업은 해당 유형을 모두 읽고 불명확하면 section="full"을 읽습니다.
+bellalun_get_status → bellalun_get_workflow(section=작업 유형) → bellalun_search_documents → bellalun_get_document 순서로 조회합니다.
+작업 유형 section은 core·선행 규칙을 포함하므로 core를 따로 먼저 읽지 않습니다. 유형을 정할 수 없을 때만 section="core"를 읽고 이후 유형은 exclude_core=true로 읽습니다.
+복합 작업은 두 번째 유형부터 exclude_core=true로 읽고, 지침 자체를 개편할 때만 section="full"을 읽습니다.
 같은 작업에는 같은 Bellalun snapshot_id를 사용하고 지침의 truncated가 참이면 next_offset으로 끝까지 읽습니다.
 아래 공통 Skill의 개인 PC 경로·로컬 스크립트·로컬 MCP 이름은 이 서버에서 실행하지 않습니다.
 서버 도구로 사양·매뉴얼·TC를 나눠 검색하고 원문·인접 문맥을 읽습니다. 조회한 범위와 미조회 범위를 구분합니다.
@@ -48,6 +49,7 @@ def reset_cache():
 
 
 def definitions():
+    from app.modules.vxvue_chatbot.desktop import WORKFLOW_PAGE_MAX
     result = []
     for tool in tools():
         if tool['name'] not in _ALLOWED:
@@ -56,7 +58,7 @@ def definitions():
         name = tool['name']
         tool['name'] = 'bellalun_' + name
         tool['description'] = 'Bellalun 서버: ' + (
-            '문서 목록·해시·snapshot_id·추출 한계를 확인하고 bellalun_get_workflow(section=core)와 작업 유형·선행 규칙을 읽는다.'
+            '문서 목록·해시·snapshot_id·추출 한계를 확인하고 bellalun_get_workflow(section=작업 유형)를 끝까지 읽는다(core 포함).'
             if name == 'get_status' else tool['description'].replace('VXvue', 'Bellalun'))
         if name != 'get_status':
             tool['inputSchema']['properties']['snapshot_id'] = {'type': 'string'}
@@ -64,9 +66,10 @@ def definitions():
         result.append(tool)
     from app.modules.vxvue_chatbot.redmine import bellalun_definitions as redmine_definitions
     result.extend(redmine_definitions())
-    result.append({'name': 'bellalun_get_workflow', 'description': 'Bellalun 공통 Skill·QA. section=core로 목차·공통, 작업 유형은 선행 규칙 포함. 생략/full은 전문. 같은 section으로 이어 읽기.',
+    result.append({'name': 'bellalun_get_workflow', 'description': 'Bellalun 공통 Skill·QA. 작업 유형 section 하나로 core·선행 규칙까지 읽는다(core 따로 먼저 읽지 않기). 유형 불명확 시만 core. full은 지침 개편 시만. 같은 section으로 이어 읽기.',
                    'inputSchema': {'type': 'object', 'properties': {'snapshot_id': {'type': 'string'},
-                       'section': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 12000}},
+                       'section': {'type': 'string'}, 'offset': {'type': 'integer', 'minimum': 0}, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': WORKFLOW_PAGE_MAX},
+                       'exclude_core': {'type': 'boolean', 'description': '이미 읽은 core·연결 안내를 빼고 작업 유형 섹션과 선행 규칙만 읽기(section이 core/full이 아닐 때). 이어 읽기도 같은 값을 유지.'}},
                        'required': ['snapshot_id'], 'additionalProperties': False}})
     from app.core.qa_workflow import SECTION_SCHEMA
     result[-1]['inputSchema']['properties']['section'] = SECTION_SCHEMA
@@ -252,13 +255,21 @@ def call(name, arguments, project_root):
         return _private_paths(value)
     if base_name == 'get_workflow':
         from app.modules.vxvue_chatbot.desktop_polarion import integer
-        offset, limit = args.get('offset', 0), args.get('limit', 12000)
-        integer(offset, 0, 10_000_000); integer(limit, 1, 12000)
+        from app.modules.vxvue_chatbot.desktop import WORKFLOW_PAGE_DEFAULT, WORKFLOW_PAGE_MAX
+        offset, limit = args.get('offset', 0), args.get('limit', WORKFLOW_PAGE_DEFAULT)
+        integer(offset, 0, 10_000_000); integer(limit, 1, WORKFLOW_PAGE_MAX)
         from app.core.qa_workflow import select_sections
+        from app.core.qa_synonyms import flag
         from app.modules.vxvue_chatbot.qa_protection import mask_qa_text
-        rules, section_meta = select_sections(current['rules'], args.get('section'))
-        body, protection = mask_qa_text(_private_paths(INSTRUCTIONS + '\n\n' + current['skill_text'] + '\n\n' + rules), current['rules'])
+        exclude_core = flag(args.get('exclude_core', False), 'exclude_core')
+        rules, section_meta = select_sections(current['rules'], args.get('section'), exclude_core=exclude_core)
+        # exclude_core: core와 함께 이미 읽은 연결 안내·Skill 지침은 다시 보내지 않는다(REQ-VXVUECHATBOT-023).
+        head = '' if exclude_core else INSTRUCTIONS + '\n\n' + current['skill_text'] + '\n\n'
+        body, protection = mask_qa_text(_private_paths(head + rules), current['rules'])
         end = min(offset + limit, len(body))
+        if offset:
+            # 섹션 목차는 첫 페이지에만 보낸다.
+            section_meta = {k: v for k, v in section_meta.items() if k != 'sections'}
         return {**section_meta, 'snapshot_id': current['id'], 'text': body[offset:end], 'total_chars': len(body),
                 'truncated': end < len(body), 'next_offset': end if end < len(body) else None,
                 'protection': protection.as_dict()}

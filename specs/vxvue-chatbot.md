@@ -397,6 +397,20 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 이유: 2026-11-12에 0.3MB짜리 QA 규칙 MD 한 파일만 바꿔도 40개 문서를 두 번(스냅샷 생성 때, 첫 조회 때) 다시 파싱했다. 서버 CPU 99%가 10분 넘게 이어졌고, 그동안 `get_status`가 시간 초과됐다.
 
+### REQ-VXVUECHATBOT-023 반복 응답 줄이기
+
+**하는 일** 자주 부르는 도구가 매번 같은 내용을 다시 보내지 않게 한다.
+- `get_status`의 compact 문서 목록은 문서 이름·종류·해시 앞 12자와 문제 표시(상태·경고·오류)만 담는다. 청크 수·버전 언급·전체 해시는 `compact=false`로 본다.
+- `get_workflow` 한 페이지는 기본 20,000자, 최대 24,000자다. 섹션 목차는 첫 페이지(offset 0)에만 보낸다.
+- 연결 안내·도구 설명·연결 Skill은 작업 유형 section 하나로 core·선행 규칙까지 읽게 안내한다. core를 먼저 따로 읽고 다시 유형 section을 읽어 core가 두 번 들어오지 않게 한다.
+- 검색·원문 조회의 compact 응답에서 공통 주의사항(`limitations`)과 오류 없는 범위 정보(`scope`)를 뺀다. 도구별로 덧붙인 주의사항과 오류가 있는 범위 정보는 남긴다.
+
+- `bellalun_get_workflow`도 같은 페이지 크기·첫 페이지 목차·`exclude_core`를 따르고, Bellalun 연결 안내·서버 Skill도 작업 유형 section 하나를 읽게 안내한다.
+
+**지킬 것** 근거 본문·위치·오류·경고는 줄이지 않는다. 공통 주의사항은 `get_status`에서 한 번 알린다.
+
+이유: 2026-11-01~12 운영 기록에서 `get_workflow` 756회·`get_status` 220회·`search_documents` 648회가 호출됐다. `get_status` 응답 18,300자 중 17,200자가 문서 목록이었고, 지침 매 페이지에 목차 1,350자가, 검색마다 공통 주의사항·범위 약 900자가 반복됐다. 안내대로 core를 먼저 읽으면 작업 유형 section에서 core 31,000자를 다시 읽었다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -454,4 +468,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-018 | `app/modules/vxvue_chatbot/word_reports.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py` | `tests/test_word_reports.py` | implemented |
 | REQ-VXVUECHATBOT-020 | `app/modules/vxvue_chatbot/redmine_draft.py`, `app/modules/vxvue_chatbot/redmine_draft_rules.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py`, `scripts/vxvue_issue_tools/register_redmine_issue.py` | `tests/test_vxvue_redmine_draft.py`, `tests/test_vxvue_read_budget.py`, `tests/test_vxvue_issue_tools.py` | implemented |
 | REQ-VXVUECHATBOT-022 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/shared_knowledge/service.py` | `tests/test_vxvue_snapshot_reuse.py`, `tests/test_xipl_shared.py` | implemented |
+| REQ-VXVUECHATBOT-023 | `app/modules/vxvue_chatbot/desktop.py`, `app/core/qa_workflow.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md`, `app/modules/bellalun_shared/service.py`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_vxvue_read_budget.py`, `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | implemented |
 | REQ-VXVUECHATBOT-021 | `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/redmine.py`, `app/core/qa_workflow.py`, `app/core/qa_synonyms.py` | `tests/test_vxvue_read_budget.py` | implemented |
