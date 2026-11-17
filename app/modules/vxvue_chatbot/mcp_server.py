@@ -47,6 +47,114 @@ def compact_response(value, inventory=False):
     return result
 
 
+_CELL_DEFAULTS = (("formula", None), ("comment", None), ("hidden_row", False), ("hidden_column", False))
+_COLUMN = __import__("re").compile(r"[A-Z]{1,3}")
+
+
+def _column(ref):
+    match = _COLUMN.match(ref or "")
+    return match.group(0) if match else None
+
+
+def _slim_cell(cell):
+    """Drop only default values; text, validity, strike runs, comments and formulas stay (REQ-VXVUECHATBOT-024)."""
+    if not isinstance(cell, dict):
+        return cell
+    out = dict(cell)
+    for key, default in _CELL_DEFAULTS:
+        if key in out and out[key] == default:
+            out.pop(key)
+    if "anchor" in out and out["anchor"] == out.get("cell"):
+        out.pop("anchor")
+    runs = out.get("runs")
+    if runs == [] or (isinstance(runs, list) and all(isinstance(r, dict) and not r.get("strike") for r in runs)
+                      and "".join(r.get("text", "") for r in runs) == out.get("text", "")):
+        out.pop("runs")
+    return out
+
+
+def generator_columns(columns):
+    if columns is None:
+        return None
+    if not isinstance(columns, list) or not 1 <= len(columns) <= 100 or any(
+            not isinstance(c, str) or not _COLUMN.fullmatch(c)
+            or sum((ord(ch) - 64) * 26 ** i for i, ch in enumerate(reversed(c))) > 16384 for c in columns):
+        raise ValueError("columns는 A~XFD 열 이름 1~100개입니다.")
+    return columns
+
+
+def select_generator_columns(value, columns):
+    """Keep only the chosen sheet columns in TC cells, model columns and VSS values."""
+    keep = set(columns)
+    out = dict(value)
+    out["tc"] = [{**row, **{group: [c for c in row.get(group, []) if _column(c.get("cell")) in keep]
+                            for group in ("common", "model_cells", "unclassified") if group in row}}
+                 for row in value.get("tc", [])]
+    out["model_columns"] = {sheet: [c for c in cols if c.get("column") in keep]
+                            for sheet, cols in (value.get("model_columns") or {}).items()}
+    out["vss"] = [r for r in value.get("vss", []) if _column((r.get("value") or {}).get("cell")) in keep]
+    out["selection"] = {"columns": list(columns)}
+    return out
+
+
+def compact_generator(value):
+    """Remove repeats whose content is kept elsewhere in the same response (REQ-VXVUECHATBOT-024)."""
+    out = dict(value)
+    raw_headers = {(sheet, c.get("column")): c.get("headers")
+                   for sheet, cols in (value.get("model_columns") or {}).items() for c in cols}
+    out["model_columns"] = {sheet: [{**c, "headers": [_slim_cell(h) for h in c.get("headers", [])]} for c in cols]
+                            for sheet, cols in (value.get("model_columns") or {}).items()}
+    documents, conflict = {}, False
+    for record in [*value.get("tc", []), *[r.get("source") or {} for r in value.get("vss", [])]]:
+        if isinstance(record, dict) and record.get("document_id"):
+            info = {k: record[k] for k in ("document_id", "document_name", "sha256") if k in record}
+            conflict |= documents.setdefault(record["document_id"], info) != info
+
+    def hoist(record):
+        if conflict or not isinstance(record, dict) or not record.get("document_id"):
+            return record
+        result = {k: v for k, v in record.items() if k not in ("document_name", "sha256")}
+        if result.get("text") == "Generator 원본 위치":
+            result.pop("text")
+        if isinstance(result.get("file"), str) and Path(result["file"].replace("\\", "/")).name == result["document_id"]:
+            result.pop("file")
+        return result
+
+    rows = []
+    for row in value.get("tc", []):
+        row = hoist(dict(row))
+        cells = []
+        for cell in row.get("model_cells", []):
+            cell = dict(cell)
+            if cell.get("header") == raw_headers.get((row.get("sheet"), _column(cell.get("cell")))):
+                cell.pop("header", None)
+            cells.append(_slim_cell(cell))
+        row["model_cells"] = cells
+        for group in ("common", "unclassified"):
+            if group in row:
+                row[group] = [_slim_cell(c) for c in row[group]]
+        rows.append(row)
+    out["tc"] = rows
+    headers, vss = {}, []
+    for record in value.get("vss", []):
+        record = dict(record)
+        source = record.get("source") or {}
+        key = f"{source.get('sheet')}!{_column((record.get('value') or {}).get('cell'))}"
+        if "model_header" in record and headers.setdefault(key, record["model_header"]) == record["model_header"]:
+            record.pop("model_header")
+        record["source"] = hoist(source)
+        for name in ("value", "effective"):
+            if name in record:
+                record[name] = _slim_cell(record[name])
+        vss.append(record)
+    out["vss"] = vss
+    out["vss_model_headers"] = {k: [_slim_cell(h) for h in v] for k, v in headers.items()}
+    if documents and not conflict:
+        out["documents"] = list(documents.values())
+    out["compact"] = True
+    return out
+
+
 class KnowledgeTools:
     def __init__(self, snapshot, attachments, trace_path, job_id="", batch_token_budget=30000, usage_context=None):
         self.usage_context = usage_context
@@ -189,10 +297,14 @@ class KnowledgeTools:
             contents.insert(0, text_content(self._decorate(reference))[0])
             return contents
         if name == "get_generator_evidence":
+            columns = generator_columns(arguments.get("columns"))
             value = generator.bundle(Path(self.snapshot["root"]), arguments.get("model", "Ecoray"), arguments.get("query", ""), arguments.get("limit", 20))
             value.pop("inventory", None)  # authoritative listing is available through get_status
             value.pop("generated_utc", None)
-            return compact_response(self._decorate(value))
+            value = compact_response(self._decorate(value))
+            if columns is not None:
+                value = select_generator_columns(value, columns)
+            return compact_generator(value) if compact else value
         allowed = {"search_documents", "get_document", "find_testcases", "compare_packages", "trace_requirements"}
         if name not in allowed:
             raise ValueError("허용되지 않은 도구입니다.")
@@ -312,7 +424,9 @@ def tools():
         ("find_testcases", "기존 TC 근거와 원문 위치. 과거 결과는 현재 지원 근거가 아니다. truncated이면 같은 조건의 next_offset으로 이어 읽기.", {"query": string, "model": string, "limit": integer, "offset": integer}, ["query"]),
         ("compare_packages", "패키지별 사양 근거 비교", {"query": string, "packages": {"type": "array", "items": string}, "limit": integer}, ["query", "packages"]),
         ("trace_requirements", "사양과 TC 연결 후보 조회. ID 연결만으로 coverage를 확정하지 않음.", {"query": string, "limit": integer}, ["query"]),
-        ("get_generator_evidence", "Generator 모델별 사양·TC 셀의 역할을 보존해 조회", {"query": string, "model": string, "limit": integer}, []),
+        ("get_generator_evidence", "Generator 모델별 사양·TC 셀의 역할을 보존해 조회. 필요한 열만 볼 때는 columns.", {"query": string, "model": string, "limit": integer,
+            "compact": {"type": "boolean", "description": "기본 false. true는 같은 머리글·문서 정보·셀 기본값 반복만 뺀다."},
+            "columns": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "string", "pattern": "^[A-Z]{1,3}$"}}}, []),
         ("read_attachment", "현재 대화의 첨부 원문·표·이미지를 읽는다. PDF 이미지는 page를 지정.", {"attachment_id": string, "offset": integer, "limit": integer, "page": {"type": "integer", "minimum": 1}}, ["attachment_id"]),
     ]
     from app.modules.vxvue_chatbot.redmine import definitions as redmine_definitions

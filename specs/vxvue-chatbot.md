@@ -34,6 +34,8 @@ QA 팀이 GPTs에서 하던 VXvue 문서 조사와 초안 작성을 사내 웹�
 - 첨부·실행: REQ-VXVUECHATBOT-003·004
 - 근거·규칙·지식: REQ-VXVUECHATBOT-005·006
 - 개인 PC의 Claude에서 쓰기: Desktop·Cowork 연결 REQ-VXVUECHATBOT-011, Polarion 수집 REQ-VXVUECHATBOT-012, 입력 없는 자동 연결 REQ-VXVUECHATBOT-013, Claude Code CLI 설치 REQ-VXVUECHATBOT-014, 한 PC의 Claude·Codex Skill 맞춤 REQ-VXVUECHATBOT-015
+- 읽는 양 줄이기: REQ-VXVUECHATBOT-021·023, Polarion 속성 골라 받기와 Generator 근거 줄이기 REQ-VXVUECHATBOT-024
+- Polarion 첨부 이미지 보기: REQ-VXVUECHATBOT-025
 - 자동 최신화: 상위 REQ-SYNC-002
 
 ### REQ-VXVUECHATBOT-001 챗봇 화면
@@ -266,7 +268,7 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 1. VP 번호는 해당 제품 프로젝트의 항목을 조회한다. 필터는 고치지 않고 프로젝트별 workitems 조회에 전달한다.
 2. 필터 결과는 페이지 번호와 다음 페이지 표시로 이어 읽는다. 한 번에 1~50개, 기본 10개다. 전체 수집 요청은 다음 페이지가 없을 때까지 이어 읽고 누락·실패한 페이지를 알린다.
-3. 항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 수집 범위에 포함하지 않는다.
+3. 항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 수집 범위에 포함하지 않는다. 첨부 이미지는 REQ-VXVUECHATBOT-025로 따로 본다.
 4. API 응답은 수집 시각·조회 조건과 함께 서버 임시 결과로 저장하고 12,000자씩 이어 읽는다. 링크된 VP 번호를 추가 조회해 관련 사양과 기존 TC를 대조한다.
 
 **지킬 것** 수집과 AI 분석을 구분한다. 서버에서 AI를 호출하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. 토큰은 서버에 두고 PC로 보내지 않는다.
@@ -411,6 +413,39 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 이유: 2026-11-01~12 운영 기록에서 `get_workflow` 756회·`get_status` 220회·`search_documents` 648회가 호출됐다. `get_status` 응답 18,300자 중 17,200자가 문서 목록이었고, 지침 매 페이지에 목차 1,350자가, 검색마다 공통 주의사항·범위 약 900자가 반복됐다. 안내대로 core를 먼저 읽으면 작업 유형 section에서 core 31,000자를 다시 읽었다.
 
+### REQ-VXVUECHATBOT-024 Polarion 속성 골라 받기와 Generator 근거 줄이기
+
+**하는 일** 많은 항목의 속성 몇 개만 모으거나 Generator 셀 몇 개만 볼 때, 필요한 값만 받아 읽는 양을 줄인다.
+
+| 기능 | 동작 |
+|---|---|
+| Polarion 속성 골라 받기 | `polarion_query`에 `fields`(속성 이름 1~30개)를 주면 항목마다 `id`와 고른 속성만 저장한다. API 원문(`response`)과 읽기용 텍스트(`readable`)는 저장하지 않는다. 항목에 없는 속성은 그 항목의 `absent`에 적는다. 응답의 항목 목록(`items`)은 번호만 담는다. 이어 읽기는 기존 `read_polarion_result`를 쓴다. |
+| Generator 근거 줄이기 | `get_generator_evidence`의 `compact=true`는 내용이 같은 반복만 뺀다. TC 셀의 머리글(`header`)은 `model_columns`에 같은 값이 있을 때만 뺀다. VSS 기록의 모델 머리글(`model_header`)은 `vss_model_headers`에 열마다 한 번 둔다. 문서 이름·해시는 `documents`에 한 번 둔다. |
+| 셀 기본값 생략 | `compact=true`에서 빈 수식(`formula`)·빈 주석(`comment`), 숨기지 않은 행·열 표시, 셀과 같은 `anchor`, 취소선이 하나도 없는 글자 조각(`runs`)은 적지 않는다. |
+| Generator 열 고르기 | `columns`(A~XFD 열 이름 1~100개)를 주면 TC 셀과 VSS 값 중 그 열만 남기고, 고른 열을 `selection`에 적는다. |
+
+공용 연결의 `get_generator_evidence` 기본값은 `compact=true`다. `compact=false`는 기존 형식을 그대로 준다. 웹 챗봇의 기본값은 기존 형식이다.
+
+**지킬 것** 셀 글자·위치·취소선·유효성·주석·수식과 오류·경고는 줄이지 않는다. `fields`·`columns`는 고른 범위만 보여 준다. 고르지 않은 속성·열이 판단에 필요하면 원래 조회로 다시 확인한다.
+
+이유: 2026-11-02 VXvue 1.1.0 이슈 709건의 속성 6~8개를 모으려 했을 때 `polarion_query` 한 페이지가 233,691자였다. 12,000자씩 약 280번 읽어야 해서 수집을 멈췄다. 2026-11-09에는 `get_generator_evidence` 한 번이 91,000~880,000자였고, 필요한 셀은 모델마다 약 10개였다.
+
+### REQ-VXVUECHATBOT-025 Polarion 첨부 이미지 보기
+
+**하는 일** 이슈 재현 절차가 가리키는 Expected·Actual 화면 캡처를 직접 본다. `get_polarion_attachment`가 그 항목의 첨부 하나를 이미지로 돌려준다. 응답 모양은 `get_document_page`와 같다(설명 한 줄과 PNG 이미지).
+
+**순서**
+
+1. `get_polarion_item(section="attachments")`로 첨부 번호를 찾는다.
+2. VP 번호와 첨부 번호로 조회한다. 서버는 그 항목 경로 아래의 첨부만 GET으로 읽는다.
+3. PNG·JPEG·GIF·BMP 이미지를 긴 변 1,800픽셀 이하 PNG로 바꿔 돌려준다.
+
+**안 될 때** 이미지가 아닌 첨부, 10MB를 넘는 첨부, 다른 항목을 가리키는 첨부 번호, 형식이 맞지 않는 번호는 오류로 알린다. 조회 실패를 빈 결과로 바꾸지 않는다.
+
+**지킬 것** 이미지를 돌려준 것은 내용 확인이 끝났다는 뜻이 아니다. 첨부 원본은 서버에 남기지 않는다. Polarion 토큰은 PC로 보내지 않는다.
+
+이유: 2026-11-02 이슈 종료 검토에서 재현 절차의 Expected 그림을 읽을 수 없었다. 그래서 첨부 업로드 시각과 Checklist 문구 같은 대체 근거로만 판단했다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -470,3 +505,5 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-022 | `app/modules/vxvue_chatbot/knowledge.py`, `app/modules/shared_knowledge/service.py` | `tests/test_vxvue_snapshot_reuse.py`, `tests/test_xipl_shared.py` | implemented |
 | REQ-VXVUECHATBOT-023 | `app/modules/vxvue_chatbot/desktop.py`, `app/core/qa_workflow.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md`, `app/modules/bellalun_shared/service.py`, `deploy/bellalun-skill/bellalun-server-ai/SKILL.md` | `tests/test_vxvue_read_budget.py`, `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | implemented |
 | REQ-VXVUECHATBOT-021 | `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/redmine.py`, `app/core/qa_workflow.py`, `app/core/qa_synonyms.py` | `tests/test_vxvue_read_budget.py` | implemented |
+| REQ-VXVUECHATBOT-024 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_desktop_polarion.py`, `tests/test_vxvue_generator_compact.py` | implemented |
+| REQ-VXVUECHATBOT-025 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/daily_qa/polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |

@@ -1,5 +1,12 @@
 # 진행 상태
 
+## 2026-11-17 관찰 0149·0171·0175·0191·0186 반영 (REQ-VXVUECHATBOT-024·025, REQ-BELLALUNSHARED-005)
+
+- 코드: `polarion_query(fields)`, `get_generator_evidence(compact, columns)`, `get_polarion_attachment`. 운영 서버 배포는 하지 않았다(미배포).
+- 실측: 실제 Polarion에 읽기 전용 GET으로 `fields` 6개 조회 시 50건 페이지 233,749 → 14,193자(12,000자 읽기 2회). VP-6493 PNG 첨부(1334×802)를 전체 번호·짧은 번호로 모두 렌더링했다. 로컬 Generator TC로 EGEN 675,855 → 310,463자, SMX-50 805,500 → 333,816자.
+- 지침: VXvue 통합 QA MD 2026-11-17.1(80.6 첨부 이미지 직접 읽기, 35.7-6 로컬 DOCX 추출 조건, meta 9 회고 항목 규칙화 전 확인). Bellalun 공통 QA 원본에 meta 9를 bellalun-ai Bridge(해시 확인·백업)로 더했다. 두 지침은 기존 예약 동기화로 서버에 올라간다.
+- 0186: 종료 전 자체검토 절차는 2026-11-13·15 사용자 요청으로 계속 쓰이고 있었고, Claude·Codex 훅(`lifecycle.py`)이 `references/session-review.md`를 읽게 한다. 그래서 파일을 지우지 않았다. 서버 배급본에는 이미 실리지 않음을 확인하고 시험으로 고정했다.
+
 ## 2026-11-12 반복 응답 줄이기 선택 배포 (REQ-VXVUECHATBOT-023, 커밋 `d2727e8`)
 
 - 배포 대상: `qa_workflow.py`·`desktop.py`·`bellalun_shared/service.py`·VXvue/Bellalun 서버 Skill·Bellalun 설치 페이지·릴리스 `2026-11-12.1` ZIP·관련 테스트 3개. 백업 `backups/deploy-token-budget-20261112T081135Z`.

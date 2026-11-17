@@ -71,6 +71,26 @@ class ReadOnlyPolarionClient:
             self._cancel_check()
         return result
 
+    def get_bytes(self, path: str, max_bytes: int) -> bytes:
+        """첨부 원본 같은 이진 응답을 GET 으로 읽는다 (REQ-VXVUECHATBOT-025). 상한을 넘으면 거절한다."""
+        if self._cancel_check is not None:
+            self._cancel_check()
+        url = f"{self.config.host}/polarion/rest/v1{path}"
+        headers = {"Authorization": f"Bearer {self.config.token}", "Accept": "*/*"}
+        try:
+            response = httpx.get(url, headers=headers, timeout=self.config.timeout_seconds, verify=self.config.verify_ssl)
+        except httpx.HTTPError as exc:
+            raise PolarionError(f"Polarion 첨부 요청 실패 ({type(exc).__name__}): {path}") from None
+        if response.status_code in (401, 403):
+            raise PolarionError(f"Polarion 인증/권한 오류 HTTP {response.status_code}")
+        if response.status_code == 404:
+            raise PolarionError(f"Polarion 경로 없음 HTTP 404: {path}")
+        response.raise_for_status()
+        data = response.content
+        if len(data) > max_bytes:
+            raise PolarionError(f"첨부가 {max_bytes // (1024 * 1024) or max_bytes} 상한을 넘습니다. 원본을 Polarion에서 직접 확인하세요.")
+        return data
+
     # -- 조회 ----------------------------------------------------------------
     def iter_workitems(self, query: str, fields: str = "@all", sort: str = "id") -> Iterator[dict[str, Any]]:
         path = f"/projects/{self.config.project_id}/workitems"

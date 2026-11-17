@@ -272,6 +272,9 @@ class DesktopTools(KnowledgeTools):
         if expand and name in ('search_documents', 'find_testcases') and args.get('match_mode', 'any') == 'any':
             from app.core.qa_synonyms import expand_any
             args['query'], added = expand_any(args.get('query'))
+        if name == 'get_generator_evidence':
+            # Generator 근거는 공용 연결에서 기본으로 반복을 뺀다. 범위(scope)의 잘림 표시는 그대로 둔다(REQ-VXVUECHATBOT-024).
+            return super().call(name, {**args, 'compact': compact})
         value = super().call(name, args)
         if added and isinstance(value, dict):
             value = {**value, 'synonym_expansion': {'added_terms': added, 'mode': 'any'}}
@@ -320,10 +323,14 @@ def definitions(context=None):
     extra = [
         ("get_workflow", "최신 Skill·QA 규칙. 작업 유형 section 하나로 core·선행 규칙까지 읽는다(core 따로 먼저 읽지 않기). 유형 불명확 시만 core. full은 지침 개편 시만. 같은 section으로 이어 읽기.",
          {"snapshot_id": {"type": "string"}, "section": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": WORKFLOW_PAGE_MAX}}, ["snapshot_id"]),
-        ("polarion_query", "VXvue AI: 사용자의 Polarion 필터를 그대로 조회(Jira 아님). 전체 요청은 next_page가 없을 때까지 수집. 원문은 read_polarion_result로 이어 읽기.",
-         {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1}, "page_size": {"type": "integer", "minimum": 1, "maximum": 50}}, ["query"]),
+        ("polarion_query", "VXvue AI: 사용자의 Polarion 필터를 그대로 조회(Jira 아님). 전체 요청은 next_page가 없을 때까지 수집. 원문은 read_polarion_result로 이어 읽기. 목록 속성 몇 개만 모을 때는 fields로 그 속성만 받는다.",
+         {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1}, "page_size": {"type": "integer", "minimum": 1, "maximum": 50},
+          "fields": {"type": "array", "minItems": 1, "maxItems": 30, "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]{0,63}$"},
+                     "description": "항목마다 id와 이 속성만 저장(예: status, rndReviewResult, created). 없는 속성은 absent. 다른 속성이 필요하면 fields 없이 다시 조회."}}, ["query"]),
         ("get_polarion_item", "VXvue AI: VP-로 시작하는 Polarion 이슈·사양 번호(예: VP-7282)의 본문·속성·관계 또는 댓글·첨부 목록 수집. VP 번호는 Jira가 아니다. 연결 VP는 추가 조회. 첨부 본문은 포함하지 않음.",
          {"vp_id": {"type": "string"}, "section": {"type": "string", "enum": ["item", "comments", "attachments", "links"]}, "page": {"type": "integer", "minimum": 1}}, ["vp_id"]),
+        ("get_polarion_attachment", "VXvue AI: VP 항목의 첨부 이미지(재현 절차의 Expected·Actual 캡처 등) 하나를 PNG로 확인. 첨부 번호는 get_polarion_item(section=attachments)에서 찾는다. 그 항목의 PNG·JPEG·GIF·BMP 첨부만 읽는다.",
+         {"vp_id": {"type": "string"}, "attachment_id": {"type": "string"}}, ["vp_id", "attachment_id"]),
         ("read_polarion_result", "수집한 Polarion 원문 전체를 next_offset으로 이어 읽기.",
          {"result_id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 12000}}, ["result_id"]),
     ]
@@ -346,6 +353,10 @@ def definitions(context=None):
             properties['expand_synonyms'] = {'type': 'boolean', 'description': '한영 동의어(버키/Bucky/Receptor, 재실행/재기동/restart, 유지/remember) 자동 추가. 기본 true, match_mode=any에서만.'}
         if tool['name'] in ('polarion_query', 'get_polarion_item', 'read_polarion_result'):
             properties['compact'] = {'type': 'boolean', 'description': 'HTML 표시 속성만 축약. 이어 읽기는 같은 compact 값을 유지.'}
+        if tool['name'] == 'get_generator_evidence':
+            properties['compact'] = {'type': 'boolean', 'description': '기본 true. 같은 머리글·문서 정보·셀 기본값 반복만 뺀다. false는 기존 형식.'}
+            properties['columns'] = {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'string', 'pattern': '^[A-Z]{1,3}$'},
+                                     'description': 'TC 셀·VSS 값 중 이 열만 남긴다. 다른 열이 필요하면 columns 없이 다시 조회.'}
     for tool in result:
         tool["annotations"] = {"readOnlyHint": tool['name'] not in ('make_manual_review_report', 'make_word_report'), "destructiveHint": False, "openWorldHint": False}
     if ((context or {}).get('usage') or {}).get('owner') and ((context or {}).get('usage') or {}).get('secure'):
@@ -384,6 +395,8 @@ def call(name, arguments):
         return polarion_lookup().query(**arguments)
     if name == "get_polarion_item":
         return polarion_lookup().item(**arguments)
+    if name == "get_polarion_attachment":
+        return polarion_lookup().attachment(**arguments)
     if name == "read_polarion_result":
         return PolarionLookup(get_settings().root, None).read(**arguments)
     if name in ('get_manual_review', 'make_manual_review_report'):

@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기
+
+- REQ-VXVUECHATBOT-024: `polarion_query`에 `fields`를 더했다. 항목마다 `id`와 고른 속성만 저장한다. VXvue 1.1.0 이슈 50건 한 페이지가 233,749자에서 14,193자로 줄었다(속성 6개, 2026-11-17 실측).
+- REQ-VXVUECHATBOT-024: `get_generator_evidence`에 `compact`·`columns`를 더했다. 공용 연결은 기본 compact이며, 같은 머리글·문서 정보·셀 기본값 반복만 뺀다. EGEN 250행 응답이 675,855자에서 310,463자로 줄었다(로컬 실측).
+- REQ-VXVUECHATBOT-024: 공용 연결의 `get_generator_evidence` 응답에서 범위 정보(`scope`)가 빠져 잘림 표시가 보이지 않던 문제를 고쳤다.
+- REQ-VXVUECHATBOT-025: `get_polarion_attachment`를 더했다. VP 항목의 이미지 첨부 하나를 PNG로 돌려준다. 그 항목 경로 아래의 첨부만 GET으로 읽고, 10MB를 넘거나 이미지가 아닌 첨부는 오류로 알린다.
+- REQ-BELLALUNSHARED-005: 로컬 전용 참조(종료 전 자체검토 절차 등)가 서버 배급본에 실리지 않는 것을 시험으로 고정했다.
+
 ## 2026-11-12 자주 쓰는 VXvue 도구의 반복 응답 줄이기
 
 - REQ-VXVUECHATBOT-023: `get_status` compact 문서 목록을 이름·종류·해시 앞 12자·문제 표시만 남겨 약 18k자에서 4k자 안팎으로 줄였다(공용 도구를 쓰는 Bellalun·XIPL status도 같다).

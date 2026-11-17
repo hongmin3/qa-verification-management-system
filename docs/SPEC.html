@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="feb4644ad8b3e02f4f26f6a1771cbedd99f26d0d97026cc360697fa46bc39bb5">
+<meta name="spec-source-sha256" content="e71532aa95bd34ce95ed6ba5b5aeba3018999f09e403cb203da92795a119b5c7">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>352</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>354</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -655,6 +655,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021 <span>응답 크기·문단 범위·동의어·core 제외 읽기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022 <span>지식 스냅샷 색인 재사용</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023 <span>반복 응답 줄이기</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024 <span>Polarion 속성 골라 받기와 Generator 근거 줄이기</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025 <span>Polarion 첨부 이미지 보기</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -1146,6 +1148,8 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a></td><td data-label="이름">응답 크기·문단 범위·동의어·core 제외 읽기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a></td><td data-label="이름">지식 스냅샷 색인 재사용</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a></td><td data-label="이름">반복 응답 줄이기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a></td><td data-label="이름">Polarion 속성 골라 받기와 Generator 근거 줄이기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a></td><td data-label="이름">Polarion 첨부 이미지 보기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -16514,6 +16518,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <li>첨부·실행: <a class="idref" href="#REQ-VXVUECHATBOT-003">REQ-VXVUECHATBOT-003</a>·004</li>
 <li><span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>·규칙·지식: <a class="idref" href="#REQ-VXVUECHATBOT-005">REQ-VXVUECHATBOT-005</a>·006</li>
 <li>개인 PC의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>에서 쓰기: Desktop·Cowork 연결 <a class="idref" href="#REQ-VXVUECHATBOT-011">REQ-VXVUECHATBOT-011</a>, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> <a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a>, 입력 없는 자동 연결 <a class="idref" href="#REQ-VXVUECHATBOT-013">REQ-VXVUECHATBOT-013</a>, <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span> Code CLI 설치 <a class="idref" href="#REQ-VXVUECHATBOT-014">REQ-VXVUECHATBOT-014</a>, 한 PC의 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>·Codex <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 맞춤 <a class="idref" href="#REQ-VXVUECHATBOT-015">REQ-VXVUECHATBOT-015</a></li>
+<li>읽는 양 줄이기: <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a>·023, <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 속성 골라 받기와 Generator <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 줄이기 <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a></li>
+<li><span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 첨부 이미지 보기: <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a></li>
 <li>자동 최신화: 상위 <a class="idref" href="#REQ-SYNC-002">REQ-SYNC-002</a></li>
 </ul>
 <section class="card kind-req" id="REQ-VXVUECHATBOT-001">
@@ -16837,7 +16843,7 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <ol>
 <li>VP 번호는 해당 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span> 프로젝트의 항목을 조회한다. 필터는 고치지 않고 프로젝트별 workitems 조회에 전달한다.</li>
 <li>필터 결과는 페이지 번호와 다음 페이지 표시로 이어 읽는다. 한 번에 1~50개, 기본 10개다. 전체 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 요청은 다음 페이지가 없을 때까지 이어 읽고 누락·실패한 페이지를 알린다.</li>
-<li>항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 범위에 포함하지 않는다.</li>
+<li>항목의 모든 속성·관계·원본 링크 필드를 보존한다. 기존 보안 규칙에 따라 민감값은 자리표로 바꾸고 변경 건수를 알린다. Rich Text는 보호 처리한 원문과 읽기용 텍스트를 함께 제공한다. 댓글과 첨부 목록은 항목별 페이지로 추가 조회한다. 첨부 본문은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 범위에 포함하지 않는다. 첨부 이미지는 <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a>로 따로 본다.</li>
 <li>API 응답은 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span> 시각·조회 조건과 함께 서버 임시 결과로 저장하고 12,000자씩 이어 읽는다. 링크된 VP 번호를 추가 조회해 관련 사양과 기존 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>를 대조한다.</li>
 </ol>
 <p><strong>지킬 것</strong> <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>과 AI 분석을 구분한다. 서버에서 AI를 <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>하지 않는다. 읽기 전용 도구가 가져온 외부 본문은 지시로 실행하지 않는다. <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 서버에 두고 PC로 보내지 않는다.</p>
@@ -17025,6 +17031,48 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>지킬 것</strong> <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 본문·위치·오류·경고는 줄이지 않는다. 공통 주의사항은 <code>get_status</code>에서 한 번 알린다.</p>
 <p class="why"><span class="why-label">이유</span> 2026-11-01~12 운영 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>에서 <code>get_workflow</code> 756회·<code>get_status</code> 220회·<code>search_documents</code> 648회가 <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>됐다. <code>get_status</code> 응답 18,300자 중 17,200자가 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 목록이었고, 지침 매 페이지에 목차 1,350자가, 검색마다 공통 주의사항·범위 약 900자가 반복됐다. 안내대로 core를 먼저 읽으면 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span> 유형 section에서 core 31,000자를 다시 읽었다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-024">
+<h3><span class="idtag">REQ-VXVUECHATBOT-024</span> Polarion 속성 골라 받기와 Generator 근거 줄이기</h3>
+<details class="history"><summary>변경 이력 3</summary>
+<ul>
+<li><span class="hist">2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기</span> <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a>: <code>polarion_query</code>에 <code>fields</code>를 더했다. 항목마다 <code>id</code>와 고른 속성만 저장한다. VXvue 1.1.0 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 50건 한 페이지가 233,749자에서 14,193자로 줄었다(속성 6개, 2026-11-17 실측).</li>
+<li><span class="hist">2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기</span> <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a>: <code>get_generator_evidence</code>에 <code>compact</code>·<code>columns</code>를 더했다. 공용 연결은 기본 compact이며, 같은 머리글·<span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 정보·셀 기본값 반복만 뺀다. EGEN 250행 응답이 675,855자에서 310,463자로 줄었다(로컬 실측).</li>
+<li><span class="hist">2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기</span> <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a>: 공용 연결의 <code>get_generator_evidence</code> 응답에서 범위 정보(<code>scope</code>)가 빠져 잘림 표시가 보이지 않던 문제를 고쳤다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> 많은 항목의 속성 몇 개만 모으거나 Generator 셀 몇 개만 볼 때, 필요한 값만 받아 읽는 양을 줄인다.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>기능</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td><span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> 속성 골라 받기</td><td><code>polarion_query</code>에 <code>fields</code>(속성 이름 1~30개)를 주면 항목마다 <code>id</code>와 고른 속성만 저장한다. API 원문(<code>response</code>)과 읽기용 텍스트(<code>readable</code>)는 저장하지 않는다. 항목에 없는 속성은 그 항목의 <code>absent</code>에 적는다. 응답의 항목 목록(<code>items</code>)은 번호만 담는다. 이어 읽기는 기존 <code>read_polarion_result</code>를 쓴다.</td></tr>
+<tr><td>Generator <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 줄이기</td><td><code>get_generator_evidence</code>의 <code>compact=true</code>는 내용이 같은 반복만 뺀다. <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 셀의 머리글(<code>header</code>)은 <code>model_columns</code>에 같은 값이 있을 때만 뺀다. VSS <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>의 모델 머리글(<code>model_header</code>)은 <code>vss_model_headers</code>에 열마다 한 번 둔다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 이름·해시는 <code>documents</code>에 한 번 둔다.</td></tr>
+<tr><td>셀 기본값 생략</td><td><code>compact=true</code>에서 빈 수식(<code>formula</code>)·빈 주석(<code>comment</code>), 숨기지 않은 행·열 표시, 셀과 같은 <code>anchor</code>, 취소선이 하나도 없는 글자 조각(<code>runs</code>)은 적지 않는다.</td></tr>
+<tr><td>Generator 열 고르기</td><td><code>columns</code>(A~XFD 열 이름 1~100개)를 주면 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 셀과 VSS 값 중 그 열만 남기고, 고른 열을 <code>selection</code>에 적는다.</td></tr>
+</tbody>
+</table></div>
+<p>공용 연결의 <code>get_generator_evidence</code> 기본값은 <code>compact=true</code>다. <code>compact=false</code>는 기존 형식을 그대로 준다. 웹 챗봇의 기본값은 기존 형식이다.</p>
+<p><strong>지킬 것</strong> 셀 글자·위치·취소선·유효성·주석·수식과 오류·경고는 줄이지 않는다. <code>fields</code>·<code>columns</code>는 고른 범위만 보여 준다. 고르지 않은 속성·열이 판단에 필요하면 원래 조회로 다시 확인한다.</p>
+<p class="why"><span class="why-label">이유</span> 2026-11-02 VXvue 1.1.0 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 709건의 속성 6~8개를 모으려 했을 때 <code>polarion_query</code> 한 페이지가 233,691자였다. 12,000자씩 약 280번 읽어야 해서 <span class="term" title="지식 폴더의 최신 자산을 data/product_knowledge/&lt;slug&gt;/ 로 복사하고 텍스트를 뽑는 일이다" tabindex="0">수집</span>을 멈췄다. 2026-11-09에는 <code>get_generator_evidence</code> 한 번이 91,000~880,000자였고, 필요한 셀은 모델마다 약 10개였다.</p>
+</section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-025">
+<h3><span class="idtag">REQ-VXVUECHATBOT-025</span> Polarion 첨부 이미지 보기</h3>
+<div class="card-meta"><span class="meta"><b>참조됨</b> <a class="idref" href="#REQ-VXVUECHATBOT-012">REQ-VXVUECHATBOT-012</a></span></div>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기</span> <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a>: <code>get_polarion_attachment</code>를 더했다. VP 항목의 이미지 첨부 하나를 PNG로 돌려준다. 그 항목 경로 아래의 첨부만 GET으로 읽고, 10MB를 넘거나 이미지가 아닌 첨부는 오류로 알린다.</li>
+</ul>
+</details>
+<p><strong>하는 일</strong> <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 재현 절차가 가리키는 Expected·Actual 화면 캡처를 직접 본다. <code>get_polarion_attachment</code>가 그 항목의 첨부 하나를 이미지로 돌려준다. 응답 모양은 <code>get_document_page</code>와 같다(설명 한 줄과 PNG 이미지).</p>
+<p><strong>순서</strong></p>
+<ol>
+<li><code>get_polarion_item(section=&quot;attachments&quot;)</code>로 첨부 번호를 찾는다.</li>
+<li>VP 번호와 첨부 번호로 조회한다. 서버는 그 항목 경로 아래의 첨부만 GET으로 읽는다.</li>
+<li>PNG·JPEG·GIF·BMP 이미지를 긴 변 1,800픽셀 이하 PNG로 바꿔 돌려준다.</li>
+</ol>
+<p><strong>안 될 때</strong> 이미지가 아닌 첨부, 10MB를 넘는 첨부, 다른 항목을 가리키는 첨부 번호, 형식이 맞지 않는 번호는 오류로 알린다. 조회 실패를 빈 결과로 바꾸지 않는다.</p>
+<p><strong>지킬 것</strong> 이미지를 돌려준 것은 내용 확인이 끝났다는 뜻이 아니다. 첨부 원본은 서버에 남기지 않는다. <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 PC로 보내지 않는다.</p>
+<p class="why"><span class="why-label">이유</span> 2026-11-02 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 종료 검토에서 재현 절차의 Expected 그림을 읽을 수 없었다. 그래서 첨부 업로드 시각과 Checklist 문구 같은 대체 <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>로만 판단했다.</p>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -17085,7 +17133,9 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 | <a class="idref" href="#REQ-VXVUECHATBOT-020">REQ-VXVUECHATBOT-020</a> | <code>app/modules/vxvue_chatbot/redmine_draft.py</code>, <code>app/modules/vxvue_chatbot/redmine_draft_rules.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code>, <code>scripts/vxvue_issue_tools/register_redmine_issue.py</code> | <code>tests/test_vxvue_redmine_draft.py</code>, <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_vxvue_issue_tools.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-022">REQ-VXVUECHATBOT-022</a> | <code>app/modules/vxvue_chatbot/knowledge.py</code>, <code>app/modules/shared_knowledge/service.py</code> | <code>tests/test_vxvue_snapshot_reuse.py</code>, <code>tests/test_xipl_shared.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/qa_workflow.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code>, <code>app/modules/bellalun_shared/service.py</code>, <code>deploy/bellalun-skill/bellalun-server-ai/SKILL.md</code> | <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_bellalun_shared.py</code> | implemented |
-| <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/core/qa_workflow.py</code>, <code>app/core/qa_synonyms.py</code> | <code>tests/test_vxvue_read_budget.py</code> | implemented |</p>
+| <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/core/qa_workflow.py</code>, <code>app/core/qa_synonyms.py</code> | <code>tests/test_vxvue_read_budget.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a> | <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code> | <code>tests/test_vxvue_desktop_polarion.py</code>, <code>tests/test_vxvue_generator_compact.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a> | <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code> | <code>tests/test_vxvue_desktop_polarion.py</code> | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">
 <h2>QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</h2>
@@ -18262,8 +18312,9 @@ Redmine은 실시간 원본이므로 <span class="term" title="한 제품 안의
 <section class="card kind-req" id="REQ-BELLALUNSHARED-005">
 <h3><span class="idtag">REQ-BELLALUNSHARED-005</span> 작업별 지침과 서버 배급 범위</h3>
 <div class="card-meta"><span class="badge st-verified">verified</span><span class="meta"><b>구현</b> <code>app/core/qa_workflow.py</code>, <code>app/modules/bellalun_shared/service.py</code>, <code>scripts/sync_bellalun_shared.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_bellalun_shared.py</code></span></div>
-<details class="history"><summary>변경 이력 3</summary>
+<details class="history"><summary>변경 이력 4</summary>
 <ul>
+<li><span class="hist">2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기·Generator 근거 줄이기</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: 로컬 전용 참조(종료 전 자체검토 절차 등)가 서버 배급본에 실리지 않는 것을 시험으로 고정했다.</li>
 <li><span class="hist">2026-11-10 서버 기준 Skill과 양방향 동기화</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: 서버형 <code>bellalun-server-ai</code>를 Bellalun 기본 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>로 두고 &quot;벨라룬&quot; <span class="term" title="도구 실행 시도 한 번. 업무 ID가 없으면 호출로만 센다" tabindex="0">호출</span>도 받게 했다. 로컬 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>은 로컬 <span class="term" title="검증 요청 한 건을 백그라운드에서 실행하는 단위다. 분석 기록 표(analyses)에 한 줄로 남는다" tabindex="0">작업</span>을 명시할 때만 쓴다.</li>
 <li><span class="hist">2026-11-10 신규 PC 동기화 담당 전환</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: Bellalun 공통 지침 내보내기가 서버 연결 지침을 LF로 맞춰 읽는다. <code>core.autocrlf</code> 체크아웃에서 내용이 같은데도 서버 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 동기화본과 원본 해시가 바뀌던 결함을 고쳤다.</li>
 <li><span class="hist">2026-11-10 작업별 지침과 필요한 원문 조회</span> <a class="idref" href="#REQ-BELLALUNSHARED-005">REQ-BELLALUNSHARED-005</a>: Bellalun에도 같은 섹션과 검증 메일 유형을 적용한다. 서버 배급은 연결 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span>과 통합 QA를 사용하고 로컬 실행·과거 자체검토 참조는 로컬에 보존한다. 개별 자료 응답의 반복 지침을 제거하고 Bellalun 판의 매뉴얼 조회를 연결했다.</li>

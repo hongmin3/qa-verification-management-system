@@ -84,3 +84,122 @@ def test_total_count_keeps_paging_and_malformed_success_is_not_zero(tmp_path):
     client._get = lambda *a: {"errors": [{"detail": "bad query"}]}
     with pytest.raises(ValueError, match="0건"):
         lookup.query("type:srs")
+
+
+def _fields_client(calls=None):
+    def get(path, params):
+        if calls is not None:
+            calls.append(params)
+        return {"data": [
+            {"id": "VXvue/VP-1", "attributes": {"status": "open", "rndReviewResult": "accept", "created": "2026-01-01",
+                                                 "description": {"type": "text/html", "value": "<p style='font-size:10pt'>x</p>" * 50}},
+             "relationships": {"author": {"data": {"id": "u1"}}}},
+            {"id": "VXvue/VP-2", "attributes": {"status": "closed"}}],
+            "meta": {"totalCount": 2}}
+    return SimpleNamespace(config=SimpleNamespace(project_id="VXvue"), _get=get)
+
+
+# Validates: REQ-VXVUECHATBOT-024
+def test_query_fields_keeps_only_requested_attributes_and_reports_absent(tmp_path):
+    calls = []
+    lookup = PolarionLookup(tmp_path, _fields_client(calls))
+    full = lookup.query("type:issue")
+    result = lookup.query("type:issue", fields=["status", "rndReviewResult"])
+    assert calls[-1]["query"] == "type:issue" and calls[-1]["fields[workitems]"] == "@all"
+    body = json.loads(result["text"]) if not result["truncated"] else None
+    assert body is not None
+    assert body["fields"] == ["status", "rndReviewResult"]
+    assert body["rows"][0] == {"id": "VXvue/VP-1", "status": "open", "rndReviewResult": "accept"}
+    assert body["rows"][1] == {"id": "VXvue/VP-2", "status": "closed", "absent": ["rndReviewResult"]}
+    assert "response" not in body and "readable" not in body
+    assert result["items"] == ["VXvue/VP-1", "VXvue/VP-2"]
+    assert result["total_chars"] < full["total_chars"] / 3
+    again = lookup.read(result["result_id"])
+    assert again["text"] == result["text"]
+
+
+# Validates: REQ-VXVUECHATBOT-024
+def test_query_fields_validation(tmp_path):
+    lookup = PolarionLookup(tmp_path, _fields_client())
+    for bad in ([], ["x"] * 31, ["bad name"], "status", [1]):
+        with pytest.raises(ValueError):
+            lookup.query("type:issue", fields=bad)
+
+
+def _png(width=40, height=20):
+    import fitz
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, width, height), False)
+    pix.clear_with(200)
+    return pix.tobytes("png")
+
+
+# Validates: REQ-VXVUECHATBOT-025
+def test_attachment_image_is_rendered_for_that_work_item_only(tmp_path):
+    seen = []
+    def get_bytes(path, max_bytes):
+        seen.append((path, max_bytes))
+        return _png()
+    client = SimpleNamespace(config=SimpleNamespace(project_id="VXvue"), get_bytes=get_bytes)
+    lookup = PolarionLookup(tmp_path, client)
+    content = lookup.attachment("vp-12", "1-expected screen.png")
+    assert seen[0][0] == "/projects/VXvue/workitems/VP-12/attachments/1-expected%20screen.png/content"
+    assert seen[0][1] == 10 * 1024 * 1024
+    meta = json.loads(content[0]["text"])
+    assert meta["vp_id"] == "VP-12" and meta["attachment_id"] == "1-expected screen.png"
+    assert meta["visual_status"] == "rendered-not-reviewed"
+    assert content[1]["type"] == "image" and content[1]["mimeType"] == "image/png"
+    # The full REST id is accepted only for the same project and work item.
+    lookup.attachment("VP-12", "VXvue/VP-12/2-actual.png")
+    assert seen[-1][0].endswith("/VP-12/attachments/2-actual.png/content")
+    for vp, att in (("VP-12", "VXvue/VP-13/2-actual.png"), ("VP-12", "Other/VP-12/2.png"), ("VP-12", "../x.png"),
+                    ("VP-12", "a/b"), ("VP-12", ""), ("../VP-1", "1.png")):
+        with pytest.raises(ValueError):
+            lookup.attachment(vp, att)
+    assert not list((tmp_path / "data/vxvue_desktop/polarion").glob("*")) if (tmp_path / "data/vxvue_desktop/polarion").exists() else True
+
+
+# Validates: REQ-VXVUECHATBOT-025
+def test_large_or_transparent_attachment_is_scaled_to_rgb_png(tmp_path):
+    import base64
+    import fitz
+    big = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 3600, 900), True)
+    big.clear_with(120)
+    client = SimpleNamespace(config=SimpleNamespace(project_id="VXvue"), get_bytes=lambda p, m: big.tobytes("png"))
+    content = PolarionLookup(tmp_path, client).attachment("VP-1", "1.png")
+    meta = json.loads(content[0]["text"])
+    assert (meta["width"], meta["height"]) == (1800, 450)
+    shown = fitz.Pixmap(base64.b64decode(content[1]["data"]))
+    assert (shown.width, shown.height, shown.alpha) == (1800, 450, 0)
+
+
+# Validates: REQ-VXVUECHATBOT-025
+def test_attachment_rejects_non_images_and_propagates_errors(tmp_path):
+    client = SimpleNamespace(config=SimpleNamespace(project_id="VXvue"), get_bytes=lambda p, m: b"%PDF-1.4 not an image")
+    lookup = PolarionLookup(tmp_path, client)
+    with pytest.raises(ValueError, match="이미지"):
+        lookup.attachment("VP-1", "1-doc.pdf")
+    client.get_bytes = lambda p, m: (_ for _ in ()).throw(PolarionError("HTTP 404"))
+    with pytest.raises(PolarionError):
+        lookup.attachment("VP-1", "1.png")
+
+
+# Validates: REQ-VXVUECHATBOT-025
+def test_client_attachment_bytes_use_get_and_size_cap(monkeypatch):
+    from app.modules.daily_qa import polarion as module
+    from app.modules.daily_qa.settings import PolarionSettings
+    cfg = PolarionSettings(host="https://alm.example", token="pat", project_id="VXvue", srs_query="x",
+                           issue_query="y", page_size=2, request_interval_seconds=0)
+    client = module.ReadOnlyPolarionClient(cfg)
+    class Resp:
+        def __init__(self, code, body): self.status_code, self.content = code, body
+        def raise_for_status(self): pass
+    calls = []
+    monkeypatch.setattr(module.httpx, "get", lambda url, **kw: calls.append((url, kw)) or Resp(200, b"x" * 11))
+    assert client.get_bytes("/projects/VXvue/workitems/VP-1/attachments/1.png/content", 20) == b"x" * 11
+    assert calls[0][0] == "https://alm.example/polarion/rest/v1/projects/VXvue/workitems/VP-1/attachments/1.png/content"
+    assert calls[0][1]["headers"]["Authorization"] == "Bearer pat"
+    with pytest.raises(module.PolarionError, match="10"):
+        client.get_bytes("/p", 10)
+    monkeypatch.setattr(module.httpx, "get", lambda url, **kw: Resp(403, b""))
+    with pytest.raises(module.PolarionError, match="403"):
+        client.get_bytes("/p", 20)

@@ -15,8 +15,8 @@ XIPL·XIPL.STUDIO의 공용 매뉴얼과 개정 이력은 같은 서버 연결�
 2. 작업 유형(spec·tc·issue·doc·verify·release·mail·integ·auto·usage·meta)을 정해 `get_workflow(snapshot_id=..., section=작업 유형)`를 읽는다. 작업 유형 section은 core와 선행 규칙을 포함하므로 core를 따로 먼저 읽지 않는다. 유형을 정할 수 없을 때만 section="core"로 목차를 읽고 이후 유형 section은 `exclude_core=true`로 읽는다. 각 선택에서 truncated이면 같은 section과 next_offset으로 끝까지 읽는다. 복합 작업은 두 번째 유형부터 `exclude_core=true`로 읽고, 지침 자체를 개편할 때만 section="full" 전문을 읽는다. 과거 판의 legacy_fallback이면 전문을 읽는다. 최신 원문·현재 요청을 적용하고 과거 판정을 재사용하지 않는다.
 3. Redmine 번호는 `get_redmine_issue`, 여러 프로젝트 검색은 `search_redmine_issues`를 쓴다. 기본 프로젝트는 Integration Defect(61), QA Defect(29), 사양문의(107)이고 모든 상태를 조회한다. 연동 모듈 XIPL(33)·QXLink(QA Defect)(41)는 `project_ids`로 지정해 검색하며 번호 조회도 된다. 전문 검색은 `full_text=true`를 쓴다. 종료 이슈를 포함하며 공개 제목·본문·댓글·사용자 정의 항목 일치를 확인해 `matched_in`에 항목 이름을 남긴다. `next_pages`·오류·limitations를 확인한다. 공용 공개 후보 조회이므로 전체 건수는 null이고 complete=false다. 다음 페이지가 없어도 전체 자료 조사 완료로 표시하지 않는다. 잘린 상세는 `read_redmine_result`로 이어 읽는다.
 
-4. VP 번호이면 `get_polarion_item`으로 전체 속성과 관계를 읽는다. `read_polarion_result`로 잘린 내용을 끝까지 읽는다. 관계가 링크만 제공하면 `section="links"`로 연결 목록을 읽고 필요한 연결 VP를 추가 조회한다. 댓글·첨부 목록도 각 section과 next_page로 이어 읽는다.
-5. Polarion 필터는 고치지 않고 `polarion_query`에 전달한다. 전체 수집 요청은 `next_page`가 없을 때까지 모든 페이지를 읽는다. 수집 건수·남은 페이지·실패를 구분한다. 목록 수집을 분석 완료로 표시하지 않는다.
+4. VP 번호이면 `get_polarion_item`으로 전체 속성과 관계를 읽는다. `read_polarion_result`로 잘린 내용을 끝까지 읽는다. 관계가 링크만 제공하면 `section="links"`로 연결 목록을 읽고 필요한 연결 VP를 추가 조회한다. 댓글·첨부 목록도 각 section과 next_page로 이어 읽는다. 첨부 이미지(재현 절차의 Expected·Actual 캡처 등)는 첨부 목록의 번호로 `get_polarion_attachment`를 호출해 본다.
+5. Polarion 필터는 고치지 않고 `polarion_query`에 전달한다. 전체 수집 요청은 `next_page`가 없을 때까지 모든 페이지를 읽는다. 수집 건수·남은 페이지·실패를 구분한다. 목록 수집을 분석 완료로 표시하지 않는다. 항목마다 속성 몇 개만 모을 때는 `fields`로 그 속성만 받는다.
 6. `search_documents`, `get_document`, Generator 도구로 사양·매뉴얼·TC를 대조한다. 같은 작업은 같은 지식 판을 쓴다. 표·이미지·취소선은 `get_document_page`로 확인한다.
 7. 매뉴얼 검토에서는 `get_manual_review`로 전체 범위·문단·변경 추적·메모·출력본 위치를 확인한다. 보고서를 요청하면 `make_manual_review_report`의 현재 스키마에 따라 한국어 해설·공식 근거·짧은 검토 코멘트를 전달한다. 작성 언어와 한국어 초안의 판단 기준은 최신 통합 QA MD 35절을 따른다. 현재 문구는 원본에서 채우고 분석 설명은 구분한다. 오류가 나오면 해당 필드를 검토해 다시 생성한다. 도구가 보이지 않으면 연결을 다시 불러오고, 사용할 수 없으면 그 제한을 알린다.
 8. 문서명·VP 번호·수집 시각·페이지 또는 시트·셀을 근거로 사실과 판단을 구분한다. 자료로 답할 수 있는 내용을 재질문하지 않는다. Expected·로그·원인·Pass/Fail을 만들지 않는다.
@@ -28,4 +28,4 @@ XIPL·XIPL.STUDIO의 공용 매뉴얼과 개정 이력은 같은 서버 연결�
 문서·QA 규칙·서버 업무 지침은 새 작업의 상태·지침 조회에서 갱신된다. 업무 지침 리비전과 연결 프로그램 버전을 구별한다. 서버 업무 지침만 개정되면 기존 연결을 재설치하지 않고 최신 `get_workflow`를 읽어 적용한다. 도구 목록이 캐시되어 있으면 연결 재시작 후 확인한다. 연결 프로그램 코드의 변경은 새 `.mcpb` 설치가 필요하다. 새 사용자는 안내 화면의 최신 Skill ZIP 또는 CLI 설치 명령을 사용한다.
 
 검색은 compact 응답의 documents와 각 근거를 함께 읽는다. 기존 형식은 compact=false다. XLSX는 get_document의 columns=["B","C"] 등 필요한 열만 선택할 수 있으나 Step·Expected·유효성·모델 열이 판단에 필요하면 함께 읽는다. 선택 결과를 전체 검토로 표시하지 않는다.
-Polarion은 compact=true로 HTML 표시 속성을 줄이고 이어 읽기에도 같은 값을 사용한다. 원 HTML은 compact=false다. 매뉴얼 변경 검토는 get_manual_review(view="paragraphs", changed_only=true)로 변경·취소선·메모·그림 변경 문단을 읽고, 전체 검토 요청은 changed_only=false로 전체 범위를 대조한다.
+Polarion은 compact=true로 HTML 표시 속성을 줄이고 이어 읽기에도 같은 값을 사용한다. 원 HTML은 compact=false다. get_generator_evidence는 기본 compact이고 필요한 열만 볼 때는 columns를 쓴다. 매뉴얼 변경 검토는 get_manual_review(view="paragraphs", changed_only=true)로 변경·취소선·메모·그림 변경 문단을 읽고, 전체 검토 요청은 changed_only=false로 전체 범위를 대조한다.

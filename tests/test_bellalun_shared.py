@@ -169,6 +169,23 @@ def test_bellalun_export_and_config(tmp_path):
     assert classify('(사양서) Exposure.pdf', cfg.knowledge_source.classify) == 'specification'
 
 
+def test_bellalun_export_ships_only_qa_guide_and_server_adapter(tmp_path):
+    """로컬 전용 참조(종료 전 자체검토 절차 등)는 references에 남아 있어도 서버 배급본에 실리지 않는다."""
+    from scripts.sync_bellalun_shared import export_common_skill
+    skill = tmp_path / 'skill'; (skill / 'references').mkdir(parents=True)
+    (skill / 'SKILL.md').write_text('# Skill\n[자체검토](references/session-review.md)', encoding='utf8')
+    (skill / 'references/session-review.md').write_text('# 종료 전 자체검토·자동 개선\nSESSION_REVIEW_UNIQUE bellalun_complete_session_review', encoding='utf8')
+    (skill / 'references/shared-skill.md').write_text('# 공유\nSHARED_SKILL_UNIQUE', encoding='utf8')
+    (skill / 'references/bellalun-qa-guide.md').write_text('# 통합 QA\nQA_UNIQUE', encoding='utf8')
+    target = tmp_path / 'knowledge'; target.mkdir()
+    result = export_common_skill(skill, target)
+    shipped = b''.join(p.read_bytes() for p in target.iterdir())
+    for marker in (b'SESSION_REVIEW_UNIQUE', b'bellalun_complete_session_review', b'SHARED_SKILL_UNIQUE'):
+        assert marker not in shipped
+    assert sorted(p.name for p in target.iterdir()) == ['Bellalun Viewer QA 지침.md', '[Skill 지침] Bellalun Viewer.md']
+    assert [r['path'] for r in result['files']] == ['references/bellalun-qa-guide.md', 'server-adapter/SKILL.md']
+
+
 def test_bellalun_rejects_modified_search_index(shared):
     client, _, _ = shared
     sid = value(rpc(client, 'bellalun_get_status'))['snapshot_id']
