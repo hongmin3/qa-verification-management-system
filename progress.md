@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기 선택 배포 (REQ-VXVUECHATBOT-024·025, 커밋 `93943fe`)
+
+- 배포 대상: `vxusage_storage.py`·`daily_qa/polarion.py`·`desktop.py`·`desktop_polarion.py`·`mcp_server.py`·`telemetry.py`·VXvue 서버 Skill·관련 테스트 3개(새 파일 1개). 백업 `backups/deploy-obs-apply-20261117T045623Z/files.tgz`(9개).
+- 사전 대조: 서버 대상 파일 9개가 줄바꿈 정규화 해시로 직전 배포판 `d251232`와 같았다. `docs/SPEC.html`은 서버 판이 직전판과 달라 이번에 옮기지 않았다. 실행 중 작업 0건.
+- 서버 시험 28 passed. `sudo systemctl restart qa-verification` 뒤 active·`/health` ok, `/`·`/knowledge`·`/qa-agent`·`/manual-review` 200.
+- 실제 MCP 확인(배포 후): `tools/list`에 `get_polarion_attachment`, `polarion_query.fields`, `get_generator_evidence.compact·columns`가 보인다. VXvue 이슈 50건 한 페이지가 속성 3개 `fields`로 8,653자. VP-6493 첨부 PNG 1334×802를 받았다.
+- PC 연결 Skill 사본은 `sync_vxvue_local_skill.py`로 서버판과 맞췄다(Claude·Codex).
+
 ## 2026-11-17 관찰 0149·0171·0175·0191·0186 반영 (REQ-VXVUECHATBOT-024·025, REQ-BELLALUNSHARED-005)
 
 - 코드: `polarion_query(fields)`, `get_generator_evidence(compact, columns)`, `get_polarion_attachment`. 운영 서버 배포는 하지 않았다(미배포).
