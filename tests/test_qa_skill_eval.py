@@ -6,30 +6,49 @@ import pytest
 
 from scripts import qa_skill_eval as evals
 
+CORE_CASES = tuple(case for case in evals.CASES if case.core)
+
+
+def test_default_cases_include_six_for_each_product_and_original_core():
+    assert len({case.id for case in evals.CASES}) == 12
+    assert sum(case.prefix == "bellalun_" for case in evals.CASES) == 6
+    assert {case.id for case in evals.CASES if case.core} == {"bellalun-id-only", "vxvue-image-page"}
+
+
+def test_consistency_counts_failures_and_snapshot_drift():
+    baseline = {"case": "a", "status": "PASS", "answer": {"value": True}, "snapshot_id": "s",
+                "skill_sha256": "sha", "model": "m"}
+    assert evals.summarize([baseline] * 3) == [
+        {"case": "a", "trials": 3, "passed": 3, "consistent": True},
+    ]
+    assert evals.summarize([baseline, {**baseline, "status": "FAIL"}])[0]["passed"] == 1
+    assert not evals.summarize([baseline, {**baseline, "snapshot_id": "new"}])[0]["consistent"]
+
 
 def transcript(case):
     sid = "fixed"
 
-    def call(name, arguments, *content):
+    def call(name, arguments, *content, prefix=case.prefix):
         return {
             "type": "mcp_tool_call", "status": "completed", "server": "vxvue-ai",
-            "tool": case.prefix + name, "arguments": arguments,
+            "tool": prefix + name, "arguments": arguments,
             "result": {"content": list(content)},
         }
 
     def block(value):
         return {"type": "text", "text": json.dumps(value)}
 
-    status = call("get_status", {}, block({"snapshot_id": sid, "scope": {"documents": [
-        {"document_id": case.document, "sha12": case.source_hash},
-    ]}}))
+    docs = [{"document_id": case.document, "sha12": case.source_hash}] if case.document else []
+    status = call("get_status", {}, block({"snapshot_id": sid, "scope": {
+        "documents": [] if case.kind == "xipl" else docs,
+    }}))
     workflow = [
         call("get_workflow", {"snapshot_id": sid, "section": case.section, **args},
              block({"snapshot_id": sid, "section": case.section, "text": "지침",
                     "truncated": bool(next_), "next_offset": next_}))
         for args, next_ in [({}, 2), ({"offset": 2}, None)]
     ]
-    if case.prefix:
+    if case.kind == "id_range":
         evidence = call("search_documents", {"snapshot_id": sid, "query": "id-only"}, block({
             "snapshot_id": sid, "results": [{
                 "document_id": case.document, "sha256": case.source_hash + "0" * 52,
@@ -38,12 +57,45 @@ def transcript(case):
                 "evidence_truncated": False,
             }],
         }))
-    else:
+    elif case.kind == "image":
         evidence = call("get_document_page", {
             "snapshot_id": sid, "document_id": case.document, "page": case.expected["page"],
         }, block({"document_id": case.document, "location": {"page": case.expected["page"]}}),
             block({"page": case.expected["page"], "text_status": "no-extractable-text"}),
             {"type": "image", "mimeType": "image/png", "data": "fixture"})
+    elif case.kind == "redmine":
+        evidence = call("search_redmine_issues", {"keywords": "내보내기", "page_size": 3, "full_text": True},
+                        block({"project_ids": [75], "status": "*", "search_mode": "full_text", "complete": False,
+                               "page": 1, "page_size": 3, "errors": []}))
+    elif case.kind == "polarion":
+        evidence = call("get_polarion_item", {"vp_id": "VP-584", "section": "links"}, block({
+            "truncated": False, "text": json.dumps({"response": {
+                "data": [{"id": "VXvue/VP-584/parent/VXvue/VP-579"}],
+            }}),
+        }))
+    elif case.kind == "generator":
+        evidence = call("get_generator_evidence", {"snapshot_id": sid, "model": "EGEN", "limit": 1}, block({
+            "model": "EGEN", "authority": "VSS specification",
+            "sources": [{"file": case.document, "sha256": case.source_hash + "0" * 52}],
+            "scope": {"tc": {"truncated": True}},
+        }))
+    else:
+        if case.kind == "xipl":
+            sid = "xipl-fixed"
+            workflow.append(call("get_status", {}, block({"snapshot_id": sid, "scope": {"documents": docs}}),
+                                 prefix="xipl_"))
+        def chunk(location, value):
+            return {
+                "document_id": case.document, "sha256": case.source_hash + "0" * 52,
+                "location": location, "evidence_truncated": False, "evidence": value,
+            }
+
+        rows = [chunk(dict(case.location), "\n".join(case.markers))]
+        if case.name_paragraph is not None:
+            rows.append(chunk({"paragraph": case.name_paragraph}, case.expected["sop_class"]))
+        evidence = call("get_document", {"snapshot_id": sid, "document_id": case.document}, block({
+            "snapshot_id": sid, "results": rows,
+        }), prefix="xipl_" if case.kind == "xipl" else case.prefix)
     return [status, *workflow, evidence]
 
 
@@ -52,14 +104,14 @@ def test_scores_complete_trace_and_final_answer(case):
     assert evals.grade(case, transcript(case), case.expected)["status"] == "PASS"
 
 
-@pytest.mark.parametrize("case", evals.CASES, ids=lambda case: case.id)
+@pytest.mark.parametrize("case", CORE_CASES, ids=lambda case: case.id)
 def test_flips_wrong_answer_even_with_correct_trace(case):
     answer = deepcopy(case.expected)
     answer["coverage_supported" if case.prefix else "default_oid_confirmed"] = True
     assert evals.grade(case, transcript(case), answer)["status"] == "FAIL"
 
 
-@pytest.mark.parametrize("case", evals.CASES, ids=lambda case: case.id)
+@pytest.mark.parametrize("case", CORE_CASES, ids=lambda case: case.id)
 def test_rejects_missing_continuation_or_mixed_snapshot(case):
     trace = transcript(case)
     assert evals.grade(case, [*trace[:2], trace[-1]], case.expected)["status"] == "FAIL"
@@ -68,7 +120,7 @@ def test_rejects_missing_continuation_or_mixed_snapshot(case):
 
 
 def test_requires_image_and_id_only_status():
-    bellalun, vxvue = evals.CASES
+    bellalun, vxvue = CORE_CASES
     trace = transcript(vxvue)
     trace[-1]["result"]["content"].pop()
     assert evals.grade(vxvue, trace, vxvue.expected)["status"] == "FAIL"
@@ -103,6 +155,81 @@ def test_changed_source_needs_rebaseline():
     entry = trace[0]["result"]["content"][0]
     entry["text"] = entry["text"].replace(case.source_hash, "new-hash")
     assert evals.grade(case, trace, case.expected)["status"] == "SOURCE_CHANGED"
+
+
+@pytest.mark.parametrize("case", evals.CASES, ids=lambda case: case.id)
+def test_requires_case_specific_evidence(case):
+    trace = transcript(case)
+    trace[-1]["result"]["content"].clear()
+    result = evals.grade(case, trace, case.expected)
+    assert result["status"] == "FAIL"
+    assert not result["checks"]["evidence"]
+
+
+def test_xipl_cannot_use_bellalun_snapshot_or_read_before_xipl_status():
+    case = next(case for case in evals.CASES if case.kind == "xipl")
+    trace = transcript(case)
+    trace[-1]["arguments"]["snapshot_id"] = "fixed"
+    assert not evals.grade(case, trace, case.expected)["checks"]["pinned_snapshot"]
+    trace[-1]["arguments"]["snapshot_id"] = "xipl-fixed"
+    trace[-1], trace[-2] = trace[-2], trace[-1]
+    assert not evals.grade(case, trace, case.expected)["checks"]["pinned_snapshot"]
+
+
+def replace_response(trace, **changes):
+    last = trace[-1]["result"]["content"][0]
+    value = json.loads(last["text"])
+    last["text"] = json.dumps({**value, **changes})
+
+
+def test_redmine_scope_requires_a_successful_project_read():
+    case = next(case for case in evals.CASES if case.kind == "redmine")
+    trace = transcript(case)
+    replace_response(trace, errors=[{"project_id": 75, "error": "timeout"}])
+    assert not evals.grade(case, trace, case.expected)["checks"]["evidence"]
+
+
+def test_polarion_invalid_link_data_cannot_pass():
+    case = next(case for case in evals.CASES if case.kind == "polarion")
+    trace = transcript(case)
+    replace_response(trace, text=json.dumps({"response": {"data": None}}))
+    assert not evals.grade(case, trace, case.expected)["checks"]["evidence"]
+
+
+@pytest.mark.parametrize("case_id", ["bellalun-windows-update", "vxvue-dicom-locator"])
+def test_document_location_without_every_required_value_is_not_evidence(case_id):
+    case = next(case for case in evals.CASES if case.id == case_id)
+    trace = transcript(case)
+    values = json.loads(trace[-1]["result"]["content"][0]["text"])
+    for row in values["results"]:
+        row["evidence"] = "다른 원문"
+    replace_response(trace, results=values["results"])
+    assert not evals.grade(case, trace, case.expected)["checks"]["evidence"]
+
+
+def test_dicom_uid_read_alone_is_not_evidence_for_sop_class_name():
+    case = next(case for case in evals.CASES if case.id == "vxvue-dicom-locator")
+    trace = transcript(case)
+    rows = json.loads(trace[-1]["result"]["content"][0]["text"])["results"]
+    replace_response(trace, results=rows[:1])
+    result = evals.grade(case, trace, case.expected)
+    assert result["checks"]["evidence"]
+    assert not result["checks"]["name_paragraph"]
+    assert result["status"] == "FAIL"
+
+
+def test_core_repeat_starts_three_trials_for_each_product(monkeypatch, capsys):
+    def fake(case, args, codex_home):
+        return evals.grade(case, transcript(case), case.expected)
+
+    monkeypatch.setattr(evals, "run_case", fake)
+    monkeypatch.setattr("sys.argv", ["qa_skill_eval.py", "--core", "--repeat", "3", "--jobs", "2"])
+    assert evals.main() == 0
+    result = json.loads(capsys.readouterr().out)
+    assert {item["case"] for item in result["summary"]} == {case.id for case in CORE_CASES}
+    assert all(item["trials"] == item["passed"] == 3 and item["consistent"] for item in result["summary"])
+    for case in CORE_CASES:
+        assert [item["trial"] for item in result["results"] if item["case"] == case.id] == [1, 2, 3]
 
 
 @pytest.mark.parametrize("snapshot, early", [("fixed", True), ("other", False)])
