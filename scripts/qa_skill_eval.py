@@ -303,6 +303,24 @@ def first_status(calls, tool):
                  for value in payloads(call) if value.get("snapshot_id")), None)
 
 
+def live_evidence_fingerprints(case, calls, sid):
+    values = []
+    for call in calls:
+        if call["tool"] not in LIVE_TOOLS or not evidence_found(case, call, sid):
+            continue
+        for value in payloads(call):
+            if case.kind == "polarion":
+                envelope = json_value(value.get("text"))
+                if not isinstance(envelope, dict) or "response" not in envelope:
+                    continue
+                value = envelope["response"]
+            else:
+                value = {key: item for key, item in value.items() if key != "collected_at"}
+            encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            values.append(hashlib.sha256(encoded).hexdigest())
+    return sorted(set(values))
+
+
 def grade(case, calls, answer):
     report = {"case": case.id, "answer": answer, "tool_calls": len(calls), "checks": {}}
     report["tool_sequence"] = [call.get("tool") for call in calls]
@@ -362,6 +380,8 @@ def grade(case, calls, answer):
     )
     evidence_calls = [call for call in queries[end + 1:] if successful(call)] if end is not None else []
     source_sid = (evidence_status or status)["snapshot_id"]
+    if case.kind in ("redmine", "polarion"):
+        report["live_evidence_sha256"] = live_evidence_fingerprints(case, evidence_calls, source_sid)
     checks["evidence"] = any(evidence_found(case, call, source_sid) for call in evidence_calls)
     if case.name_paragraph is not None:
         checks["name_paragraph"] = any(
@@ -407,12 +427,17 @@ def answer_schema(case):
             "required": list(case.expected), "additionalProperties": False}
 
 
-def run_case(case, args, codex_home):
+def run_case(case, args, codex_home, *, skill=None):
     started = time.monotonic()
     try:
-        skill = (codex_home / "skills" / case.skill / "SKILL.md").read_bytes()
-        with (codex_home / "config.toml").open("rb") as file:
-            config = tomllib.load(file)
+        if skill is None:
+            skill = (codex_home / "skills" / case.skill / "SKILL.md").read_bytes()
+        config_path = codex_home / "config.toml"
+        source_config = config_path.read_bytes()
+        config_hash = getattr(args, "config_sha256", None)
+        if config_hash and hashlib.sha256(source_config).hexdigest() != config_hash:
+            raise ValueError("비교 도중 Codex 설정이 변경됨")
+        config = tomllib.loads(source_config.decode("utf-8"))
         servers = config.get("mcp_servers", {})
         if SERVER not in servers:
             raise ValueError("Codex 설정에 vxvue-ai MCP가 없습니다.")
@@ -439,6 +464,8 @@ def run_case(case, args, codex_home):
                 [*cmd, "-"], cwd=directory, input=prompt, capture_output=True,
                 encoding="utf-8", errors="replace", timeout=args.timeout,
             )
+        if config_hash and config_path.read_bytes() != source_config:
+            raise ValueError("비교 도중 Codex 설정이 변경됨")
         report = score_stream(case, child.stdout, child.returncode)
         report["skill_sha256"] = hashlib.sha256(skill).hexdigest()
         report["model"] = args.model or config.get("model")

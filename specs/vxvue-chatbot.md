@@ -457,6 +457,14 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 - 기본 평가에는 제품별 6건이 있다. 벨라룬은 TC 정의와 번호 구간, DICOM 문단, Windows Update 기록, XIPL 공용 자료, Redmine 검색 범위를 묻는다. VXvue는 PDF 이미지와 본문, DICOM 문단, Windows Update 기록, Generator 근거, Polarion 관계를 묻는다.
 - 핵심 사례는 벨라룬 ID 전용 TC와 VXvue 이미지 전용 페이지다. 반복 평가마다 새 대화를 열어 모든 시도를 기록한다. 같은 모델·스킬·자료 판에서 모든 시도가 통과한 경우에 일관 통과로 집계한다.
 
+### REQ-VXVUECHATBOT-027 서버 배급 스킬 변경 전후 비교
+
+운영 배포 스크립트는 서버의 벨라룬·VXvue 배급 스킬과 이번에 보낼 파일을 비교한다. 내용이 달라진 경우 같은 Codex 모델과 운영 MCP로 각 판의 전체 12건과 핵심 두 사례의 3회 반복을 실행한다.
+
+- 양쪽 실행은 같은 사례·자료 판을 사용해야 한다. XIPL은 자체 자료 판을 확인한다. 실시간 Redmine·Polarion 응답은 조회 시각과 임시 결과 번호를 제외한 내용 해시를 대조한다.
+- 후보에 새로운 실패가 생기거나 핵심 사례의 통과 횟수가 줄면 배포를 차단한다. 자료 판 변경, 누락, 연결 오류도 배포를 차단한다. 기존 실패는 비교 결과에 남긴다.
+- 비교 보고서에는 양쪽 스킬 해시, 사례별 판정, 차단 이유를 남긴다. 운영 ZIP의 해시를 SSH 대상과 대조하고 비교한 임시 사본을 전송한다. 스킬 변경이 없으면 모델을 호출하지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -491,6 +499,10 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 정상 응답, 오답, 이어 읽기 누락, 자료 판 혼합, 필수 근거 누락, 문서 변경과 CLI 오류를 시험한다. 전체 12건을 채점하고 핵심 두 사례는 운영 MCP와 설치된 스킬로 각각 세 번 실행해 일관 통과 여부를 확인한다.
 
+### TEST-VXVUECHATBOT-009 배포 전 스킬 판 비교
+
+같은 자료의 정상 비교, 신규 실패, 핵심 통과 횟수 감소, 문서 판·실시간 근거 변경, 실행 오류, 결과 누락을 확인한다. 운영 배포 경로에서 차단 결과가 나오면 파일 전송에 도달하지 않는지 검사한다.
+
 ## 12. 요구사항 추적성
 
 <!-- Skill 동기화 시험은 문서 DB 등록 없이 실제 자산 확정 경로를 사용한다. -->
@@ -523,3 +535,4 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-024 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_desktop_polarion.py`, `tests/test_vxvue_generator_compact.py` | implemented |
 | REQ-VXVUECHATBOT-025 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/daily_qa/polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
 | REQ-VXVUECHATBOT-026 | `scripts/qa_skill_eval.py` | `tests/test_qa_skill_eval.py`, 운영 MCP 평가와 핵심 사례 반복 | implemented |
+| REQ-VXVUECHATBOT-027 | `scripts/qa_skill_compare.py`, `scripts/deploy.ps1` | `tests/test_qa_skill_compare.py` | implemented |

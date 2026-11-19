@@ -40,6 +40,26 @@ Codex CLI에 로그인하고 `vxvue-ai` MCP와 `bellalun-server-ai`, `vxvue-ai` 
 .\.venv\Scripts\python.exe -m pytest -q tests/test_qa_skill_eval.py
 ```
 
+## 운영 스킬 게시 전 변경 전후 비교
+
+배포 스크립트 `scripts/deploy.ps1`는 운영 서버가 제공하는 두 스킬 ZIP의 `SKILL.md`를 내려받아 이번 배포 사본과 비교한다. 운영 ZIP 해시는 SSH 배포 대상 파일의 해시와 먼저 대조한다. 스킬 내용이 달라지면 각 판에서 전체 12건과 핵심 2건의 3회 반복을 실행한다. 스킬이 같으면 모델 실행을 건너뛴다.
+
+| 비교 결과 | 배포 처리 |
+|---|---|
+| `PASS` 또는 `UNCHANGED` | 비교한 사본을 파일 전송에 사용한다. |
+| `REGRESSION` | 새 실패 또는 통과 횟수가 감소한 사례를 보고하고 전송을 중단한다. |
+| `INCOMPARABLE` | 자료 판·Redmine/Polarion 근거·모델 불일치나 실행 오류를 보고하고 전송을 중단한다. |
+
+보고서 기본 위치는 `%LOCALAPPDATA%\QA-Skill-Eval\comparisons`다. 보고서는 해시, 사례별 이전·후보 결과와 차단 이유를 담는다. 재검토 때는 두 스킬의 원본과 자료 판을 확인한 뒤 다시 실행한다.
+
+파일 전송 없이 배포 후보를 사전에 검사할 수 있다. 아래 주소는 이 PC의 `vxvue-ai` MCP가 연결된 운영 QA 서버로 바꾼다. `--force`를 더하면 후보 스킬이 운영본과 같아도 비교를 실행한다.
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 scripts\qa_skill_compare.py --server http://<QA_HOST>:24357
+```
+
+이 게이트의 게시 대상은 서버가 제공하는 두 연결 스킬의 `SKILL.md`다. 통합 QA MD는 운영 지식 업로드에서 관리하며, 이 평가에서는 양쪽이 같은 운영 지침 판을 읽는다.
+
 ## Regression 추천 평가 종료 안내
 
 2026-10-01에 별도 Regression 영향 분석과 함께 정답 TC 입력 화면·precision/recall/F1 계산·`scripts/evaluate_analysis.py`를 없앴다.

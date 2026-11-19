@@ -100,17 +100,74 @@ print(json.dumps({"running_products": running, "active_jobs": jobs["active_jobs"
     $qaStatus = ($statusText -join "") | ConvertFrom-Json
     if ($null -eq $qaStatus.running_products -or $null -eq $qaStatus.active_jobs) { throw "서버 실행 상태 응답을 읽지 못해 배포를 중단합니다." }
     if (@($qaStatus.running_products).Count -gt 0 -or $qaStatus.active_jobs -gt 0) { throw "서버에서 QA 점검 또는 분석이 대기·실행 중입니다. 완료 뒤 배포하세요." }
+    return $qaStatus
 }
-Assert-QaIdle
-ssh $hostTarget "test ! -e '$directory' || test -d '$directory'"
-ssh $hostTarget "mkdir -p '$directory'"
-foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requirements.txt", "config.yaml", "pytest.ini", ".env.example", "secrets.example.txt", "secrets.example.json", "README.md", "SECURITY.md")) {
-    $copyExit = Invoke-Native { scp -r -- "$item" $target }
-    if ($copyExit -ne 0) { throw "파일 전송 실패: $item" }
+function Get-QaSkillReleaseState {
+    $releaseCode = @'
+import hashlib
+import json
+from pathlib import Path
+from app.core.config import app_bind
+
+paths = {
+    "vxvue": "deploy/claude-desktop/skill/vxvue-ai/SKILL.md",
+    "bellalun": "deploy/bellalun-skill/bellalun-server-ai/SKILL.md",
+}
+result = {name: hashlib.sha256(Path(path).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+          for name, path in paths.items()}
+result["port"] = app_bind()[1]
+print(json.dumps(result))
+'@
+    $releaseText = $releaseCode | ssh $hostTarget "cd '$directory' && .venv/bin/python -"
+    if ($LASTEXITCODE -ne 0) { throw "SSH 배포 대상의 스킬 판을 읽지 못했습니다." }
+    $release = ($releaseText -join "") | ConvertFrom-Json
+    if ($release.vxvue -notmatch '^[0-9a-f]{64}$' -or $release.bellalun -notmatch '^[0-9a-f]{64}$' -or -not $release.port) {
+        throw "SSH 배포 대상의 스킬 해시와 운영 포트를 확인하지 못했습니다."
+    }
+    return $release
+}
+$qaState = Assert-QaIdle
+$stageParent = (Resolve-Path -LiteralPath ([IO.Path]::GetTempPath())).Path
+$stageRoot = Join-Path $stageParent ("qa-deploy-" + [guid]::NewGuid().ToString("N"))
+New-Item -Path $stageRoot -ItemType Directory | Out-Null
+$skillStage = Join-Path $stageRoot "deploy"
+try {
+    Copy-Item -LiteralPath (Join-Path $projectRoot "deploy") -Destination $skillStage -Recurse
+    if ($qaState.initial_install -ne $true) {
+        $release = Get-QaSkillReleaseState
+        $qaBaseUrl = $deploy.DEPLOY_QA_BASE_URL
+        if (-not $qaBaseUrl) {
+            $qaBaseUrl = [UriBuilder]::new("http", $deploy.DEPLOY_SSH_HOST, [int]$release.port).Uri.GetLeftPart([UriPartial]::Authority)
+        }
+        $gateExit = Invoke-Native {
+            & "$projectRoot\.venv\Scripts\python.exe" -X utf8 scripts/qa_skill_compare.py --server $qaBaseUrl --candidate-deploy $skillStage --baseline-sha $release.vxvue $release.bellalun
+        }
+        if ($gateExit -ne 0) { throw "스킬 변경 전후 비교가 통과하지 못해 운영 파일 전송을 중단합니다." }
+        $currentRelease = Get-QaSkillReleaseState
+        if ($currentRelease.vxvue -ne $release.vxvue -or $currentRelease.bellalun -ne $release.bellalun -or $currentRelease.port -ne $release.port) {
+            throw "비교 도중 SSH 배포 대상의 스킬 또는 포트가 변경되어 전송을 중단합니다."
+        }
+    }
+    Assert-QaIdle | Out-Null
+    ssh $hostTarget "test ! -e '$directory' || test -d '$directory'"
+    if ($LASTEXITCODE -ne 0) { throw "서버 배포 폴더를 확인하지 못했습니다." }
+    ssh $hostTarget "mkdir -p '$directory'"
+    if ($LASTEXITCODE -ne 0) { throw "서버 배포 폴더를 준비하지 못했습니다." }
+    foreach ($item in @("app", "scripts", "tests", "config", "docs", "deploy", "requirements.txt", "config.yaml", "pytest.ini", ".env.example", "secrets.example.txt", "secrets.example.json", "README.md", "SECURITY.md")) {
+        $source = if ($item -eq "deploy") { $skillStage } else { $item }
+        $copyExit = Invoke-Native { scp -r -- "$source" $target }
+        if ($copyExit -ne 0) { throw "파일 전송 실패: $item" }
+    }
+}
+finally {
+    $resolved = (Resolve-Path -LiteralPath $stageRoot).Path
+    if ((Split-Path -Parent $resolved) -eq $stageParent -and (Split-Path -Leaf $resolved) -match '^qa-deploy-[0-9a-f]{32}$') {
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
 }
 
 Write-Host "파일 전송 완료. 사용을 종료한 단일 이슈 분석 파일을 확인합니다."
-Assert-QaIdle
+Assert-QaIdle | Out-Null
 $retiredExit = Invoke-Native { ssh $hostTarget "cd '$directory' && .venv/bin/python scripts/remove_retired_qa_agent.py --apply" }
 if ($retiredExit -ne 0) { throw "사용 종료 파일 정리 실패. 프로젝트 밖 경로나 파일 상태를 확인하세요." }
 Write-Host "서버에서 의존성 동기화 중..."
@@ -125,7 +182,7 @@ if (-not $Restart) {
 }
 
 if ($ManualRestart) {
-    Assert-QaIdle
+    Assert-QaIdle | Out-Null
     Write-Host "파일과 의존성을 반영했습니다. 재기동은 아직 하지 않았습니다."
     Write-Host "실행 중인 QA 점검이 없는지 확인한 뒤 서버에서 직접 실행하세요: sudo systemctl restart qa-verification"
     Write-Host "재기동 뒤 /health 와 실행 상태를 확인하세요. 인증 정보는 읽거나 입력하지 않았습니다."
@@ -139,7 +196,7 @@ if (-not $sudoLine) { throw "secrets.txt에 SERVER_SUDO_PASSWORD가 없어 -Rest
 $sudoPassword = $sudoLine.Substring("SERVER_SUDO_PASSWORD=".Length)
 
 Write-Host "qa-verification 서비스 재기동 중..."
-Assert-QaIdle
+Assert-QaIdle | Out-Null
 $exitCode = Invoke-SudoOverSsh -HostTarget $hostTarget -Command "systemctl restart qa-verification" -Password $sudoPassword
 if ($exitCode -ne 0) { throw "서비스 재기동 실패 (sudo 비밀번호 또는 유닛 이름을 확인하세요)." }
 

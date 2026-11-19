@@ -189,6 +189,17 @@ def test_redmine_scope_requires_a_successful_project_read():
     assert not evals.grade(case, trace, case.expected)["checks"]["evidence"]
 
 
+def test_redmine_evidence_fingerprint_ignores_only_collection_time():
+    case = next(case for case in evals.CASES if case.kind == "redmine")
+    trace = transcript(case)
+    replace_response(trace, items=[{"id": 1, "subject": "before"}], collected_at="first")
+    first = evals.grade(case, trace, case.expected)["live_evidence_sha256"]
+    replace_response(trace, collected_at="second")
+    assert evals.grade(case, trace, case.expected)["live_evidence_sha256"] == first
+    replace_response(trace, items=[{"id": 1, "subject": "after"}])
+    assert evals.grade(case, trace, case.expected)["live_evidence_sha256"] != first
+
+
 def test_polarion_invalid_link_data_cannot_pass():
     case = next(case for case in evals.CASES if case.kind == "polarion")
     trace = transcript(case)
