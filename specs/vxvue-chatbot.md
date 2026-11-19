@@ -465,6 +465,14 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 - 후보에 새로운 실패가 생기거나 핵심 사례의 통과 횟수가 줄면 배포를 차단한다. 자료 판 변경, 누락, 연결 오류도 배포를 차단한다. 기존 실패는 비교 결과에 남긴다.
 - 비교 보고서에는 양쪽 스킬 해시, 사례별 판정, 차단 이유를 남긴다. 운영 ZIP의 해시를 SSH 대상과 대조하고 비교한 임시 사본을 전송한다. 스킬 변경이 없으면 모델을 호출하지 않는다.
 
+### REQ-VXVUECHATBOT-028 통합 QA 지침 업로드 전 비교
+
+VXvue·Bellalun의 수집 업로드는 통합 QA 지침이 바뀌면 첫 파일 전송 전에 REQ-VXVUECHATBOT-027의 비교를 실행한다.
+
+- 현행 응답과 후보는 같은 운영 스냅샷으로 문서와 이슈를 읽는다. 로컬 미리보기 연결은 후보 요청의 지침 응답만 후보 MD로 조합한다. 서버에는 미리보기를 게시하지 않는다.
+- 두 판 각각 전체 12건과 핵심 두 사례 3회씩을 확인한다. 새 실패나 자료 판·실시간 근거 불일치가 있으면 업로드를 차단한다.
+- 자료 수집 목록과 전송 바이트를 비교해, 검증한 지침만 전송한다. 지침이 같은 일반 수집은 모델을 호출하지 않는다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -503,6 +511,10 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 같은 자료의 정상 비교, 신규 실패, 핵심 통과 횟수 감소, 문서 판·실시간 근거 변경, 실행 오류, 결과 누락을 확인한다. 운영 배포 경로에서 차단 결과가 나오면 파일 전송에 도달하지 않는지 검사한다.
 
+### TEST-VXVUECHATBOT-010 통합 QA 지침 업로드 게이트
+
+후보 지침 조합, 동일한 문서 판과 조회 경로, 지침 바이트 일치, 무변경과 신규 실패 차단을 시험한다. 차단된 업로드가 asset과 commit 호출에 도달하지 않는지 확인한다.
+
 ## 12. 요구사항 추적성
 
 <!-- Skill 동기화 시험은 문서 DB 등록 없이 실제 자산 확정 경로를 사용한다. -->
@@ -536,3 +548,4 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-025 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/daily_qa/polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
 | REQ-VXVUECHATBOT-026 | `scripts/qa_skill_eval.py` | `tests/test_qa_skill_eval.py`, 운영 MCP 평가와 핵심 사례 반복 | implemented |
 | REQ-VXVUECHATBOT-027 | `scripts/qa_skill_compare.py`, `scripts/deploy.ps1` | `tests/test_qa_skill_compare.py` | implemented |
+| REQ-VXVUECHATBOT-028 | `scripts/qa_guide_compare.py`, `app/core/knowledge_push.py` | `tests/test_qa_guide_compare.py` | implemented |

@@ -58,7 +58,15 @@ Codex CLI에 로그인하고 `vxvue-ai` MCP와 `bellalun-server-ai`, `vxvue-ai` 
 .\.venv\Scripts\python.exe -X utf8 scripts\qa_skill_compare.py --server http://<QA_HOST>:24357
 ```
 
-이 게이트의 게시 대상은 서버가 제공하는 두 연결 스킬의 `SKILL.md`다. 통합 QA MD는 운영 지식 업로드에서 관리하며, 이 평가에서는 양쪽이 같은 운영 지침 판을 읽는다.
+이 배포 게이트의 게시 대상은 서버가 제공하는 두 연결 스킬의 `SKILL.md`다.
+
+## 통합 QA MD 수집 업로드 전 비교
+
+벨라룬과 VXvue의 PC 수집 업로드는 운영 커밋의 지침 해시와 실제 파일을 확인한다. 지침이 바뀌면 첫 파일 전송 전에 각 판에서 전체 12건과 핵심 두 사례의 3회 반복을 실행한다. 현행 응답은 운영 MCP에서 받고, 후보 응답은 PC의 임시 미리보기 연결에서 같은 방식으로 조합한다. 두 판의 문서·이슈는 운영 MCP의 같은 자료 판에서 읽는다.
+
+새 실패, 통과 횟수 감소, 자료 판 불일치, 후보 지침 미조회는 업로드를 차단한다. 통과하면 채점한 원문 바이트를 전송한다. 지침이 같은 정기 수집은 운영 커밋의 지침 해시를 확인한 뒤 모델 평가를 건너뛴다. 보고서는 `%LOCALAPPDATA%\QA-Skill-Eval\comparisons`에 저장된다.
+
+실행 PC에는 기존 Codex 운영 MCP 설정과 `.deploy.env` SSH 설정이 필요하다. 새 VXvue 예약 작업자 사본은 관리자 PowerShell에서 `scripts/install_product_knowledge_schedule.ps1`로 갱신한다. Bellalun 예약과 수동 수집은 프로젝트에서 실행되는 `sync_bellalun_shared.py` 및 `sync_product_knowledge.py` 경로에서 이 게이트를 사용한다.
 
 ## Regression 추천 평가 종료 안내
 

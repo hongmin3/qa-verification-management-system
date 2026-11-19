@@ -17,6 +17,7 @@ import json
 import shutil
 import socket
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from pathlib import Path
 
 from app.core.product_knowledge import (
@@ -226,31 +227,69 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
 
     with _client(timeout) as client:
         have = fetch_server_state(client, target_url, config.product)
-        for asset in assets:
+        from scripts.qa_guide_compare import LIBRARIES, RULE_KINDS, compare_upload, read_operating_inputs, rule_asset, stage_changed_rules
+        from httpx import HTTPError
+        from subprocess import SubprocessError
+        try:
+            operating = None
+            declared = have
+            if config.product in LIBRARIES and (any(rule_asset(row) for row in assets)
+                                                or any(kind in RULE_KINDS for kind, _ in have)):
+                operating = read_operating_inputs(target_url, config.product)
+                declared = {key: hashlib.sha256(value).hexdigest() for key, value in operating.items()}
+                present = {key: sha for key, sha in have.items() if key[0] in RULE_KINDS}
+                if present != declared:
+                    raise ValueError("운영 규칙의 커밋 해시와 서버 파일 해시가 다릅니다.")
+            staged_rules = stage_changed_rules(config.product, assets, declared, manifest_payload["allow_prune"],
+                                               lambda asset: collected_path(config.product, asset))
+            if staged_rules:
+                desired_rules = {(row["kind"], row["file_name"]): row["sha256"] for row in assets if rule_asset(row)}
+                verdict, report = compare_upload(config.product, target_url, staged_rules, desired_rules,
+                                                 manifest_payload["allow_prune"], operating=operating)
+                if verdict["status"] != "PASS":
+                    return {"status": "FAILED", "detail": f"통합 QA 지침 업로드 차단: {verdict['status']} / {report}"}
+                if fetch_server_state(client, target_url, config.product) != have:
+                    return {"status": "FAILED", "detail": f"비교 후 운영 지식 목록이 변경되어 업로드 차단 / {report}"}
+        except (OSError, ValueError, KeyError, TypeError, HTTPError, SubprocessError) as exc:
+            return {"status": "FAILED", "detail": f"통합 QA 지침 업로드 사전 비교 실패 ({type(exc).__name__})"}
+        # Update ordinary documents first. A partial upload can turn off pruning
+        # and would otherwise activate a different set of guides from the preview.
+        transfer = sorted(assets, key=lambda row: (row.get("kind"), row.get("file_name")) in staged_rules)
+        for asset in transfer:
             kind, file_name, digest = asset.get("kind", ""), asset.get("file_name", ""), asset.get("sha256", "")
             if have.get((kind, file_name)) == digest and digest:
                 skipped.append(file_name)
                 continue
             path = collected_path(config.product, asset)
-            if not path.is_file():
+            tested_bytes = staged_rules.get((kind, file_name))
+            if tested_bytes is not None and failed:
+                return {"status": "FAILED", "detail": "일반 파일 전송 오류로 검증한 QA 지침 전송을 중단했습니다."}
+            if tested_bytes is None and not path.is_file():
                 failed.append(f"{file_name} (수집본 없음)")
                 continue
             try:
-                with path.open("rb") as handle:
+                with (BytesIO(tested_bytes) if tested_bytes is not None else path.open("rb")) as handle:
                     response = client.post(
                         f"{target_url.rstrip('/')}/knowledge/product-knowledge/asset",
                         data={"product": config.product, "kind": kind, "sha256": digest},
                         files={"file": (file_name, handle, "application/octet-stream")},
                     )
                 response.raise_for_status()
+                record = response.json()
+                if tested_bytes is not None and (record.get("error") or record.get("sha256") != digest):
+                    return {"status": "FAILED", "detail": "서버가 검증한 QA 지침을 반영하지 못해 확정을 중단했습니다."}
             except Exception as exc:
+                if tested_bytes is not None:
+                    return {"status": "FAILED", "detail": f"QA 지침 전송 실패로 확정을 중단했습니다 ({type(exc).__name__})."}
                 # 한 파일이 실패해도 나머지는 계속 올린다. 큰 PDF 하나 때문에 그 주 수집이
                 # 통째로 비는 것이 가장 나쁘다.
                 failed.append(f"{file_name} ({type(exc).__name__})")
                 continue
-            uploaded[file_name] = response.json()
-            sent_bytes += path.stat().st_size
+            uploaded[file_name] = record
+            sent_bytes += len(tested_bytes) if tested_bytes is not None else path.stat().st_size
 
+        if failed and staged_rules:
+            return {"status": "FAILED", "detail": "일반 파일 전송 오류로 검증한 QA 지침 목록 확정을 중단했습니다."}
         manifest_payload["allow_prune"] = manifest_payload["allow_prune"] and not failed
         commit = client.post(
             f"{target_url.rstrip('/')}/knowledge/product-knowledge/commit",

@@ -375,6 +375,12 @@ def grade(case, calls, answer):
     )
     checks["status_first"] = calls[0].get("tool") == status_tool
     end = workflow_end(case, queries, sid)
+    if end is not None:
+        preview_ids = {value["qa_guide_preview_id"] for call in queries[:end + 1]
+                       if successful(call) and call["tool"] == case.prefix + "get_workflow"
+                       for value in payloads(call) if isinstance(value.get("qa_guide_preview_id"), str)}
+        if preview_ids:
+            report["qa_guide_preview_ids"] = sorted(preview_ids)
     checks["workflow_complete_before_evidence"] = end is not None and all(
         call["tool"] == case.prefix + "get_workflow" for call in queries[:end + 1]
     )
@@ -427,7 +433,7 @@ def answer_schema(case):
             "required": list(case.expected), "additionalProperties": False}
 
 
-def run_case(case, args, codex_home, *, skill=None):
+def run_case(case, args, codex_home, *, skill=None, preview_url=None):
     started = time.monotonic()
     try:
         if skill is None:
@@ -453,6 +459,9 @@ def run_case(case, args, codex_home, *, skill=None):
             ]
             for name in servers.keys() - {SERVER}:
                 cmd.extend(["-c", f"mcp_servers.{name}.enabled=false"])
+            if preview_url:
+                cmd.extend(["-c", f"mcp_servers.{SERVER}.url=" + json.dumps(preview_url),
+                            "-c", f"mcp_servers.{SERVER}.http_headers={{}}"])
             if args.model:
                 cmd.extend(["--model", args.model])
             prompt = (

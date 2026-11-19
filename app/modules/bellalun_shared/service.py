@@ -229,6 +229,28 @@ def _verify_snapshot(current):
 REDMINE_TOOLS = {'bellalun_get_redmine_issue', 'bellalun_search_redmine_issues', 'bellalun_read_redmine_result'}
 
 
+def workflow(current, args):
+    from app.modules.vxvue_chatbot.desktop_polarion import integer
+    from app.modules.vxvue_chatbot.desktop import WORKFLOW_PAGE_DEFAULT, WORKFLOW_PAGE_MAX
+    offset, limit = args.get('offset', 0), args.get('limit', WORKFLOW_PAGE_DEFAULT)
+    integer(offset, 0, 10_000_000); integer(limit, 1, WORKFLOW_PAGE_MAX)
+    from app.core.qa_workflow import select_sections
+    from app.core.qa_synonyms import flag
+    from app.modules.vxvue_chatbot.qa_protection import mask_qa_text
+    exclude_core = flag(args.get('exclude_core', False), 'exclude_core')
+    rules, section_meta = select_sections(current['rules'], args.get('section'), exclude_core=exclude_core)
+    # exclude_core: core와 함께 이미 읽은 연결 안내·Skill 지침은 다시 보내지 않는다(REQ-VXVUECHATBOT-023).
+    head = '' if exclude_core else INSTRUCTIONS + '\n\n' + current['skill_text'] + '\n\n'
+    body, protection = mask_qa_text(_private_paths(head + rules), current['rules'])
+    end = min(offset + limit, len(body))
+    if offset:
+        # 섹션 목차는 첫 페이지에만 보낸다.
+        section_meta = {k: v for k, v in section_meta.items() if k != 'sections'}
+    return {**section_meta, 'snapshot_id': current['id'], 'text': body[offset:end], 'total_chars': len(body),
+            'truncated': end < len(body), 'next_offset': end if end < len(body) else None,
+            'protection': protection.as_dict()}
+
+
 def call(name, arguments, project_root):
     schema = next((t['inputSchema'] for t in definitions() if t['name'] == name), None)
     if schema is None or not isinstance(arguments, dict) or set(arguments) - set(schema['properties']):
@@ -254,25 +276,7 @@ def call(name, arguments, project_root):
         _verify_snapshot(current)
         return _private_paths(value)
     if base_name == 'get_workflow':
-        from app.modules.vxvue_chatbot.desktop_polarion import integer
-        from app.modules.vxvue_chatbot.desktop import WORKFLOW_PAGE_DEFAULT, WORKFLOW_PAGE_MAX
-        offset, limit = args.get('offset', 0), args.get('limit', WORKFLOW_PAGE_DEFAULT)
-        integer(offset, 0, 10_000_000); integer(limit, 1, WORKFLOW_PAGE_MAX)
-        from app.core.qa_workflow import select_sections
-        from app.core.qa_synonyms import flag
-        from app.modules.vxvue_chatbot.qa_protection import mask_qa_text
-        exclude_core = flag(args.get('exclude_core', False), 'exclude_core')
-        rules, section_meta = select_sections(current['rules'], args.get('section'), exclude_core=exclude_core)
-        # exclude_core: core와 함께 이미 읽은 연결 안내·Skill 지침은 다시 보내지 않는다(REQ-VXVUECHATBOT-023).
-        head = '' if exclude_core else INSTRUCTIONS + '\n\n' + current['skill_text'] + '\n\n'
-        body, protection = mask_qa_text(_private_paths(head + rules), current['rules'])
-        end = min(offset + limit, len(body))
-        if offset:
-            # 섹션 목차는 첫 페이지에만 보낸다.
-            section_meta = {k: v for k, v in section_meta.items() if k != 'sections'}
-        return {**section_meta, 'snapshot_id': current['id'], 'text': body[offset:end], 'total_chars': len(body),
-                'truncated': end < len(body), 'next_offset': end if end < len(body) else None,
-                'protection': protection.as_dict()}
+        return workflow(current, args)
     if 'document_id' in args and args['document_id'] not in {r['document_id'] for r in current['documents']}:
         raise ValueError('해당 Bellalun 판 목록의 문서 ID만 조회할 수 있습니다.')
     if base_name == 'get_document_page' and not args['document_id'].lower().endswith('.pdf'):
