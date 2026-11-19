@@ -578,7 +578,7 @@ pytest tests -q
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 로컬 설치 · 서버 배포 · 하위 서비스 통합 |
 | [docs/SERVERS.md](docs/SERVERS.md) | 운영 서버에 떠 있는 3개 서버(핵심 앱/Manual Hub/nginx) 각각의 역할과 필수 명령 |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | 작업 복구 · 백업 · 모니터링 |
-| [docs/EVALUATION.md](docs/EVALUATION.md) | 추천 정확도 평가 |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | 벨라룬·VXvue 스킬의 실제 질문과 답변 회귀시험 |
 | [docs/AUTOMATION.md](docs/AUTOMATION.md) | 진행 상태 · 사양서/지식 폴더 자동 동기화 · PC 예약 작업과 하루 실행 순서 |
 | [docs/modules/daily-qa.md](docs/modules/daily-qa.md) | QA Agent 점검(QA Intelligence Agent) 엔진 구조 · Skill · 서버 설치 · 운영 |
 | [docs/SECURITY_AI_AGENT.md](docs/SECURITY_AI_AGENT.md) | QA Agent 점검이 외부 AI 로 보낼 때의 보안 통제와 확인 방법 |

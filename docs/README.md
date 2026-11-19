@@ -10,6 +10,7 @@
 |---|---|
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
 | VXvue·Bellalun 작업별 지침·응답 크기·원문 선택 조회 | [QA 지침과 조회 응답 크기 관리](qa-context-budget.md) |
+| 실제 질문으로 벨라룬·VXvue 스킬 답변 검증 | [QA 답변 평가](EVALUATION.md) |
 | 클린 PC에서 설치·자료 복원·개발 재개·서버 Skill 갱신 예약 | [클린 PC 재개 절차](CLEAN_PC.md) |
 | 매뉴얼 검색 조건 공유·본문 검색·색인 갱신 | [Manual Hub](../services/qa-manual-hub/README.md) · [검색 개선 계획](superpowers/plans/2026-11-06-manual-hub-search.md) · SPEC의 REQ-HUB-008과 TEST-HUB-008 |
 | Bellalun 공용 서버 설치·조회·최신 지침 동기화 | 앱 안 `/static/skills/bellalun/index.html` · [운영 절차](BELLALUN_SHARED.md) · [사양](../specs/bellalun-shared.md) · [구현 계획](superpowers/plans/2026-11-03-bellalun-shared.md) |

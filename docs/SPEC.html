@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="e71532aa95bd34ce95ed6ba5b5aeba3018999f09e403cb203da92795a119b5c7">
+<meta name="spec-source-sha256" content="74c12e277e9fa70403286a3918c16a5b21a235e968fc3a26f422ea8d6b4d5bf0">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -93,7 +93,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <header class="top">
 <h1>QA 검증 관리 시스템 사양서</h1>
 <div class="chips"><span class="chip"><span>Document Version</span><b>0.5.0</b></span><span class="chip"><span>Last Updated</span><b>2026-10-01</b></span><span class="chip"><span>Status</span><b>draft. 핵심 앱 전체와 하위 서비스의 근거 기반 상세 사양</b></span></div>
-<div class="stats"><div class="stat"><b>354</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>214</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
+<div class="stats"><div class="stat"><b>355</b><span>기능 요구사항 REQ</span></div><div class="stat"><b>31</b><span>비기능 NFR</span></div><div class="stat"><b>215</b><span>테스트 TEST</span></div><div class="stat st-implemented"><b>226</b><span>implemented</span></div><div class="stat st-verified"><b>102</b><span>verified</span></div><div class="stat st-deprecated"><b>50</b><span>deprecated</span></div></div>
 </header>
 <div class="layout">
 <nav class="toc" aria-label="목차">
@@ -657,6 +657,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023 <span>반복 응답 줄이기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024 <span>Polarion 속성 골라 받기와 Generator 근거 줄이기</span></a></li>
 <li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025 <span>Polarion 첨부 이미지 보기</span></a></li>
+<li class="toc-id kind-req"><a href="#REQ-VXVUECHATBOT-026">REQ-VXVUECHATBOT-026 <span>공용 스킬 답변 회귀시험</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-11">11. 테스트 사양</a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-001">TEST-VXVUECHATBOT-001 <span>화면·첨부·소유 확인</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-002">TEST-VXVUECHATBOT-002 <span>CLI·규칙·원문 조회</span></a></li>
@@ -665,6 +666,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-005">TEST-VXVUECHATBOT-005 <span>Skill 자동 반영과 자산 연결</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-006">TEST-VXVUECHATBOT-006 <span>자동 연결과 실패 안내</span></a></li>
 <li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-007">TEST-VXVUECHATBOT-007 <span>한 PC의 Skill 사본 맞춤</span></a></li>
+<li class="toc-id kind-test"><a href="#TEST-VXVUECHATBOT-008">TEST-VXVUECHATBOT-008 <span>공용 스킬 답변 채점</span></a></li>
 <li class="toc-2"><a href="#doc-vxvue-chatbot-sec-12">12. 요구사항 추적성</a></li>
 <li class="toc-2"><a href="#doc-alm-change-report">QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</a></li>
 <li class="toc-2"><a href="#doc-alm-change-report-sec-1">1. 목적</a></li>
@@ -1150,6 +1152,7 @@ footer{max-width:1800px;margin:0 auto;padding:8px 24px 40px;color:var(--muted);f
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a></td><td data-label="이름">반복 응답 줄이기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a></td><td data-label="이름">Polarion 속성 골라 받기와 Generator 근거 줄이기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a></td><td data-label="이름">Polarion 첨부 이미지 보기</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
+<tr><td data-label="ID"><a class="idref" href="#REQ-VXVUECHATBOT-026">REQ-VXVUECHATBOT-026</a></td><td data-label="이름">공용 스킬 답변 회귀시험</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr class="group"><th colspan="5"><span class="gcode">ALMCHG</span> ALM 변경 리포트</th></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-001">REQ-ALMCHG-001</a></td><td data-label="이름">매 업무일 수집 실행</td><td data-label="상태"></td><td data-label="구현"></td><td data-label="테스트"></td></tr>
 <tr><td data-label="ID"><a class="idref" href="#REQ-ALMCHG-002">REQ-ALMCHG-002</a></td><td data-label="이름">기간 안 기록을 하루씩 비교</td><td data-label="상태"><span class="badge st-verified">verified</span></td><td data-label="구현"><code>app/modules/daily_qa/snapshots.py</code>, <code>app/modules/daily_qa/srs_snapshot.py</code>, <code>app/modules/daily_qa/change_events.py</code>, <code>app/modules/daily_qa/product_adapter.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/daily_qa/change_report.py</code></td><td data-label="테스트"><a class="idref" href="#TEST-ALMCHG-002">TEST-ALMCHG-002</a>: <code>tests/test_alm_change_report.py</code>, <code>tests/test_alm_assignee.py</code></td></tr>
@@ -17073,6 +17076,21 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <p><strong>지킬 것</strong> 이미지를 돌려준 것은 내용 확인이 끝났다는 뜻이 아니다. 첨부 원본은 서버에 남기지 않는다. <span class="term" title="사양(SRS)과 이슈를 관리하는 회사의 ALM 도구" tabindex="0">Polarion</span> <span class="term" title="AI 사용량을 세는 단위. 요금과 일일 한도가 이 값으로 계산된다" tabindex="0">토큰</span>은 PC로 보내지 않는다.</p>
 <p class="why"><span class="why-label">이유</span> 2026-11-02 <span class="term" title="Polarion 에 등록된 결함·문의 작업 항목 하나다. 번호는 VP-1234 같은 모양이다" tabindex="0">이슈</span> 종료 검토에서 재현 절차의 Expected 그림을 읽을 수 없었다. 그래서 첨부 업로드 시각과 Checklist 문구 같은 대체 <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span>로만 판단했다.</p>
 </section>
+<section class="card kind-req" id="REQ-VXVUECHATBOT-026">
+<h3><span class="idtag">REQ-VXVUECHATBOT-026</span> 공용 스킬 답변 회귀시험</h3>
+<details class="history"><summary>변경 이력 1</summary>
+<ul>
+<li><span class="hist">2026-11-20 벨라룬·VXvue 스킬 답변 회귀시험</span> <a class="idref" href="#REQ-VXVUECHATBOT-026">REQ-VXVUECHATBOT-026</a>: 벨라룬의 ID만 있는 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 행과 VXvue의 이미지 전용 사양 페이지를 Codex에 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>한다. <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 도구 경로·<span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 판·필수 <span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 조회와 최종 답변을 자동 채점한다.</li>
+</ul>
+</details>
+<p>로컬 명령은 벨라룬과 VXvue의 고정 <span class="term" title="서버가 발급한 업무 UUID 또는 실제 웹 작업에 연결된 단위" tabindex="0">업무</span> <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>을 같은 실행기로 채점한다. 각 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>은 새 Codex 대화로 실행하고 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 공용 MCP의 읽기 도구를 사용한다.</p>
+<ul>
+<li>벨라룬은 Mammo 연동 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>의 특정 번호가 있는 시트·행, Step·Expected 유무와 <span class="term" title="기존 Checklist·TC 가 바뀐 사양의 핵심 동작과 Expected Result 를 실제로 검증하는지다" tabindex="0">Coverage</span> 인정 여부를 답한다. 같은 판에서 ID만 있는 범위를 확인한다.</li>
+<li>VXvue는 <span class="term" title="제품이 어떻게 동작해야 하는지 적은 문서(PDF 또는 Word .docx). Knowledge 메뉴에 제품별로 등록한다" tabindex="0">사양서</span> 2의 이미지 전용 페이지에서 OID 표시값과 Matching 버튼 순서를 답한다. 화면 예시로 기본값을 확정할 수 있는지도 답한다. 도구가 해당 페이지 이미지를 반환한 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>을 확인한다.</li>
+<li>채점기는 <span class="term" title="문서를 묶는 가장 위 단위다. 예: VXvue. 화면 이름은 Products 다" tabindex="0">제품</span>별 상태·지침·<span class="term" title="Finding 을 뒷받침하는 문서 위치 목록(evidence)이다. SRS 번호, TC 의 파일 / 시트 / N행, 규칙 절 번호처럼 찾아갈 수 있는 위치가 있어야 한다" tabindex="0">근거</span> 조회 순서, 동일한 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 판, 지침 이어 읽기, 최종 답변 필드를 검사한다. <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 해시가 기준에서 바뀌면 재검토 대상으로 표시한다.</li>
+<li>보고서는 답변·<span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>·진단을 남긴다. 지침 전문, 원문 이미지와 인증 설정은 저장하지 않는다. 실행 실패나 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 변경은 답변 오답과 다른 상태로 표시한다.</li>
+</ul>
+</section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-11">
 <h2>11. 테스트 사양</h2>
@@ -17103,6 +17121,10 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 <section class="card kind-test" id="TEST-VXVUECHATBOT-007">
 <h3><span class="idtag">TEST-VXVUECHATBOT-007</span> 한 PC의 Skill 사본 맞춤</h3>
 <p>임시 홈과 합성 서버 응답으로 네 사본 갱신, 줄바꿈만 다른 사본 유지, 관리 표시 없는 <span class="term" title="Claude Code 가 읽는 작업 설명서 폴더(SKILL.md). 일일 점검의 공통 Skill 은 app/modules/daily_qa/skills/, 제품 규칙 Skill 은 config/products/&lt;slug&gt;/skills/ 에 있다" tabindex="0">Skill</span> 보존, 직접 고친 사본 보호, 잘못된 ZIP·연결 실패 시 무변경, 훅 출력 형식, 훅 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>의 반복 실행과 다른 항목 보존을 확인한다. 실제 서버 ZIP으로 이 PC의 사본을 맞추고 <span class="term" title="Anthropic 의 생성형 AI. 회사 Team 계정으로 쓴다. QA Intelligence Agent 일일 점검과, 기본 설정에서 QA Agent·매뉴얼 개정 검토이 부른다" tabindex="0">Claude</span>·Codex 훅 실행 결과를 <code>progress.md</code>에 <span class="term" title="그날 저장한 SRS 스냅샷과 이슈 스냅샷이다(REQ-QAINTEL-003, REQ-QAINTEL-004). 날짜마다 하나다" tabindex="0">기록</span>한다.</p>
+</section>
+<section class="card kind-test" id="TEST-VXVUECHATBOT-008">
+<h3><span class="idtag">TEST-VXVUECHATBOT-008</span> 공용 스킬 답변 채점</h3>
+<p>정상 응답, 잘못된 최종 <span class="term" title="AI 결과 하나에 근거를 붙인 기록(코드 이름 Claim)이다. 종류는 issue_analysis(이슈 분석)·spec_trace(사양 관련도)·tc_coverage(TC 판정)·regression(Regression 축)" tabindex="0">판정</span>, 누락된 이어 읽기, 서로 다른 <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 판, 이미지나 ID 전용 범위 누락, <span class="term" title="한 제품 안의 문서 한 종류다. 예: Operation Manual. 개정본들을 묶는다" tabindex="0">문서</span> 변경과 CLI 오류를 시험한다. 동일 실행 명령으로 운영 MCP와 설치된 스킬을 읽어 두 <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span>의 최종 답변을 채점한다.</p>
 </section>
 </section>
 <section class="chapter" id="doc-vxvue-chatbot-sec-12">
@@ -17135,7 +17157,8 @@ Expected·Actual을 별도 구획으로 전달하고 충돌 분류·이유·<spa
 | <a class="idref" href="#REQ-VXVUECHATBOT-023">REQ-VXVUECHATBOT-023</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/qa_workflow.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code>, <code>app/modules/bellalun_shared/service.py</code>, <code>deploy/bellalun-skill/bellalun-server-ai/SKILL.md</code> | <code>tests/test_vxvue_read_budget.py</code>, <code>tests/test_qa_workflow_sections.py</code>, <code>tests/test_bellalun_shared.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-021">REQ-VXVUECHATBOT-021</a> | <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>app/modules/vxvue_chatbot/skill/scripts/corpus.py</code>, <code>app/modules/vxvue_chatbot/redmine.py</code>, <code>app/core/qa_workflow.py</code>, <code>app/core/qa_synonyms.py</code> | <code>tests/test_vxvue_read_budget.py</code> | implemented |
 | <a class="idref" href="#REQ-VXVUECHATBOT-024">REQ-VXVUECHATBOT-024</a> | <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/modules/vxvue_chatbot/mcp_server.py</code>, <code>deploy/claude-desktop/skill/vxvue-ai/SKILL.md</code> | <code>tests/test_vxvue_desktop_polarion.py</code>, <code>tests/test_vxvue_generator_compact.py</code> | implemented |
-| <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a> | <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code> | <code>tests/test_vxvue_desktop_polarion.py</code> | implemented |</p>
+| <a class="idref" href="#REQ-VXVUECHATBOT-025">REQ-VXVUECHATBOT-025</a> | <code>app/modules/vxvue_chatbot/desktop_polarion.py</code>, <code>app/modules/daily_qa/polarion.py</code>, <code>app/modules/vxvue_chatbot/desktop.py</code>, <code>app/core/vxusage_storage.py</code>, <code>app/modules/vxvue_usage/telemetry.py</code> | <code>tests/test_vxvue_desktop_polarion.py</code> | implemented |
+| <a class="idref" href="#REQ-VXVUECHATBOT-026">REQ-VXVUECHATBOT-026</a> | <code>scripts/qa_skill_eval.py</code> | <code>tests/test_qa_skill_eval.py</code>, 실제 MCP <span class="term" title="판정에 필요한데 자료에 없어 AI 가 남긴 문장(open_questions)이다. 질문 표에 저장한다. 화면에서 답하는 입력은 없다. 개편 전에 사람이 남긴 답은 계속 작업 입력(answered_questions)에 들어간다" tabindex="0">질문</span> 2건 | implemented |</p>
 </section>
 <section class="chapter" id="doc-alm-change-report">
 <h2>QA 검증 관리 시스템 — ALM 변경 리포트 기능 사양</h2>

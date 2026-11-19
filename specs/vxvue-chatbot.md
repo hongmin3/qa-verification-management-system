@@ -446,6 +446,15 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 
 이유: 2026-11-02 이슈 종료 검토에서 재현 절차의 Expected 그림을 읽을 수 없었다. 그래서 첨부 업로드 시각과 Checklist 문구 같은 대체 근거로만 판단했다.
 
+### REQ-VXVUECHATBOT-026 공용 스킬 답변 회귀시험
+
+로컬 명령은 벨라룬과 VXvue의 고정 업무 질문을 같은 실행기로 채점한다. 각 질문은 새 Codex 대화로 실행하고 등록된 공용 MCP의 읽기 도구를 사용한다.
+
+- 벨라룬은 Mammo 연동 TC의 특정 번호가 있는 시트·행, Step·Expected 유무와 Coverage 인정 여부를 답한다. 같은 판에서 ID만 있는 범위를 확인한다.
+- VXvue는 사양서 2의 이미지 전용 페이지에서 OID 표시값과 Matching 버튼 순서를 답한다. 화면 예시로 기본값을 확정할 수 있는지도 답한다. 도구가 해당 페이지 이미지를 반환한 기록을 확인한다.
+- 채점기는 제품별 상태·지침·근거 조회 순서, 동일한 문서 판, 지침 이어 읽기, 최종 답변 필드를 검사한다. 문서 해시가 기준에서 바뀌면 재검토 대상으로 표시한다.
+- 보고서는 답변·판정·진단을 남긴다. 지침 전문, 원문 이미지와 인증 설정은 저장하지 않는다. 실행 실패나 문서 변경은 답변 오답과 다른 상태로 표시한다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -475,6 +484,10 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 ### TEST-VXVUECHATBOT-007 한 PC의 Skill 사본 맞춤
 
 임시 홈과 합성 서버 응답으로 네 사본 갱신, 줄바꿈만 다른 사본 유지, 관리 표시 없는 Skill 보존, 직접 고친 사본 보호, 잘못된 ZIP·연결 실패 시 무변경, 훅 출력 형식, 훅 등록의 반복 실행과 다른 항목 보존을 확인한다. 실제 서버 ZIP으로 이 PC의 사본을 맞추고 Claude·Codex 훅 실행 결과를 `progress.md`에 기록한다.
+
+### TEST-VXVUECHATBOT-008 공용 스킬 답변 채점
+
+정상 응답, 잘못된 최종 판정, 누락된 이어 읽기, 서로 다른 문서 판, 이미지나 ID 전용 범위 누락, 문서 변경과 CLI 오류를 시험한다. 동일 실행 명령으로 운영 MCP와 설치된 스킬을 읽어 두 질문의 최종 답변을 채점한다.
 
 ## 12. 요구사항 추적성
 
@@ -507,3 +520,4 @@ Desktop 이 요청을 다 보내기 전에 연결을 끊으면(재시작·네트
 | REQ-VXVUECHATBOT-021 | `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `app/modules/vxvue_chatbot/skill/scripts/corpus.py`, `app/modules/vxvue_chatbot/redmine.py`, `app/core/qa_workflow.py`, `app/core/qa_synonyms.py` | `tests/test_vxvue_read_budget.py` | implemented |
 | REQ-VXVUECHATBOT-024 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/modules/vxvue_chatbot/mcp_server.py`, `deploy/claude-desktop/skill/vxvue-ai/SKILL.md` | `tests/test_vxvue_desktop_polarion.py`, `tests/test_vxvue_generator_compact.py` | implemented |
 | REQ-VXVUECHATBOT-025 | `app/modules/vxvue_chatbot/desktop_polarion.py`, `app/modules/daily_qa/polarion.py`, `app/modules/vxvue_chatbot/desktop.py`, `app/core/vxusage_storage.py`, `app/modules/vxvue_usage/telemetry.py` | `tests/test_vxvue_desktop_polarion.py` | implemented |
+| REQ-VXVUECHATBOT-026 | `scripts/qa_skill_eval.py` | `tests/test_qa_skill_eval.py`, 실제 MCP 질문 2건 | implemented |

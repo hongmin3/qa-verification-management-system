@@ -1,5 +1,11 @@
 # 진행 상태
 
+## 2026-11-20 벨라룬·VXvue 스킬 답변 회귀시험 (REQ-VXVUECHATBOT-026)
+
+- 설치 스킬과 운영 공용 MCP를 사용한 Codex 실행에서 두 질문 모두 통과했다. 벨라룬은 TC 250번의 251행에 Step·Expected가 없어 Coverage 근거로 인정할 수 없다고 답했다. VXvue는 87쪽의 OID 171과 Physical Matching, Pattern Matching 순서를 읽고 화면만으로 기본값을 확정하지 않았다.
+- 채점기와 관련 공용 MCP 시험 58건 통과. 1초 시간 제한 시험은 `RUN_ERROR`와 종료 코드 2를 반환했으며, 새 Codex 프로세스가 남지 않았다. 프로젝트 준비 검사에서 실패 0건을 확인했다.
+- Windows PowerShell 기본 모듈 경로를 시험 프로세스에 지정해 전체 테스트를 실행했다. 2,521건 통과, 12건 건너뜀, 실패 0건.
+
 ## 2026-11-17 Polarion 속성 골라 받기·첨부 이미지 보기 선택 배포 (REQ-VXVUECHATBOT-024·025, 커밋 `93943fe`)
 
 - 배포 대상: `vxusage_storage.py`·`daily_qa/polarion.py`·`desktop.py`·`desktop_polarion.py`·`mcp_server.py`·`telemetry.py`·VXvue 서버 Skill·관련 테스트 3개(새 파일 1개). 백업 `backups/deploy-obs-apply-20261117T045623Z/files.tgz`(9개).
