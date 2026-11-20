@@ -3,7 +3,7 @@
 QA Agent 와 일일 점검이 같은 방식으로 같은 문서를 읽어야 한다. 두 기능이 서로
 다른 문서 집합을 보면 같은 Issue 에 대해 다른 결론이 나오고 그 차이를 설명할 수 없다.
 
-중요한 규칙 하나: **등록된 모든 문서가 항상 검색 대상이다** (`Storage.active_documents`).
+정규 검증의 기본 검색은 등록된 사양서를 읽고 과거·개발 참고용 사양을 제외한다.
 제품·버전당 최신 리비전 1개만 고르면 안 된다 — 사양서1~5 처럼 서로 다른 문서가 같은 제품에
 여러 개 등록되고, 새 문서가 이전 문서를 레거시로 만들지 않는다. 이 규칙은 과거에
 `latest_documents` 방식으로 구현했다가 사용자 지적으로 뒤집힌 것이다.
@@ -18,6 +18,7 @@ from pathlib import Path
 from app.core import document_cache
 from app.core.document_schemas import SpecificationChunk, TestCase
 from app.core.storage import Storage
+from app.modules.bellalun_shared.specifications import excluded_from_current_specification
 from app.parsers.document_parser import extract_document_text, parse_document
 from app.parsers.excel_parser import parse_testcases
 
@@ -75,6 +76,8 @@ def load_specification_chunks(
     texts: list[str] = []
     labels: dict[str, str] = {}
     for document in documents:
+        if excluded_from_current_specification(document["name"]):
+            continue
         path = Path(document["path"])
         try:
             cached_chunks = document_cache.load(document["id"], SpecificationChunk)
@@ -133,7 +136,8 @@ def load_for_product(product: str, storage: Storage | None = None, with_text: bo
     Gate 판정(G1)으로 보고해야 하고, 예외로 끝내면 그 이유가 결과에 남지 않는다.
     """
     storage = storage or Storage()
-    specification_documents = storage.active_documents("specification", product)
+    specification_documents = [doc for doc in storage.active_documents("specification", product)
+                               if not excluded_from_current_specification(doc["name"])]
     testcase_documents = storage.active_documents("testcase", product)
     if require_both and (not specification_documents or not testcase_documents):
         raise ValueError(f"'{product}' 제품에 등록된 사양서 또는 TC가 없습니다.")

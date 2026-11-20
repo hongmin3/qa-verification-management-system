@@ -318,9 +318,10 @@ def parse(path):
 
 
 class Corpus:
-    def __init__(self, root=None, index_path=None, *, document_kinds=None, parser=None):
+    def __init__(self, root=None, index_path=None, *, document_kinds=None, parser=None, search_excluded=()):
         self.parser = parser
         self.document_kinds = dict(document_kinds or {})
+        self.search_excluded = frozenset(search_excluded)
         self.root = Path(root or os.environ.get('VXVUE_KNOWLEDGE_ROOT') or k.DEFAULT_ROOT).resolve()
         root_key = hashlib.sha256(str(self.root).encode('utf-8')).hexdigest()[:16]
         self.index_path = Path(index_path or os.environ.get('VXVUE_INDEX_PATH') or
@@ -520,6 +521,8 @@ class Corpus:
                 rows = db.execute('SELECT id,document_id,text,search_text FROM chunks WHERE id IN (' + ','.join('?' for _ in batch) + ')', batch)
                 for row in rows:
                     if document_id is not None and row['document_id'] != document_id:
+                        continue
+                    if document_id is None and row['document_id'] in self.search_excluded:
                         continue
                     if document_kind and kinds[row['document_id']] != document_kind:
                         continue

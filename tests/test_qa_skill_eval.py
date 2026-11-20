@@ -275,3 +275,36 @@ def test_codex_stream_requires_completion_and_uses_last_agent_answer():
     events.append({"type": "turn.completed", "usage": {"output_tokens": 100}})
     assert evals.score_stream(case, stream(), 0)["status"] == "PASS"
     assert evals.score_stream(case, stream(), 1)["status"] == "RUN_ERROR"
+
+
+def test_preview_evaluation_uses_pinned_settings_across_desktop_config_changes(tmp_path, monkeypatch):
+    from hashlib import sha256
+    from types import SimpleNamespace
+
+    config = tmp_path / "config.toml"
+    config.write_text('model = "live-model"\n[mcp_servers.vxvue-ai]\nurl = "http://example.test/mcp"\n',
+                      encoding="utf-8")
+    args = SimpleNamespace(codex="codex", model="fixed-model", timeout=30,
+                           config_sha256=sha256(config.read_bytes()).hexdigest(),
+                           preview_settings={"model_reasoning_effort": "high"})
+    invocations = []
+
+    def execute(command, **kwargs):
+        invocations.append((command, kwargs.get("env", {})))
+        config.write_text('model = "changed-again"\n', encoding="utf-8")
+        return SimpleNamespace(stdout="", returncode=0)
+
+    monkeypatch.setattr(evals.subprocess, "run", execute)
+    monkeypatch.setattr(evals, "score_stream", lambda *_: {"status": "PASS"})
+    for _ in range(2):
+        result = evals.run_case(evals.CASES[0], args, tmp_path, skill=b"test",
+                                preview_url="http://127.0.0.1:6000/candidate")
+        assert result["status"] == "PASS"
+        assert result["model"] == "fixed-model"
+
+    for command, environment in invocations:
+        assert environment["CODEX_HOME"] == str(tmp_path)
+        assert "--ignore-user-config" in command
+        assert 'model_reasoning_effort="high"' in command
+        assert "fixed-model" in command
+        assert 'mcp_servers.vxvue-ai.url="http://127.0.0.1:6000/candidate"' in command

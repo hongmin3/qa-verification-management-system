@@ -13,6 +13,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from app.modules.bellalun_shared.specifications import provenance
 
 from app.core.product_config import (
     ASSET_KINDS,
@@ -221,9 +222,15 @@ def _registered_rows(ctx: _Context, kind: str) -> tuple[list[DocumentRow], list[
         if source == "product_knowledge":
             asset = ctx.manifest_by_name.get((kind, document["name"])) or {}
             updated = asset.get("collected_at") or updated
+        spec = provenance(document["name"]) if kind == 'specification' else {}
+        source_label = DOCUMENT_SOURCE_LABELS.get(source, SOURCE_LABELS[SOURCE_MANUAL])
+        if spec.get('source') == 'OneNote':
+            source_label = '원노트 · 과거 자료'
+        elif spec.get('source') == 'ALM':
+            source_label = 'ALM 자동 · ' + spec['usage']
         rows.append(DocumentRow(
             name=document["name"], kind=kind, kind_label=KIND_LABELS[kind],
-            source_label=DOCUMENT_SOURCE_LABELS.get(source, SOURCE_LABELS[SOURCE_MANUAL]),
+            source_label=source_label,
             status=status, updated_at=updated, id=document["id"], usable=usable,
             can_delete=can_manual_upload(ctx.config, kind) or registered_by_person(document), misfiled_as=misfiled_as,
             ai_status=_ai_status(ctx, kind, document, metadata, exists),

@@ -64,8 +64,11 @@ def _esc(v: Any) -> str:
 
 
 def _render_meta(rec: dict[str, Any]) -> str:
+    item_id = _esc(rec["id"])
+    if rec.get('source_url'):
+        item_id = f'<a href="{_esc(rec["source_url"])}">{item_id}</a>'
     parts = [
-        f'<span><b>ID:</b> {_esc(rec["id"])}</span>',
+        f'<span><b>ID:</b> {item_id}</span>',
         f'<span><b>Status:</b> <span class="badge status-{_esc(rec.get("status"))}">{_esc(rec.get("status"))}</span></span>',
     ]
     if rec.get("old_id"):
@@ -76,6 +79,8 @@ def _render_meta(rec: dict[str, Any]) -> str:
         parts.append(f'<span><b>Jira:</b> {_esc(rec["jira_id"])}</span>')
     if rec.get("content_field_used"):
         parts.append(f'<span><b>Source Field:</b> {_esc(rec["content_field_used"])}</span>')
+    if rec.get('target_version'):
+        parts.append(f'<span><b>Target Version:</b> {_esc(rec["target_version"])}</span>')
     return '<div class="srs-meta">' + " ".join(parts) + "</div>"
 
 
@@ -133,12 +138,20 @@ def render_group_html(group: FileGroup, *, project_label: str, generated_at: dat
     generated_at = generated_at or datetime.now()
     records = sort_records(group.records)
     body_html = "".join(_render_record(r) for r in records)
+    first = records[0] if records else {}
+    source = first.get('document_source')
+    details = ''
+    if source:
+        details += (f'<a href="{_esc(source["url"])}">Polarion LiveDoc</a><br/>'
+                    f'Document revision: {_esc(source["revision"])} · {_esc(source["status"])}<br/>')
+    if first.get('collection_scope'):
+        details += _esc(first['collection_scope']) + '<br/>'
     cover = (
         '<div class="cover">'
         f"<h1>{_esc(group.display_name)}</h1>"
         f'<div class="meta">Project: {_esc(project_label)}<br/>'
         f"Generated: {generated_at.strftime('%Y-%m-%d %H:%M')}<br/>"
-        f"Total SRS: {len(records)}</div></div>"
+        f"Total SRS: {len(records)}<br/>{details}</div></div>"
     )
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"

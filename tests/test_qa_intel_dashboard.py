@@ -239,15 +239,25 @@ def test_latest_revisions_keeps_both_when_revisions_are_not_comparable():
 
 def test_knowledge_list_for_non_alm_product_includes_specification(tmp_path):
     root = tmp_path / "root"
-    _copy_product_config(root, "bellalun-viewer.yaml")
-    _write_manifest(root, "bellalun-viewer", [
-        {"kind": "specification", "file_name": "(사양서) Bellalun 사양서.docx", "collected_at": "2026-09-30T01:00:00+00:00"},
-        {"kind": "qa_rules", "file_name": "(QA규칙) Bellalun_QA_Rules_Rev1.0.md", "collected_at": "2026-09-30T01:00:00+00:00"},
+    configs = root / "config" / "products"
+    configs.mkdir(parents=True)
+    (configs / "sample-viewer.yaml").write_text(
+        "product: Sample Viewer\nspecification:\n  source: manual\n", encoding="utf-8",
+    )
+    _write_manifest(root, "sample-viewer", [
+        {"kind": "specification", "file_name": "(사양서) Sample Viewer.docx", "collected_at": "2026-09-30T01:00:00+00:00"},
+        {"kind": "qa_rules", "file_name": "(QA규칙) Sample Viewer.md", "collected_at": "2026-09-30T01:00:00+00:00"},
     ])
-    data = dash.knowledge_uploads("Bellalun Viewer", root)
+    data = dash.knowledge_uploads("Sample Viewer", root)
     assert data["kinds"] == ["사양서", "매뉴얼", "TC·Checklist"]
-    assert [row["file_name"] for row in data["rows"]] == ["(사양서) Bellalun 사양서.docx"]
+    assert [row["file_name"] for row in data["rows"]] == ["(사양서) Sample Viewer.docx"]
     assert all("revision" not in row for row in data["rows"])
+
+
+def test_bellalun_alm_specification_is_not_a_manual_upload_kind(tmp_path):
+    root = tmp_path / "root"
+    _copy_product_config(root, "bellalun-viewer.yaml")
+    assert "specification" not in dash.manual_kinds("Bellalun Viewer", root)
 
 
 def test_knowledge_list_survives_unreadable_document_table(world, monkeypatch):

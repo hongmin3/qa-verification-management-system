@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 import time
 
 import httpx
@@ -69,8 +69,52 @@ class PolarionClient:
             raise PolarionApiError('Polarion 응답에 예상 건수가 없습니다.')
         return int(count)
 
-    def iter_workitems(self, project_id, query):
-        return self._client(project_id).iter_workitems(query, sort='oldId')
+    def iter_workitems(self, project_id, query, fields='@all'):
+        return self._client(project_id).iter_workitems(query, fields=fields, sort='oldId')
+
+    def document_scope(self, project_id, space, name):
+        client = self._client(project_id)
+        document_id = f'{project_id}/{space}/{name}'
+        path = f'/projects/{project_id}/spaces/{quote(space, safe="")}/documents/{quote(name, safe="")}'
+        before = client._get(path, {'fields[documents]': '@all'}).get('data') or {}
+        if before.get('id') != document_id:
+            raise PolarionApiError('수집할 LiveDoc을 확인할 수 없습니다.')
+        parts = {}
+        page = 1
+        while True:
+            response = client._get(path + '/parts', {
+                'page[size]': self.page_size, 'page[number]': page, 'fields[document_parts]': '@all',
+            })
+            batch = response.get('data')
+            if not isinstance(batch, list) or not batch or response.get('errors') or page > 1000:
+                raise PolarionApiError('LiveDoc 부분 목록을 끝까지 읽지 못했습니다.')
+            # Polarion may repeat the whole set on each advertised page.
+            for part in batch:
+                previous = parts.setdefault(part['id'], part)
+                if previous != part:
+                    raise PolarionApiError('조회 중 LiveDoc의 부분 목록이 변경됐습니다.')
+            if not (response.get('links') or {}).get('next'):
+                break
+            page += 1
+        ids = set()
+        for part in parts.values():
+            relations = part.get('relationships') or {}
+            for relation in ('previousPart', 'nextPart'):
+                neighbor = (relations.get(relation) or {}).get('data')
+                if neighbor and neighbor['id'] not in parts:
+                    raise PolarionApiError('LiveDoc 부분 목록에 연결된 항목이 빠졌습니다.')
+            if part.get('attributes', {}).get('type') == 'workitem':
+                item = (relations.get('workItem') or {}).get('data') or {}
+                item_id = item.get('id', '')
+                if not item_id.startswith(project_id + '/') or item_id in ids:
+                    raise PolarionApiError('LiveDoc 작업 항목 ID가 중복됐거나 다른 프로젝트에 속합니다.')
+                ids.add(item_id)
+        after = client._get(path, {'fields[documents]': '@all'}).get('data') or {}
+        if not ids or before != after:
+            raise PolarionApiError('LiveDoc이 비어 있거나 수집 중 변경됐습니다.')
+        attrs = after['attributes']
+        return ids, {'id': document_id, 'revision': attrs.get('version'), 'status': attrs.get('status'),
+                     'updated': attrs.get('updated'), 'url': f'{self.host.rstrip("/")}/#/project/{project_id}/wiki/{quote(space, safe="")}/{quote(name, safe="")}'}
 
     def get_comments(self, project_id, wi_id):
         return self._client(project_id).get_comments(wi_id, strict=True)
@@ -93,14 +137,21 @@ class PolarionClient:
             raise PolarionApiError('첨부파일 주소가 Polarion 서버 밖을 가리킵니다.')
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = dest_path.with_suffix(dest_path.suffix + '.part')
-        try:
-            with self.session.stream('GET', content_url, headers={'Accept': '*/*'}) as response:
-                if response.status_code != 200:
-                    raise PolarionApiError(f'첨부파일 읽기 실패 HTTP {response.status_code}')
-                with temporary.open('wb') as handle:
-                    for chunk in response.iter_bytes():
-                        handle.write(chunk)
-            temporary.replace(dest_path)
-        finally:
-            temporary.unlink(missing_ok=True)
-        time.sleep(self.request_interval_seconds)
+        for attempt in range(3):
+            try:
+                with self.session.stream('GET', content_url, headers={'Accept': '*/*'}) as response:
+                    if response.status_code < 500 and response.status_code != 200:
+                        raise PolarionApiError(f'첨부파일 읽기 실패 HTTP {response.status_code}')
+                    response.raise_for_status()
+                    with temporary.open('wb') as handle:
+                        for chunk in response.iter_bytes():
+                            handle.write(chunk)
+                temporary.replace(dest_path)
+                return
+            except httpx.HTTPError as exc:
+                if attempt == 2:
+                    raise PolarionApiError(f'첨부파일 읽기 3회 실패 ({type(exc).__name__})') from exc
+                time.sleep(2 ** attempt)
+            finally:
+                temporary.unlink(missing_ok=True)
+                time.sleep(self.request_interval_seconds)

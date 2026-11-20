@@ -80,6 +80,8 @@ DEPLOY_TARGET_DIRECTORY=/path/to/qa-verification-management-system
 
 벨라룬·VXvue 연결 스킬 배포에는 `scripts/deploy.ps1`를 사용한다. 운영 ZIP과 후보가 다르면 파일 전송 전에 전체 12건과 핵심 3회씩을 변경 전후로 채점한다. 새 실패나 자료 판 불일치가 있으면 전송을 중단한다. SSH 주소와 MCP의 기본 주소가 다르면 `.deploy.env`의 `DEPLOY_QA_BASE_URL`에 운영 MCP의 기본 주소를 지정한다. [실행·보고서 안내](EVALUATION.md#운영-스킬-게시-전-변경-전후-비교)
 
+배포 스크립트는 Windows 사용자 임시 폴더에 실행마다 다른 pytest 경로를 사용한다. Claude CLI 시험이 읽는 경로의 상위 폴더에 에이전트 지침이 있는지 먼저 확인한다. 예약 설치 시험이 여는 Windows PowerShell에는 Windows 기본 모듈 경로를 우선 적용한다.
+
 ### 4-3. 서비스 재기동
 
 파일 전송과 의존성 설치까지는 `deploy.ps1`이 항상 수행한다. **재기동은 기본적으로 하지

@@ -46,7 +46,7 @@ snapshot_id를 받고 get_workflow(section=작업 유형)로 지침을 읽으세
 문서명·VP 번호·페이지 또는 시트·셀과 수집 시각을 인용하세요. 수집과 분석 완료를 구분하고
 미조회 페이지·첨부 본문·조회 실패를 알리세요. Expected·Log·Pass/Fail을 만들지 마세요.
 Bellalun 질문은 bellalun_get_status → bellalun_get_workflow(section=작업 유형, core 포함) → bellalun_ 검색·원문 도구를 사용하세요.
-Bellalun 질문에는 VXvue 지침·Polarion 규칙을 적용하지 마세요. 설치·사용 안내는 /static/skills/bellalun/index.html 입니다.
+BellalunViewer의 VP 번호와 필터는 bellalun_ Polarion 도구를 사용하세요. 설치·사용 안내는 /static/skills/bellalun/index.html 입니다.
 XIPL 공용 매뉴얼·개정 이력은 xipl_get_status부터 조회하고 xipl_ 도구에 그 snapshot_id를 사용하세요.
 VXvue·Bellalun의 적용 사양과 라이선스 조건은 각 제품 도구로 별도 확인하세요. 공용 문서만으로 제품 지원을 판정하지 마세요."""
 
@@ -214,6 +214,8 @@ RESPONSE_CHAR_BUDGET = 24000
 WORKFLOW_PAGE_MAX = RESPONSE_CHAR_BUDGET
 WORKFLOW_PAGE_DEFAULT = 20000
 _BUDGET_TOOLS = ('search_documents', 'find_testcases', 'get_document')
+_POLARION_METHODS = {'polarion_query': 'query', 'get_polarion_item': 'item',
+                     'get_polarion_attachment': 'attachment', 'read_polarion_result': 'read'}
 
 
 def fit_response_budget(value, offset=0, budget=RESPONSE_CHAR_BUDGET):
@@ -344,6 +346,11 @@ def definitions(context=None):
     from .word_reports import definitions as word_definitions
     result.extend(word_definitions())
     from app.core.qa_workflow import SECTION_SCHEMA
+    result.extend({
+        **tool,
+        'name': 'bellalun_' + tool['name'],
+        'description': 'BellalunViewer 프로젝트 전용. ' + tool['description'].removeprefix('VXvue AI: '),
+    } for tool in tuple(result) if tool['name'] in _POLARION_METHODS)
     for tool in result:
         properties = tool['inputSchema']['properties']
         if tool['name'] == 'get_workflow':
@@ -365,17 +372,26 @@ def definitions(context=None):
     return result
 
 
-def polarion_lookup():
+def polarion_lookup(project='VXvue'):
     from dataclasses import replace
     from app.modules.daily_qa.settings import load
     from app.modules.daily_qa.polarion import ReadOnlyPolarionClient
     cfg = load(product="VXvue")
-    return PolarionLookup(get_settings().root, ReadOnlyPolarionClient(replace(cfg.polarion, timeout_seconds=20)))
+    settings = replace(cfg.polarion, timeout_seconds=20)
+    if project == 'BellalunViewer':
+        settings = replace(settings, project_id=project)
+    return PolarionLookup(get_settings().root, ReadOnlyPolarionClient(settings), project=project)
 
 
 def call(name, arguments):
     if name not in {t["name"] for t in definitions()}:
         raise ValueError("허용되지 않은 읽기 도구입니다.")
+    project = 'BellalunViewer' if name.startswith('bellalun_') else 'VXvue'
+    method = _POLARION_METHODS.get(name.removeprefix('bellalun_'))
+    if method:
+        lookup = (PolarionLookup(get_settings().root, None, project=project) if method == 'read'
+                  else polarion_lookup(project) if project == 'BellalunViewer' else polarion_lookup())
+        return getattr(lookup, method)(**arguments)
     if name.startswith("bellalun_"):
         from app.modules.bellalun_shared.service import call as bellalun_call
         return bellalun_call(name, arguments, get_settings().root)
@@ -391,14 +407,6 @@ def call(name, arguments):
     if name == "make_word_report":
         from .word_reports import create
         return create(get_settings().root, **arguments)
-    if name == "polarion_query":
-        return polarion_lookup().query(**arguments)
-    if name == "get_polarion_item":
-        return polarion_lookup().item(**arguments)
-    if name == "get_polarion_attachment":
-        return polarion_lookup().attachment(**arguments)
-    if name == "read_polarion_result":
-        return PolarionLookup(get_settings().root, None).read(**arguments)
     if name in ('get_manual_review', 'make_manual_review_report'):
         from app.modules.manual_review.shared_tools import call as review_call
         return review_call(name, arguments, get_settings().root, snapshot)
@@ -486,7 +494,10 @@ def _dispatch(message, context=None):
                     for row, original in zip(masked['files'], data['files']):
                         row['url'] = base + original['url']
                 content = [{'type': 'text', 'text': json.dumps(masked, ensure_ascii=False)}]
-            elif params["name"] in ("get_workflow", "bellalun_get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result", "get_redmine_issue", "read_redmine_result"):
+            elif params["name"].removeprefix('bellalun_') in (
+                "get_workflow", "polarion_query", "get_polarion_item", "read_polarion_result",
+                "get_redmine_issue", "read_redmine_result"
+            ):
                 # These are already protected before slicing. Replacing text after slicing
                 # would change offsets and could corrupt a JSON value across chunk boundaries.
                 from app.core.security_filter import mask_payload

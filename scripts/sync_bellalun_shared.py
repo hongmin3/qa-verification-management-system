@@ -99,9 +99,8 @@ def main():
         from app.core.knowledge_push import push_product
 
         def sync(product, target_url):
-            exported = export_common_skill(args.skill_root, args.knowledge_root)
-            result = push_product(product, target_url)
-            return {**result, 'export': exported}
+            return sync_bellalun(product, target_url, args.skill_root, args.knowledge_root,
+                                 push_product, force=args.only_when_requested)
 
         if args.only_when_requested:
             from app.core.config import get_settings
@@ -113,11 +112,68 @@ def main():
             print(json.dumps(result, ensure_ascii=False, default=str))
             return 1 if result['status'] == 'FAILED' else 0
         result = sync('Bellalun Viewer', args.upload_to)
-        print(json.dumps({'export': result.pop('export'), 'upload': result}, ensure_ascii=False, default=str))
+        print(json.dumps(result, ensure_ascii=False, default=str))
         return 0 if result['status'] == 'SUCCESS' else 1
     except (OSError, ValueError) as exc:
         print('Bellalun 동기화 실패: ' + type(exc).__name__ + ': ' + str(exc))
         return 1
+
+
+def sync_bellalun(product, target_url, skill_root, knowledge_root, push_product, *, force=False):
+    from app.core.config import get_settings
+    from app.modules.bellalun_shared.specifications import ONENOTE_ARCHIVE, ONENOTE_ORIGINAL, PRODUCT_VERSIONS
+    from app.modules.knowledge.srs_crawler.config import load_config
+    from app.modules.knowledge.srs_crawler.pipeline import _error_detail, run
+    from app.modules.knowledge.srs_crawler.run_lock import RunLock
+    from app.modules.knowledge.vxvue_spec_sync import report_sync_log
+
+    with RunLock(get_settings().root / 'data/bellalun_sync/sync.lock'):
+        try:
+            exported = export_common_skill(skill_root, knowledge_root)
+            keep_guides = False
+        except (OSError, ValueError) as exc:
+            exported = {'status': 'FAILED', 'detail': _error_detail(exc)}
+            keep_guides = True
+        for extension in ('.pdf', '.md'):
+            original = knowledge_root / (ONENOTE_ORIGINAL + extension)
+            archive = knowledge_root / (ONENOTE_ARCHIVE + extension)
+            if original.exists():
+                if archive.exists():
+                    raise ValueError('원노트 보관 이름이 이미 사용 중입니다. 기존 사본을 확인하세요.')
+                original.rename(archive)
+        versions = {}
+        for version in PRODUCT_VERSIONS:
+            try:
+                config = load_config(profile=f'bellalun-{version}')
+                config.knowledge_folder = knowledge_root
+                result = run(config, force=force)
+                scope_count = sum(item['total_items'] for item in result['stats'])
+                versions[version] = {'status': 'SUCCESS', 'detail': f'SRS {scope_count}건', 'files': result['files']}
+            except Exception as exc:
+                versions[version] = {'status': 'FAILED', 'detail': _error_detail(exc)}
+        # The folder is authoritative. Failed versions still have their last verified PDF there.
+        uploaded = push_product(product, target_url, preserve_server_guides=True)
+        failed = sum(item['status'] == 'FAILED' for item in versions.values())
+        status = uploaded['status']
+        if status == 'SUCCESS' and failed:
+            status = 'PARTIAL' if failed < len(versions) else 'FAILED'
+        detail = ' / '.join(f'{v} {item["status"]} {item["detail"]}' for v, item in versions.items())
+        report_sync_log(target_url, product, 'specification', 'alm_crawler', status, detail)
+
+    # Compare guide updates after the specification commit. A pending guide
+    # comparison must not block a new ALM collection request.
+    if not keep_guides and not force:
+        try:
+            guide_update = push_product(product, target_url)
+        except Exception as exc:
+            guide_update = {'status': 'FAILED', 'detail': _error_detail(exc)}
+        exported = {**exported, 'publication': {
+            'status': guide_update['status'], 'detail': guide_update['detail'],
+        }}
+
+    # A guide-only result cannot override the independently verified PDF upload.
+    return {**uploaded, 'status': 'FAILED' if failed else status, 'detail': detail + ' / ' + uploaded['detail'],
+            'alm': versions, 'export': exported}
 
 
 if __name__ == '__main__':

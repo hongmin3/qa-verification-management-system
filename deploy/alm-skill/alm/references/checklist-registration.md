@@ -102,6 +102,7 @@ timeout은 실패 확정이 아니다. 동일 대상 GET으로 기대 관계를 
 |---|---|
 | TC 전체 생성/유지 | 모든 페이지의 실제 ALM ID·유형·Old ID와 원본 목록 양방향 비교 |
 | 정의 보존 | A~K 전체 매핑 필드, I/J 내용·묶음·번호·누락, K 실제 공란/값 |
+| Test Data 실제 값 | 원본 K열에 값이 있는 행 수와 ALM Test Data에 값이 있는 TC 수, TC별 값 일치. Test Data·Test Steps를 REST로 읽을 수 없으면 [등록된 Checklist TC 갱신](existing-tc-update.md) 3절의 조회 경로를 사용 |
 | 중복 | 생성 ID·Old ID 중복과 사용자가 허용한 원문 내용 중복을 구분 |
 | 문서 소속·순서 | 각 TC의 실제 module 관계와 저장된 문서의 TC ID 목록·순서 |
 | verifies 전체 | 기대 관계 집합과 저장 관계 집합의 차집합·예상 외 관계·역방향 여부 |

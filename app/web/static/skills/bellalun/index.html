@@ -12,7 +12,7 @@
 <h3>Claude Desktop</h3><ol>
 <li>이미 VXvue AI 확장을 사용한다면 확장을 껐다 켜고 새 대화를 엽니다. 신규 사용자는 <a href="/vxvue-desktop/download">공용 서버 확장(.mcpb)</a>을 직접 받습니다. PC 등록 번호가 있으므로 받은 파일을 다른 사람에게 전달하지 않습니다.</li>
 <li>Claude Desktop의 설정 → 확장 프로그램 → 고급 설정 → 확장 프로그램 설치에서 받은 파일을 설치합니다. 자세한 화면 순서는 <a href="/vxvue-desktop#desktop">연결 설치 안내</a>에 있습니다.</li>
-<li><a href="/static/skills/bellalun/releases/2026-11-12.1/bellalun-server-ai-skill.zip" download="bellalun-server-ai-skill.zip">Bellalun 서버 Skill ZIP</a>을 받아 사용자 지정(Customize) → Skills → + → 스킬 만들기 → 스킬 업로드에서 등록하고 켭니다.</li>
+<li><a href="/static/skills/bellalun/releases/2026-11-20.1/bellalun-server-ai-skill.zip" download="bellalun-server-ai-skill.zip">Bellalun 서버 Skill ZIP</a>을 받아 사용자 지정(Customize) → Skills → + → 스킬 만들기 → 스킬 업로드에서 등록하고 켭니다.</li>
 </ol>
 <h3>Claude Code</h3><p><a href="/vxvue-desktop#cli">기존 공용 연결 설치 안내</a>의 PowerShell 명령으로 사용자 범위 연결을 설치합니다. 서버 주소나 키를 수동 복사하지 않습니다. 위 Skill ZIP의 <code>bellalun-server-ai</code> 폴더를 <code>~/.claude/skills/</code> 아래에 풀고 Claude Code를 새로 시작합니다.</p>
 <h3>Codex</h3><p>기존에 연결한 <strong>VXvue AI (QA 서버)</strong> 플러그인을 활성화하고 연결을 다시 불러옵니다. 위 ZIP의 <code>bellalun-server-ai</code> 폴더를 사용자 스킬 위치인 <code>~/.agents/skills/</code> 아래에 풀고 새 작업에서 <code>$bellalun-server-ai</code>를 호출합니다. 기존 설치가 <code>~/.codex/skills/</code>를 사용하는 환경은 그 위치를 유지할 수 있습니다. 서버 연결이 아직 없다면 관리자가 제공하는 기존 QA 서버 연결을 먼저 설치해야 합니다. Skill ZIP만으로 서버 연결이 생기지는 않습니다. <a href="https://learn.chatgpt.com/docs/build-skills">공식 Skill 설치 위치 안내</a>도 참고하세요.</p>
@@ -181,6 +181,9 @@ Expected / Actual: [원문 근거 / 제공된 관찰]
 </ul></details>
 </section>
 <!-- work-examples:end -->
+<h2>ALM 사양서와 작업</h2>
+<p><a href="/knowledge/products/bellalun-viewer">Bellalun 검증 자료 관리</a>에서 1.0.12 배포 사양, 2.0.0 개발 자료, 기존 원노트 과거 자료를 확인합니다. 담당 PC에서 매일 10:10에 ALM을 수집하고 지식 폴더를 거쳐 서버에 반영합니다. 화면의 지금 수집 요청도 담당 PC가 처리합니다.</p>
+<p>“벨라룬 1.0.12 로그인 사양을 찾아줘”, “2.0.0 개발 사양의 CESM 변경을 조회해줘”처럼 버전을 지정할 수 있습니다. 2.0.0은 요청한 경우에 조회합니다. 벨라룬 VP 번호는 BellalunViewer 프로젝트에서 읽습니다. 실제 저장이 필요한 ALM 등록·수정에는 <a href="/static/alm-ai/index.html">공통 ALM 스킬</a>을 함께 사용합니다.</p>
 <h2 id="examples">3. 업무별 요청 예시</h2>
 <table><thead><tr><th>업무</th><th>복사해서 사용할 질문</th></tr></thead><tbody>
 <tr><td>사양 확인</td><td>Crop과 Image Processing의 적용 범위를 사양서·매뉴얼에서 찾아줘. 촬영 UI, Send Preview, 수신 DICOM의 근거를 구분해줘.</td></tr>

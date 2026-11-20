@@ -322,6 +322,14 @@ def compare_upload(product, server, staged, desired, allow_prune, *, jobs=2, cod
     if not executable:
         raise ValueError("지침 비교를 실행할 Codex 실행 파일을 찾지 못했습니다.")
     args = SimpleNamespace(codex=executable, model=config["model"], config_sha256=digest(config_source), timeout=420)
+    if config.get("model_provider", "openai") == "openai":
+        args.preview_settings = {
+            key: config[key] for key in ("model_reasoning_effort", "service_tier", "cli_auth_credentials_store")
+            if key in config
+        }
+        windows_sandbox = config.get("windows", {}).get("sandbox")
+        if windows_sandbox:
+            args.preview_settings["windows.sandbox"] = windows_sandbox
     library = LIBRARIES[product]
     with httpx.Client(timeout=40, follow_redirects=False, trust_env=False) as client:
         snapshots = gate.capture_snapshots(client, mcp)

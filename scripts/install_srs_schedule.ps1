@@ -1,7 +1,7 @@
 ﻿param(
     [string]$ProjectRoot = (Split-Path $PSScriptRoot -Parent),
     [string]$Python = '',
-    [string]$AlmRoot = 'C:\Users\2024980\Documents\자동화\projects\ALM-QA-Automation',
+    [string]$AlmRoot = 'C:\Automation\projects\ALM-QA-Automation',
     [string]$TargetUrl = 'http://10.13.0.222:24357',
     [switch]$CheckOnly
 )

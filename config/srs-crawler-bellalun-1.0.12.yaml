@@ -1,0 +1,15 @@
+product_slug: bellalun-viewer
+projects:
+  - id: BellalunViewer
+    document_space: Requirements
+    document_name: Software Requirement Specification
+    target_version: Bellalun_1_0_12
+content:
+  field_priority: [description, Description]
+partition:
+  single_file_projects:
+    - project_id: BellalunViewer
+      file_key: bellalun_1_0_12
+      display_name: Bellalun Viewer ALM 사양서 1.0.12
+publish_pattern: "(사양서) Bellalun Viewer ALM 사양서 1.0.12(*).pdf"
+collection_scope: "1.0.12 LiveDoc에 속하며 Target Version이 Bellalun 1.0.12인 SRS입니다."

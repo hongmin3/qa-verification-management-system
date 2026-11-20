@@ -1,0 +1,14 @@
+product_slug: bellalun-viewer
+projects:
+  - id: BellalunViewer
+    query: "type:srs AND targetVersion.KEY:Bellalun_2_0_0"
+    target_version: Bellalun_2_0_0
+content:
+  field_priority: [description, Description]
+partition:
+  single_file_projects:
+    - project_id: BellalunViewer
+      file_key: bellalun_2_0_0
+      display_name: Bellalun Viewer ALM 사양서 2.0.0 (목표 버전)
+publish_pattern: "(사양서) Bellalun Viewer ALM 사양서 2.0.0 (목표 버전)(*).pdf"
+collection_scope: "개발 참고용. Target Version이 Bellalun 2.0.0인 SRS 모음입니다. 기본 검증 근거에서 제외합니다."

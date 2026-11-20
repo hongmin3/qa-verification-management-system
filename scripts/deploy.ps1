@@ -75,7 +75,24 @@ function Invoke-Native([scriptblock]$Command) {
     finally { $ErrorActionPreference = $previous }
 }
 
-$testExit = Invoke-Native { & "$projectRoot\.venv\Scripts\python.exe" -m pytest -q -p no:warnings }
+$python = Join-Path $projectRoot ".venv\Scripts\python.exe"
+# pytest의 공유 임시 폴더 권한과 작업공간의 에이전트 지침이 배포 검사를 바꾸지 않게 한다.
+$userTemp = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "Temp"
+$testBase = Join-Path $userTemp ("qa-" + [guid]::NewGuid().ToString("N").Substring(0, 12))
+$testPathExit = Invoke-Native {
+    & $python -c 'import sys; from pathlib import Path; from app.core.claude_cli import validate_workdir; validate_workdir(Path(sys.argv[1]))' $testBase
+}
+if ($testPathExit -ne 0) { throw "배포 검사에 사용할 격리 임시 경로를 확보하지 못했습니다." }
+$savedModulePath = $env:PSModulePath
+$windowsModules = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\Modules"
+try {
+    # Python에서 Windows PowerShell을 띄우는 시험은 부모 pwsh의 모듈 경로를 그대로 상속한다.
+    $env:PSModulePath = (@($windowsModules, $savedModulePath) -join [IO.Path]::PathSeparator)
+    $testExit = Invoke-Native { & $python -X utf8 -m pytest -q -p no:warnings --basetemp $testBase }
+}
+finally {
+    $env:PSModulePath = $savedModulePath
+}
 if ($testExit -ne 0) { throw "테스트 실패로 배포를 중단합니다." }
 $appPort = (Select-String -Path (Join-Path $projectRoot "config.yaml") -Pattern '^\s*port:\s*(\d+)' | Select-Object -First 1).Matches[0].Groups[1].Value
 if (-not $appPort) { throw "config.yaml 에서 app.port 를 읽지 못했습니다." }

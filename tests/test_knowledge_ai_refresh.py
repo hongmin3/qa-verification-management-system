@@ -182,7 +182,12 @@ def test_bellalun_request_only_mode_uploads_only_for_a_new_request(tmp_path, mon
     skill.mkdir(), knowledge.mkdir()
     pushes, exports = [], []
     monkeypatch.setattr(script, "export_common_skill", lambda skill_root, knowledge_root: exports.append(1) or {"status": "SKIPPED"})
-    monkeypatch.setattr(knowledge_push, "push_product", lambda product, url: pushes.append(product) or {"status": "SUCCESS", "detail": "ok"})
+    from app.modules.knowledge.srs_crawler import config as crawler_config, pipeline
+    from app.modules.knowledge import vxvue_spec_sync
+    monkeypatch.setattr(crawler_config, "load_config", lambda **kwargs: SimpleNamespace())
+    monkeypatch.setattr(pipeline, "run", lambda config, **kwargs: {"stats": [{"total_items": 1}], "files": []})
+    monkeypatch.setattr(vxvue_spec_sync, "report_sync_log", lambda *args: None)
+    monkeypatch.setattr(knowledge_push, "push_product", lambda product, url, **options: pushes.append(product) or {"status": "SUCCESS", "detail": "ok"})
     request = {"value": ""}
     monkeypatch.setattr(knowledge_push, "fetch_collect_request", lambda product, url: request["value"])
     monkeypatch.setattr(config_module, "get_settings", lambda: SimpleNamespace(root=tmp_path))

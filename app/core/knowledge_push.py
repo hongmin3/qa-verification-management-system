@@ -151,7 +151,8 @@ def _pull_summary(pulled: dict | None, error: str = "") -> str:
             f"내려받기 실패 {len(pulled['failed'])}건")
 
 
-def push_product(product: str, target_url: str, *, dry_run: bool = False, timeout: int = UPLOAD_TIMEOUT_SECONDS) -> dict:
+def push_product(product: str, target_url: str, *, dry_run: bool = False, timeout: int = UPLOAD_TIMEOUT_SECONDS,
+                 preserve_server_guides: bool = False) -> dict:
     """제품 하나의 지식 폴더를 수집해 서버로 올린다.
 
     반환값은 `sync_and_register` 와 같은 모양(`status`/`detail`)이라 CLI 가 두 경로를 같게
@@ -231,6 +232,16 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
         from httpx import HTTPError
         from subprocess import SubprocessError
         try:
+            if preserve_server_guides:
+                # Keep the deployed guides when a local candidate did not pass validation.
+                previous_guides = [{'kind': kind, 'file_name': name, 'sha256': digest}
+                                   for (kind, name), digest in have.items() if kind in RULE_KINDS]
+                if {row['kind'] for row in previous_guides} < {'qa_rules', 'skill_instruction'}:
+                    raise ValueError('기존 운영 QA·Skill 지침을 모두 확인할 수 없습니다.')
+                assets = [row for row in assets if not rule_asset(row)] + previous_guides
+                manifest_payload['assets'] = [
+                    row for row in manifest_payload['assets'] if not rule_asset(row)
+                ] + previous_guides
             operating = None
             declared = have
             if config.product in LIBRARIES and (any(rule_asset(row) for row in assets)
@@ -291,6 +302,11 @@ def push_product(product: str, target_url: str, *, dry_run: bool = False, timeou
         if failed and staged_rules:
             return {"status": "FAILED", "detail": "일반 파일 전송 오류로 검증한 QA 지침 목록 확정을 중단했습니다."}
         manifest_payload["allow_prune"] = manifest_payload["allow_prune"] and not failed
+        if preserve_server_guides:
+            current = fetch_server_state(client, target_url, config.product)
+            if {key: digest for key, digest in current.items() if key[0] in RULE_KINDS} != {
+                    key: digest for key, digest in have.items() if key[0] in RULE_KINDS}:
+                return {"status": "FAILED", "detail": "동기화 중 운영 지침 변경을 감지했습니다. 다시 실행하세요."}
         commit = client.post(
             f"{target_url.rstrip('/')}/knowledge/product-knowledge/commit",
             data={

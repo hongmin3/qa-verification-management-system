@@ -26,8 +26,8 @@ knowledge_source:
     - "*지침 프롬프트*"
 
 specification:
-  # VXvue와 달리 ALM 크롤러 연동이 없다. 사양서는 knowledge_source 폴더에서 수집한다.
-  source: manual
+  source: alm_crawler
+  allow_manual: true
 
 testcase:
   source: manual

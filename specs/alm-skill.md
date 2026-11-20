@@ -6,8 +6,8 @@
 |---|---|
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `alm-skill` |
-| Document Version | 0.2.0 |
-| Last Updated | 2026-11-05 |
+| Document Version | 0.3.0 |
+| Last Updated | 2026-11-20 |
 | Status | implemented |
 
 먼저 목적과 범위를 읽고, 5절에서 안내 화면과 자료 연결 기준을 확인한다. 설치와 질문 예시는 앱 안 안내 페이지에서 제공한다.
@@ -44,15 +44,21 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 **지킬 것** 안내 화면은 자료 목록의 표시 여부만 확인한다. CLI 스킬의 SHA256 검증이나 실제 운영 설정 검증이 끝났다고 표시하지 않는다. 자료 링크는 같은 서버의 정해진 정적 자료 경로 안에서만 만든다.
 
-### REQ-ALMSKILL-003 기존 로그인 브라우저 작업 절차와 스킬 배포
+### REQ-ALMSKILL-003 개인 PAT 및 기존 로그인 브라우저 작업 절차
 
-**하는 일** 사용자가 구체적인 ALM 등록·수정·연결·Import를 요청하면 스킬이 현재 실행 환경의 Computer Use 도구와 기존 Edge·Chrome 로그인 세션을 사용하도록 안내한다. 미래의 사용 의향만으로 ALM 기록을 바꾸지 않는다.
+**하는 일** 이슈 등록·수정·댓글은 사용자가 요청한 대상에 한해 개인 PAT로 사용자 PC에서 직접 수행한다. 공용 QA 서버에는 읽기 연결을 둔다. 브라우저 지정 작업과 TC·Test Run·LiveDoc·Import에는 기존 Edge·Chrome 로그인 세션을 사용한다.
 
 **순서** 서버·프로젝트·대상 ID·현재 상태·변경값을 확인하고 허용된 작업을 수행한 뒤 같은 객체의 저장값을 다시 조회한다. 탭·창·실제 화면의 대상이 다르거나 연결이 없으면 입력을 중단한다. 결과 기록은 실제 수행 증거에 따르고 전자서명은 사용자에게 넘긴다.
 
 **결과** 스킬 원본은 `deploy/alm-skill/alm`에서 관리한다. 빌드 도구는 지정한 QA 서버 주소로 설정을 넣은 ZIP을 만들며 기존 출력 파일을 덮어쓰지 않는다. 안내 화면은 필요한 연결과 실제 저장 시험 여부를 구분한다.
 
 **Checklist 전체 등록** 사용자가 전체 등록을 요청하면 최신 원본 대조·허용된 파일 준비·Preview·Import·문서 편입·실제 SRS 관계 연결·미서명 문서 표시·전체 저장 대조를 안내한다. 기존 정상 서비스 API는 승인된 대량 작업에 병행할 수 있으며 브라우저 인증을 추출하지 않는다. 참고 문서의 결재표·공통 매크로와 실제 결재경로 속성을 구분한다. 원본 변경과 불명확한 저장은 기존 결과를 보존한 채 대조하고, 권한 제한과 미완료를 보고한다. 조사·준비 요청에는 쓰기를 추가하지 않는다.
+
+**등록본 갱신** 이미 등록한 Checklist TC를 최신 원본에 맞추는 순서를 안내한다. 원본 판 해시를 확인하고 TC ID와 Old ID를 1:1로 대조한다. A~K 필드별 차이와 원인을 나눈 뒤 변경 전 값을 백업한다. 1건 시험, 일괄 반영, 문서 전체 재조회 순서로 진행하고 대상 외 TC가 바뀌지 않았는지 확인한다.
+
+**REST 미지원 필드** Test Steps·Test Data는 같은 개인 PAT의 SOAP 조회·저장 형식을 안내한다. 새 정보를 담을 필드는 화면 표시를 확인한 뒤 일괄 반영한다. Old ID 같은 대응 키 필드에는 다른 값을 함께 쓰지 않는다. 저장 시 제거·변환되는 문자는 쓰기 실패와 구분해 보고한다.
+
+**Main TC 병합 TC** STC Category에 Full Function을 더하고 TC위치·Function·Func 01·Func 02를 대응 Main TC 행 기준으로 채운다.
 
 **지킬 것** 기존 브라우저 프로필을 복사하거나 쿠키·비밀번호를 추출하지 않는다. 사용자가 지정한 로그인 세션을 새 자동화 전용 브라우저로 대체하지 않는다. 컴퓨터 제어 도구의 별도 확인 정책을 따른다.
 
@@ -68,7 +74,7 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 ### REQ-ALMSKILL-005 실행 중심 안내와 업무 사례
 
-**하는 일** ALM·PLM은 기존 로그인 브라우저와 Computer Use를 이용한 업무 수행을 먼저 안내한다. 사용법 질문에는 설명·근거 조회로 답한다. 스킬 설치만으로 컴퓨터 제어 연결이나 쓰기 권한이 생긴다고 설명하지 않는다.
+**하는 일** ALM 이슈 처리는 개인 PAT, 그 밖의 ALM·PLM 화면 작업은 기존 로그인 브라우저와 Computer Use를 안내한다. 사용법 질문에는 설명·근거 조회로 답한다. 대상 권한과 실행 연결은 스킬 설치와 별도로 확인한다.
 
 **순서** 구체적인 실행 요청은 현재 대상·상태·입력 확인, 허용된 조작, 저장 후 같은 객체 재조회, 결과와 미완료 보고까지 진행한다. 조사 요청에는 쓰기를 추가하지 않는다. 이미 받은 일반 저장 권한을 반복해서 묻지 않는다. 서명과 최종 승인은 사람이 처리하며 현재 도구의 확인 정책을 따른다.
 
@@ -92,7 +98,7 @@ QA 사용자가 ALM 스킬의 활용 범위와 설치 방법을 이해하고, �
 
 ### TEST-ALMSKILL-003 스킬 패키지와 작업 경계
 
-ZIP에 브라우저 작업 절차와 지정 서버 설정이 들어가고 비밀값이 담긴 주소·잘못된 주소·기존 출력 덮어쓰기는 거절한다. 실제 ALM 저장은 이 패키지 시험에 포함하지 않는다.
+ZIP에 브라우저 작업 절차·등록본 갱신 절차와 지정 서버 설정이 들어가고 비밀값이 담긴 주소·잘못된 주소·기존 출력 덮어쓰기는 거절한다. 실제 ALM 저장은 이 패키지 시험에 포함하지 않는다.
 
 ## 12. 요구사항 추적성
 
@@ -100,6 +106,6 @@ ZIP에 브라우저 작업 절차와 지정 서버 설정이 들어가고 비밀
 |---|---|---|---|
 | REQ-ALMSKILL-001 | `app/web/templates/hub.html`, `app/web/static/alm-ai/index.html`, `app/web/static/alm-ai/style.css` | `tests/test_alm_skill_guide.py` | verified |
 | REQ-ALMSKILL-002 | `app/web/static/alm-ai/guide.js` | `tests/test_alm_skill_guide.py` | verified |
-| REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `deploy/alm-skill/alm/references/checklist-registration.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
+| REQ-ALMSKILL-003 | `deploy/alm-skill/alm/SKILL.md`, `deploy/alm-skill/alm/references/browser-operations.md`, `deploy/alm-skill/alm/references/local-issue-api.md`, `deploy/alm-skill/alm/references/checklist-registration.md`, `deploy/alm-skill/alm/references/existing-tc-update.md`, `scripts/build_alm_skill.py` | `tests/test_alm_skill_package.py` | implemented |
 | REQ-ALMSKILL-004 | `app/web/static/skills/index.html`, `app/web/static/skills/AGENTS.md`, `app/web/templates/hub.html` | `tests/test_skill_management.py` | verified |
 | REQ-ALMSKILL-005 | `deploy/skill-examples.json`, `scripts/render_skill_examples.py`, `deploy/alm-skill/alm/references/work-examples.md`, `app/web/static/alm-ai/index.html`, `app/web/static/plm-ai/index.html`, `app/modules/vxvue_chatbot/templates/desktop-guide.html`, `app/web/static/skills/bellalun/index.html` | `tests/test_skill_work_examples.py` | verified |

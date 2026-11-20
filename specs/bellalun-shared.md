@@ -87,7 +87,19 @@ REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이�
 
 코드·설치 절차·검증 방법은 Git에 게시하고 제품 원문·QA 원문·로컬 Skill·검증 기록은 서버에 보관한다. 로컬 Skill·별칭·연결 코드 묶음은 파일 목록과 SHA256을 포함하고 config·자격 증명·캐시·백업은 넣지 않는다. 새 PC에서는 경로와 Python을 새 환경에 맞추고 기존 파일이 다르면 덮어쓰지 않는다. 제품 원문과 내부 지침은 Git에 넣지 않는다. PC에 설치된 서버 배포 Skill(`vxvue-ai`·`bellalun-server-ai`·`alm`·`plm`)은 서버 판을 기준으로 맞춘다. 내려받은 묶음은 쓰기 전에 Skill 폴더 밖 경로가 없는지 검사하고, ALM·PLM은 `current.json`→`manifest.json`→ZIP SHA256 연결을 확인한다. 바뀐 파일만 폴더 백업 뒤 원자적으로 쓰고 로컬에만 있는 파일은 지우지 않는다. 한 Skill의 실패가 다른 Skill 동기화를 막지 않는다.
 
+### REQ-BELLALUNSHARED-007 Polarion 사양 수집과 작업 연결
+
+담당 PC의 매일 10:10 예약과 화면 수집 요청이 같은 Polarion 수집 코드를 실행한다. ALM 작업 항목을 스냅샷으로 보관하고, 검증한 PDF를 실제 지식 폴더에 저장한 뒤 서버에 반영한다. 버전별 실행 기록과 이전 판을 관리하며 수집 실패 시 해당 버전의 직전 정상본을 사용한다. 기존 PDF는 원노트 사양서로 표시한다.
+
+1.0.12는 현재 배포 사양이다. 확인된 LiveDoc에서 목표 버전이 1.0.12인 SRS를 수집한다. 그 밖의 ALM 버전은 개발 자료로 표시하며 원노트는 과거 자료로 유지한다. 제품 버전, 목표 버전, 문서 개정 및 승인 상태는 따로 기록한다. 기본 사양 검색과 추적에는 배포 사양을 사용한다. 개발·과거 자료도 버전이나 출처를 지정해 읽을 수 있다.
+
+실시간 상세, 필터, 첨부 이미지, 결과 이어 읽기는 BellalunViewer 프로젝트 전용 도구로 제공한다. 실제 기록 요청에는 공통 ALM 스킬을 적용해 Bellalun Viewer 화면에서 저장 후 다시 조회한다.
+
 ## 11. 테스트 사양
+
+### TEST-BELLALUNSHARED-007 버전별 수집 및 실시간 조회
+
+LiveDoc 항목과 프로젝트 전체 항목을 다르게 구성해 문서 밖 항목이 섞이지 않는지 확인한다. 한 버전의 새 PDF가 다른 버전과 원노트 PDF를 교체하지 않는지 확인한다. 동일 VP 번호가 있는 두 프로젝트로 실시간 도구와 검색 범위를 확인한다.
 
 ### TEST-BELLALUNSHARED-001 판·원문·지침
 
@@ -109,6 +121,7 @@ REQ-VXVUECHATBOT-019의 공통 섹션 ID·선행 규칙·목차·보호 후 이�
 
 | Requirement | Implementation | Test | Status |
 |---|---|---|---|
+| REQ-BELLALUNSHARED-007 | `scripts/sync_bellalun_shared.py`, `app/modules/knowledge/srs_crawler/collector.py`, `app/modules/bellalun_shared/service.py` | `tests/test_bellalun_alm.py`, `tests/test_bellalun_shared.py` | implemented |
 | REQ-BELLALUNSHARED-006 | `scripts/package_qa_client.py`, `scripts/install_qa_client.py`, `scripts/sync_server_skills.py`, `scripts/run_scheduled_python.py`, `docs/CLEAN_PC.md` | `tests/test_qa_client_handoff.py`, `tests/test_sync_server_skills.py`, `tests/test_hidden_schedule.py` | verified |
 | REQ-BELLALUNSHARED-005 | `app/core/qa_workflow.py`, `app/modules/bellalun_shared/service.py`, `scripts/sync_bellalun_shared.py` | `tests/test_qa_workflow_sections.py`, `tests/test_bellalun_shared.py` | verified |
 | REQ-BELLALUNSHARED-001 | `scripts/sync_bellalun_shared.py`, `config/products/bellalun-viewer.yaml` | `tests/test_bellalun_shared.py` | verified |

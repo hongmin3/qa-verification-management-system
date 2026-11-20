@@ -18,10 +18,14 @@ def main(argv=None):
     parser.add_argument('--force', action='store_true')
     parser.add_argument('--from-snapshot', metavar='YYYY-MM-DD')
     parser.add_argument('--no-publish', action='store_true')
+    parser.add_argument('--profile', choices=['bellalun-1.0.12', 'bellalun-2.0.0'], default='')
+    parser.add_argument('--knowledge-root', type=Path)
     args = parser.parse_args(argv)
     try:
         from app.modules.knowledge.srs_crawler.config import load_config, ConfigError
-        config = load_config()
+        config = load_config(profile=args.profile)
+        if args.knowledge_root:
+            config.knowledge_folder = args.knowledge_root.resolve(strict=True)
         missing = [name for name in ('bs4', 'playwright', 'fitz') if importlib.util.find_spec(name) is None]
         if missing:
             print('SRS 수집 라이브러리가 없습니다: ' + ', '.join(missing))

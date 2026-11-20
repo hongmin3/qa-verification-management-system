@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import shutil
 import uuid
 from dataclasses import asdict
@@ -41,20 +42,28 @@ def run(config, snapshot_date: str | None = None, force: bool = False, publish: 
     today = datetime.now(ZoneInfo('Asia/Seoul')).date()
     run_date = snapshot_date or today.isoformat()
     stamp = datetime.fromisoformat(run_date).strftime(config.filename_date_format)
+    profile_hash = (hashlib.sha256(json.dumps(config.raw, sort_keys=True).encode()).hexdigest()
+                    if getattr(config, 'collection_scope', '') else None)
     with RunLock(config.logs_dir / 'collection.lock'):
         logger = setup_logging(config.logs_dir, today.strftime('%Y%m%d'))
         complete = config.base_dir / run_date / 'manifest.json'
         if publish and snapshot_date is None and not force and complete.is_file():
             prior = json.loads(complete.read_text(encoding='utf-8'))
-            if prior.get('status') == 'SUCCESS' and prior.get('published') is True:
-                # 완료 기록뿐 아니라 최종 파일도 다시 검사한다.
-                for record in prior['files']:
-                    if inspect_pdf(config.base_dir / run_date / 'pdf' / record['name']) != record:
-                        raise RuntimeError('완료본 파일이 실행 기록과 다릅니다.')
-                    if inspect_pdf(config.knowledge_folder / record['name']) != record:
-                        raise RuntimeError('지식 폴더의 완료본이 실행 기록과 다릅니다.')
-                logger.info('오늘 수집·배포 완료본을 다시 확인했습니다.')
-                return dict(prior, reused=True)
+            if (prior.get('status') == 'SUCCESS' and prior.get('published') is True
+                    and (not profile_hash or prior.get('profile_hash') == profile_hash)):
+                try:
+                    for record in prior['files']:
+                        if inspect_pdf(config.base_dir / run_date / 'pdf' / record['name']) != record:
+                            raise RuntimeError('완료본 파일이 실행 기록과 다릅니다.')
+                        if inspect_pdf(config.knowledge_folder / record['name']) != record:
+                            raise RuntimeError('지식 폴더의 완료본이 실행 기록과 다릅니다.')
+                except (OSError, RuntimeError, ValueError):
+                    if not profile_hash:
+                        raise
+                    logger.warning('완료본을 확인하지 못해 ALM에서 다시 수집합니다.')
+                else:
+                    logger.info('오늘 수집·배포 완료본을 다시 확인했습니다.')
+                    return dict(prior, reused=True)
         run_id = today.strftime('%Y%m%d') + '-' + uuid.uuid4().hex[:12]
         work = config.base_dir / '.runs' / run_id
         html_dir, pdf_dir = work / 'html', work / 'pdf'
@@ -63,6 +72,8 @@ def run(config, snapshot_date: str | None = None, force: bool = False, publish: 
         records, stats = [], []
         result = {'run_id': run_id, 'date': run_date, 'status': 'FAILED', 'published': False,
                   'reused': False, 'files': [], 'warnings': []}
+        if profile_hash:
+            result['profile_hash'] = profile_hash
         snapshot_stage = config.snapshots_dir / '.runs' / run_id
         try:
             if snapshot_date:
@@ -86,6 +97,8 @@ def run(config, snapshot_date: str | None = None, force: bool = False, publish: 
                 # 예상 건수와 빈 응답을 검사한 뒤에만 스냅샷을 확정한다.
                 if any(s.errors or s.total_items == 0 or s.total_items != s.expected_total for s in stats):
                     raise RuntimeError('SRS 수집 건수 또는 상세 수집 검사에 실패했습니다.')
+                if profile_hash and any(s.images_failed for s in stats):
+                    raise RuntimeError('SRS 이미지 수집을 완료하지 못했습니다. 기존 정상 PDF를 유지합니다.')
                 save_manifest(snapshot_stage, run_date, {'stats': [asdict(s) for s in stats]})
                 for project in config.projects:
                     destination = config.snapshots_dir / run_date / project.id
@@ -159,8 +172,9 @@ def run(config, snapshot_date: str | None = None, force: bool = False, publish: 
                     if previous.exists():
                         previous.replace(public)
                     raise
+            publish_options = {'replace_pattern': config.publish_pattern} if profile_hash else {}
             archive_and_publish(knowledge_folder=config.knowledge_folder, generated_pdfs=[p.path for p in pdfs],
-                                file_date=stamp, finalize=finalize)
+                                file_date=stamp, finalize=finalize, **publish_options)
             logger.info('SRS 수집·PDF 배포 완료: %d건 / PDF %d개', len(records), len(pdfs))
             return result
         except Exception as exc:

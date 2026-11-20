@@ -12,6 +12,7 @@ from pathlib import Path
 from app.core import document_cache
 from app.core.storage import Storage
 from app.core.document_schemas import SpecificationChunk
+from app.modules.bellalun_shared.specifications import excluded_from_current_specification
 from app.parsers.document_parser import parse_document
 from app.retrieval.bm25_retriever import BM25Retriever
 
@@ -22,6 +23,8 @@ def load_srs_chunks(storage: Storage, product: str) -> tuple[list[SpecificationC
     chunks: list[SpecificationChunk] = []
     doc_labels: dict[str, str] = {}
     for doc in storage.active_documents("specification", product):
+        if excluded_from_current_specification(doc["name"]):
+            continue
         path = Path(doc["path"])
         if not path.exists():
             continue

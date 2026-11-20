@@ -39,6 +39,7 @@ def inspect_pdf(path: Path) -> dict:
 
 def archive_and_publish(*, knowledge_folder: Path | None, generated_pdfs: list[Path],
                         file_date: str, org_folder: Path | None = None,
+                        replace_pattern: str = '(사양서)*.pdf',
                         finalize: Callable[[PublishResult], None] | None = None) -> PublishResult:
     if knowledge_folder is None or not generated_pdfs:
         raise ValueError('배포 폴더와 PDF가 필요합니다.')
@@ -55,7 +56,7 @@ def archive_and_publish(*, knowledge_folder: Path | None, generated_pdfs: list[P
     incoming, backup = stage / 'incoming', stage / 'originals'
     incoming.mkdir()
     backup.mkdir()
-    originals = sorted(set(knowledge_folder.glob('(사양서)*.pdf')) |
+    originals = sorted(set(knowledge_folder.glob(replace_pattern)) |
                        {knowledge_folder / p.name for p in generated_pdfs if (knowledge_folder / p.name).exists()})
     if any(p.is_symlink() for p in originals):
         shutil.rmtree(stage)

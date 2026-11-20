@@ -6779,7 +6779,7 @@ python scripts/backup_data.py --verify backups/qa-backup-YYYYMMDDTHHMMSSZ.zip
 
 **순서**
 
-1. 로컬 `pytest` 를 돌린다. 실패하면 멈춘다.
+1. 사용자 임시 폴더에 이번 실행의 시험 경로를 잡는다. 저장소와 에이전트 지침이 있는 상위 경로를 피한 뒤 로컬 전체 `pytest`를 실행한다. 실패하면 멈춘다.
 2. 서버 안에서 모든 등록 제품의 QA 실행 잠금과 핵심 앱의 대기·실행 중인 분석을 확인한다. 하나라도 있거나 상태 확인이 실패하면 전송을 멈춘다. 대상 폴더를 만들고 `app`, `scripts`, `tests`, `config`, `docs`, `deploy`, `requirements.txt`, `config.yaml`, `pytest.ini`, `.env.example`, `secrets.example.txt`, `secrets.example.json`, `README.md`, `SECURITY.md` 만 복사한다.
 
    > **예외** 최초 설치에서 대상 폴더에 `.venv`만 있는 것을 확인하면 앱 실행 자료가 없는 것으로 보고 첫 상태 검사를 통과한다. 다른 파일이나 폴더가 하나라도 있으면 정상 상태 검사를 생략하지 않는다.

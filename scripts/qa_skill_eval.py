@@ -42,7 +42,8 @@ class Case:
 
 
 BELLALUN_DOC = "(TC) Mammo System 연동 TestCase (개정).xlsx"
-VXVUE_DOC = "(사양서) VXvue 사양서2(261119).pdf"
+VXVUE_DOC = "(사양서) VXvue 사양서2(261120).pdf"
+VXVUE_DOC_SHA12 = "6d88c1781860"
 BELLALUN_DICOM = "(매뉴얼) Bellalun Viewer DICOM Conformance Statement.V1.3W1_EN_수정_확인완료.docx"
 VXVUE_DICOM = "(매뉴얼) VXvue DICOM Conformance Statement.V4.4W5.docx"
 BELLALUN_WU = "(TC) R-25-782_Bellalun Viewer_Windows Update 호환성 검증 Checklist.xlsx"
@@ -67,7 +68,7 @@ CASES = (
         TC_TOOLS, kind="id_range", core=True,
     ),
     Case(
-        "vxvue-image-page", "vxvue-ai", "", "spec", VXVUE_DOC, "3313f639733c",
+        "vxvue-image-page", "vxvue-ai", "", "spec", VXVUE_DOC, VXVUE_DOC_SHA12,
         f"VXvue {VXVUE_DOC}의 PDF 물리 87쪽 화면에서 OID 표시값과 이름에 Matching이 들어간 버튼 라벨을 "
         "위에서 아래 순서대로 읽어줘. 이 화면만으로 OID 기본값까지 확정할 수 있는지도 알려줘.",
         {
@@ -121,7 +122,7 @@ CASES = (
         ("search_redmine_issues",), kind="redmine",
     ),
     Case(
-        "vxvue-stitch-conditions", "vxvue-ai", "", "spec", VXVUE_DOC, "3313f639733c",
+        "vxvue-stitch-conditions", "vxvue-ai", "", "spec", VXVUE_DOC, VXVUE_DOC_SHA12,
         f"VXvue {VXVUE_DOC}의 PDF 물리 82쪽 Stitch Image 조건을 읽어줘. "
         "한 번에 이어 붙일 수 있는 최대 영상 수와 이미 이어 붙인 영상의 재스티칭 허용 여부를 알려줘.",
         {"document": VXVUE_DOC, "page": 82, "max_images": 6, "restitch_allowed": False},
@@ -438,15 +439,18 @@ def run_case(case, args, codex_home, *, skill=None, preview_url=None):
     try:
         if skill is None:
             skill = (codex_home / "skills" / case.skill / "SKILL.md").read_bytes()
+        preview_settings = getattr(args, "preview_settings", None) if preview_url else None
         config_path = codex_home / "config.toml"
-        source_config = config_path.read_bytes()
-        config_hash = getattr(args, "config_sha256", None)
-        if config_hash and hashlib.sha256(source_config).hexdigest() != config_hash:
-            raise ValueError("비교 도중 Codex 설정이 변경됨")
-        config = tomllib.loads(source_config.decode("utf-8"))
-        servers = config.get("mcp_servers", {})
-        if SERVER not in servers:
-            raise ValueError("Codex 설정에 vxvue-ai MCP가 없습니다.")
+        config_hash = None
+        config = {}
+        if preview_settings is None:
+            source_config = config_path.read_bytes()
+            config_hash = getattr(args, "config_sha256", None)
+            if config_hash and hashlib.sha256(source_config).hexdigest() != config_hash:
+                raise ValueError("비교 도중 Codex 설정이 변경됨")
+            config = tomllib.loads(source_config.decode("utf-8"))
+            if SERVER not in config.get("mcp_servers", {}):
+                raise ValueError("Codex 설정에 vxvue-ai MCP가 없습니다.")
         with tempfile.TemporaryDirectory(prefix="qa-skill-eval-") as directory:
             schema = Path(directory) / "answer-schema.json"
             schema.write_text(json.dumps(answer_schema(case)), encoding="utf-8")
@@ -457,8 +461,17 @@ def run_case(case, args, codex_home, *, skill=None, preview_url=None):
                 "-c", 'approval_policy="never"', "-c", 'web_search="disabled"',
                 "-c", f"mcp_servers.{SERVER}.enabled_tools=" + json.dumps(case.tools),
             ]
-            for name in servers.keys() - {SERVER}:
-                cmd.extend(["-c", f"mcp_servers.{name}.enabled=false"])
+            cli_env = {}
+            if preview_settings is not None:
+                # The preview bridge owns QA authentication. Keep the CLI's existing
+                # account while isolating evaluation from mutable desktop settings.
+                cmd.append("--ignore-user-config")
+                for key, value in preview_settings.items():
+                    cmd.extend(["-c", f"{key}=" + json.dumps(value)])
+                cli_env["env"] = {**os.environ, "CODEX_HOME": str(codex_home)}
+            else:
+                for name in config["mcp_servers"].keys() - {SERVER}:
+                    cmd.extend(["-c", f"mcp_servers.{name}.enabled=false"])
             if preview_url:
                 cmd.extend(["-c", f"mcp_servers.{SERVER}.url=" + json.dumps(preview_url),
                             "-c", f"mcp_servers.{SERVER}.http_headers={{}}"])
@@ -471,7 +484,7 @@ def run_case(case, args, codex_home, *, skill=None, preview_url=None):
             )
             child = subprocess.run(
                 [*cmd, "-"], cwd=directory, input=prompt, capture_output=True,
-                encoding="utf-8", errors="replace", timeout=args.timeout,
+                encoding="utf-8", errors="replace", timeout=args.timeout, **cli_env,
             )
         if config_hash and config_path.read_bytes() != source_config:
             raise ValueError("비교 도중 Codex 설정이 변경됨")

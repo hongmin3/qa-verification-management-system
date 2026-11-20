@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import logging
+from html import escape
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from .config import Config, ProjectSpec
 from .polarion_client import PolarionApiError, PolarionClient
@@ -45,13 +47,39 @@ def fetch_raw_items(client: PolarionClient, project: ProjectSpec, stats: Collect
     logger.info("[%s] Work Item 조회 시작 (query=%s)", project.id, project.query)
     stats.expected_total = client.get_total_count(project.id, project.query)
     logger.info("[%s] Polarion 응답 기준 예상 건수: %d", project.id, stats.expected_total)
-    items = list(client.iter_workitems(project.id, project.query))
+    scoped = project.document_name or project.target_version
+    if scoped:
+        items = list(client.iter_workitems(project.id, project.query, fields='@all,description,Description,targetVersion'))
+    else:
+        items = list(client.iter_workitems(project.id, project.query))
     logger.info("[%s] Work Item %d건 조회 완료", project.id, len(items))
     if len(items) != stats.expected_total:
         msg = f"[{project.id}] 수집 건수 불일치: 예상 {stats.expected_total}건, 실제 수집 {len(items)}건"
         logger.error(msg)
         stats.errors.append(msg)
+    if project.document_name:
+        ids, source = client.document_scope(project.id, project.document_space, project.document_name)
+        items = [item for item in items if item['id'] in ids]
+        if {item['id'] for item in items} != ids:
+            stats.errors.append('LiveDoc 작업 항목과 수집한 SRS 목록이 일치하지 않습니다.')
+        if project.target_version:
+            expected = f'{project.id}/{project.target_version}'
+            items = [item for item in items if target_version(item) == expected]
+            stats.expected_total = client.get_total_count(
+                project.id, f'({project.query}) AND targetVersion.KEY:{project.target_version}')
+        else:
+            stats.expected_total = len(ids)
+        for item in items:
+            item['_document_source'] = source
+    if project.target_version:
+        expected = f'{project.id}/{project.target_version}'
+        if any(target_version(item) != expected for item in items):
+            stats.errors.append('Polarion 응답의 목표 버전이 요청한 Plan과 일치하지 않습니다.')
     return items
+
+
+def target_version(item):
+    return (((item.get('relationships') or {}).get('targetVersion') or {}).get('data') or {}).get('id')
 
 
 def _build_base_record(project_id: str, raw: dict[str, Any]) -> dict[str, Any]:
@@ -98,6 +126,8 @@ def _build_base_record(project_id: str, raw: dict[str, Any]) -> dict[str, Any]:
         "author_id": author,
         "description_raw": _rich("description"),
         "description_kr_raw": _rich("descriptionKR"),
+        "description_custom_raw": '<br/>'.join(escape(line) for line in attrs['Description'].splitlines())
+        if isinstance(attrs.get('Description'), str) else None,
         "parent_id": parent,
         "linked_work_items": linked,
         "attachments_meta": attachments,
@@ -118,6 +148,11 @@ def collect_project(
 ) -> list[dict[str, Any]]:
     raw_items = fetch_raw_items(client, project, stats)
     records = [_build_base_record(project.id, r) for r in raw_items]
+    if project.document_name or project.target_version:
+        for record, raw in zip(records, raw_items):
+            record.update(document_source=raw.get('_document_source'), target_version=target_version(raw),
+                          source_url=f'{config.host.rstrip("/")}/#/project/{project.id}/workitem?id={quote(record["id"], safe="")}',
+                          collection_scope=config.collection_scope)
     id_title_map = {r["id"]: r["title"] for r in records}
 
     attachments_index: dict[str, dict[str, Any]] = {}
@@ -151,7 +186,8 @@ def collect_project(
         chosen_field = None
         chosen_html = None
         for field_name in config.content_field_priority:
-            key = "description_kr_raw" if field_name == "descriptionKR" else "description_raw"
+            key = {"descriptionKR": "description_kr_raw", "Description": "description_custom_raw"}.get(
+                field_name, "description_raw")
             if rec.get(key):
                 chosen_field = field_name
                 chosen_html = rec[key]

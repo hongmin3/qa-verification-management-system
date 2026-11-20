@@ -18,6 +18,8 @@ Bellalun Redmine은 VXvue와 같은 읽기 모듈(`app/modules/vxvue_chatbot/red
 
 ## 수동 동기화
 
+예약과 화면 수집 요청은 같은 스크립트에서 Polarion SRS를 수집한다. 1.0.12는 LiveDoc에 속한 1.0.12 목표 항목을 가져오고 2.0.0 목표 항목은 개발 자료로 모은다. 버전별 원본과 실행 기록은 `data/srs_crawler/bellalun-<버전>/` 및 `output/srs_crawler/bellalun-<버전>/`에 둔다. 검증된 PDF는 담당자 지식 폴더와 QA 서버에서 같은 이름과 해시로 확인한다. 원노트 PDF와 다른 버전의 파일은 해당 버전의 새 판이 들어올 때 유지한다.
+
 프로젝트의 Python 환경에서 다음 명령을 사용한다. 실제 경로와 주소는 운영 환경 값을 쓴다.
 
 ```powershell

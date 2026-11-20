@@ -11,9 +11,15 @@ def builder():
 def test_bundle_contains_browser_workflow_and_dynamic_server(tmp_path):
  out=tmp_path/'skill.zip';result=builder().build_skill('https://qa.example.test',out)
  with zipfile.ZipFile(out) as z:
-  assert set(z.namelist())=={'alm/SKILL.md','alm/agents/openai.yaml','alm/scripts/knowledge.py','alm/references/browser-operations.md','alm/references/work-examples.md','alm/references/checklist-registration.md','alm/server.json'}
+  assert set(z.namelist())=={'alm/SKILL.md','alm/agents/openai.yaml','alm/scripts/knowledge.py','alm/references/browser-operations.md','alm/references/work-examples.md','alm/references/checklist-registration.md','alm/references/local-issue-api.md','alm/references/existing-tc-update.md','alm/server.json'}
   assert json.loads(z.read('alm/server.json'))['catalog_url']=='https://qa.example.test/static/alm-guide/current.json'
   assert 'references/browser-operations.md' in z.read('alm/SKILL.md').decode()
+  assert 'references/local-issue-api.md' in z.read('alm/SKILL.md').decode()
+  assert b'POLARION_TOKEN' in z.read('alm/references/local-issue-api.md')
+  assert 'references/existing-tc-update.md' in z.read('alm/SKILL.md').decode()
+  update=z.read('alm/references/existing-tc-update.md').decode()
+  assert 'workItemURI' in update and 'full_function' in update and 'Description' in update
+  assert 'existing-tc-update.md' in z.read('alm/references/checklist-registration.md').decode()
   assert '전자서명은 사용자가 직접 처리한다' in z.read('alm/references/browser-operations.md').decode()
  assert result['bytes']==out.stat().st_size and len(result['sha256'])==64
 

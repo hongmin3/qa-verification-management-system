@@ -77,8 +77,9 @@ def integer(value, minimum, maximum):
 
 
 class PolarionLookup:
-    def __init__(self, root, client):
-        self.root = Path(root) / "data/vxvue_desktop/polarion"
+    def __init__(self, root, client, *, project='VXvue'):
+        directory = 'vxvue_desktop' if project == 'VXvue' else 'bellalun_shared'
+        self.root = Path(root) / 'data' / directory / 'polarion'
         self.client = client
 
     def _save(self, response, source, compact=False, fields=None):

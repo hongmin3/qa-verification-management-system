@@ -11,6 +11,7 @@ from threading import Lock
 import uuid
 
 from app.core.snapshot_files import publish_directory
+from .specifications import SPECIFICATION_VIEWS, excluded_from_current_specification, provenance, specification_view
 
 from app.modules.vxvue_chatbot.mcp_server import tools
 from app.modules.vxvue_chatbot.skill.scripts import corpus, knowledge
@@ -34,6 +35,10 @@ bellalun_get_status → bellalun_get_workflow(section=작업 유형) → bellalu
 검색 없음은 미지원이 아니며 과거 TC Pass는 현재 동작 증거가 아닙니다. 수행 결과와 승인 판정을 만들지 않습니다.
 PDF 그림·표는 bellalun_get_document_page로 확인합니다. DOCX 문단·표 번호는 출력 페이지 번호가 아닙니다.
 Bellalun 이슈는 bellalun_search_redmine_issues·bellalun_get_redmine_issue·bellalun_read_redmine_result로 읽습니다.
+Bellalun ALM은 bellalun_polarion_query·bellalun_get_polarion_item·bellalun_get_polarion_attachment·bellalun_read_polarion_result로 조회합니다.
+VP 번호에 BellalunViewer 프로젝트를 적용합니다. 실제 등록·수정·연결·테스트 기록 요청은 공통 alm 스킬로 Bellalun Viewer 화면에서 저장 후 다시 조회합니다.
+사양 검색은 specification_version=1.0.12, 2.0.0 또는 onenote로 범위를 지정합니다. 2.0.0은 개발 참고용이며 명시 조회에서만 사용합니다.
+현재 배포 사양은 1.0.12입니다. 기본 검증 근거에는 1.0.12를 적용합니다. 원노트는 과거 자료로 명시 조회합니다. 배포 기준과 ALM 문서의 승인 상태를 구분합니다.
 기본은 VDMS Series QA Defect(75)이고 Software Dev(86)·이전 세대 VDMS 1000B(35·37)는 project_ids로 지정합니다.
 관련 이슈 확인·없음 판단 전에는 full_text=true로 종료 이슈·본문·댓글·사용자 정의 항목(원인/분석·수정내용)까지 찾고 matched_in을 보고합니다.
 짧은 영문 검색어는 다른 단어 안에서도 일치하므로 더 구체적인 검색어를 쓰고 제목을 걸러 봅니다. 첨부 본문은 받지 않습니다.
@@ -63,6 +68,11 @@ def definitions():
         if name != 'get_status':
             tool['inputSchema']['properties']['snapshot_id'] = {'type': 'string'}
             tool['inputSchema']['required'].append('snapshot_id')
+        if name == 'search_documents':
+            tool['inputSchema']['properties']['specification_version'] = {
+                'type': 'string', 'enum': list(SPECIFICATION_VIEWS),
+                'description': '사양 조회 범위. 2.0.0(개발용)은 명시한 경우에 조회합니다.',
+            }
         result.append(tool)
     from app.modules.vxvue_chatbot.redmine import bellalun_definitions as redmine_definitions
     result.extend(redmine_definitions())
@@ -277,17 +287,39 @@ def call(name, arguments, project_root):
         return _private_paths(value)
     if base_name == 'get_workflow':
         return workflow(current, args)
+    if base_name == 'search_documents' and 'specification_version' in args:
+        selection = args.pop('specification_version')
+        if selection not in SPECIFICATION_VIEWS or args.get('document_kind') not in (None, 'specification'):
+            raise ValueError('사양 조회 범위는 1.0.12, 2.0.0, onenote 중 하나입니다.')
+        ids = sorted(row['document_id'] for row in current['documents']
+                     if row['kind'] == 'specification' and specification_view(row['document_id']) == selection)
+        if not ids:
+            raise ValueError(f'{selection} 사양서가 이 지식 판에 없습니다.')
+        if args.get('document_id') and args['document_id'] not in ids:
+            raise ValueError('문서 ID와 사양 버전이 일치하는지 확인하세요.')
+        args.setdefault('document_id', ids[-1])
     if 'document_id' in args and args['document_id'] not in {r['document_id'] for r in current['documents']}:
         raise ValueError('해당 Bellalun 판 목록의 문서 ID만 조회할 수 있습니다.')
     if base_name == 'get_document_page' and not args['document_id'].lower().endswith('.pdf'):
         raise ValueError('DOCX는 bellalun_get_document로 문단·표 위치를 확인하세요. 출력 쪽수는 제공하지 않습니다.')
     from app.modules.vxvue_chatbot.desktop import DesktopTools
     session = DesktopTools(current, [], Path(project_root) / 'data/shared_knowledge/unused-trace')
-    session.corpus = FrozenCorpus(current['root'], current['index'], document_kinds={r['document_id']: r['kind'] for r in current['documents']})
+    session.corpus = FrozenCorpus(current['root'], current['index'],
+                                  document_kinds={r['document_id']: r['kind'] for r in current['documents']},
+                                  search_excluded=[r['document_id'] for r in current['documents']
+                                                   if excluded_from_current_specification(r['document_id'])])
     value = session.call(base_name, args)
     _verify_snapshot(current)
     if isinstance(value, dict):
         value.update(snapshot_id=current['id'], library='Bellalun Viewer')
+        if base_name in ('get_status', 'search_documents', 'get_document'):
+            ids = (None if base_name == 'get_status' else {args['document_id']} if args.get('document_id')
+                   else {r.get('document_id') for r in value.get('results', [])})
+            value['specifications'] = [
+                {'document_id': row['document_id'], **metadata}
+                for row in current['documents'] if ids is None or row['document_id'] in ids
+                if (metadata := provenance(row['document_id']))
+            ]
         if base_name == 'get_status' and 'metadata_view' in value:
             value['metadata_view'] = 'bellalun_get_status(compact=false)'
     return _private_paths(value)

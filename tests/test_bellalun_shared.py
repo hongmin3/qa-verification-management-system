@@ -116,6 +116,32 @@ def test_bellalun_old_snapshot_and_failed_sources(shared):
     assert value(rpc(client, 'bellalun_search_documents', snapshot_id=old, query='TC_UNIQUE'))['results']
 
 
+def test_development_specification_is_explicit_search_only(shared):
+    client, base, manifest = shared
+    data = json.loads(manifest.read_text(encoding='utf8'))
+    for name, text in [
+        ('(사양서) Bellalun Viewer ALM 사양서 1.0.12(261120).pdf', 'MATCH_PROD'),
+        ('(사양서) Bellalun Viewer ALM 사양서 2.0.0 (목표 버전)(261120).pdf', 'MATCH_DEV'),
+        ('(사양서) Bellalun Viewer 기존 원노트 사양서(261030).pdf', 'MATCH_LEGACY'),
+    ]:
+        path = base / 'original/specification' / name
+        with fitz.open() as doc:
+            doc.new_page().insert_text((72, 72), text)
+            doc.save(path)
+        data['assets'].append({'file_name': name, 'kind': 'specification',
+                               'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+    manifest.write_text(json.dumps(data), encoding='utf8')
+    status = value(rpc(client, 'bellalun_get_status'))
+    assert len(status['specifications']) == 3
+    args = {'snapshot_id': status['snapshot_id'], 'query': 'MATCH'}
+    default = value(rpc(client, 'bellalun_search_documents', **args))
+    assert {row['usage'] for row in default['specifications']} == {'현재 배포 사양'}
+    selected = value(rpc(client, 'bellalun_search_documents', specification_version='2.0.0', **args))
+    assert selected['matched'] == 1 and selected['specifications'][0]['development'] is True
+    legacy = value(rpc(client, 'bellalun_search_documents', specification_version='onenote', **args))
+    assert legacy['matched'] == 1 and legacy['specifications'][0]['usage'] == '과거 자료'
+
+
 def test_bellalun_manual_review_uses_own_snapshot_and_selection(shared):
     client, _, _ = shared
     sid = value(rpc(client, 'bellalun_get_status'))['snapshot_id']
@@ -270,7 +296,7 @@ def test_bellalun_download_contains_portable_skill(shared):
     text = guide.read_text(encoding='utf8')
     for word in ('Claude Desktop', 'Claude Code', 'Codex', 'bellalun_get_status', 'Redmine', '동기화'):
         assert word in text
-    release = guide.parent / 'releases/2026-11-12.1/bellalun-server-ai-skill.zip'
+    release = guide.parent / 'releases/2026-11-20.1/bellalun-server-ai-skill.zip'
     with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
         assert archive.namelist() == dynamic.namelist()
         assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())

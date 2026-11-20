@@ -12,6 +12,9 @@ class ProjectSpec:
     id: str
     query: str
     fetch_comments: bool = True
+    document_space: str = ''
+    document_name: str = ''
+    target_version: str = ''
 
 
 @dataclass
@@ -54,21 +57,23 @@ class Config:
     known_problem_srs: list[str] = field(default_factory=list)
     pdf_timeout_seconds: int = 300
     raw: dict[str, Any] = field(default_factory=dict)
+    collection_scope: str = ''
+    publish_pattern: str = '(사양서)*.pdf'
 
 
 class ConfigError(RuntimeError):
     pass
 
 
-def load_config(root: Path | None = None) -> Config:
+def load_config(root: Path | None = None, *, profile: str = '') -> Config:
     settings = get_settings()
     root = root or settings.root
-    raw = yaml.safe_load((root / 'config/srs-crawler.yaml').read_text(encoding='utf-8')) or {}
+    filename = f'srs-crawler-{profile}.yaml' if profile else 'srs-crawler.yaml'
+    raw = yaml.safe_load((root / 'config' / filename).read_text(encoding='utf-8')) or {}
     host, token = settings.secrets.polarion_host, settings.secrets.polarion_token
     if not host or not token:
         raise ConfigError('POLARION_HOST / POLARION_TOKEN 설정이 필요합니다.')
-    projects = [ProjectSpec(id=p['id'], query=p.get('query', 'type:srs'),
-                            fetch_comments=p.get('fetch_comments', True)) for p in raw.get('projects', [])]
+    projects = [ProjectSpec(**{'query': 'type:srs', **p}) for p in raw.get('projects', [])]
     if not projects:
         raise ConfigError('수집할 projects가 없습니다.')
     partition = raw.get('partition', {})
@@ -78,6 +83,7 @@ def load_config(root: Path | None = None) -> Config:
         raise ConfigError('제품의 knowledge_source.dir 설정이 필요합니다.')
     validation = raw.get('validation', {})
     render = raw.get('render', {})
+    folder_name = f'srs_crawler/{profile}' if profile else 'srs_crawler'
     return Config(
         host=host.rstrip('/'), token=token,
         verify_ssl=bool(settings.get('daily_qa.polarion.verify_ssl', True)),
@@ -88,14 +94,15 @@ def load_config(root: Path | None = None) -> Config:
         vxvue_project_id=partition.get('vxvue_project_id', ''),
         vxvue_groups=[VXvueGroup(**g) for g in partition.get('vxvue_groups', [])],
         single_file_projects=[SingleFileProject(**g) for g in partition.get('single_file_projects', [])],
-        base_dir=root / 'output/srs_crawler', archive_dir=root / 'data/srs_crawler/archive',
-        snapshots_dir=root / 'data/srs_crawler/snapshots', logs_dir=root / 'output/logs/srs_crawler',
+        base_dir=root / 'output' / folder_name, archive_dir=root / 'data' / folder_name / 'archive',
+        snapshots_dir=root / 'data' / folder_name / 'snapshots', logs_dir=root / 'output/logs' / folder_name,
         knowledge_folder=Path(folder) if Path(folder).is_absolute() else root / folder,
         filename_prefix='(사양서) ', filename_date_format='%y%m%d',
         min_expected_srs_ratio=float(validation.get('min_expected_srs_ratio', .95)),
         require_all_pdfs=bool(validation.get('require_all_pdfs', True)),
         known_problem_srs=render.get('known_problem_srs', []),
         pdf_timeout_seconds=int(render.get('pdf_timeout_seconds', 300)), raw=raw,
+        collection_scope=raw.get('collection_scope', ''), publish_pattern=raw.get('publish_pattern', '(사양서)*.pdf'),
     )
 
 
