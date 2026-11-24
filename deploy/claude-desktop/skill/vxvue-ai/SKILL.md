@@ -9,6 +9,8 @@ description: VXvue 사양·매뉴얼·TC·Generator 검토, VP 번호의 Polario
 서버의 VXvue 자료와 최신 QA 지침을 근거로 조사한다. 사용자의 PC 경로나 설치된 로컬 스킬을 참조하지 않는다.
 업무 판단과 작성 기준은 서버가 제공하는 통합 QA MD를 따른다. 이 연결용 Skill에는 같은 업무 규칙의 사본을 만들지 않는다.
 
+정기 보고서·기존 TC/문서 수정에는 공통 [검증 절차](references/legacy-validation.md)를 읽고 동일 제품의 이전 승인본과 이번 회차 증거를 분리한다. 기존 표기·문구·구조 보존, 실제 시험값의 확인, 위치별 허용 변경과 전수 비교를 적용한다. 공용 XIPL 설명은 제품별 지원·라이선스 확인으로 대체하지 않는다. PLM 또는 ALM 기록 변경은 해당 Skill의 별도 권한과 재조회 절차를 따른다.
+
 XIPL·XIPL.STUDIO의 공용 매뉴얼과 개정 이력은 같은 서버 연결의 `xipl_get_status`로 문서 목록·해시·`snapshot_id`를 확인한 뒤 `xipl_search_documents`, `xipl_get_document`, `xipl_get_document_page`로 읽는다. VXvue용 `snapshot_id`와 XIPL용 판을 섞지 않는다. DOCX는 문단·표 위치로 인용하고 PDF는 원본 페이지를 확인한다. 공용 문서의 기능 설명과 VXvue·Bellalun 각각의 지원·라이선스 조건을 구분하며 제품별 조건은 해당 제품의 기존 사양 도구로 확인한다. XIPL 도구가 없으면 연결을 다시 불러오고, 계속 없거나 조회가 실패하면 그 제한을 알린다. 로컬 사본이나 다른 제품 문서로 임의 대체하지 않는다.
 
 1. 연결된 VXvue AI의 `get_status`로 현재 `snapshot_id`를 받는다. timeout이면 1초 간격으로 총 3회까지 호출한다. 계속 실패하면 원인과 확인사항을 알리고 중단한다. 로컬 색인·rawfile·다른 연결로 옮기기 전에는 사용자 승인을 받는다. 도구가 없거나 결과가 `VXvue AI 연결 실패`이면 그 원인과 할 일을 사용자에게 그대로 알린다. 자료를 읽었다고 주장하지 않는다. `connection.update_required`가 참이면 새 설치 파일 안내도 전한다.

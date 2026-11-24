@@ -5,6 +5,8 @@
     $Server = '__SERVER__'
     $Ticket = '__TICKET__'
     $SkillBase64 = '__SKILL_BASE64__'
+    $QAGuardBase64 = '__QA_GUARD_BASE64__'
+    $QAGuideBase64 = '__QA_GUIDE_BASE64__'
     $BridgeVersion = '__VERSION__'
     $ErrorActionPreference = 'Continue'
     [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -75,7 +77,16 @@
     if (Test-Path $skillFile) { $managed = ([IO.File]::ReadAllText($skillFile, $utf8)) -match 'vxvue-ai-managed' }
     if ($managed) {
         New-Item -ItemType Directory -Force -Path $skillDir | Out-Null
-        [IO.File]::WriteAllBytes($skillFile, [Convert]::FromBase64String($SkillBase64))
+        $skillText = $utf8.GetString([Convert]::FromBase64String($SkillBase64))
+        if (Test-Path -LiteralPath $skillFile) {
+            $previousSkill = [IO.File]::ReadAllText($skillFile, $utf8)
+            $overlay = [regex]::Match($previousSkill, '\r?\n<!-- qa-server-fallback:begin -->.*?<!-- qa-server-fallback:end -->\r?\n', [Text.RegularExpressions.RegexOptions]::Singleline)
+            if ($overlay.Success) { $skillText += $overlay.Value }
+        }
+        New-Item -ItemType Directory -Force -Path (Join-Path $skillDir 'scripts'), (Join-Path $skillDir 'references') | Out-Null
+        [IO.File]::WriteAllBytes((Join-Path $skillDir 'scripts\qa_document_guard.py'), [Convert]::FromBase64String($QAGuardBase64))
+        [IO.File]::WriteAllBytes((Join-Path $skillDir 'references\legacy-validation.md'), [Convert]::FromBase64String($QAGuideBase64))
+        [IO.File]::WriteAllText($skillFile, $skillText, $utf8)
         Say "Skill을 설치했습니다: $skillFile" 'Green'
     } else {
         Say "같은 이름의 다른 Skill이 있어 덮어쓰지 않았습니다: $skillFile" 'Yellow'

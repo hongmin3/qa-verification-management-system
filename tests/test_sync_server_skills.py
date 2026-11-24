@@ -96,6 +96,16 @@ def test_manifest_hash_mismatch_refuses_before_any_write(tmp_path):
     assert (root / 'alm/SKILL.md').read_text(encoding='utf-8') == 'old'
 
 
+def test_new_skill_cannot_be_installed_without_guard_files(tmp_path):
+    root = tmp_path / 'claude'
+    (root / 'alm').mkdir(parents=True)
+    (root / 'alm/SKILL.md').write_bytes(b'old')
+    fetch = fake_server({'alm': package('alm', {'SKILL.md': 'references/legacy-validation.md'})})
+    result = sync.sync(SERVER, [root], ['alm'], fetch=fetch, backup_root=tmp_path / 'backups')
+    assert result['status'] == 'FAILED'
+    assert (root / 'alm/SKILL.md').read_bytes() == b'old'
+
+
 @pytest.mark.parametrize('entry', ['../evil.md', 'other-skill/SKILL.md', '/abs.md'])
 def test_package_paths_must_stay_inside_the_skill(tmp_path, entry):
     buffer = io.BytesIO()

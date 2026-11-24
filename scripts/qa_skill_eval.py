@@ -42,8 +42,8 @@ class Case:
 
 
 BELLALUN_DOC = "(TC) Mammo System 연동 TestCase (개정).xlsx"
-VXVUE_DOC = "(사양서) VXvue 사양서2(261120).pdf"
-VXVUE_DOC_SHA12 = "6d88c1781860"
+VXVUE_DOC = "(사양서) VXvue 사양서2(261124).pdf"
+VXVUE_DOC_SHA12 = "4cf98cd75d45"
 BELLALUN_DICOM = "(매뉴얼) Bellalun Viewer DICOM Conformance Statement.V1.3W1_EN_수정_확인완료.docx"
 VXVUE_DICOM = "(매뉴얼) VXvue DICOM Conformance Statement.V4.4W5.docx"
 BELLALUN_WU = "(TC) R-25-782_Bellalun Viewer_Windows Update 호환성 검증 Checklist.xlsx"

@@ -62,6 +62,26 @@ def test_line_endings_alone_are_not_a_change(homes):
     assert homes["paths"]["claude"].read_bytes().count(b"\r\n") > 0
 
 
+def test_guard_resources_reach_all_managed_copies_and_preserve_overlay(homes):
+    from scripts.build_vxvue_desktop import skill_bytes
+    path = homes["paths"]["claude"]
+    overlay = b"\n<!-- qa-server-fallback:begin -->\nlocal\n<!-- qa-server-fallback:end -->\n"
+    path.write_bytes(skill("old") + overlay)
+    text, extras = sync.package_from_zip(skill_bytes())
+    result = run(homes, text, extras=extras)
+    assert len(result["updated"]) == 4
+    assert path.read_bytes().endswith(overlay)
+    for path in homes["paths"].values():
+        for rel, content in extras.items():
+            assert (path.parent / rel).read_bytes() == content
+    assert len(run(homes, text, extras=extras)["same"]) == 4
+
+
+def test_new_skill_without_guard_resources_is_rejected():
+    with pytest.raises(ValueError):
+        sync.package_from_zip(zipped({"vxvue-ai/SKILL.md": skill("references/legacy-validation.md")}))
+
+
 def test_unmanaged_skill_and_missing_copy_are_left_alone(homes):
     homes["paths"]["claude"].write_text("---\nname: vxvue-ai\n---\nmy own skill\n", encoding="utf-8")
     homes["paths"]["codex"].unlink()

@@ -165,6 +165,23 @@ def test_limits_reject_unbounded_settings(tmp_path):
             fb.probe(config, dict(FAST, **bad), 'http://127.0.0.1:1', repair=False)
 
 
+def test_local_socket_permission_denial_is_not_server_outage():
+    import errno
+    import urllib.error
+    denied = PermissionError(errno.EACCES, "socket access denied")
+    assert fb.classify(denied) == 'auth_error'
+    assert fb.classify(urllib.error.URLError(denied)) == 'auth_error'
+    state = fb.probe_target('target', lambda _: (_ for _ in ()).throw(denied), FAST)
+    assert state['state'] == 'auth_error' and state['attempts'] == 1
+
+
+def test_fallback_install_resources_match_canonical_guard():
+    resources = fb.guard_resources(SOURCE)
+    common = SOURCE.parents[1] / 'deploy/qa-validation'
+    assert set(resources) == {'scripts/qa_document_guard.py', 'references/legacy-validation.md'}
+    assert all(content.encode('utf-8') == (common / rel).read_bytes() for rel, content in resources.items())
+
+
 @pytest.mark.parametrize('status', [401, 403, 407])
 def test_auth_errors_stop_without_retry_or_fallback(tmp_path, server, status):
     """Validates: REQ-QACLIENTFALLBACK-001"""
@@ -244,6 +261,8 @@ def test_install_is_repeatable_and_preserves_identity(tmp_path):
     assert fb.is_link(claude) and claude.resolve() == codex.resolve()
     rendered = (codex / 'SKILL.md').read_text(encoding='utf-8')
     assert '{{' not in rendered and os.sys.executable.replace('\\', '/') in rendered
+    for rel in ('scripts/qa_document_guard.py', 'references/legacy-validation.md'):
+        assert (codex / rel).read_bytes() == (SOURCE.parents[1] / 'deploy/qa-validation' / rel).read_bytes()
     for cli in ('.codex', '.claude'):
         vx = (home / cli / 'skills/vxvue-ai/SKILL.md').read_bytes().decode()
         assert vx.startswith('---\nname: vxvue-ai\ndescription: x\n---\n<!-- vxvue-ai-managed: server -->\n# VXvue\n')

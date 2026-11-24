@@ -74,6 +74,9 @@ def unpack(name, data):
         files['/'.join(path.parts[1:])] = archive.read(info)
     if 'SKILL.md' not in files:
         raise SyncError(f'{name}: SKILL.md missing')
+    if b'references/legacy-validation.md' in files['SKILL.md'] and not {
+            'references/legacy-validation.md', 'scripts/qa_document_guard.py'} <= files.keys():
+        raise SyncError(f'{name}: QA validation resources missing')
     return files
 
 
@@ -122,7 +125,7 @@ def apply(name, files, target, *, check, backup_dir):
         backup = backup_dir / hashlib.sha256(str(target).encode()).hexdigest()[:12] / name
         shutil.copytree(target, backup, ignore=shutil.ignore_patterns('__pycache__'))
         record['backup'] = str(backup)
-    for rel in changed:
+    for rel in sorted(changed, key=lambda rel: rel == 'SKILL.md'):
         atomic_write(target / rel, wanted[rel])
     stale = [rel for rel in changed if (target / rel).read_bytes() != wanted[rel]]
     if stale:

@@ -7,7 +7,7 @@
 | 상위 사양 | [../SPEC.md](../SPEC.md) |
 | 기능 ID | `plm-skill` |
 | Document Version | 0.1.0 |
-| Last Updated | 2026-11-05 |
+| Last Updated | 2026-11-24 |
 | Status | implemented |
 
 목적과 범위를 읽은 뒤 5절에서 필요한 기능을 찾는다. 설치와 업무별 사용법은 앱의 상세 안내에서 제공한다.
@@ -68,6 +68,20 @@ QA 담당자가 Teamcenter의 산출물 등록·승인 준비·DHF 연결·WBS �
 
 **검증 범위** HTTP HEAD·영상 Range·health·파일 해시·CLI 조회와 1366·1920px 화면을 확인한다. 현재 운영 Teamcenter 쓰기와 자연어 자동 스킬 선택은 별도 검증이다. 영상은 10초 간격과 끝부분 표본이며 음성 전사와 모든 중간 동작 확인은 포함하지 않는다.
 
+### REQ-PLMSKILL-005 정기 보고서와 기존 기록 변경 검사
+
+**입력** 같은 제품·문서 유형의 이전 승인본, 이번 회차의 실제 시험 증거, 수정할 파일, 위치별 허용 변경 목록이다. 다른 제품의 등록 선례는 객체 유형·첨부 절차에만 쓴다.
+
+**순서** 원본과 수정본의 본문·표·머리글·바닥글 등 텍스트 및 구조를 읽어 위치별로 비교한다. 승인된 변경은 위치·이전 값·새 값·근거가 모두 맞아야 한다. 누락·추가·미사용 허용 항목도 실패로 처리한다. ALM의 기존 기록은 동일 ID·필드·단계·관계를 담은 전체 JSON 조회본을 같은 원리로 비교한다.
+
+**결과** 원본과 수정본 SHA256, 검토한 범위, 허용·예상 밖 차이와 위치, 종료값을 낸다. 실패하면 업로드하지 않는다. 원본을 수정하지 않는다. DOCX의 변경 추적과 지원하지 않는 의미 요소는 사람이 원문을 검토해야 한다.
+
+**등록 후** 같은 ID·리비전·교체 파일·체크인 상태를 재조회한다. 변환 PDF는 업로드 이후의 산출물인지 확인하고 페이지 수·필수 표기·전체 렌더링을 확인한다. PDF 텍스트와 비교 데이터가 없으면 완료 근거가 부족하다고 기록한다.
+
+**제공 경로** PLM·ALM·VXvue·Bellalun 설치 ZIP과 QA 서버 장애 대응 스킬에 같은 검사 도구를 담는다. XIPL 공용 문서를 쓰는 업무에서는 VXvue 또는 Bellalun 스킬의 도구를 사용한다.
+
+**지킬 것** 실행 증거에서 확인된 결과와 보고서용 표기 방식을 구분한다. 교육자료 장애, 운영 서버 장애, 브라우저 제어 연결 장애를 따로 판단한다. 저장 응답 불명확 시 재조회 전 재시도하지 않는다. 서명과 최종 승인은 사람에게 넘긴다.
+
 ## 11. 테스트 사양
 
 ### TEST-PLMSKILL-001 안내와 자료 연결
@@ -82,6 +96,10 @@ ZIP 구성·서버 설정·덮어쓰기 및 주소 거절을 확인한다. 합�
 
 게시한 모든 파일의 해시·크기, HTTP HEAD·영상 Range·health, ZIP의 읽기 도구와 1366·1920px 화면을 확인한다. Teamcenter 쓰기는 수행하지 않는다.
 
+### TEST-PLMSKILL-004 기존 문서 전체 대조와 공통 배포
+
+합성 DOCX·JSON의 지정 값 변경만 승인하고 임의 문구·표·머리글·삭제·추가·허용 목록 오류는 실패시키는지 확인한다. PDF 페이지·필수 문구 대조와 이미지 전용 PDF의 미확인 처리를 시험한다. 각 배포 ZIP에 같은 검사 도구와 절차가 포함되는지 확인한다. 실데이터를 변경하지 않는다.
+
 ## 12. 요구사항 추적성
 
 | Requirement | Implementation | Test | Status |
@@ -90,3 +108,4 @@ ZIP 구성·서버 설정·덮어쓰기 및 주소 거절을 확인한다. 합�
 | REQ-PLMSKILL-002 | `app/web/static/plm-ai/guide.js` | `tests/test_plm_skill_guide.py` | verified |
 | REQ-PLMSKILL-003 | `deploy/plm-skill/plm/SKILL.md`, `deploy/plm-skill/plm/scripts/knowledge.py`, `scripts/build_plm_skill.py` | `tests/test_plm_skill_package.py` | verified |
 | REQ-PLMSKILL-004 | `deploy/plm-skill/plm/references/browser-operations.md` | `tests/test_plm_skill_package.py`, TEST-PLMSKILL-003 | implemented |
+| REQ-PLMSKILL-005 | `deploy/qa-validation/scripts/qa_document_guard.py`, `deploy/qa-validation/references/legacy-validation.md`, `scripts/build_qa_skill_candidates.py` | `tests/test_qa_document_guard.py`, TEST-PLMSKILL-004 | implemented |

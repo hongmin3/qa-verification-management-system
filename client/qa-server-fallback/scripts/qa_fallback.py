@@ -68,9 +68,13 @@ def classify(exc):
         reason = exc.reason
         if isinstance(reason, ssl.SSLError):
             return 'integrity_error'
+        if isinstance(reason, PermissionError) or getattr(reason, 'winerror', None) == 10013:
+            return 'auth_error'
         return 'outage'
     if isinstance(exc, ssl.SSLError):
         return 'integrity_error'
+    if isinstance(exc, PermissionError) or getattr(exc, 'winerror', None) == 10013:
+        return 'auth_error'
     if isinstance(exc, (TimeoutError, socket.timeout, ConnectionError, OSError, http.client.HTTPException)):
         return 'outage'
     return 'server_error'
@@ -379,6 +383,9 @@ def check(config):
     spec, bodies, _ = overlay_spec(config)
     skill_dir = Path(config['fallback_skill']).parent
     problems = []
+    for rel in ('scripts/qa_document_guard.py', 'references/legacy-validation.md'):
+        if not (skill_dir / rel).is_file():
+            problems.append('공통 변경 검사 파일 없음: ' + rel)
     links = []
     for root in config['skill_roots']:
         candidate = Path(root) / SKILL_NAME
@@ -458,6 +465,16 @@ def default_config(home, python, server_base, roots):
     }
 
 
+def guard_resources(source):
+    source = Path(source).resolve()
+    common = source.parents[1] / 'deploy/qa-validation'
+    resources = {}
+    for rel in ('scripts/qa_document_guard.py', 'references/legacy-validation.md'):
+        bundled = source / rel
+        resources[rel] = (bundled if bundled.is_file() else common / rel).read_bytes().decode('utf-8')
+    return resources
+
+
 def install(home=None, python=None, server_base=DEFAULT_SERVER, roots=None, source=PACKAGE):
     home = Path(home or Path.home())
     roots = dict(roots or {})
@@ -476,14 +493,15 @@ def install(home=None, python=None, server_base=DEFAULT_SERVER, roots=None, sour
         'scripts/qa_fallback.py': (Path(source) / 'scripts/qa_fallback.py').read_text(encoding='utf-8'),
         'fallback-config.json': json.dumps(config, ensure_ascii=False, indent=2) + '\n',
     }
+    rendered.update(guard_resources(source))
     backups, changed = [], []
-    if skill_dir.exists() and any(not (skill_dir / k).is_file() or (skill_dir / k).read_text(encoding='utf-8') != v for k, v in rendered.items()):
+    if skill_dir.exists() and any(not (skill_dir / k).is_file() or (skill_dir / k).read_bytes() != v.encode('utf-8') for k, v in rendered.items()):
         target = Path(config['state_dir']) / 'backups' / datetime.now().strftime('%Y%m%dT%H%M%S') / SKILL_NAME
         shutil.copytree(skill_dir, target, ignore=shutil.ignore_patterns('__pycache__'))
         backups.append(str(target))
     for rel, text in rendered.items():
         path = skill_dir / rel
-        if not path.is_file() or path.read_text(encoding='utf-8') != text:
+        if not path.is_file() or path.read_bytes() != text.encode('utf-8'):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(text.encode('utf-8'))
             changed.append(str(path))

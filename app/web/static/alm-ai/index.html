@@ -21,7 +21,7 @@
     <p class="lead">이슈 등록·수정·댓글은 각자 PC의 개인 PAT로 처리합니다. TC 등록·SRS 연결·Test Run·문서 등의 화면 작업에는 로그인된 Edge·Chrome을 사용합니다. 저장 뒤 같은 ID에서 결과를 확인합니다.</p>
     <div class="actions"><a class="button primary" href="#work-examples">실제로 맡길 작업 보기</a>
       <a id="guide-link" class="button" data-asset="index.html" aria-disabled="true">상세 사용 가이드 열기</a>
-      <a class="button" href="/static/skills/alm/releases/1.4.2/alm-skill.zip" download="alm-skill.zip">ALM 스킬 1.4.2 다운로드</a>
+      <a class="button" href="/static/skills/alm/releases/1.6.0/alm-skill.zip" download="alm-skill.zip">ALM 스킬 1.6.0 다운로드</a>
       <a id="skill-download" class="button" data-asset="alm-skill.zip" aria-disabled="true" download="alm-skill.zip">교육 자료 판의 스킬 ZIP</a>
     </div>
     <p class="small">설치 없이 가이드와 영상을 바로 볼 수 있습니다. AI와 함께 사용하려면 아래 설치 방법을 따르세요.</p>
@@ -97,8 +97,8 @@ Import·SRS verifies 연결·[표준 문서] 기준 문서 편입·전체 재조
 Excel을 사용하면 신규 Import가 아니라 기존 ID를 유지하는 Roundtrip인지 먼저 확인해줘.</pre>
 <h4>수행할 범위</h4><ol>
 <li>ID로 현재 항목과 상태·원래 값을 확인한다. 이미 값이 바뀌었으면 전후표와 충돌을 확인한다.</li>
-<li>허용된 필드만 수정한다. Roundtrip이면 내보낸 ID·행 구조와 현재 매핑을 보존한다.</li>
-<li>저장 뒤 같은 ID의 변경값·변경하지 않은 단계·관계·이력을 대조하고 추가 생성 여부를 확인한다.</li>
+<li>전체 기존 TC를 JSON으로 읽고 위치별 허용 변경 목록과 비교 도구로 수정 준비본을 검사한다. Roundtrip이면 내보낸 ID·행 구조와 현재 매핑을 보존한다.</li>
+<li>저장 뒤 같은 ID의 전체 변경값·변경하지 않은 단계·관계·이력을 동일 허용 목록으로 다시 대조하고 추가 생성 여부를 확인한다.</li>
 </ol><h4>결과 보고 형식</h4><pre class="case-result">대상: [TC ID / URL]
 변경: [필드 / 이전 값 / 저장된 값]
 보존: [단계 수·Step/Expected 대응·문서·실행 이력]

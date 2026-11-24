@@ -125,7 +125,7 @@ def test_guide_and_bundle_are_unauthenticated_but_contain_no_token(server):
     skill = client.get("/vxvue-desktop/skill.zip")
     assert skill.status_code == 200
     with zipfile.ZipFile(io.BytesIO(skill.content)) as archive:
-        assert archive.namelist() == ["vxvue-ai/SKILL.md"]
+        assert set(archive.namelist()) == {"vxvue-ai/SKILL.md", "vxvue-ai/scripts/qa_document_guard.py", "vxvue-ai/references/legacy-validation.md"}
         assert b"2024980" not in archive.read("vxvue-ai/SKILL.md")
 
 

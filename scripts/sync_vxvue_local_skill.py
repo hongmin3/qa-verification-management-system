@@ -27,6 +27,7 @@ import zipfile
 
 MARKER = b"vxvue-ai-managed"
 ZIP_ENTRY = "vxvue-ai/SKILL.md"
+GUARD_FILES = ("scripts/qa_document_guard.py", "references/legacy-validation.md")
 MAX_ZIP_BYTES = 1_000_000
 FETCH_TIMEOUT = 3
 RETRY_AFTER_FAILURE = 30 * 60
@@ -121,6 +122,16 @@ def skill_from_zip(data):
     return text
 
 
+def package_from_zip(data):
+    text = skill_from_zip(data)
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        extras = {rel: archive.read("vxvue-ai/" + rel) for rel in GUARD_FILES
+                  if "vxvue-ai/" + rel in archive.namelist()}
+    if b"references/legacy-validation.md" in text and set(extras) != set(GUARD_FILES):
+        raise ValueError("QA 검증 도구와 참조 문서가 모두 포함되어야 합니다.")
+    return text, extras
+
+
 def _load_state(state_dir):
     state = _json(state_dir / "skill-sync-state.json")
     return state if isinstance(state, dict) else {}
@@ -146,12 +157,19 @@ def _backup(state_dir, label, data):
         old.unlink()
 
 
-def sync(data, *, claude_dir, codex_dir, state_dir, force=False):
+def sync(data, *, claude_dir, codex_dir, state_dir, force=False, extras=None):
     """Replace managed copies that differ from `data`; a copy edited on this PC since the last sync is kept."""
     state = _load_state(state_dir)
     applied = state.setdefault("applied", {})
     wanted = digest(data)
     result = {"updated": [], "same": [], "skipped": [], "local_edits": []}
+    try:
+        from .sync_server_skills import split_overlay
+    except ImportError:
+        from sync_server_skills import split_overlay
+    extras = extras or {}
+    if set(extras) - set(GUARD_FILES):
+        raise ValueError("지원하지 않는 Skill 추가 파일입니다.")
     for label, path in targets(claude_dir, codex_dir):
         key = str(path)
         if not path.is_file():
@@ -161,15 +179,28 @@ def sync(data, *, claude_dir, codex_dir, state_dir, force=False):
         if MARKER not in current:
             result["skipped"].append((label, "관리 표시 없음"))
             continue
-        if digest(current) == wanted:
-            result["same"].append(label)
-        elif key in applied and applied[key] != digest(current) and not force:
+        base, overlay = split_overlay(normalized(current))
+        if digest(base) != wanted and key in applied and applied[key] not in (digest(base), digest(current)) and not force:
             result["local_edits"].append(label)
             continue
-        else:
+        resource_changed = False
+        for rel, content in extras.items():
+            target = path.parent / rel
+            if not target.is_file() or target.read_bytes() != content:
+                if target.is_file():
+                    _backup(state_dir, label + "-" + rel.replace("/", "-"), target.read_bytes())
+                _write(target, content)
+                if target.read_bytes() != content:
+                    raise OSError("Skill 추가 파일 재조회 불일치: " + rel)
+                resource_changed = True
+        if digest(base) != wanted:
             _backup(state_dir, label, current)
-            _write(path, data)
+            _write(path, data + overlay)
             result["updated"].append(label)
+        elif resource_changed:
+            result["updated"].append(label)
+        else:
+            result["same"].append(label)
         applied[key] = wanted
     state.update(server_sha256=wanted, synced_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     state.pop("last_failure", None)
@@ -283,13 +314,13 @@ def main(argv=None):
                 outcome = "no server address"
             else:
                 try:
-                    data = skill_from_zip(fetch(server, FETCH_TIMEOUT))
+                    data, extras = package_from_zip(fetch(server, FETCH_TIMEOUT))
                 except (OSError, ValueError) as exc:
                     state["last_failure"] = time.time()
                     _save_state(state_dir, state)
                     outcome = f"server unavailable: {exc}"
                 else:
-                    result = sync(data, claude_dir=claude_dir, codex_dir=codex_dir, state_dir=state_dir)
+                    result = sync(data, claude_dir=claude_dir, codex_dir=codex_dir, state_dir=state_dir, extras=extras)
                     outcome = summary(result).splitlines()[0]
                     message = hook_message(result)
                     if message:
@@ -311,11 +342,11 @@ def main(argv=None):
         print("서버 주소를 찾지 못했습니다. --server로 지정하세요.", file=sys.stderr)
         return 2
     try:
-        data = skill_from_zip(fetch(server, 10))
+        data, extras = package_from_zip(fetch(server, 10))
     except (OSError, ValueError) as exc:
         print(f"서버 Skill을 받지 못해 아무 사본도 바꾸지 않았습니다: {exc}", file=sys.stderr)
         return 1
-    result = sync(data, claude_dir=claude_dir, codex_dir=codex_dir, state_dir=state_dir, force=args.force)
+    result = sync(data, claude_dir=claude_dir, codex_dir=codex_dir, state_dir=state_dir, force=args.force, extras=extras)
     print(f"서버: {server}\n{summary(result)}")
     return 3 if result["local_edits"] else 0
 

@@ -86,6 +86,7 @@ Skill의 서버 조회가 실패했거나 서버 도구가 보이지 않을 때 
 | 정상 응답, 해시 일치 | `ok` | 서버 |
 | 연결 거부·제한 시간 초과·주소 찾기 실패·5xx | `outage` | 로컬(묻지 않음) |
 | 401·403·407 | `auth_error` | 중단 |
+| PC 소켓 접근 권한 거부(PermissionError, Windows 10013) | `auth_error` | 중단 |
 | 형식 오류·해시 불일치 | `integrity_error` | 중단 |
 | 그 밖의 4xx | `server_error` | 중단 |
 

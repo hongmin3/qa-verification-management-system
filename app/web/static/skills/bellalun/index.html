@@ -4,7 +4,7 @@
 <style>body{font:16px/1.85 system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 22px;color:#203044}h1{line-height:1.4}h2{margin-top:40px;border-bottom:2px solid #dce5ed;padding-bottom:6px}a{color:#1457a0}pre,code{overflow-wrap:anywhere;white-space:pre-wrap}pre,.note{background:#eef4fa;padding:16px;border-radius:10px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd7e2;text-align:left;padding:10px;vertical-align:top}th{background:#eef4fa}li{margin:9px 0}@media(max-width:600px){body{margin:24px auto}table{font-size:14px}}</style><link rel="stylesheet" href="/static/skills/examples.css">
 </head>
 <body><p><a href="/static/skills/index.html">스킬 관리</a> · <a href="/static/skills/bellalun/updates.html">업데이트·개선 사항</a> · <a href="/vxvue-desktop">서버 연결 설치 안내</a></p>
-<h1>Bellalun AI 설치·사용 가이드</h1>
+<h1>Bellalun AI 설치·사용 가이드</h1><p class="note">정기 보고서 작성 시 동일 제품의 이전 승인본과 현재 회차 실제 시험값을 구분하고, Skill에 함께 제공되는 위치별 허용 변경 검사와 페이지별 렌더링 확인을 수행합니다.</p>
 <p>Bellalun Viewer의 사양서·매뉴얼·기존 TC와 최신 통합 QA 지침을 QA 서버에서 찾아 근거와 함께 답합니다. 개인 PC에 지식파일을 복사할 필요 없이 사내 파트원이 같은 자료 판을 사용합니다.</p>
 <p class="note">연결 프로그램의 표시 이름은 <strong>VXvue AI</strong>입니다. 이 연결에 Bellalun 전용 도구를 함께 제공합니다. Bellalun 질문에는 <code>bellalun_</code> 도구와 Bellalun QA 지침을 사용합니다.</p>
 <nav><a href="#install">설치</a> · <a href="#first">첫 질문</a> · <a href="#work-examples">상세 업무 사례</a> · <a href="#examples">기본 질문</a> · <a href="#sync">최신화</a> · <a href="#limits">지원 범위</a> · <a href="#help">문제 해결</a></nav>
@@ -12,7 +12,7 @@
 <h3>Claude Desktop</h3><ol>
 <li>이미 VXvue AI 확장을 사용한다면 확장을 껐다 켜고 새 대화를 엽니다. 신규 사용자는 <a href="/vxvue-desktop/download">공용 서버 확장(.mcpb)</a>을 직접 받습니다. PC 등록 번호가 있으므로 받은 파일을 다른 사람에게 전달하지 않습니다.</li>
 <li>Claude Desktop의 설정 → 확장 프로그램 → 고급 설정 → 확장 프로그램 설치에서 받은 파일을 설치합니다. 자세한 화면 순서는 <a href="/vxvue-desktop#desktop">연결 설치 안내</a>에 있습니다.</li>
-<li><a href="/static/skills/bellalun/releases/2026-11-20.1/bellalun-server-ai-skill.zip" download="bellalun-server-ai-skill.zip">Bellalun 서버 Skill ZIP</a>을 받아 사용자 지정(Customize) → Skills → + → 스킬 만들기 → 스킬 업로드에서 등록하고 켭니다.</li>
+<li><a href="/static/skills/bellalun/releases/2026-11-24.1/bellalun-server-ai-skill.zip" download="bellalun-server-ai-skill.zip">Bellalun 서버 Skill ZIP</a>을 받아 사용자 지정(Customize) → Skills → + → 스킬 만들기 → 스킬 업로드에서 등록하고 켭니다.</li>
 </ol>
 <h3>Claude Code</h3><p><a href="/vxvue-desktop#cli">기존 공용 연결 설치 안내</a>의 PowerShell 명령으로 사용자 범위 연결을 설치합니다. 서버 주소나 키를 수동 복사하지 않습니다. 위 Skill ZIP의 <code>bellalun-server-ai</code> 폴더를 <code>~/.claude/skills/</code> 아래에 풀고 Claude Code를 새로 시작합니다.</p>
 <h3>Codex</h3><p>기존에 연결한 <strong>VXvue AI (QA 서버)</strong> 플러그인을 활성화하고 연결을 다시 불러옵니다. 위 ZIP의 <code>bellalun-server-ai</code> 폴더를 사용자 스킬 위치인 <code>~/.agents/skills/</code> 아래에 풀고 새 작업에서 <code>$bellalun-server-ai</code>를 호출합니다. 기존 설치가 <code>~/.codex/skills/</code>를 사용하는 환경은 그 위치를 유지할 수 있습니다. 서버 연결이 아직 없다면 관리자가 제공하는 기존 QA 서버 연결을 먼저 설치해야 합니다. Skill ZIP만으로 서버 연결이 생기지는 않습니다. <a href="https://learn.chatgpt.com/docs/build-skills">공식 Skill 설치 위치 안내</a>도 참고하세요.</p>

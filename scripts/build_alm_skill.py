@@ -6,9 +6,11 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import zipfile
 
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 SOURCE = Path(__file__).resolve().parents[1] / "deploy/alm-skill/alm"
 FILES = ("SKILL.md", "agents/openai.yaml", "scripts/knowledge.py", "references/browser-operations.md", "references/work-examples.md", "references/checklist-registration.md", "references/local-issue-api.md", "references/existing-tc-update.md")
+COMMON = SOURCE.parents[1] / "qa-validation"
+COMMON_FILES = ("scripts/qa_document_guard.py", "references/legacy-validation.md")
 
 
 def build_skill(server_url, output):
@@ -32,6 +34,8 @@ def build_skill(server_url, output):
     with zipfile.ZipFile(output, "x", zipfile.ZIP_DEFLATED) as archive:
         for name in FILES:
             archive.write(SOURCE / name, "alm/" + name)
+        for name in COMMON_FILES:
+            archive.write(COMMON / name, "alm/" + name)
         archive.writestr("alm/server.json", json.dumps(config, ensure_ascii=False, indent=2))
     body = output.read_bytes()
     return {"skill_version": VERSION, "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}

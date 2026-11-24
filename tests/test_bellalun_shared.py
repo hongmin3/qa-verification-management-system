@@ -289,17 +289,16 @@ def test_bellalun_download_contains_portable_skill(shared):
     response = client.get('/vxvue-desktop/bellalun-skill.zip')
     assert response.status_code == 200
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        assert archive.namelist() == ['bellalun-server-ai/SKILL.md']
+        assert set(archive.namelist()) == {'bellalun-server-ai/SKILL.md', 'bellalun-server-ai/scripts/qa_document_guard.py', 'bellalun-server-ai/references/legacy-validation.md'}
         text = archive.read(archive.namelist()[0]).decode('utf8')
     assert 'bellalun_get_workflow' in text and 'C:/Users/' not in text
     guide = Path(__file__).parents[1] / 'app/web/static/skills/bellalun/index.html'
     text = guide.read_text(encoding='utf8')
     for word in ('Claude Desktop', 'Claude Code', 'Codex', 'bellalun_get_status', 'Redmine', '동기화'):
         assert word in text
-    release = guide.parent / 'releases/2026-11-20.1/bellalun-server-ai-skill.zip'
-    with zipfile.ZipFile(release) as archive, zipfile.ZipFile(io.BytesIO(response.content)) as dynamic:
-        assert archive.namelist() == dynamic.namelist()
-        assert all(archive.read(name) == dynamic.read(name) for name in archive.namelist())
+    release_path = 'releases/2026-11-24.1/bellalun-server-ai-skill.zip'
+    assert f'/static/skills/bellalun/{release_path}' in text
+    assert response.content == (guide.parent / release_path).read_bytes()
 
 
 def test_bellalun_export_ignores_adapter_checkout_line_endings(tmp_path, monkeypatch):

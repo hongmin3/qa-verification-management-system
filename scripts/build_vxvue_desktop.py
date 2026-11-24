@@ -30,11 +30,13 @@ def _ticket(ticket):
     return ticket
 
 
-def _zip(entries):
+def _zip(entries, *, create_system=None):
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, content in entries:
             info = zipfile.ZipInfo(name, date_time=STAMP)
+            if create_system is not None:
+                info.create_system = create_system
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, content)
     return output.getvalue()
@@ -60,7 +62,20 @@ def skill_text():
 
 
 def skill_bytes():
-    return _zip((("vxvue-ai/SKILL.md", skill_text()),))
+    # Use the same ZIP metadata as the Windows release file on the Linux server.
+    return _zip((("vxvue-ai/SKILL.md", skill_text()), *qa_guard_entries("vxvue-ai")), create_system=0)
+
+
+def qa_guard_entries(name):
+    common = SOURCE.parent / "qa-validation"
+    return tuple((name + "/" + rel, (common / rel).read_bytes().replace(b"\r\n", b"\n"))
+                 for rel in ("scripts/qa_document_guard.py", "references/legacy-validation.md"))
+
+
+def bellalun_skill_bytes():
+    source = SOURCE.parent / "bellalun-skill/bellalun-server-ai/SKILL.md"
+    return _zip((("bellalun-server-ai/SKILL.md", source.read_bytes().replace(b"\r\n", b"\n")),
+                 *qa_guard_entries("bellalun-server-ai")), create_system=0)
 
 
 def installer_text(server_url, ticket):
@@ -68,6 +83,8 @@ def installer_text(server_url, ticket):
     template = (SOURCE / "install-claude-code.ps1").read_text(encoding="utf-8")
     return (template.replace("__SERVER__", _server(server_url)).replace("__TICKET__", _ticket(ticket))
             .replace("__SKILL_BASE64__", base64.b64encode(skill_text()).decode("ascii"))
+            .replace("__QA_GUARD_BASE64__", base64.b64encode(qa_guard_entries("vxvue-ai")[0][1]).decode("ascii"))
+            .replace("__QA_GUIDE_BASE64__", base64.b64encode(qa_guard_entries("vxvue-ai")[1][1]).decode("ascii"))
             .replace("__VERSION__", BRIDGE_VERSION))
 
 

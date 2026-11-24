@@ -8,6 +8,8 @@ description: Bellalun Viewer 사양·매뉴얼·TC·Issue·Redmine·DICOM·Mammo
 개인 PC 경로가 필요 없는 서버형 Bellalun Skill이다. 최신 업무 규칙은 서버에서 매번 받는다.
 Bellalun 작업의 기본 스킬이다. 로컬 bellalun-ai·bellalun-local-knowledge는 사용자가 로컬 지식 폴더·로컬 스크립트·로컬 Redmine 상세 내보내기·스킬 원본 수정을 명시한 작업에만 쓴다.
 
+정기 보고서·기존 TC/문서 수정에는 공통 [검증 절차](references/legacy-validation.md)를 읽고 동일 제품의 이전 승인본과 이번 회차 증거를 구분한다. 기존 문구·버전 표기 방식·표 구조를 유지하고 실제 환경·시험값만 근거에 따라 변경한다. 상세 설치 빌드를 보고서 제품 버전으로 확대하지 않는다. 위치별 허용 변경과 전체 비교를 통과한 파일만 PLM/ALM의 별도 등록 절차로 넘긴다.
+
 1. 연결된 QA 서버(VXvue AI)의 `bellalun_get_status`에서 문서 목록·해시·추출 한계와 `snapshot_id`를 받는다. timeout이면 1초 간격 총 3회까지 시도한다. 실패하면 원인·확인사항을 알리고 중단하며 로컬 자료로 전환하기 전에 사용자에게 묻는다.
 2. 업무 목적에 맞는 유형(spec·tc·issue·doc·verify·release·mail·integ·auto·meta)을 선택한다. 제품 기능·DICOM 기술 조건·SOP Class·UID 등 사양 확인은 근거가 매뉴얼이나 DOCX여도 `spec`이다. 문서 작성·편집 요청에는 `doc`을 쓴다. 선택한 `bellalun_get_workflow(snapshot_id=..., section=작업 유형)`를 읽는다. 유형 section은 core와 선행 규칙을 포함하므로 core를 따로 먼저 읽지 않는다. 유형을 정할 수 없을 때만 section="core"로 목차를 읽고 이후 유형 section은 `exclude_core=true`로 읽는다. 지침 응답의 `next_offset`이 숫자이면 그 값을 `offset`에 넣고 같은 `snapshot_id`·`section`·`exclude_core`로 바로 이어 읽는다. 복합 작업은 두 번째 유형부터 `exclude_core=true`로 읽고, 지침 자체를 개편할 때만 section="full" 전문을 읽는다. 과거 판의 legacy_fallback이면 전문을 읽는다. 최신 원문·현재 요청을 적용하고 과거 판정을 재사용하지 않는다.
 3. 지침 응답이 `truncated=false`, `next_offset=null`에 도달한 뒤 검색·원문·TC·이슈 도구를 호출한다. `bellalun_search_documents`로 실제 UI명·동의어·SRS·조건을 여러 번 검색하고 사양·매뉴얼·TC를 대조한다. 같은 작업에는 같은 Bellalun 판을 사용한다. 검색 없음은 미지원이 아니다.
