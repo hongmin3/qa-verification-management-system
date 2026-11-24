@@ -13,6 +13,7 @@
     "tests/test_skill_knowledge.py",
     "tests/test_xipl_shared.py",
     "tests/test_sync_server_skills.py",
+    "tests/test_qa_server_fallback.py",
     "tests/test_hidden_schedule.py"
   ]
 }

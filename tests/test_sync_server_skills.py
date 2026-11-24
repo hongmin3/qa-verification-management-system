@@ -115,3 +115,36 @@ def test_one_failed_skill_does_not_block_the_others(tmp_path):
     assert result['status'] == 'FAILED'
     assert result['skills']['vxvue-ai']['status'] == 'FAILED'
     assert (root / 'plm/SKILL.md').read_text(encoding='utf-8') == 'new'
+
+
+BLOCK = '\n<!-- qa-server-fallback:begin -->\n## 장애 시\n로컬 전환\n<!-- qa-server-fallback:end -->\n'
+
+
+def test_fallback_block_alone_is_not_a_difference(tmp_path):
+    """Validates: REQ-QACLIENTFALLBACK-005"""
+    root = tmp_path / 'codex'
+    (root / 'alm').mkdir(parents=True)
+    (root / 'alm/SKILL.md').write_bytes(('server text\n' + BLOCK).encode())
+    fetch = fake_server({'alm': package('alm', {'SKILL.md': 'server text\n'})})
+    result = sync.sync(SERVER, [root], ['alm'], fetch=fetch, backup_root=tmp_path / 'backups', check=True)
+    assert result['skills']['alm']['status'] == 'UNCHANGED'
+    result = sync.sync(SERVER, [root], ['alm'], fetch=fetch, backup_root=tmp_path / 'backups')
+    assert result['skills']['alm']['status'] == 'UNCHANGED'
+    assert not (tmp_path / 'backups').exists()
+
+
+def test_server_update_keeps_fallback_block(tmp_path):
+    """Validates: REQ-QACLIENTFALLBACK-005"""
+    roots = [tmp_path / 'claude', tmp_path / 'codex']
+    for root in roots:
+        (root / 'vxvue-ai').mkdir(parents=True)
+        (root / 'vxvue-ai/SKILL.md').write_bytes(('old\n' + BLOCK).encode())
+    fetch = fake_server({'vxvue-ai': package('vxvue-ai', {'SKILL.md': 'new\n', 'extra.md': 'x'})})
+    result = sync.sync(SERVER, roots, ['vxvue-ai'], fetch=fetch, backup_root=tmp_path / 'backups')
+    assert result['skills']['vxvue-ai']['status'] == 'UPDATED'
+    for root in roots:
+        text = (root / 'vxvue-ai/SKILL.md').read_bytes().decode()
+        assert text == 'new\n' + BLOCK
+        assert text.count('qa-server-fallback:begin') == 1
+        assert (root / 'vxvue-ai/extra.md').read_text(encoding='utf-8') == 'x'
+    assert sync.split_overlay(('new\n' + BLOCK).encode()) == (b'new\n', BLOCK.encode())

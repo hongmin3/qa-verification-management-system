@@ -89,8 +89,31 @@ def atomic_write(path, data):
             os.unlink(temp)
 
 
+OVERLAY_BEGIN = b'\n<!-- qa-server-fallback:begin -->'
+OVERLAY_END = b'<!-- qa-server-fallback:end -->\n'
+
+
+def split_overlay(data):
+    """(server part, this PC's fallback block). The block is local-only and survives sync (REQ-QACLIENTFALLBACK-005)."""
+    start = data.find(OVERLAY_BEGIN)
+    if start < 0:
+        return data, b''
+    end = data.find(OVERLAY_END, start)
+    if end < 0:
+        return data, b''
+    end += len(OVERLAY_END)
+    return data[:start] + data[end:], data[start:end]
+
+
+def desired(path, data):
+    if not path.is_file():
+        return data
+    return data + split_overlay(path.read_bytes())[1]
+
+
 def apply(name, files, target, *, check, backup_dir):
-    changed = sorted(rel for rel, data in files.items()
+    wanted = {rel: desired(target / rel, data) for rel, data in files.items()}
+    changed = sorted(rel for rel, data in wanted.items()
                      if not (target / rel).is_file() or (target / rel).read_bytes() != data)
     record = {'path': str(target), 'changed': changed}
     if not changed or check:
@@ -100,8 +123,8 @@ def apply(name, files, target, *, check, backup_dir):
         shutil.copytree(target, backup, ignore=shutil.ignore_patterns('__pycache__'))
         record['backup'] = str(backup)
     for rel in changed:
-        atomic_write(target / rel, files[rel])
-    stale = [rel for rel in changed if (target / rel).read_bytes() != files[rel]]
+        atomic_write(target / rel, wanted[rel])
+    stale = [rel for rel in changed if (target / rel).read_bytes() != wanted[rel]]
     if stale:
         raise SyncError(f'{name}: readback mismatch {stale}')
     return record

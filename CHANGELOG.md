@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-11-24 QA 서버 장애 시 로컬 전환
+
+- REQ-QACLIENTFALLBACK-001: 서버 연결을 3회(1초 간격, 시도당 5초, 전체 30초 이내)만 다시 확인해 서버 장애이면 제품별로 로컬 모드를 정한다. 인증 실패·권한 거부·해시 불일치·그 밖의 서버 오류는 로컬로 우회하지 않고 멈춘다.
+- REQ-QACLIENTFALLBACK-002: VXvue·XIPL·Bellalun 로컬 자료를 기존 Bellalun 검색 엔진으로 찾고 원문 위치를 근거로 돌려준다. 제품마다 지식 폴더와 캐시를 나누고, 지난 판 폴더와 다른 프로젝트 파일은 빼며, 판 표기·수정일·빠진 자료를 함께 보여 준다.
+- REQ-QACLIENTFALLBACK-003: ALM·PLM은 교육자료 장애가 개인 PAT·로그인 브라우저 작업을 막지 않게 하고, 빠진 자료를 인터넷 자료로 채우지 않도록 Skill별 이용 범위를 정했다.
+- REQ-QACLIENTFALLBACK-004: 공통 Skill을 Codex에 설치하고 Claude에는 Junction으로 연결한다. 서버 Skill 6종 끝과 두 CLI 전역 지침에 같은 안내 블록을 백업 후 넣고 `check`로 점검한다.
+- REQ-QACLIENTFALLBACK-005: 서버 Skill 동기화가 이 PC의 보충 블록을 지우지 않는다. 블록만 다른 사본은 변경 없음으로 본다.
+
 ## 2026-11-20 ALM 스킬 1.5.0 등록본 갱신 절차
 
 - REQ-ALMSKILL-003: 등록된 Checklist TC를 최신 원본에 맞추는 절차(`references/existing-tc-update.md`)를 추가했다. Test Steps·Test Data의 개인 PAT SOAP 경로, 필드 화면 표시 확인, 저장 시 문자 변형, Main TC 병합 TC 분류 규칙을 담고 등록 검증에 Test Data 실제 값 대조를 넣었다.

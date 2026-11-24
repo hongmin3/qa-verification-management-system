@@ -8870,6 +8870,7 @@ CLI 출력은 `[제품] 상태 — 상세` 한 줄로 시작한다. 이어서 "�
 | XIPL 공용 문서 조회 | [specs/xipl-shared.md](specs/xipl-shared.md) | verified |
 | Bellalun 공용 서버 지식과 Skill | [specs/bellalun-shared.md](specs/bellalun-shared.md) | verified |
 | PLM 스킬 안내 | [specs/plm-skill.md](specs/plm-skill.md) | implemented |
+| QA 서버 장애 시 로컬 전환 | [specs/qa-client-fallback.md](specs/qa-client-fallback.md) | verified |
 
 <!-- spec-index: end -->
 

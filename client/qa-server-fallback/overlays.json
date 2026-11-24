@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "begin": "<!-- qa-server-fallback:begin -->",
+  "end": "<!-- qa-server-fallback:end -->",
+  "skills": {
+    "alm": "## QA 서버 장애 시 (이 PC 보충)\n\n교육자료 서버(`knowledge.py`) 조회가 연결 실패·timeout·5xx로 실패하면 `{{FALLBACK_SKILL}}`을 읽고 그 `probe`로 장애를 확인한다. 장애로 판정되면 묻지 않고 그 파일의 ALM 로컬 범위를 따른다. 교육자료 장애는 개인 PAT 이슈 작업과 로그인 브라우저 작업을 막지 않는다. 교육자료가 필요한 판단은 `교육자료 미확인(서버 장애)`로 남긴다. 인증·권한·해시 오류는 장애가 아니므로 위 본문대로 멈춘다.",
+    "plm": "## QA 서버 장애 시 (이 PC 보충)\n\n교육자료 서버(`knowledge.py`) 조회가 연결 실패·timeout·5xx로 실패하면 `{{FALLBACK_SKILL}}`을 읽고 그 `probe`로 장애를 확인한다. 장애로 판정되면 묻지 않고 로그인된 Teamcenter 브라우저와 이 폴더의 `references/`로 작업한다. 최신 교육자료가 필요한 판단은 `교육자료 미확인(서버 장애)`로 남긴다. 인증·권한·해시 오류는 장애가 아니므로 위 본문대로 멈춘다.",
+    "vxvue-ai": "## QA 서버 장애 시 (이 PC 보충)\n\n`get_status`·`xipl_get_status`가 3회 실패하거나 VXvue AI 도구가 세션에 없으면 `{{FALLBACK_SKILL}}`을 읽고 그 `probe`로 장애를 확인한다. 장애로 판정되면 위 1번의 \"로컬로 옮기기 전 사용자 승인\"과 XIPL의 \"로컬 사본으로 임의 대체하지 않는다\"는 이미 받은 승인으로 갈음하고, 그 파일의 VXvue·XIPL 로컬 절차(로컬 판·누락 표시 포함)를 따른다. 인증·권한·해시 오류는 장애가 아니므로 위 본문대로 멈춘다.",
+    "bellalun-server-ai": "## QA 서버 장애 시 (이 PC 보충)\n\n`bellalun_get_status`가 3회 실패하거나 `bellalun_` 도구가 세션에 없으면 `{{FALLBACK_SKILL}}`을 읽고 그 `probe`로 장애를 확인한다. 장애로 판정되면 위 1번의 \"로컬 자료로 전환하기 전에 사용자에게 묻는다\"는 이미 받은 승인으로 갈음하고 `bellalun-local-knowledge` Skill과 로컬 `bellalun-ai` MCP로 바꾼다. XIPL은 같은 파일의 XIPL 로컬 절차를 따른다. 인증·권한·해시 오류는 장애가 아니므로 위 본문대로 멈춘다.",
+    "bellalun-ai": "## QA 서버 장애 시 (이 PC 보충)\n\n서버 기준 `bellalun-server-ai`가 QA 서버 장애로 판정되면(`{{FALLBACK_SKILL}}`의 `probe`) 사용자가 \"로컬\"을 말하지 않아도 이 로컬 스킬을 쓴다. XIPL 공용 서버도 같은 장애이면 위 XIPL 문단의 \"로컬 사본으로 임의 대체하지 않는다\" 대신 그 파일의 XIPL 로컬 절차를 따르고 로컬 판·미조회 범위를 밝힌다.",
+    "bellalun-local-knowledge": "## QA 서버 장애 시 (이 PC 보충)\n\n서버 기준 `bellalun-server-ai`가 QA 서버 장애로 판정되면(`{{FALLBACK_SKILL}}`의 `probe`) 사용자가 \"로컬\"을 말하지 않아도 이 Skill과 로컬 `bellalun-ai` MCP를 쓴다. 답 첫 줄에 로컬 모드와 사용한 판을 적는다. XIPL 공용 서버도 같은 장애이면 위 \"로컬 사본으로 임의 대체하지 않는다\" 대신 그 파일의 XIPL 로컬 절차를 따르고 XIPL.STUDIO 등 미조회 범위를 밝힌다."
+  },
+  "global": "## QA 서버 장애 시 로컬 전환\n\n- ALM·PLM·VXvue·XIPL·벨라룬 작업에서 QA 서버(10.13.0.222) 조회가 연결 실패·timeout·5xx로 실패하거나 서버 도구가 보이지 않으면 `{{FALLBACK_SKILL}}`을 읽고 그 절차(`probe`로 장애 확인 → 장애면 묻지 않고 로컬 모드)를 따른다. 인증·권한·무결성 오류는 장애가 아니므로 멈춘다.\n- 이 안내는 서버 Skill이 다시 설치돼 각 Skill 끝의 보충 블록이 사라져도 적용한다."
+}

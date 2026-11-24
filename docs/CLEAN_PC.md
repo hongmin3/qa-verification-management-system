@@ -102,6 +102,20 @@ Start-ScheduledTask -TaskName $taskName
 
 반대 방향(로컬 → 서버)은 두 경로다. 제품 원문과 Bellalun 통합 QA 지침은 동기화 담당 PC의 예약이 매일 올리고, 서버 화면의 수집 요청은 5분마다 확인한 뒤 처리한다. 로컬 통합 QA 지침(`references/bellalun-qa-guide.md`)을 `bellalun_update_skill_file`이나 종료 전 자체검토(`applied`)로 고치면 그 순간 `Bellalun_SharedKnowledge_Sync`를 한 번 시작한다. 변경을 감시하는 추가 반복 실행은 두지 않는다.
 
+### QA 서버 장애 시 로컬 전환
+
+서버가 멈춰도 ALM·PLM·VXvue·XIPL·Bellalun 작업을 PC 자료로 이어 가려면 공통 Skill `qa-server-fallback`을 설치한다([사양](../specs/qa-client-fallback.md)). Bellalun 로컬 Skill(검색 엔진)과 VXvue·XIPL 지식 폴더가 있는 PC에서 프로젝트 루트 기준으로 한 번 실행한다.
+
+```powershell
+.venv/Scripts/python.exe -X utf8 client/qa-server-fallback/scripts/qa_fallback.py install
+$cfg = Get-Content -Raw -Encoding UTF8 "$HOME/.codex/skills/qa-server-fallback/fallback-config.json" | ConvertFrom-Json
+& $cfg.python_executable -X utf8 "$HOME/.codex/skills/qa-server-fallback/scripts/qa_fallback.py" check
+```
+
+설치는 `~/.codex/skills/qa-server-fallback`에 복사하고 Claude 쪽은 Junction으로 연결한다. 서버 Skill 6종 끝에 `qa-server-fallback` 보충 블록을, `~/.claude/CLAUDE.md`와 `~/.codex/AGENTS.md`에 같은 안내 블록을 넣는다. 바꾸기 전 파일은 `~/.local/state/qa-server-fallback/backups/`에 둔다. 위 동기화 예약은 보충 블록을 지우지 않는다. 서버 설치 명령으로 Skill을 다시 받아 블록이 사라지면 다음 `probe`가 백업 후 다시 붙인다.
+
+두 번째 명령(`check`)의 결과에서 `ok: true`를 확인한다. 원본을 고쳤으면 같은 `install`을 다시 실행한다(여러 번 실행해도 결과가 같다).
+
 동기화 예약은 `pythonw.exe`와 `scripts/run_scheduled_python.py`로 실행해 CMD·터미널 창을 만들지 않는다. 자식 Python에도 `CREATE_NO_WINDOW`를 적용하고 종료 코드를 작업 스케줄러에 전달한다. 성공 기록은 기존 작업의 상태·로그를 읽고, 실패 출력은 `output/logs/<예약명>-last-error.log`에 마지막 64KB만 저장한다. 마지막 오류 파일이 남아 있어도 현재 실행 실패라는 뜻은 아니므로 기록 시각과 `LastTaskResult`를 함께 확인한다.
 
 ## 기존 예약을 복원한 경우

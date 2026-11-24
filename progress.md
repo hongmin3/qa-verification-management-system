@@ -1,5 +1,13 @@
 # 진행 상태
 
+## 2026-11-24 QA 서버 장애 시 로컬 전환 설치와 실제 장애 검증 (REQ-QACLIENTFALLBACK-001~005)
+
+- 이 PC에 `qa-server-fallback`을 설치했다. 서버 Skill 6종 10곳과 전역 지침 2곳에 보충 블록을 넣고, 바꾸기 전 12개 파일을 `~/.local/state/qa-server-fallback/backups/`에 백업했다. 백업과 블록을 뺀 현재 본문이 바이트 단위로 같았다. `check` 결과는 `ok: true`였다.
+- 11:42 KST 실제 서버 무응답 상태에서 `probe`가 17초 만에 3회 시도를 마치고 다섯 제품 모두 `local`로 정했다. VXvue 28개(지난 판 5개 제외)·XIPL 1개·Bellalun 17개 파일을 오류 없이 색인했고 검색·원문·PDF 페이지 조회를 확인했다.
+- 장애 중 Claude Code 실제 호출 2건(VXvue·Bellalun)은 로컬 모드 표시, 로컬 판, 원문 쪽수, 서버 전용 미확인 항목을 함께 답했다. 11:50경 서버가 복구된 뒤 Codex 실제 호출 2건(ALM·XIPL)과 Claude Code 1건(ALM)은 `probe` 결과 `server`를 받아 서버 자료로 답했다.
+- 첫 Codex ALM 호출이 교육자료 대신 인터넷 일반 문서를 인용해 공통 규칙에 금지 문장을 추가하고 다시 설치했다. 재실행은 서버 복구 뒤라 장애 상태의 같은 동작은 다시 확인하지 못했다.
+- ALM·PLM 교육자료 조회, ALM 개인 PAT 읽기 전용 조회(HTTP 200), Bellalun 로컬 MCP와 기존 로컬 테스트 15건을 확인했다. PLM의 Teamcenter 브라우저 작업은 이번에 실행하지 않았다.
+
 ## 2026-11-20 ALM 스킬 1.5.0 배포 및 통합 검증 (REQ-ALMSKILL-003)
 
 - 등록된 Checklist TC의 최신 원본 반영 절차를 보강했다. 서버에 `20261120-v1-5-0`을 게시하고 이 PC의 Codex와 Claude Code 설치본을 갱신한 이전 배포 기록을 확인했다.
