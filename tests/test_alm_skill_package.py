@@ -31,3 +31,20 @@ def test_bundle_does_not_overwrite_existing_file(tmp_path):
  out=tmp_path/'skill.zip';out.write_bytes(b'preserve')
  with pytest.raises(FileExistsError):builder().build_skill('https://qa.example.test',out)
  assert out.read_bytes()==b'preserve'
+
+
+def test_new_standalone_tc_workflow_requires_id_before_document_move(tmp_path):
+    out = tmp_path / "skill.zip"
+    builder().build_skill("https://qa.example.test", out)
+    with zipfile.ZipFile(out) as archive:
+        core = archive.read("alm/SKILL.md").decode("utf-8")
+        browser = archive.read("alm/references/browser-operations.md").decode("utf-8").replace("\r\n", "\n")
+
+    assert "신규 TC 등록과 기존 문서 편입" in core
+    section = browser.split("## 신규 TC 등록과 기존 문서 편입\n", 1)[1].split("\n## ", 1)[0]
+    milestones = ["Work Items", "Software Test Case", "발급 ID", "Actions", "→ Into Document", "같은 ID"]
+    assert [section.index(milestone) for milestone in milestones] == sorted(section.index(milestone) for milestone in milestones)
+    assert "발급 ID를 재조회하기 전에는 LiveDoc 편집을 시작하지 않는다" in section
+    assert "문서 추가 필요성만 확인" in section
+    assert "브라우저 탭 제어를 우선한다" in browser
+    assert "탭 제어가 불가능할 때만" in browser

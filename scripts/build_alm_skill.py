@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import zipfile
 
-VERSION = "1.6.0"
+VERSION = "1.6.1"
 SOURCE = Path(__file__).resolve().parents[1] / "deploy/alm-skill/alm"
 FILES = ("SKILL.md", "agents/openai.yaml", "scripts/knowledge.py", "references/browser-operations.md", "references/work-examples.md", "references/checklist-registration.md", "references/local-issue-api.md", "references/existing-tc-update.md")
 COMMON = SOURCE.parents[1] / "qa-validation"
