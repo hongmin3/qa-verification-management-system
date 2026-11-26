@@ -42,9 +42,29 @@ def test_new_standalone_tc_workflow_requires_id_before_document_move(tmp_path):
 
     assert "신규 TC 등록과 기존 문서 편입" in core
     section = browser.split("## 신규 TC 등록과 기존 문서 편입\n", 1)[1].split("\n## ", 1)[0]
+    steps = section.split("\n1. ", 1)[1]
     milestones = ["Work Items", "Software Test Case", "발급 ID", "Actions", "→ Into Document", "같은 ID"]
-    assert [section.index(milestone) for milestone in milestones] == sorted(section.index(milestone) for milestone in milestones)
+    assert [steps.index(milestone) for milestone in milestones] == sorted(steps.index(milestone) for milestone in milestones)
     assert "발급 ID를 재조회하기 전에는 LiveDoc 편집을 시작하지 않는다" in section
     assert "문서 추가 필요성만 확인" in section
     assert "브라우저 탭 제어를 우선한다" in browser
     assert "탭 제어가 불가능할 때만" in browser
+
+
+def test_bundle_documents_safe_resume_for_relationships_and_new_tc(tmp_path):
+    out = tmp_path / "skill.zip"
+    builder().build_skill("https://qa.example.test", out)
+    with zipfile.ZipFile(out) as archive:
+        core = archive.read("alm/SKILL.md").decode()
+        browser = archive.read("alm/references/browser-operations.md").decode()
+        checklist = archive.read("alm/references/checklist-registration.md").decode()
+    assert "첫 쓰기 전에" in core and "기존 서비스 API의 지원·권한" in core
+    assert "API가 지정됐지만 지원·권한을 확인하지 못하면 그 제한을 보고한다" in checklist
+    assert "TC위치" in browser and "일치 항목이 여러 개" in browser
+    assert "새 TC를 워크아이템으로 등록하는 요청은" in core
+    first_save = browser.index("프로젝트 필수값을 모두 채웠는지 확인하고 `Save`")
+    assert "확인한 TC위치도 입력한다" in browser[browser.index("\n1. 신규 한 건은"):first_save]
+    assert "이미 한 번 편입되어 있으면 확인에서 끝낸다" in browser
+    assert "관계 목록의 전체 페이지를 다시 읽고" in checklist
+    assert "이전 저장 요청이 끝났음을 확인한 뒤" in checklist
+    assert "승인된 누락분만 다시 보낸다" in checklist
