@@ -5,7 +5,8 @@
 - 안내 페이지의 설치 절을 Claude 데스크톱 앱 Code 탭 기준으로 다시 쓰고, 개인 PAT 설정 절과 실제 요청 사례 12가지를 더했다. 사례는 이 PC의 Claude Code·Codex 요청 이력에서 ALM 관련 요청을 골라 대괄호 자리표시로 바꿨다. 별도 ChatGPT 웹 이력은 이 PC에서 찾지 못했고, Codex 요청에 기록된 이전 ChatGPT Work 세션의 사내망 DNS 제한 사례만 반영했다.
 - PAT 동작 확인: 이 PC의 사용자 환경 변수 PAT로 운영 ALM REST 단건 읽기는 200, 같은 요청을 토큰 없이 보내면 401이었다. 값은 출력하지 않았다.
 - 명령 확인: 새 PAT 저장 명령(`-AsSecureString`)과 삭제 명령은 Windows PowerShell 5.1에서 임시 변수 이름으로 저장·확인·삭제를 확인했다. 기존 `-MaskInput` 명령은 5.1의 `Read-Host`에 해당 인자가 없다. `Expand-Archive` 한 줄은 운영 ZIP을 임시 폴더에 풀어 `alm/SKILL.md` 위치를 확인했다.
-- 데스크톱 앱 화면 순서(트레이 종료, Code 탭 폴더 선택)와 Polarion PAT 발급 화면 이름은 이번에 직접 눌러 확인하지 않았다. 운영 서버 반영은 사용자 확인 뒤 진행한다.
+- 데스크톱 앱 화면 순서(트레이 종료, Code 탭 폴더 선택)와 Polarion PAT 발급 화면 이름은 이번에 직접 눌러 확인하지 않았다.
+- 운영 반영(2026-11-26 16:46 KST, 사용자 승인): 서버의 `app/web/static/alm-ai/index.html`이 직전 커밋 `afc622f` 판과 줄바꿈 외 내용이 같음을 확인했다. 백업(`/home/ubuntu/qa-deploy-backups/alm-guide-desktop-20261126T074603Z/`) 뒤 이 파일 하나만 `0dcbf74` 판으로 교체했다. 정적 파일이라 재시작하지 않았다. 운영 주소의 응답 200·해시 일치·`/health` 200을 확인했고, 실제 브라우저에서 자료 판 `20261125-v1-6-1`, 다운로드 링크 활성, 자료 수량 4칸, 콘솔 오류 없음을 확인했다.
 
 ## 2026-11-25 ALM 신규 TC 등록과 문서 편입 (REQ-ALMSKILL-003)
 
