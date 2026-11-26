@@ -12,13 +12,19 @@
 <body>
 <header class="site-header">
   <a class="brand" href="/">QA 업무 지원</a>
-  <nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#work-examples">실제 작업과 결과</a><a href="#install">설치 방법</a><a href="#claude">Claude에서 사용</a><a href="#local-issue-api">이슈 등록·수정·댓글</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
+  <nav aria-label="관련 화면"><a href="/">QA 홈</a><a href="/vxvue-desktop">VXvue AI 안내</a><a href="#work-examples">실제 작업과 결과</a><a href="#real-requests">이런 일을 맡겨요</a><a href="#install">설치 방법</a><a href="#pat-setup">개인 PAT 설정</a><a href="#browser-work">브라우저 작업</a><a href="#examples">질문 예시</a></nav>
 </header>
 <main>
   <section class="intro" aria-labelledby="title">
     <p class="eyebrow">QA 공통 업무 스킬</p>
     <h1 id="title">ALM 스킬 사용 안내</h1>
-    <p class="lead">이슈 등록·수정·댓글은 각자 PC의 개인 PAT로 처리합니다. TC 등록·SRS 연결·Test Run·문서 등의 화면 작업에는 로그인된 Edge·Chrome을 사용합니다. 저장 뒤 같은 ID에서 결과를 확인합니다.</p>
+    <p class="lead">ALM(Polarion)에서 하던 TC 등록·SRS 연결·Test Run 기록·이슈 댓글 같은 일을 Claude에게 말로 맡기는 스킬입니다. Claude는 일을 마친 뒤 같은 ID를 다시 열어 제대로 저장됐는지 확인하고 알려 줍니다.</p>
+    <div class="note"><strong>처음이라면 이 순서대로 하세요 (약 10분)</strong><ol>
+      <li>아래 <b>ALM 스킬 다운로드</b> 버튼으로 ZIP을 받습니다.</li>
+      <li>ZIP을 내 PC의 스킬 폴더에 풉니다. <a href="#install">설치 방법</a></li>
+      <li>ALM에서 개인 PAT를 발급해 내 PC에 저장합니다. <a href="#pat-setup">개인 PAT 설정</a></li>
+      <li>Claude 데스크톱 앱을 완전히 종료했다가 다시 켜고, <b>Code 탭</b>에서 요청합니다.</li>
+    </ol></div>
     <div class="actions"><a class="button primary" href="#work-examples">실제로 맡길 작업 보기</a>
       <a id="guide-link" class="button" data-asset="index.html" aria-disabled="true">상세 사용 가이드 열기</a>
       <a id="skill-download" class="button" data-asset="alm-skill.zip" aria-disabled="true" download="alm-skill.zip">ALM 스킬 다운로드</a>
@@ -33,7 +39,6 @@
       <div><dt>업무별 가이드</dt><dd><span data-count="chapters">—</span><small>장</small></dd></div>
       <div><dt>Word와 PDF</dt><dd><span data-count="guide_pages">—</span><small>쪽</small></dd></div>
       <div><dt>원본 슬라이드</dt><dd><span data-count="slides">—</span><small>장</small></dd></div>
-      <div><dt>중복 제외 영상</dt><dd><span data-count="videos">—</span><small>개</small></dd></div>
       <div><dt>시간별 화면 표본</dt><dd><span data-count="sample_frames">—</span><small>개</small></dd></div>
     </dl>
     <div class="resource-links">
@@ -54,6 +59,33 @@
       <article><h3>승인과 산출물 보관</h3><p>문서 서명과 상태 변경을 구분하고, 보고서·Baseline·Collection·PDF 보관까지 확인합니다.</p></article>
       <article><h3>근거 다시 찾기</h3><p>가이드의 장, 원본 슬라이드 번호, 영상 시점으로 돌아가 설명의 근거와 확인되지 않은 범위를 살펴봅니다.</p></article>
     </div>
+  </section>
+
+
+  <section id="real-requests" aria-labelledby="real-requests-title">
+    <h2 id="real-requests-title">이런 일을 맡길 수 있어요 (실제 요청 사례)</h2>
+    <p>Claude Code·Codex에서 실제로 맡겼던 요청을 업무별로 정리했습니다. 대괄호 부분만 바꿔서 그대로 쓰면 됩니다. 오른쪽 칸은 그 일을 하려면 무엇이 준비돼 있어야 하는지 알려 줍니다.</p>
+    <div class="table-wrap"><table><thead><tr><th>하고 싶은 일</th><th>이렇게 요청했어요</th><th>필요한 것</th></tr></thead><tbody>
+      <tr><td>연결이 빠진 SRS 찾기</td><td>“ALM 스킬로 SRS STC Coverage에서 사양 설명은 있는데 TC가 하나도 verified 되지 않은 SRS가 뭐가 있는지 조사해줘.”</td><td>개인 PAT</td></tr>
+      <tr><td>기존 TC로 연결할 수 있는지 조사</td><td>“Main TC를 전수조사해서 STC 연결이 없는 SRS 중 기존 TC로 연결할 수 있는 게 있는지 찾아줘. 일단 조사만 해줘.”</td><td>개인 PAT, VXvue 스킬</td></tr>
+      <tr><td>보강안 확인 후 반영</td><td>“보강이 필요한 TC는 각각 어떻게 바꿀지 먼저 보여줘. 내가 승인하면 ALM에 올리고 SRS 연결과 문서 최신화까지 해줘.”</td><td>개인 PAT, 로그인된 브라우저</td></tr>
+      <tr><td>Checklist TC를 ALM TC로 등록</td><td>“Basic Checklist [번호]번 TC를 ALM TC Work Item으로 올리고 Basic Function Test Case 문서에도 넣어줘.”</td><td>로그인된 브라우저(문서 편입), 개인 PAT</td></tr>
+      <tr><td>엑셀 기준으로 신규 TC 한꺼번에 등록</td><td>“내가 고친 엑셀 기준으로 신규 TC를 전부 ALM에 올리고, TC 문서 반영·SRS 링크·[Test Run]에 추가까지 해줘. 보류 이슈가 Fail로 안 돼 있으면 Fail 처리하고 이슈와 링크해줘.”</td><td>개인 PAT, 로그인된 브라우저</td></tr>
+      <tr><td>TC와 SRS 관계 수천 건 일괄 연결</td><td>“원본 엑셀과 ALM의 TC ID·제목·SRS 번호가 일치하는 TC에 verifies 관계를 일괄 반영해줘.”</td><td>개인 PAT, 사내망 PC</td></tr>
+      <tr><td>등록된 TC 속성 일괄 수정</td><td>“Main TC에 반영된 Checklist TC는 STC Category에 Full Function을 추가하고, Function과 TC위치를 Main TC 기준으로 맞춰줘.”</td><td>개인 PAT</td></tr>
+      <tr><td>ALM에서 직접 고친 내용 되가져오기</td><td>“내가 ALM에서 [VP 번호] 내용을 조금 고쳤어. 바뀐 내용을 서버와 내 PC의 TestCase 엑셀에도 맞춰줘.”</td><td>개인 PAT, VXvue 스킬</td></tr>
+      <tr><td>이슈 완료 처리와 댓글</td><td>“[VP 번호] 완료 처리해줘. 게시할 댓글과 바꿀 필드를 먼저 보여주고, 내가 확인하면 올린 뒤 다시 읽어서 알려줘.”</td><td>개인 PAT</td></tr>
+      <tr><td>검증 메일에 ALM 이슈 넣기</td><td>“검증완료 메일 초안을 쓰고 이슈 목록에 ALM 이슈 [VP 번호]도 넣어줘.”</td><td>개인 PAT(읽기), 제품 스킬</td></tr>
+      <tr><td>교육 자료에서 근거 찾기</td><td>“ALM 교육자료에서 Roundtrip 설명이 있는 장 번호와 자료 판만 알려줘. 파일은 수정하지 마.”</td><td>사내망만 있으면 됨</td></tr>
+      <tr><td>되는지부터 알아보기</td><td>“실수로 번호가 크게 올라갔는데 되돌릴 방법이 있는지 찾아줘. 아무것도 바꾸지 말고 조사만 해줘.”</td><td>조사만 하므로 쓰기 권한 불필요</td></tr>
+    </tbody></table></div>
+    <h3>요청할 때 이렇게 하면 결과가 좋아요</h3>
+    <ul>
+      <li><b>조사와 실행을 나눠서 말하세요.</b> “일단 조사만”이라고 하면 아무것도 저장하지 않습니다. 결과를 보고 “이대로 반영해줘”라고 하면 그때 씁니다.</li>
+      <li><b>기준이 되는 파일을 알려주세요.</b> “내가 고친 엑셀 기준으로”처럼 무엇을 따라야 하는지 말하면 엉뚱한 판을 쓰지 않습니다.</li>
+      <li><b>브라우저 로그인은 직접 해 주세요.</b> Claude가 로그인을 부탁하면 Edge에서 로그인한 뒤 “로그인 완료”라고 답하면 이어서 진행합니다.</li>
+      <li><b>전자서명·최종 승인과 실제 시험 수행은 사람이 합니다.</b> Claude는 시험하지 않은 TC에 Passed를 넣지 않습니다.</li>
+    </ul>
   </section>
 
   <!-- work-examples:start -->
@@ -233,52 +265,75 @@ Step별 결과와 전체 상태를 구분해 재조회하고, 증거가 부족�
 </section>
 <!-- work-examples:end -->
 <section id="install" aria-labelledby="install-title">
-    <h2 id="install-title">Codex와 Claude Code에 설치하기</h2>
-    <p>Python 3을 실행할 수 있는 PC와 QA 서버에 접속할 수 있는 사내망이 필요합니다. 이슈 쓰기에 필요한 개인 PAT는 <a href="#local-issue-api">본인 PC에서 설정</a>합니다.</p>
+    <h2 id="install-title">설치하기 (Claude 데스크톱 앱 기준)</h2>
+    <div id="claude">
+    <h3>먼저, 어느 탭에서 쓰나요?</h3>
+    <p>Claude 데스크톱 앱에는 Chat·Cowork·Code 탭이 있습니다. ALM에 실제로 등록·수정하려면 <b>Code 탭</b>을 사용하세요. Code 탭은 내 PC에서 실행되기 때문에 내 PC에 저장한 개인 PAT와 사내망을 그대로 쓸 수 있습니다.</p>
+    <div class="table-wrap"><table><thead><tr><th>탭</th><th>ALM 스킬로 할 수 있는 일</th><th>추천</th></tr></thead><tbody>
+      <tr><td><b>Code</b></td><td>교육 자료 조회, 개인 PAT로 이슈·TC·SRS 관계·Test Run 기록 쓰기, 로그인된 브라우저 화면 작업(Computer Use 같은 브라우저 제어 연결이 켜져 있을 때), 엑셀 정리</td><td>실제 작업은 여기서</td></tr>
+      <tr><td>Cowork</td><td>업로드한 스킬로 절차 설명, 문안·엑셀 준비. 실행 환경에 따라 내 PC 환경 변수와 사내망에 닿지 않을 수 있습니다.</td><td>준비·검토용</td></tr>
+      <tr><td>Chat</td><td>업로드한 스킬로 사용법 설명과 문안 작성. 인터넷 쪽 실행 환경이라 사내 ALM·QA 서버에 닿지 않습니다.</td><td>질문용</td></tr>
+    </tbody></table></div>
+    <p class="small">예전에 사내망 밖 실행 환경의 AI 채팅에서는 DNS 접근 제한 때문에 ALM 쓰기를 하지 못했고, 같은 작업을 사내 PC의 로컬 실행에서 마쳤습니다. 등록·수정 작업은 처음부터 Code 탭에서 시작하세요.</p>
+
+    <h3>Code 탭에 설치하는 순서</h3>
     <ol class="steps">
-      <li><strong>준비 사항을 확인합니다.</strong><p>Windows PowerShell에서 <code>py --version</code>을 실행해 Python 3이 있는지 확인합니다. 다른 운영체제에서는 <code>python3 --version</code>을 사용합니다.</p></li>
-      <li><strong>위의 ALM 스킬 ZIP을 받고 압축을 풉니다.</strong><p>압축 안의 <code>alm</code> 폴더 전체를 사용합니다. <code>SKILL.md</code>, <code>scripts</code>, <code>server.json</code>을 함께 둡니다.</p></li>
-      <li><strong>사용하는 도구의 사용자 스킬 폴더에 넣습니다.</strong><div class="table-wrap"><table><thead><tr><th>사용 도구</th><th>Windows에서 둘 위치</th></tr></thead><tbody><tr><td>Codex</td><td><code>%USERPROFILE%\.codex\skills\alm</code></td></tr><tr><td>Claude Code</td><td><code>%USERPROFILE%\.claude\skills\alm</code></td></tr></tbody></table></div><p>macOS·Linux에서는 홈 폴더 아래 <code>~/.codex/skills/alm</code> 또는 <code>~/.claude/skills/alm</code>을 사용합니다. 같은 이름의 사용자 수정본이 있으면 먼저 보관하고 내용을 비교합니다.</p></li>
-      <li><strong>새 대화에서 첫 질문을 합니다.</strong><p><code>ALM 스킬로 로그인된 Edge의 [프로젝트]에 [TC 목록]으로 [Test Run 이름] 초안을 만들고 Plan Scope와 실제 포함 ID를 재조회해줘. 시험 결과는 입력하지 마.</code></p><p>가이드의 절차와 함께 <code>M220</code> 같은 원본 슬라이드나 영상 시점이 제시되는지 확인합니다. Codex에서는 <code>$alm</code>으로도 부를 수 있습니다.</p></li>
+      <li><strong>준비물을 확인합니다.</strong><p>회사 계정으로 로그인한 Claude 데스크톱 앱, 사내망(또는 VPN), Python 3이 필요합니다. 시작 메뉴에서 PowerShell을 열고 <code>py --version</code>을 입력해 <code>Python 3.x</code>가 나오면 됩니다.</p></li>
+      <li><strong>스킬 ZIP을 받습니다.</strong><p>이 페이지 위쪽의 <b>ALM 스킬 다운로드</b>를 누르면 다운로드 폴더에 <code>alm-skill.zip</code>이 저장됩니다.</p></li>
+      <li><strong>스킬 폴더에 풉니다.</strong><p>PowerShell에 아래 한 줄을 붙여 넣고 Enter를 누릅니다. 폴더가 없으면 자동으로 만들어집니다.</p>
+        <pre><code>Expand-Archive "$env:USERPROFILE\Downloads\alm-skill.zip" "$env:USERPROFILE\.claude\skills" -Force</code></pre>
+        <p>끝나면 <code>%USERPROFILE%\.claude\skills\alm</code> 폴더 안에 <code>SKILL.md</code>, <code>scripts</code>, <code>server.json</code>이 보여야 합니다. 직접 고쳐 둔 <code>alm</code> 폴더가 이미 있으면 덮어쓰기 전에 다른 곳에 복사해 두세요.</p>
+        <details><summary>명령 대신 파일 탐색기로 하기</summary><p><kbd>Win</kbd>+<kbd>R</kbd>를 누르고 <code>%USERPROFILE%\.claude\skills</code>를 입력해 엽니다. 폴더가 없다고 나오면 <code>%USERPROFILE%\.claude</code> 안에 <code>skills</code> 폴더를 새로 만듭니다. ZIP을 열어 안에 있는 <code>alm</code> 폴더를 그대로 끌어다 놓습니다. <code>alm\alm\SKILL.md</code>처럼 한 번 더 겹치면 인식되지 않습니다.</p></details></li>
+      <li><strong>ALM에 쓰기까지 하려면 개인 PAT를 저장합니다.</strong><p>조회와 질문만 할 거라면 건너뛰어도 됩니다. 방법은 아래 <a href="#pat-setup">개인 PAT 설정</a>에 있습니다.</p></li>
+      <li><strong>앱을 완전히 종료했다가 다시 켭니다.</strong><p>창의 X 버튼만 누르면 앱이 작업 표시줄 오른쪽 트레이에 남아 있습니다. 트레이의 Claude 아이콘을 오른쪽 클릭해 종료(Quit)한 뒤 다시 실행해야 새 스킬과 PAT를 읽습니다.</p></li>
+      <li><strong>Code 탭에서 첫 요청을 합니다.</strong><p>Code 탭을 열고 작업 폴더를 하나 고릅니다(예: 문서 폴더). 아래처럼 요청하거나 <code>/alm</code>을 입력해 부릅니다. Claude가 명령 실행 허락을 물으면 내용을 보고 허용합니다.</p>
+        <pre><code>ALM 스킬 상태를 확인해줘. 교육 자료 판과 내 PC에 POLARION_TOKEN이 설정돼 있는지만 보고, 아무것도 바꾸지 마.</code></pre>
+        <p>스킬 버전, 자료 판, <code>metadata_verified: true</code>, PAT 설정 여부가 나오면 준비가 끝난 것입니다.</p></li>
     </ol>
-    <details><summary>서버 자료를 읽는지 직접 확인하기</summary><p>Codex 사용자 폴더에 설치했다면 PowerShell에서 실행합니다. Claude Code만 사용한다면 경로의 <code>.codex</code>를 <code>.claude</code>로 바꿉니다.</p><pre><code>py "$env:USERPROFILE\.codex\skills\alm\scripts\knowledge.py" status</code></pre><p><code>metadata_verified: true</code>와 자료 판·가이드 장수 등이 나오면 자료 목록과 본문 파일의 해시 대조가 끝난 것입니다. 실제 ALM에서 시험이나 승인을 실행한 결과는 아닙니다.</p></details>
-    <p class="small">위 폴더 설치는 로컬 Python을 사용하는 Codex·Claude Code용입니다. Claude Desktop·Cowork의 Skill ZIP 업로드와 실행 조건은 아래에서 따로 설명합니다. 브라우저의 상세 가이드와 영상은 별도 스킬 설치 없이 사용할 수 있습니다.</p>
+    <p><b>새 버전이 나오면</b> ZIP을 다시 받아 3번과 5번만 반복합니다. PAT는 다시 넣지 않아도 됩니다.</p>
+    <details><summary>Codex 또는 터미널의 Claude Code에 설치하기</summary>
+      <div class="table-wrap"><table><thead><tr><th>사용 도구</th><th>Windows에서 둘 위치</th></tr></thead><tbody><tr><td>Claude Code(터미널·데스크톱 Code 탭 공통)</td><td><code>%USERPROFILE%\.claude\skills\alm</code></td></tr><tr><td>Codex</td><td><code>%USERPROFILE%\.codex\skills\alm</code></td></tr></tbody></table></div>
+      <p>macOS·Linux는 <code>~/.claude/skills/alm</code> 또는 <code>~/.codex/skills/alm</code>입니다. Claude Code에서는 <code>/alm</code>, Codex에서는 <code>$alm</code>으로도 부를 수 있습니다. 설치 후 새 세션을 시작합니다. 자료 연결은 아래 명령으로도 확인할 수 있습니다.</p>
+      <pre><code>py -X utf8 "$env:USERPROFILE\.claude\skills\alm\scripts\knowledge.py" status</code></pre>
+      <p><code>metadata_verified: true</code>는 자료 목록과 본문 파일의 해시가 맞는다는 뜻입니다. ALM에서 실제로 저장해 본 결과는 아닙니다.</p>
+    </details>
+    <details><summary>Chat·Cowork에 스킬 ZIP 올리기(설명·문안용)</summary>
+      <p><code>Customize → Skills → + → Create skill → Upload a skill</code>에서 ZIP을 올리고 켭니다. 계정에 Skills와 코드 실행이 허용돼 있어야 합니다. 올린 스킬은 절차 설명과 문안 작성에 쓰고, 실제 등록·수정은 Code 탭에서 합니다. <a href="https://support.claude.com/en/articles/12512180-use-skills-in-claude">Claude 공식 Skill 업로드 안내</a></p>
+    </details>
+    </div>
   </section>
 
-  <section id="claude" aria-labelledby="claude-title">
-<h2 id="claude-title">Claude Code와 Claude Desktop·Cowork에서 사용하기</h2>
-<h3>Claude Code</h3>
-<ol><li>현재 ALM ZIP의 <code>alm</code> 폴더 전체를 <code>~/.claude/skills/alm</code>에 둡니다. Windows에서는 <code>%USERPROFILE%\.claude\skills\alm</code>입니다. 기존 사용자 수정본이나 다른 스킬로 연결된 폴더는 먼저 비교·보관합니다.</li>
-<li>Claude Code에서 <code>/alm</code>으로 호출하거나 “ALM 스킬로 로그인된 브라우저의 [대상]을 처리하고 저장 결과를 다시 확인해줘”라고 요청합니다. 스킬 목록이 갱신되지 않았다면 새 세션에서 확인합니다.</li>
-<li>Python 3과 QA 서버에 닿는 사내망에서 아래 명령을 실행해 자료 판과 <code>metadata_verified</code>를 확인합니다. 실제 브라우저 작업은 현재 Computer Use 도구와 대상 권한을 별도로 확인합니다.</li></ol>
-<pre><code>py -X utf8 "$env:USERPROFILE\.claude\skills\alm\scripts\knowledge.py" status</code></pre>
-<p><a href="https://code.claude.com/docs/en/skills">Claude Code 공식 스킬 안내</a></p>
-<h3>Claude Desktop·Cowork</h3>
-<ol><li>사용 중인 Claude에서 Skills 및 코드 실행·파일 생성이 허용돼 있는지 확인합니다. 조직 계정은 관리 정책에 따라 표시가 다를 수 있습니다.</li>
-<li><code>Customize → Skills → + → Create skill → Upload a skill</code>에서 위의 ALM ZIP을 업로드하고 스킬을 켭니다. 이것은 Skill 업로드이며 MCP 확장 설치가 아닙니다.</li>
-<li>현재 세션에 로컬 브라우저·컴퓨터 제어 도구가 연결돼 있는지, 실제 실행 위치에서 사내 QA 서버와 대상 ALM·PLM에 접근할 수 있는지 확인합니다. 같은 이름의 스킬을 올렸다는 이유만으로 로컬 PC 연결이 생기지는 않습니다.</li></ol>
-<p>일반 채팅의 클라우드 실행 환경은 PC의 로그인 탭이나 사내망에 직접 닿지 않을 수 있습니다. 그런 환경에서는 실제 등록·수정이 가능한 것으로 표시하지 않고, 접근 가능한 설명·검토·준비 범위로 보고합니다. Cowork에서도 현재 Computer Use 연결·권한·서버 접근을 확인한 뒤 실제 작업을 진행합니다.</p>
-<p><a href="https://support.claude.com/en/articles/12512180-use-skills-in-claude">Claude 공식 Skill 업로드 안내</a></p>
-<p class="small">공식 설치 절차를 확인해 작성했습니다. 이번 검증은 Claude Code의 로컬 설치 경로·자료 조회까지이며, Claude Desktop·Cowork의 사용자 계정 업로드와 실제 브라우저 쓰기는 별도로 확인해야 합니다.</p>
-</section>
+  <section id="pat-setup" aria-labelledby="pat-title">
+    <span id="local-issue-api"></span>
+    <h2 id="pat-title">개인 PAT 설정 (ALM에 쓰기 위해 꼭 필요)</h2>
+    <p><b>본인 PAT를 실제로 쓰는 PC의 환경 변수에 넣어야 ALM 쓰기가 됩니다.</b> 공용 QA 서버는 자료를 읽기만 합니다. 이슈 등록·수정·댓글, TC·SRS 관계·Test Run 기록 같은 쓰기는 각자 PC에서 각자의 PAT로 ALM에 직접 요청하므로, ALM 기록에도 본인 이름으로 남습니다.</p>
+    <ul>
+      <li>PAT가 없으면 ALM이 <code>401</code>(인증 필요)로 거절합니다. 같은 요청에 PAT를 넣으면 정상으로 읽힙니다.</li>
+      <li>PC를 바꾸거나 다른 PC에서도 쓰려면 그 PC에도 따로 저장합니다.</li>
+      <li>스킬은 PAT가 있는지만 확인하고 값을 화면·채팅·파일에 남기지 않습니다.</li>
+    </ul>
+    <ol class="steps">
+      <li><strong>ALM에서 PAT를 발급합니다.</strong><p>ALM(Polarion)에 로그인해 오른쪽 위 내 계정(My Account) 화면의 <b>Personal Access Token</b> 항목에서 새 토큰을 만듭니다. 이름(예: <code>claude-alm</code>)과 만료일을 정하고, 만들어진 토큰을 복사합니다. 닫으면 다시 볼 수 없을 수 있으니 바로 다음 단계로 넘어갑니다.</p></li>
+      <li><strong>내 PC에 저장합니다.</strong><p>시작 메뉴에서 PowerShell을 엽니다(관리자 권한 아님). 아래 명령을 붙여 넣고 Enter를 누른 뒤, <code>Polarion PAT</code> 입력 칸에 복사한 토큰을 붙여 넣고(마우스 오른쪽 클릭) 다시 Enter를 누릅니다. 입력한 값은 <code>*</code>로 가려집니다.</p>
+        <pre><code>$s = Read-Host 'Polarion PAT' -AsSecureString; [Environment]::SetEnvironmentVariable('POLARION_TOKEN', [Net.NetworkCredential]::new('', $s).Password, 'User')</code></pre>
+        <p>Windows 기본 PowerShell(5.1)과 PowerShell 7 모두에서 동작합니다.</p></li>
+      <li><strong>저장됐는지 확인합니다.</strong><p>아래 명령의 결과가 <code>True</code>면 저장된 것입니다. 토큰 값은 표시되지 않습니다.</p>
+        <pre><code>[bool][Environment]::GetEnvironmentVariable('POLARION_TOKEN','User')</code></pre></li>
+      <li><strong>Claude 데스크톱 앱을 완전히 종료했다가 다시 켭니다.</strong><p>켜져 있던 앱은 새 환경 변수를 모릅니다. 트레이 아이콘에서 종료한 뒤 다시 실행합니다.</p></li>
+      <li><strong>읽기로 먼저 시험합니다.</strong><pre><code>ALM 스킬로 내 PC의 개인 PAT가 동작하는지 [VP 번호] 하나만 읽어서 확인해줘. 아무것도 바꾸지 마.</code></pre></li>
+    </ol>
+    <div class="table-wrap"><table><thead><tr><th>이럴 때</th><th>이렇게 하세요</th></tr></thead><tbody>
+      <tr><td>토큰이 만료됐거나 새로 발급했어요</td><td>2번 명령을 다시 실행해 새 값으로 덮어쓰고 앱을 다시 켭니다.</td></tr>
+      <tr><td>이 PC에서 더 이상 쓰지 않아요</td><td><code>[Environment]::SetEnvironmentVariable('POLARION_TOKEN', $null, 'User')</code>로 지우고, ALM의 Personal Access Token 화면에서도 토큰을 폐기합니다.</td></tr>
+      <tr><td><code>403</code>(권한 없음)이 나와요</td><td>PAT는 맞지만 내 계정에 그 프로젝트의 생성·수정·댓글 권한이 없는 경우입니다. ALM 관리자에게 권한을 요청합니다.</td></tr>
+    </tbody></table></div>
+    <p><b>지켜 주세요.</b> PAT를 채팅창에 붙여 넣거나 메신저·메일·파일에 저장하지 않습니다. 여러 사람이 같이 쓰는 PC에는 저장하지 않고, 다른 사람의 PAT를 빌려 쓰지 않습니다. 이슈 본문과 댓글의 사양 출처는 <code>VP-480</code>처럼 SRS ID만 적고, 게시된 댓글은 고칠 수 없으니 Claude가 보여 주는 게시 직전 문안을 확인합니다.</p>
+  </section>
+
 <section id="together" aria-labelledby="together-title">
     <h2 id="together-title">VXvue와 Bellalun 스킬을 함께 사용하기</h2>
     <div class="table-wrap"><table><thead><tr><th>확인할 것</th><th>담당하는 근거</th></tr></thead><tbody><tr><td>ALM의 Import·Test Run·승인·이슈 처리 순서</td><td>ALM 스킬의 공통 교육 자료와 사용 가이드</td></tr><tr><td>제품 기능의 Expected·기존 TC·버전별 조건</td><td>VXvue 또는 Bellalun 스킬이 지정한 사양·매뉴얼·TC</td></tr><tr><td>실제 시험의 성공과 실패</td><td>해당 버전에서 수행한 결과와 캡처·로그 등 증거</td></tr></tbody></table></div>
     <p>예를 들어 “Bellalun의 변경 사양을 제품 스킬로 확인하고, ALM 스킬로 SRS와 TC 연결 및 재시험 준비 절차를 정리해줘”라고 요청할 수 있습니다. 기존 제품 스킬과 연결 설정을 교체할 필요는 없습니다.</p>
-  </section>
-
-  <section id="local-issue-api" aria-labelledby="local-issue-api-title">
-    <h2 id="local-issue-api-title">본인 PC에서 이슈 등록·수정·댓글 달기</h2>
-    <p>완료 처리 전에 게시할 댓글과 변경할 필드·값을 확인합니다. 사양서 보강 검토에서는 요청 항목별로 최신 SRS의 반영 여부를 대조합니다. TC 검토는 별도로 요청할 수 있습니다.</p>
-    <p>공용 QA 서버는 자료를 조회합니다. Codex 또는 Claude Code를 본인 PC에서 실행하고 개인 Polarion PAT로 운영 ALM에 직접 요청하면 본인 계정으로 기록됩니다.</p>
-    <ol>
-      <li>Polarion 개인 설정에서 본인 명의의 Personal Access Token을 발급합니다. 해당 프로젝트의 생성·수정·댓글 권한이 필요합니다.</li>
-      <li>본인 PC의 PowerShell 7에서 아래 명령을 실행하고 가려진 입력창에 PAT를 넣습니다. 데스크톱 앱을 사용한다면 저장 후 앱을 완전히 종료했다가 다시 실행합니다.</li>
-      <li>스킬에 프로젝트·이슈 ID·변경할 필드나 댓글을 알려주고 저장 후 재조회를 요청합니다. PAT는 채팅, 공용 QA 서버, 스킬 파일에 넣지 않습니다.</li>
-    </ol>
-    <pre><code>[Environment]::SetEnvironmentVariable('POLARION_TOKEN', (Read-Host -MaskInput 'Polarion PAT'), 'User')</code></pre>
-    <p><code>ALM 스킬로 내 PC의 개인 PAT를 사용해 [이슈 ID]에 이 댓글을 달고, 지정한 필드를 수정한 뒤 저장값을 다시 읽어줘.</code></p>
-    <p>이슈 본문과 댓글의 사양 출처는 <code>VP-480</code>처럼 SRS ID만 적습니다. 내부 PDF의 이름·판·쪽수는 조사 기록에 둡니다. 게시된 댓글의 본문은 운영 ALM에서 읽기 전용이므로 게시 직전 문안을 확인합니다.</p>
   </section>
 
   <section id="browser-work" aria-labelledby="browser-title">
@@ -315,7 +370,7 @@ Step별 결과와 전체 상태를 구분해 재조회하고, 증거가 부족�
 
   <section id="trouble" aria-labelledby="trouble-title">
     <h2 id="trouble-title">사용이 안 될 때</h2>
-    <dl class="troubles"><dt>자료 버튼이 활성화되지 않습니다</dt><dd>사내망 또는 VPN과 QA 서버 연결을 확인하고 “다시 불러오기”를 누릅니다. 실패 중에는 확인되지 않은 자료 링크를 열지 않습니다.</dd><dt>스킬 이름이 보이지 않습니다</dt><dd>압축을 푼 폴더가 <code>alm/alm/SKILL.md</code>처럼 중첩되지 않았는지 확인합니다. 설치 후 새 대화를 시작합니다.</dd><dt>Python 실행을 찾지 못합니다</dt><dd>Python 3 설치와 실행 경로를 확인합니다. 스킬이 실행되지 않아도 브라우저의 상세 가이드는 이용할 수 있습니다.</dd><dt>해시 불일치가 나옵니다</dt><dd>자료 갱신이 끝난 뒤 status를 다시 확인합니다. 계속 실패하면 자료 판과 오류를 운영 담당자에게 전달합니다.</dd><dt>현재 화면과 교육 자료가 다릅니다</dt><dd>현재 문서 유형과 상태를 확인하고 가이드 23장의 자료 차이 목록을 함께 읽습니다. 교육 자료의 오탈자를 실제 상태 이름으로 입력하지 않습니다.</dd></dl>
+    <dl class="troubles"><dt>Claude가 ALM 스킬을 모른다고 합니다</dt><dd><code>%USERPROFILE%\.claude\skills\alm\SKILL.md</code>가 있는지 확인하고, 앱을 트레이에서 완전히 종료한 뒤 다시 켭니다. Chat 탭이 아니라 Code 탭인지도 확인합니다.</dd><dt>PAT를 넣었는데 “토큰이 없다”거나 401이 나옵니다</dt><dd>앱을 완전히 종료하지 않아 예전 환경 변수를 쓰는 경우가 많습니다. 확인 명령이 <code>True</code>인지 보고 앱을 다시 켭니다. 그래도 401이면 토큰이 만료됐거나 잘못 붙여 넣은 것이니 새로 발급해 다시 저장합니다.</dd><dt>사내 서버나 ALM에 연결할 수 없다고 합니다</dt><dd>Chat·Cowork에서 요청했다면 Code 탭에서 다시 요청합니다. Code 탭이라면 사내망·VPN 연결을 확인합니다.</dd><dt>자료 버튼이 활성화되지 않습니다</dt><dd>사내망 또는 VPN과 QA 서버 연결을 확인하고 “다시 불러오기”를 누릅니다. 실패 중에는 확인되지 않은 자료 링크를 열지 않습니다.</dd><dt>스킬 이름이 보이지 않습니다</dt><dd>압축을 푼 폴더가 <code>alm/alm/SKILL.md</code>처럼 중첩되지 않았는지 확인합니다. 설치 후 새 대화를 시작합니다.</dd><dt>Python 실행을 찾지 못합니다</dt><dd>Python 3 설치와 실행 경로를 확인합니다. 스킬이 실행되지 않아도 브라우저의 상세 가이드는 이용할 수 있습니다.</dd><dt>해시 불일치가 나옵니다</dt><dd>자료 갱신이 끝난 뒤 status를 다시 확인합니다. 계속 실패하면 자료 판과 오류를 운영 담당자에게 전달합니다.</dd><dt>현재 화면과 교육 자료가 다릅니다</dt><dd>현재 문서 유형과 상태를 확인하고 가이드 23장의 자료 차이 목록을 함께 읽습니다. 교육 자료의 오탈자를 실제 상태 이름으로 입력하지 않습니다.</dd></dl>
   </section>
 <section><h2>2026-11-04 · Checklist 검토와 ALM 이관 기준 개선</h2><p>복사용 원행과 결과 이력 보존, 삭제 예정·보관 기록·실행 TC 구분, 질문 중 독립 작업 계속, 승인 후 실행 가능성 재검토, 최종 서버본 재확인을 반영했습니다. Checklist 확정 전 ALM 생성 보류 요청을 우선합니다. VXvue 업무 지침은 새 workflow 조회로 적용되며, ALM은 새 Skill ZIP을 다시 설치해야 합니다. 문구·구조·서버 배포본 검증과 실제 제품 시험·ALM 등록 검증은 구분합니다.</p></section></main>
 <footer><p>QA 공통 ALM 참고 자료 · <a href="/">QA 홈</a> · <a href="/vxvue-desktop">VXvue AI 사용 안내</a></p></footer>

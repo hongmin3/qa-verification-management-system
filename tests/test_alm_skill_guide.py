@@ -19,8 +19,21 @@ def test_alm_guide_is_available_from_hub_and_serves_assets():
  for word in ['ALM 스킬 사용 안내','Codex','Claude Code','VXvue','Bellalun','화면 표본','음성','로그인된 Edge','저장 결과','전자서명']:
   assert word in response.text
  assert 'href="/vxvue-desktop"' in response.text
+ assert '중복 제외 영상' not in response.text
  assert client.get('/static/alm-ai/style.css').status_code==200
  assert client.get('/static/alm-ai/guide.js').status_code==200
+
+def test_alm_guide_explains_desktop_install_and_personal_pat():
+ """Validates: REQ-ALMSKILL-001 (TEST-ALMSKILL-001) desktop install and PAT setup."""
+ text=TestClient(app).get(PAGE).text
+ for word in ['Claude 데스크톱 앱','Code 탭','Cowork','완전히 종료',r'%USERPROFILE%\.claude\skills\alm',
+              'POLARION_TOKEN','Personal Access Token','-AsSecureString',"GetEnvironmentVariable('POLARION_TOKEN','User')",
+              'id="pat-setup"','id="real-requests"','401','403']:
+  assert word in text,word
+ # PAT must never be typed as a literal command argument
+ assert "SetEnvironmentVariable('POLARION_TOKEN', '" not in text
+ for private in ['10.13.','alm.vieworks.com']:
+  assert private not in text
 
 @pytest.fixture
 def page():
