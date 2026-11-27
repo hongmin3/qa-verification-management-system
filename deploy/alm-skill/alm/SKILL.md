@@ -41,11 +41,11 @@ description: Polarion ALM 이슈 등록·수정·댓글은 사용자 PC의 개�
 - 사용자가 이슈 신규 등록·속성 또는 상태 수정·댓글 등록을 요청하면 [로컬 PC의 개인 PAT로 이슈 처리하기](references/local-issue-api.md)를 적용한다. 공용 서버의 자격증명은 조회에만 사용한다.
 - 브라우저 화면 작업을 지정한 요청과 TC·Test Run·LiveDoc·Import 등은 [로그인된 브라우저 작업 절차](references/browser-operations.md)에 따라 사용자 PC의 기존 로그인 세션으로 처리한다.
 
-새 TC를 워크아이템으로 등록하고 기존 문서에 넣는 요청은 [신규 TC 등록과 기존 문서 편입](references/browser-operations.md#신규-tc-등록과-기존-문서-편입)을 따른다. 발급 ID로 저장값을 재조회한 뒤 같은 항목을 문서에 편입한다. 문서 추가 필요성만 묻는 경우에는 소속과 편입 필요성을 확인한다.
+새 TC를 워크아이템으로 등록하는 요청은 [신규 TC 등록과 기존 문서 편입](references/browser-operations.md#신규-tc-등록과-기존-문서-편입)을 따른다. 편입 요청이 있으면 발급 ID로 저장값을 재조회한 뒤 같은 항목을 문서에 편입한다. 문서 추가 필요성만 묻는 경우에는 소속과 편입 필요성을 확인한다.
 
 **ALM 이슈 본문과 댓글의 사양 출처**는 `VP-480`처럼 해당 SRS ID만 적는다. 내부 관리용 PDF 파일명·분권 번호·파일 날짜·쪽수·절 이름은 조사 노트에 둔다. 초안과 게시 직전 문안 모두에서 적용한다. 예시: `VP-480에 단일 선택 시에만 수정할 수 있도록 정정된 것을 확인함.`
 
-Checklist 전체를 새 TC로 등록하고 SRS 관계·문서까지 구성하는 요청은 [Checklist 일괄 등록과 문서 정리](references/checklist-registration.md)를 함께 읽는다. 기존 서비스 API 연결이 사용 가능하면 승인된 대량 관계 작업에 병행하고, 등록 요청의 완료 지점은 저장 후 전체 대조를 마친 미서명 문서까지로 잡는다. 조사·준비만 요청한 경우의 변경 금지는 그대로 적용한다.
+Checklist 등록 또는 여러 TC·SRS 관계 저장 요청은 첫 쓰기 전에 [Checklist 일괄 등록과 문서 정리](references/checklist-registration.md) 5절을 읽는다. 사용자 지정 방식, 승인한 TC·SRS와 관계 방향, 기존 서비스 API의 지원·권한을 확인한다. 브라우저를 지정하면 기존 로그인 세션을 사용한다. API를 지정했거나 방식 지정이 없는 대량 관계 작업은 승인 범위에서 기존 서비스 API를 쓸 수 있는지 확인한다. 방식 지정이 없고 API를 쓸 수 없으면 지원되는 브라우저 절차를 확인한다. 전체 등록의 완료 지점은 저장값을 대조한 미서명 문서다. 조사·준비 요청은 읽기와 준비 범위에서 완료한다.
 
 이미 등록한 Checklist TC를 최신 Checklist에 맞춰 고치거나, Main TC로 병합된 TC의 STC Category·TC위치·Function을 채우는 요청은 쓰기 전에 [등록된 Checklist TC 갱신](references/existing-tc-update.md)을 읽는다. Test Steps·Test Data처럼 REST로 읽거나 쓸 수 없는 필드, 새 정보를 담을 필드의 화면 표시 확인, 저장 시 바뀌는 문자도 이 문서를 따른다.
 

@@ -473,6 +473,14 @@ VXvue·Bellalun의 수집 업로드는 통합 QA 지침이 바뀌면 첫 파일 
 - 두 판 각각 전체 12건과 핵심 두 사례 3회씩을 확인한다. 새 실패나 자료 판·실시간 근거 불일치가 있으면 업로드를 차단한다.
 - 자료 수집 목록과 전송 바이트를 비교해, 검증한 지침만 전송한다. 지침이 같은 일반 수집은 모델을 호출하지 않는다.
 
+### REQ-VXVUECHATBOT-029 ALM 변경분의 VXvue Main TC 반영 검사
+
+사용자가 지정한 기준 XLSX와 대상 TC 식별 셀, 승인한 전후 값을 고정한다. 저장 직전의 원본과 반영 후보 XLSX를 함께 비교한다.
+
+- 후보의 승인 셀은 각각 승인한 새 값과 일치해야 한다. 기준과 다른 TC 식별 셀 또는 기준과 승인값 양쪽에 없는 현행 값이 있으면 충돌로 보고한다.
+- 후보의 승인 범위 밖 셀 값과 수식은 최신 원본과 같아야 한다. 최신 원본에서 이미 승인값과 일치하는 셀은 재적용 대상에서 제외한다.
+- 검사는 파일과 서버를 읽기 전용으로 다룬다. 레이아웃, 개체, 게시와 색인 확인은 운영 지침에서 별도로 검증한다.
+
 ## 11. 테스트 사양
 
 ### TEST-VXVUECHATBOT-001 화면·첨부·소유 확인
@@ -515,6 +523,10 @@ VXvue·Bellalun의 수집 업로드는 통합 QA 지침이 바뀌면 첫 파일 
 
 후보 지침 조합, 동일한 문서 판과 조회 경로, 지침 바이트 일치, 무변경과 신규 실패 차단을 시험한다. 차단된 업로드가 asset과 commit 호출에 도달하지 않는지 확인한다.
 
+### TEST-VXVUECHATBOT-011 Main TC 승인 셀 검사
+
+합성 XLSX로 동시 변경 보존, 같은 승인 셀 충돌, TC 식별값 변경, 승인 외 값과 수식 변경, 빠진 승인값, 기준 해시 변경과 같은 후보의 재실행을 확인한다.
+
 ## 12. 요구사항 추적성
 
 <!-- Skill 동기화 시험은 문서 DB 등록 없이 실제 자산 확정 경로를 사용한다. -->
@@ -549,3 +561,4 @@ VXvue·Bellalun의 수집 업로드는 통합 QA 지침이 바뀌면 첫 파일 
 | REQ-VXVUECHATBOT-026 | `scripts/qa_skill_eval.py` | `tests/test_qa_skill_eval.py`, 운영 MCP 평가와 핵심 사례 반복 | implemented |
 | REQ-VXVUECHATBOT-027 | `scripts/qa_skill_compare.py`, `scripts/deploy.ps1` | `tests/test_qa_skill_compare.py` | implemented |
 | REQ-VXVUECHATBOT-028 | `scripts/qa_guide_compare.py`, `app/core/knowledge_push.py` | `tests/test_qa_guide_compare.py` | implemented |
+| REQ-VXVUECHATBOT-029 | `scripts/verify_vxvue_main_tc_merge.py` | `tests/test_vxvue_main_tc_merge.py` | implemented |

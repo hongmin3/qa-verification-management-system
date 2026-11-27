@@ -11,6 +11,7 @@
 | 이 프로젝트가 무엇인지 훑기 | [README](../README.md) |
 | 정기 보고서·기존 TC의 수정 범위를 검사하고 Skill 배포 후보 생성 | [QA 문서 변경 검사와 배포](qa-legacy-validation.md) |
 | VXvue·Bellalun 작업별 지침·응답 크기·원문 선택 조회 | [QA 지침과 조회 응답 크기 관리](qa-context-budget.md) |
+| ALM 변경분을 VXvue Main TC에 반영하기 전 승인 셀 대조 | [Main TC 승인 셀 검사](vxvue-main-tc-merge.md) |
 | 실제 질문으로 벨라룬·VXvue 스킬 답변 검증 | [QA 답변 평가](EVALUATION.md) |
 | 클린 PC에서 설치·자료 복원·개발 재개·서버 Skill 갱신 예약 | [클린 PC 재개 절차](CLEAN_PC.md) |
 | QA 서버 장애 때 ALM·PLM·VXvue·XIPL·Bellalun을 PC 자료로 이어 쓰기 | [설치·점검](CLEAN_PC.md#qa-서버-장애-시-로컬-전환) · [사양](../specs/qa-client-fallback.md) · [구현 계획](superpowers/plans/2026-11-24-qa-client-fallback.md) |

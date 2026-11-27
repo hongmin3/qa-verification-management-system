@@ -28,11 +28,11 @@ Native pipe 오류와 교육자료 서버·운영 Polarion 장애를 각각 진�
 
 ## 신규 TC 등록과 기존 문서 편입
 
-ALM 상세 가이드 9장과 10장, 특히 10.5절에서 필드와 `Move Into Document` 절차를 확인한다. 대상 프로젝트와 Old ID·제목으로 중복을 조회한다. 대상 LiveDoc의 Space·문서명·상태·기존 항목을 미리 읽어도 된다.
+ALM 상세 가이드 9장과 10장, 특히 10.5절에서 필드와 `Move Into Document` 절차를 확인한다. 프로젝트의 Software Test Case 필수 필드와 enum을 확인한다. Main TC에서는 대응 시트와 유효한 TC위치를 확인하고 값이 없거나 매핑할 수 없으면 저장을 보류한다. 같은 프로젝트에서 Old ID로 전체 일치 항목을 찾고 제목·유형·원본과 대조한다. 한 건이 같은 TC이면 그 ID로 재개한다. 일치 항목이 여러 개거나 원본이 다르면 대상이 확인될 때까지 생성을 보류한다.
 
-1. 신규 한 건은 `Work Items`의 `CREATE…`에서 `Software Test Case`를 선택한다. 확인한 Title·Old ID·분류·사전조건·Test Steps·Expected·Test Data를 입력하고 `Save`한다. 일괄 신규 등록은 Work Items의 Excel Import 절차를 적용한다.
-2. 발급 ID를 같은 Work Item에서 다시 열어 유형·Old ID·분류·절차·기대결과와 원본을 대조한다. 발급 ID를 재조회하기 전에는 LiveDoc 편집을 시작하지 않는다. 저장 여부가 불명확하면 같은 Old ID와 제목으로 먼저 조회한다.
-3. 문서 추가 필요성만 확인하는 요청은 문서 범위와 소속을 읽고 판단을 보고한다. 실제 편입도 요청받았으면, 저장한 TC의 `Actions → Move… → Into Document`에서 대상 Space와 기존 LiveDoc을 지정하고 적용한다.
+1. 신규 한 건은 `Work Items`의 `CREATE…`에서 `Software Test Case`를 선택한다. 확인한 Title·Old ID·분류·사전조건·Test Steps·Expected·Test Data를 입력한다. Main TC는 확인한 TC위치도 입력한다. 프로젝트 필수값을 모두 채웠는지 확인하고 `Save`한다. 일괄 신규 등록은 Work Items의 Excel Import 절차를 적용한다.
+2. 발급 ID를 같은 Work Item에서 다시 열어 유형·Old ID·TC위치·분류·절차·기대결과와 원본을 대조한다. 발급 ID를 재조회하기 전에는 LiveDoc 편집을 시작하지 않는다. 저장 여부가 불명확하면 같은 Old ID와 제목으로 먼저 조회한다.
+3. 문서 추가 필요성만 확인하는 요청은 문서 범위와 소속을 읽고 판단을 보고한다. 실제 편입을 요청받았으면 먼저 TC의 문서 소속과 LiveDoc 본문에서 해당 ID의 횟수를 확인한다. 대상 문서에 이미 한 번 편입되어 있으면 확인에서 끝낸다. 소속과 본문이 다르거나 다른 문서에 소속되어 있으면 현재 상태를 보고한다. 두 곳에서 미편입이 확인되면 저장한 TC의 `Actions → Move… → Into Document`에서 대상 Space와 기존 LiveDoc을 지정하고 적용한다.
 4. 같은 ID의 문서 소속과 LiveDoc 본문의 해당 ID를 다시 읽는다. 기존 TC 목록·순서와 새 ID가 한 번만 들어갔는지 대조한다. 편입이 막히면 발급 ID를 보존해 다음 작업에서 재사용한다.
 
 ## 지원할 수 있는 작업과 완료 기준
