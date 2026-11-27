@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="botyard render-spec-html v8">
 <meta name="spec-html-renderer" content="v8">
-<meta name="spec-source-sha256" content="9ba7732a77d4576d0e80a86fbfbe49e32036950e6353a7c6526b1912813d5bac">
+<meta name="spec-source-sha256" content="95cc40b8efee209e1e3849ed10b183e9555d588d8426e219ac4a69c6dc0c69c6">
 <title>QA 검증 관리 시스템 사양서</title>
 <style>:root{--bg:#f7f8fa;--panel:#fff;--text:#1d2330;--muted:#5d6678;--line:#e2e6ee;--accent:#2f6fde;--code:#f1f3f7;
 --req:#2f6fde;--nfr:#8a4fd8;--test:#15907a;--draft:#8a93a6;--implemented:#c98a12;--verified:#1f9d55;--deprecated:#c2413a;--active:#2f6fde;
@@ -18184,8 +18184,9 @@ TEST-ID는 절차의 이름이지 테스트가 있다는 증거가 아니다. �
 <section class="card kind-req" id="REQ-ALMSKILL-003">
 <h3><span class="idtag">REQ-ALMSKILL-003</span> 개인 PAT 및 기존 로그인 브라우저 작업 절차</h3>
 <div class="card-meta"><span class="badge st-implemented">implemented</span><span class="meta"><b>구현</b> <code>deploy/alm-skill/alm/SKILL.md</code>, <code>deploy/alm-skill/alm/references/browser-operations.md</code>, <code>deploy/alm-skill/alm/references/local-issue-api.md</code>, <code>deploy/alm-skill/alm/references/checklist-registration.md</code>, <code>deploy/alm-skill/alm/references/existing-tc-update.md</code>, <code>scripts/build_alm_skill.py</code></span><span class="meta"><b>테스트</b> <code>tests/test_alm_skill_package.py</code></span></div>
-<details class="history"><summary>변경 이력 5</summary>
+<details class="history"><summary>변경 이력 6</summary>
 <ul>
+<li><span class="hist">2026-11-27 ALM 스킬 1.6.2 게시</span> <a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a>: 저장 재개 절차를 담은 ALM 스킬 1.6.2를 QA 서버 교육자료 판 <code>20261127-v1-6-2</code>로 게시했다. 업데이트 페이지에 1.6.2 항목을 더했다.</li>
 <li><span class="hist">2026-11-26 ALM 저장 재개와 Main TC 승인 셀 검사</span> <a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a>. 최초 쓰기 전 연결 경로 선택, 관계 부분 저장 뒤 재조회, 필수 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>위치와 Old ID 확인, LiveDoc 편입 재개 절차를 ALM 스킬 원본에 추가했다.</li>
 <li><span class="hist">2026-11-25 ALM 신규 TC 등록 순서</span> <a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a>: 신규 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>의 단독 저장과 발급 ID 확인 뒤 기존 LiveDoc에 편입하는 절차를 추가했다. 로그인된 브라우저 탭 제어를 우선한다.</li>
 <li><span class="hist">2026-11-20 ALM 스킬 1.5.0 등록본 갱신 절차</span> <a class="idref" href="#REQ-ALMSKILL-003">REQ-ALMSKILL-003</a>: <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span>된 Checklist <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span>를 최신 원본에 맞추는 절차(<code>references/existing-tc-update.md</code>)를 추가했다. Test Steps·Test Data의 개인 PAT SOAP 경로, 필드 화면 표시 확인, 저장 시 문자 변형, Main <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 병합 <span class="term" title="Test Case. 시험 항목 하나. 제품별 TC Excel 파일의 한 행이다" tabindex="0">TC</span> 분류 규칙을 담고 <span class="term" title="파일을 문서 표(documents)에 넣어 분석이 검색할 수 있게 하는 일로, 수집만 하면 분석에 쓰이지 않는다" tabindex="0">등록</span> 검증에 Test Data 실제 값 대조를 넣었다.</li>
